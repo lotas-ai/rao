@@ -1,0 +1,470 @@
+#!/usr/bin/env bash
+
+#
+# make-package (macOS)
+#
+# Copyright (C) 2022 by Posit Software, PBC
+#
+# Unless you have received this program directly from Posit Software pursuant
+# to the terms of a commercial license agreement with Posit Software, then
+# this program is licensed to you under the terms of version 3 of the
+# GNU Affero General Public License. This program is distributed WITHOUT
+# ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+# MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+# AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+#
+#
+set -e
+set +H
+
+PKG_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${PKG_DIR}/../../dependencies/tools/rstudio-tools.sh"
+
+# use RStudioDesktop as GWT main module
+GWT_MAIN_MODULE=RStudioDesktop
+export GWT_MAIN_MODULE
+
+function help() {
+    cat <<EOF
+usage: make-package [options]
+
+Build RStudio Electron Desktop and redistributable package (DMG) on a Mac.
+
+Specify version by setting environment variables. The default is 99.9.9.
+
+Examples
+  RSTUDIO_VERSION_MAJOR=2022 RSTUDIO_VERSION_MINOR=7 RSTUDIO_VERSION_PATCH=1 RSTUDIO_VERSION_SUFFIX=-daily+321 ./make-package clean --electron
+
+Options
+  clean, --clean
+        Perform a clean build. Default is an incremental build.
+
+  --arch=<architecture>
+        Command-separated list of architectures to build for. Default is 
+        "x86_64,arm64" on an M1 Mac, and "x86_64" on an Intel Mac.
+
+  --install
+        Install the built Rao.app to /Applications/Rao-Devel.app.
+
+  --build-gwt=[0|1], --gwt-build=[0|1]
+        Whether to rebuild GWT; default is yes (1).
+
+  --copy-gwt=[0|1], --gwt-copy=[0|1]
+        Whether to copy the GWT build output into the application; default is yes (1).
+
+  --build-package=[0|1]
+        Whether to produce an app bundle (Rao.app); default is yes (1).
+
+  --build-dmg=[0|1]
+        Whether to produce a redistributable package (DMG); default is yes (1).
+
+  --use-creds=[0|1]
+        Whether to use RStudio credentials for codesigning; default is yes (1) when running via
+        Jenkins, otherwise false (0).
+
+  --electron, --rstudio-target=Electron
+        Ignored legacy option for backwards compatibility (always builds Electron)
+EOF
+exit 1
+}
+
+# used to ensure JAVA_HOME points at a version of Java compatible
+# with the version of GWT sources we use for compilation
+set-java-home () {
+   if [ -d "$1" ]; then
+      _OLD_JAVA_HOME="${JAVA_HOME}"
+      JAVA_HOME="$1"
+      export JAVA_HOME
+      info "Found Java: ${JAVA_HOME}"
+   fi
+}
+
+# Find and set the best JAVA_HOME for the build; on an M1 Mac, prefer a native M1
+# JDK even for Intel builds. The GWT build outputs JavaScript, not anything
+# processor-native, so can use the fastest tool for the job.
+find-java-home () {
+   if is-m1-mac; then
+      if [ -e "/Library/Java/JavaVirtualMachines/zulu-11.jdk/Contents/Home" ]; then
+         # native M1 JDK11; see https://www.azul.com/downloads
+         set-java-home "/Library/Java/JavaVirtualMachines/zulu-11.jdk/Contents/Home"
+      elif [ -e "/opt/homebrew/opt/openjdk@11" ]; then
+         # default location for M1 homebrew
+         set-java-home "/opt/homebrew/opt/openjdk@11"
+      fi
+   else # Intel Mac
+      if [ -e "/Library/Java/JavaVirtualMachines/adoptopenjdk-11.jdk/Contents/Home" ]; then
+         set-java-home "/Library/Java/JavaVirtualMachines/adoptopenjdk-11.jdk/Contents/Home"
+      fi
+   fi
+}
+
+restore-java-home () {
+   if [ -n "${_OLD_JAVA_HOME}" ]; then
+      JAVA_HOME="${_OLD_JAVA_HOME}"
+      unset _OLD_JAVA_HOME
+   fi
+}
+
+NPM_INSTALLED=0
+install-npm-packages() {
+   if [ "${NPM_INSTALLED}" = "0" ]; then
+      MAKEFLAGS="" ${NPM} ci
+      NPM_INSTALLED=1
+   fi
+}
+
+# For a full package build the package.json file gets modified with the 
+# desired build version, and the build-info.ts source file gets modified with
+# details on the build (date, git-commit, etc). We try to put these back to
+# their original state at the end of the package build.
+PACKAGE_VERSION_SET=0
+set-version () {
+   # Set package.json info
+   pushd ${ELECTRON_SOURCE_DIR}
+   install-npm-packages
+   save-original-file package.json
+   ${NPX} json -I -f package.json -e "this.version=\"$1\""
+
+   # Keep a backup of build-info.ts so we can restore it
+   save-original-file src/main/build-info.ts
+
+   PACKAGE_VERSION_SET=1
+   popd
+}
+
+restore-package-version () {
+   if [ "${PACKAGE_VERSION_SET}" = "1" ]; then
+      pushd ${ELECTRON_SOURCE_DIR}
+      restore-original-file package.json
+      restore-original-file src/main/build-info.ts
+      PACKAGE_VERSION_SET=0
+      popd
+   fi
+}
+
+# ensure JAVA_HOME and package.json restored on exit if necessary
+on-exit () {
+   restore-java-home
+   restore-package-version
+}
+
+trap on-exit EXIT
+
+if [ "$(uname -m)" = "arm64" ]; then
+   HOMEBREW_PREFIX="/opt/homebrew"
+else
+   HOMEBREW_PREFIX="/usr/local"
+fi
+
+# build / install directories
+GWT_SRC_DIR="${PKG_DIR}/../../src/gwt"
+ELECTRON_SOURCE_DIR="${PKG_DIR}/../../src/node/desktop"
+
+BUILD_DIR_X86_64="${PKG_DIR}/build"
+BUILD_DIR_ARM64="${PKG_DIR}/build-arm64"
+
+INSTALL_DIR="${PKG_DIR}/install"
+mkdir -p "${INSTALL_DIR}"
+
+# build RStudio version suffix
+RSTUDIO_VERSION_ARRAY=(
+   "${RSTUDIO_VERSION_MAJOR-99}"
+   "${RSTUDIO_VERSION_MINOR-9}"
+   "${RSTUDIO_VERSION_PATCH-9}"
+)
+
+RSTUDIO_VERSION_FULL=$(IFS="."; echo "${RSTUDIO_VERSION_ARRAY[*]}")"${RSTUDIO_VERSION_SUFFIX}"
+
+# build bundle name (handle Pro builds as well)
+if [ -f "${PKG_DIR}/CMakeOverlay.txt" ]; then
+   RSTUDIO_PRO_SUFFIX="-pro"
+else
+   RSTUDIO_PRO_SUFFIX=""
+fi
+
+RSTUDIO_BUNDLE_NAME=$(echo "Rao${RSTUDIO_PRO_SUFFIX}-${RSTUDIO_VERSION_FULL}" | sed 's/+/-/g')
+
+# use Ninja if available
+if has-program ninja; then
+   export CMAKE_GENERATOR=Ninja
+fi
+
+# find ant
+find-program ANT ant            \
+   "/opt/homebrew/bin" \
+   "/usr/local/bin"
+
+# find node
+find-program NODE node \
+   "${PKG_DIR}/../../dependencies/common/node/${RSTUDIO_NODE_VERSION}-arm64/bin" \
+   "${PKG_DIR}/../../dependencies/common/node/${RSTUDIO_NODE_VERSION}/bin"
+
+find-program NPM npm \
+   "${PKG_DIR}/../../dependencies/common/node/${RSTUDIO_NODE_VERSION}-arm64/bin" \
+   "${PKG_DIR}/../../dependencies/common/node/${RSTUDIO_NODE_VERSION}/bin"
+
+find-program NPX npx \
+   "${PKG_DIR}/../../dependencies/common/node/${RSTUDIO_NODE_VERSION}-arm64/bin" \
+   "${PKG_DIR}/../../dependencies/common/node/${RSTUDIO_NODE_VERSION}/bin"
+
+# put node on the path
+NODE_PATH=$(dirname "${NODE}")
+PATH="${NODE_PATH}:${PATH}"
+
+# determine architectures to build for
+if is-m1-mac; then
+   arch=x86_64,arm64
+else
+   arch=x86_64
+fi
+
+# default build options
+build_gwt=1
+build_package=1
+build_dmg=1
+clean=0
+copy_gwt=1
+install=0
+use_creds=0
+rstudio_target=Electron
+
+# by default, use RStudio credentials for builds on Jenkins
+if is-jenkins; then
+   use_creds=1
+fi
+
+# read command line arguments
+for arg in "$@"; do
+
+   case "$arg" in
+   clean)              clean=1 ;;
+   --arch=*)           arch=${arg#*=} ;;
+   --clean)            clean=1 ;;
+   --install)          install=1 ;;
+   --build-gwt=*)      build_gwt=${arg#*=} ;;
+   --copy-gwt=*)       copy_gwt=${arg#*=} ;;
+   --gwt-build=*)      build_gwt=${arg#*=} ;;
+   --gwt-copy=*)       copy_gwt=${arg#*=} ;;
+   --build-package=*)  build_package=${arg#*=} ;;
+   --build-dmg=*)      build_dmg=${arg#*=} ;;
+   --use-creds=*)      use_creds=${arg#*=} ;;
+   --electron)         : ;;
+   --rstudio-target=*) : ;;
+   *)                  help ;;
+   esac
+
+done
+
+# configure Electron build info
+set-version ${RSTUDIO_VERSION_FULL}
+
+case "${arch}" in *arm64*)  build_arm64=1  ;; esac
+case "${arch}" in *x86_64*) build_x86_64=1 ;; esac
+
+if [ "${clean}" = "1" ]; then
+
+   # remove existing build dir
+   rm -rf "${BUILD_DIR_X86_64}"
+   rm -rf "${BUILD_DIR_ARM64}"
+
+   # clean out ant build if requested
+   if [ -d "${GWT_SRC_DIR}" ]; then
+      cd "${GWT_SRC_DIR}"
+      "${ANT}" clean
+   fi
+
+   # cleanup Electron project
+   rm -rf "${ELECTRON_SOURCE_DIR}/.webpack"
+   rm -rf "${ELECTRON_SOURCE_DIR}/out"
+
+   # cleanup Electron packaging directories
+   rm -rf "${ELECTRON_SOURCE_DIR}/../desktop-build-arm64"
+   rm -rf "${ELECTRON_SOURCE_DIR}/../desktop-build-x86_64"
+
+   # move back to package dir
+   cd "${PKG_DIR}"
+
+fi
+
+# set up MAKEFLAGS
+MAKEFLAGS="${MAKEFLAGS} -j$(sysctl -n hw.ncpu)"
+
+# set up JAVA_HOME if necessary
+find-java-home
+
+# if SCCACHE_ENABLED environment variable is set, use sccache
+if [ -n "$SCCACHE_ENABLED" ]; then
+    echo "Using sccache"
+   
+    if [ -n "$AWS_ACCESS_KEY_ID" ] || [ $(aws sts get-caller-identity --query "Account" --profile ${AWS_PROFILE:-sso}) -eq 14 ]; then
+        echo "AWS credentials valid, using S3 build cache"
+        export SCCACHE_BUCKET="rstudio-build-cache"
+    else
+        echo "No valid AWS SSO session, using only local build cache"
+        export SCCACHE_DIR=$(pwd)/object_file_cache
+        mkdir -p $SCCACHE_DIR
+    fi
+fi
+
+# perform an x86_64 build
+if [ -n "${build_x86_64}" ]; then
+
+   # find x86_64 cmake
+   find-program CMAKE_X86_64 cmake  \
+      "/usr/local/bin"
+
+   # prefer using x86_64 build of cmake
+   CMAKE="${CMAKE_X86_64:-/usr/local/bin/cmake}"
+   info "Using CMake '${CMAKE}' for x86_64 build"
+
+   # prepare for build
+   mkdir -p "${BUILD_DIR_X86_64}"
+   mkdir -p "${BUILD_DIR_X86_64}/gwt"
+
+   cd "${BUILD_DIR_X86_64}"
+   rm -f CMakeCache.txt
+   rm -rf build/_CPack_Packages
+
+   info "Configuring for x86_64 ..."
+   arch -x86_64 "${CMAKE}"                                   \
+      -DCMAKE_BUILD_TYPE=RelWithDebInfo                      \
+      -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"                \
+      -DRSTUDIO_TARGET=${rstudio_target}                     \
+      -DRSTUDIO_PACKAGE_BUILD=1                              \
+      -DRSTUDIO_CRASHPAD_ENABLED=0                           \
+      -DRSTUDIO_DISABLE_CHECK_FOR_UPDATES=ON                 \
+      -DRSTUDIO_TOOLS_ROOT="${RSTUDIO_TOOLS_ROOT}/../x86_64" \
+      -DRSTUDIO_CODESIGN_USE_CREDENTIALS="${use_creds}"      \
+      -DGWT_BUILD="${build_gwt}"                             \
+      -DGWT_COPY="${copy_gwt}"                               \
+      -DGWT_BIN_DIR="${BUILD_DIR_X86_64}/gwt/bin"            \
+      -DGWT_WWW_DIR="${BUILD_DIR_X86_64}/gwt/www"            \
+      -DGWT_EXTRAS_DIR="${BUILD_DIR_X86_64}/gwt/extras"      \
+      -DSCCACHE_ENABLED=$SCCACHE_ENABLED                     \
+      "${PKG_DIR}/../.."
+   info "Done!"
+
+
+   info "Building for x86_64 with flags '${MAKEFLAGS}' ..."
+   export npm_config_arch=x64
+   export npm_config_target_arch=x64
+   arch -x86_64 "${CMAKE}" --build . --target all -- ${MAKEFLAGS}
+   unset npm_config_arch
+   unset npm_config_target_arch
+   info "Done!"
+
+   if [ -n "$SCCACHE_ENABLED" ]; then
+   sccache --show-stats
+   fi
+fi
+
+# perform an arm64 build
+if [ -n "${build_arm64}" ]; then
+
+   # set CMake paths
+   find-program CMAKE_ARM64 cmake  \
+      "/opt/homebrew/bin"
+
+   # prefer using arm64 build of cmake
+   CMAKE="${CMAKE_ARM64:-/opt/homebrew/bin/cmake}"
+   info "Using CMake '${CMAKE}' for arm64 build"
+
+   # prepare for build
+   mkdir -p "${BUILD_DIR_ARM64}"
+   mkdir -p "${BUILD_DIR_ARM64}/gwt"
+
+   cd "${BUILD_DIR_ARM64}"
+   rm -f CMakeCache.txt
+   rm -rf build/_CPack_Packages
+
+   info "Configuring for arm64 ..."
+   arch -arm64 "${CMAKE}"                                   \
+      -DCMAKE_BUILD_TYPE=RelWithDebInfo                     \
+      -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}"               \
+      -DRSESSION_ALTERNATE_BUILD=1                          \
+      -DRSTUDIO_TARGET=${rstudio_target}                    \
+      -DRSTUDIO_PACKAGE_BUILD=1                             \
+      -DRSTUDIO_CRASHPAD_ENABLED=0                          \
+      -DRSTUDIO_DISABLE_CHECK_FOR_UPDATES=ON                \
+      -DRSTUDIO_TOOLS_ROOT="${RSTUDIO_TOOLS_ROOT}/../arm64" \
+      -DGWT_BUILD=0                                         \
+      -DGWT_COPY=0                                          \
+      -DSCCACHE_ENABLED=$SCCACHE_ENABLED                    \
+      "${PKG_DIR}/../.."
+   info "Done!"
+
+   info "Building for arm64 with flags '${MAKEFLAGS}' ..."
+   export npm_config_arch=arm64
+   export npm_config_target_arch=arm64
+   arch -arm64 "${CMAKE}" --build . --target all -- ${MAKEFLAGS}
+   unset npm_config_arch
+   unset npm_config_target_arch
+   info "Done!"
+
+   if [ -n "$SCCACHE_ENABLED" ]; then
+      sccache --show-stats
+   fi
+
+fi
+
+if [ "${build_package}" = "1" ]; then
+
+   info "Building package ..."
+
+   # find appropriate copy of CMake
+   find-program CMAKE cmake        \
+      "${HOMEBREW_PREFIX}/bin"
+
+   # remove an existing install directory
+   rm -rf "${INSTALL_DIR}"
+   mkdir -p "${INSTALL_DIR}"
+
+   # perform install
+   cd "${BUILD_DIR_X86_64}"
+   "${CMAKE}" --build . --target install -- ${MAKEFLAGS}
+
+   if [ "${build_dmg}" = "1" ]; then
+
+      # move to target directory
+      cd "${INSTALL_DIR}"
+
+      # create 'Applications' symlink
+      ln -nfs /Applications Applications
+
+      # package into dmg
+      info "Creating '${RSTUDIO_BUNDLE_NAME}.dmg ...'"
+
+      cd ..
+
+      # allocate oversized dmg, which will be compressed
+      hdiutil create                       \
+         -size 2g                          \
+         -fs "APFS"                        \
+         -volname "${RSTUDIO_BUNDLE_NAME}" \
+         -srcfolder "install"              \
+         -ov                               \
+         -format "UDZO"                    \
+         "${RSTUDIO_BUNDLE_NAME}.dmg"
+
+      # move to expected location in build folder
+      mv "${RSTUDIO_BUNDLE_NAME}.dmg" "${BUILD_DIR_X86_64}/"
+
+      info "'${BUILD_DIR_X86_64}/${RSTUDIO_BUNDLE_NAME}.dmg' has been created."
+   fi
+
+   info "Done!"
+fi
+
+cd "${PKG_DIR}"
+
+if [ "${install}" = "1" ]; then
+   RSTUDIO_BUNDLE_PATH="${INSTALL_DIR}/Rao.app"
+   RSTUDIO_DEVEL_PATH="/Applications/Rao-Devel.app"
+   if [ -e "${RSTUDIO_BUNDLE_PATH}" ]; then
+      rm -rf "${RSTUDIO_DEVEL_PATH}"
+      cp -R "${RSTUDIO_BUNDLE_PATH}" "${RSTUDIO_DEVEL_PATH}"
+      info "Rao installed to '${RSTUDIO_DEVEL_PATH}'"
+   else
+      warn "'${RSTUDIO_BUNDLE_PATH}' does not exist; cannot install"
+   fi
+fi

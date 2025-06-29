@@ -1,0 +1,207 @@
+/*
+ * WebFileDialogs.java
+ *
+ * Copyright (C) 2022 by Posit Software, PBC
+ *
+ * Unless you have received this program directly from Posit Software pursuant
+ * to the terms of a commercial license agreement with Posit Software, then
+ * this program is licensed to you under the terms of version 3 of the
+ * GNU Affero General Public License. This program is distributed WITHOUT
+ * ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+ * AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+ *
+ */
+package org.rstudio.studio.client.common.impl;
+
+import com.google.gwt.core.client.GWT;
+import org.rstudio.core.client.files.FileSystemContext;
+import org.rstudio.core.client.files.FileSystemItem;
+import org.rstudio.core.client.files.filedialog.ChooseFolderDialog2;
+import org.rstudio.core.client.files.filedialog.FileDialog;
+import org.rstudio.core.client.files.filedialog.OpenFileDialog;
+import org.rstudio.core.client.files.filedialog.OpenProjectDialog;
+import org.rstudio.core.client.files.filedialog.SaveFileDialog;
+import org.rstudio.core.client.widget.ProgressOperationWithInput;
+import org.rstudio.studio.client.common.FileDialogs;
+import org.rstudio.studio.client.common.StudioClientCommonConstants;
+import org.rstudio.studio.client.projects.model.OpenProjectParams;
+
+public class WebFileDialogs implements FileDialogs
+{
+   public void openFile(String caption,
+                        FileSystemContext fsContext,
+                        FileSystemItem initialFilePath,
+                        ProgressOperationWithInput<FileSystemItem> operation)
+   {
+      openFile(caption, fsContext, initialFilePath, "", false, operation);
+   }
+   
+   public void openFile(String caption,
+                        FileSystemContext fsContext,
+                        FileSystemItem initialFilePath,
+                        String filter,
+                        ProgressOperationWithInput<FileSystemItem> operation)
+   {
+      openFile(caption, fsContext, initialFilePath, filter, false, operation);
+   }
+   
+   public void openFile(String caption,
+                        FileSystemContext fsContext,
+                        FileSystemItem initialFilePath,
+                        String filter,
+                        boolean canChooseDirectories,
+                        ProgressOperationWithInput<FileSystemItem> operation)
+   {
+      openFile(caption, constants_.openLabel(), fsContext, initialFilePath, filter, canChooseDirectories, operation);
+   }
+   
+   public void openFile(String caption,
+                        String label,
+                        FileSystemContext fsContext,
+                        FileSystemItem initialFilePath,
+                        String filter,
+                        boolean canChooseDirectories,
+                        ProgressOperationWithInput<FileSystemItem> operation)
+   {
+      openFile(caption, label, fsContext, initialFilePath, filter, canChooseDirectories, true, operation);
+   }
+      
+   public void openFile(String caption,
+                        String label,
+                        FileSystemContext fsContext,
+                        FileSystemItem initialFilePath,
+                        String filter,
+                        boolean canChooseDirectories,
+                        boolean focusOwner,
+                        ProgressOperationWithInput<FileSystemItem> operation)
+   {
+      OpenFileDialog dialog = new OpenFileDialog(caption,
+                                                 label,
+                                                 fsContext,
+                                                 filter,
+                                                 canChooseDirectories,
+                                                 operation);
+      
+      dialog.setInvokeOperationEvenOnCancel(true);
+
+      finishInit(fsContext, initialFilePath, dialog);
+   }
+   
+   public void openProject(FileSystemContext fsContext,
+                           FileSystemItem initialFilePath,
+                           int defaultType, 
+                           boolean showNewSession,
+                           ProgressOperationWithInput<OpenProjectParams> operation)
+   {
+      OpenProjectDialog dialog = new OpenProjectDialog(fsContext, defaultType,
+            showNewSession, operation);
+
+      dialog.setInvokeOperationEvenOnCancel(true);
+      
+      finishInit(fsContext, initialFilePath, dialog);
+   }
+
+   public void saveFile(String caption,
+                        FileSystemContext fsContext,
+                        FileSystemItem initialFilePath,
+                        String defaultExtension,
+                        boolean forceDefaultExtension,
+                        ProgressOperationWithInput<FileSystemItem> operation)
+   {
+      saveFile(caption, constants_.saveLabel(), fsContext, initialFilePath, defaultExtension, forceDefaultExtension, operation);
+   }
+   
+   public void saveFile(String caption,
+                        String buttonLabel,
+                        FileSystemContext fsContext,
+                        FileSystemItem initialFilePath,
+                        String defaultExtension,
+                        boolean forceDefaultExtension,
+                        ProgressOperationWithInput<FileSystemItem> operation)
+   {
+      saveFile(caption, buttonLabel, fsContext, initialFilePath, defaultExtension, forceDefaultExtension, true, operation);
+   }
+   
+   public void saveFile(String caption,
+                        String buttonLabel,
+                        FileSystemContext fsContext,
+                        FileSystemItem initialFilePath,
+                        String defaultExtension,
+                        boolean forceDefaultExtension,
+                        boolean focusOwner,
+                        ProgressOperationWithInput<FileSystemItem> operation)
+   {
+      SaveFileDialog dialog = new SaveFileDialog(caption,
+                                                 buttonLabel,
+                                                 fsContext,
+                                                 defaultExtension,
+                                                 forceDefaultExtension,
+                                                 operation);
+
+      dialog.setInvokeOperationEvenOnCancel(true);
+
+      finishInit(fsContext, initialFilePath, dialog);
+   }
+
+   public void chooseFolder(String caption,
+                            FileSystemContext fsContext,
+                            FileSystemItem initialDir,
+                            ProgressOperationWithInput<FileSystemItem> operation)
+   {
+      chooseFolder(caption, constants_.chooseLabel(), fsContext, initialDir, operation);
+   }
+   
+   public void chooseFolder(String caption,
+                            String label,
+                            FileSystemContext fsContext,
+                            FileSystemItem initialDir,
+                            ProgressOperationWithInput<FileSystemItem> operation)
+   {
+      chooseFolder(caption, label, fsContext, initialDir, true, operation);
+   }
+   
+   public void chooseFolder(String caption,
+                            String label,
+                            FileSystemContext fsContext,
+                            FileSystemItem initialDir,
+                            boolean focusOwner,
+                            ProgressOperationWithInput<FileSystemItem> operation)
+   {
+      ChooseFolderDialog2 dialog = new ChooseFolderDialog2(caption,
+                                                           label,
+                                                           fsContext,
+                                                           true,
+                                                           operation);
+      dialog.setInvokeOperationEvenOnCancel(true);
+      if (initialDir != null)
+         fsContext.cd(initialDir.getPath());
+      else
+         fsContext.refresh();
+      dialog.showModal();
+   }
+
+   private void finishInit(FileSystemContext fsContext,
+                           FileSystemItem initialFilePath,
+                           FileDialog dialog)
+   {
+      if (initialFilePath != null)
+      {
+         if (initialFilePath.isDirectory())
+         {
+            fsContext.cd(initialFilePath.getPath());
+         }
+         else
+         {
+            dialog.setFilename(initialFilePath.getName());
+            fsContext.cd(initialFilePath.getParentPathString());
+         }
+      }
+      else
+      {
+         fsContext.refresh();
+      }
+      dialog.showModal();
+   }
+   private static final StudioClientCommonConstants constants_ = GWT.create(StudioClientCommonConstants.class);
+}

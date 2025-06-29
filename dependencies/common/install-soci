@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+
+#
+# install-soci
+#
+# Copyright (C) 2022 by Posit Software, PBC
+#
+# Unless you have received this program directly from Posit Software pursuant
+# to the terms of a commercial license agreement with Posit Software, then
+# this program is licensed to you under the terms of version 3 of the
+# GNU Affero General Public License. This program is distributed WITHOUT
+# ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+# MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+# AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+#
+#
+
+set -e
+
+source "$(dirname "${BASH_SOURCE[0]}")/../tools/rstudio-tools.sh"
+section "Installing SOCI"
+
+# vars
+SOCI_VERSION="4.0.3"
+SOCI_DIR="$RSTUDIO_TOOLS_ROOT/soci-${SOCI_VERSION}"
+SOCI_BIN_DIR="${SOCI_DIR}/build"
+SOCI_ARCHIVE=soci-${SOCI_VERSION}.tar.gz
+SOCI_URL="${RSTUDIO_BUILDTOOLS}/${SOCI_ARCHIVE}"
+BOOST_VERSION="1_87_0"
+BOOST_DIR="$RSTUDIO_TOOLS_ROOT/boost/boost_$BOOST_VERSION"
+
+# install SOCI if it isn't already installed
+if [ -d "${SOCI_BIN_DIR}/lib" ]; then
+   SOCI_FOUND=true
+
+   # Detect macOS situation where soci was built without postgres and proceed to rebuild
+   # https://github.com/rstudio/rstudio/issues/12288
+   if [[ "$OSTYPE" = "darwin"* ]]; then
+      if [ ! -e "${SOCI_BIN_DIR}/lib/libsoci_postgresql.a" ]; then
+         SOCI_FOUND=false
+      fi
+   fi
+
+   if [[ $SOCI_FOUND = true ]]; then
+      echo "SOCI already installed at '${SOCI_DIR}'"
+      exit 0
+   fi
+fi
+
+sudo-if-necessary-for "${RSTUDIO_TOOLS_ROOT}" "$@"
+cd "${RSTUDIO_TOOLS_ROOT}"
+
+# download and unpack SOCI sources
+if ! [ -d "$SOCI_DIR" ]; then
+   download "${SOCI_URL}" ${SOCI_ARCHIVE}
+   tar zxvf ${SOCI_ARCHIVE}
+fi
+cd "${SOCI_DIR}"
+
+# make build directory
+mkdir -p "$SOCI_BIN_DIR"
+cd "$SOCI_BIN_DIR"
+
+# create symlink to our boost datetime library so it is properly discovered by the SOCI build
+ln -nfs "$BOOST_DIR/lib/libboost_date_time.a" "$BOOST_DIR/lib/rstudio_boost_date_time.a"
+
+# set compilation visibility
+if [[ "$OSTYPE" = "darwin"* ]]; then
+   COMPILE_VISIBILITY="hidden"
+else
+   COMPILE_VISIBILITY="default"
+fi
+
+# remove an old cmake cache if it exists
+rm -f CMakeCache.txt
+
+# build SOCI
+: "${CMAKE=cmake}"
+: "${MAKE=make}"
+
+if has-program ninja
+then 
+   CMAKE_GENERATOR="Ninja"
+else
+   CMAKE_GENERATOR="Unix Makefiles"
+fi
+
+# Help cmake find the homebrew-installed postgresql libs on macOS
+# https://github.com/rstudio/rstudio/issues/12288
+if [[ "$OSTYPE" = "darwin"* ]]; then
+   HOMEBREW_PREFIX=$(brew --prefix)
+   export POSTGRESQL_ROOT="${HOMEBREW_PREFIX}/opt/libpq"
+fi
+
+"${CMAKE}" -G"${CMAKE_GENERATOR}"                      \
+   -DCMAKE_POLICY_DEFAULT_CMP0063="NEW"                \
+   -DCMAKE_POLICY_DEFAULT_CMP0074="NEW"                \
+   -DCMAKE_POLICY_VERSION_MINIMUM=3.5                  \
+   -DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=true         \
+   -DCMAKE_CXX_VISIBILITY_PRESET="$COMPILE_VISIBILITY" \
+   -DSOCI_TESTS=OFF                                    \
+   -DSOCI_CXX11=ON                                     \
+   -DSOCI_EMPTY=OFF                                    \
+   -DBoost_NO_SYSTEM_PATHS=1                           \
+   -DBOOST_ROOT="$BOOST_DIR"                           \
+   -DBOOST_INCLUDE_DIRS="$BOOST_DIR/include"           \
+   -DBOOST_LIBRARY_DIRS="$BOOST_DIR/lib"               \
+   -DBoost_USE_STATIC_LIBS=ON                          \
+   -DBoost_DEBUG=1                                     \
+   -DCMAKE_INCLUDE_PATH="$BOOST_DIR/include"           \
+   -DCMAKE_LIBRARY_PATH="$BOOST_DIR/lib"               \
+   -DWITH_BOOST=ON                                     \
+   -DWITH_POSTGRESQL=ON                                \
+   -DWITH_SQLITE3=ON                                   \
+   -DWITH_DB2=OFF                                      \
+   -DWITH_MYSQL=OFF                                    \
+   -DWITH_ORACLE=OFF                                   \
+   -DWITH_FIREBIRD=OFF                                 \
+   -DWITH_ODBC=OFF                                     \
+   ..
+
+"${CMAKE}" --build . --target all -- ${MAKEFLAGS}
+
+# fix up permissions so bin dir will be readable by others
+chmod -R 777 "$SOCI_BIN_DIR"
+

@@ -1,0 +1,23 @@
+
+.dataGridCell {
+   border: none;
+   border-bottom: 1px solid #ddd;
+}
+
+.dataGridWidget {
+   border: solid 1px #ddd;
+   background: #FFF;
+}
+
+.dataGridWidget table {
+   border-collapse: collapse;
+}
+
+.dataGridWidget .dataGridSelectedRow {
+   background: #eeeff1
+}
+
+.filterLabel {
+   float: left;
+   padding-right: 4px;
+}

@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+
+#
+# install-dependencies-debian
+#
+# Copyright (C) 2022 by Posit Software, PBC
+#
+# Unless you have received this program directly from Posit Software pursuant
+# to the terms of a commercial license agreement with Posit Software, then
+# this program is licensed to you under the terms of version 3 of the
+# GNU Affero General Public License. This program is distributed WITHOUT
+# ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+# MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+# AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+#
+#
+
+set -e
+
+# delegate to specific debian release scripts
+if command -v lsb_release &> /dev/null; then
+  platform_codename=$(lsb_release -sc)
+  platform_script="install-dependencies-$platform_codename"
+  if [ -e $platform_script ] ; then
+    ./$platform_script "$@"
+    exit
+  fi
+fi
+
+echo Error: Unsupported Debian release
+exit 1
+

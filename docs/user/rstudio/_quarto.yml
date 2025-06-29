@@ -1,0 +1,143 @@
+project:
+  type: posit-docs
+
+website:
+  title: "RStudio User Guide"
+  twitter-card: true
+  open-graph: true
+  page-navigation: true
+  site-url: https://docs.posit.co/ide/user/
+  search:
+    copy-button: true
+    show-item-context: true
+  back-to-top-navigation: true
+  repo-url: https://github.com/rstudio/rstudio/
+  repo-subdir: "docs/user/rstudio/"
+  repo-actions: [edit, source]
+  
+  navbar:
+    title: "RStudio User Guide<br>{{< var buildType >}} {{< var version >}}"
+    collapse: false
+    pinned: true
+    search: true
+    logo: images/posit-icon-fullcolor.svg
+    right:
+      - text: "Versions"
+        url: 'https://docs.posit.co/previous-versions/rstudio/'
+      - text: "Release Notes"
+        url: "https://docs.posit.co/ide/news/#rstudio-{{< var version >}}" 
+      - text: "Guides"
+        menu:
+          - text: "Workbench Admin Guide"
+            url: 'https://docs.posit.co/ide/server-pro/{{< var version >}}'
+          - text: "Posit Workbench User Guide"
+            url: 'https://docs.posit.co/ide/server-pro/user/{{< var version >}}'
+          - text: Workbench Licenses
+            url: 'https://docs.posit.co/ide/licenses/{{< var version >}}'   
+      - icon: "list"
+        aria-label: 'Drop-down menu for additional Posit resources'
+        menu:
+          - text: "docs.posit.co"
+            href: "https://docs.posit.co"
+          - text: "Posit Support"
+            href: "https://support.posit.co/hc/en-us/"
+
+  sidebar:
+   # - id: guide
+      collapse-level: 2
+      contents:
+      - text: "Introduction"
+        href: index.qmd
+      - text: "Getting Started"
+        href: ide/get-started/index.qmd
+      - section: "Guide"
+        contents:
+          - section: "Accessibility"
+            contents:
+              - ide/guide/accessibility/accessibility.qmd
+              - ide/guide/accessibility/screen-reader.qmd
+          - section: "User Interface"
+            contents:
+              - ide/guide/ui/ui-panes.qmd
+              - ide/guide/ui/files.qmd
+              - ide/guide/ui/appearance.qmd
+              - ide/guide/ui/command-palette.qmd
+          - section: "Code"
+            contents:
+              - ide/guide/code/console.qmd
+              - ide/guide/code/projects.qmd
+              - ide/guide/code/execution.qmd
+              - ide/guide/code/diagnostics.qmd
+              - ide/guide/code/debugging.qmd
+              - ide/guide/code/code-sections.qmd
+              - ide/guide/code/code-navigation.qmd
+          - section: "Data"
+            contents:
+              - ide/guide/data/data-viewer.qmd
+              - ide/guide/data/data-local.qmd
+              - ide/guide/data/data-connections.qmd
+              - ide/guide/data/connection-snippets.qmd
+              - ide/guide/data/connection-contracts.qmd
+          - section: "Tools"
+            contents:
+              - ide/guide/tools/terminal.qmd
+              - ide/guide/tools/jobs.qmd
+              - ide/guide/tools/jobs-in-action.qmd
+              - ide/guide/tools/version-control.qmd
+              - ide/guide/tools/copilot.qmd
+          - section: "Productivity"
+            contents:
+              - ide/guide/productivity/text-editor.qmd
+              - ide/guide/productivity/add-ins.qmd
+              - ide/guide/productivity/snippets.qmd
+              - ide/guide/productivity/custom-shortcuts.qmd
+              - ide/guide/productivity/project-templates.qmd
+              - ide/guide/productivity/custom-settings.qmd
+          - section: "Computational Documents"
+            contents:
+              - ide/guide/documents/visual-editor.qmd
+              - ide/guide/documents/quarto-project.qmd
+          - section: "Deploy"
+            contents:
+              - ide/guide/publish/connecting.qmd
+              - ide/guide/publish/publishing.qmd
+          - text: "Package Development"
+            href: ide/guide/pkg-devel/writing-packages.qmd
+          - section: "Environments"
+            contents:
+              - ide/guide/environments/r/managing-r.qmd
+              - ide/guide/environments/r/packages.qmd
+              - ide/guide/environments/r/renv.qmd
+              - ide/guide/environments/py/python.qmd
+          - section: "Troubleshooting"
+            contents: 
+              - ide/guide/troubleshooting/desktop-will-not-start.qmd
+              - ide/guide/troubleshooting/resetting-state.qmd
+              - ide/guide/troubleshooting/logs.qmd
+              - ide/guide/troubleshooting/diagnostic-report.qmd
+      - section: "Reference"
+        collapse-level: 1
+        contents:
+          - ide/reference/shortcuts.qmd
+          
+          
+  page-footer:
+    left: |
+      Copyright © 2009-2025 Posit Software, PBC. All Rights Reserved.
+    center: |
+      RStudio {{< var buildType >}} {{< var version >}}
+    right:
+      - icon: question-circle-fill
+        href: https://support.posit.co/hc/en-us
+      - icon: lightbulb-fill
+        href: https://solutions.posit.co
+      - text: "<img src='/images/posit-guide-ltmd.svg' id='footer-right-logo'>"
+        href: https://docs.posit.co
+      - text: "<img src='/images/posit-icon-fullcolor.svg' id='footer-right-posit-logo'>"
+        href: "https://posit.co"
+
+
+format:
+  html:
+    fig-responsive: true
+    code-overflow: scroll

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>#!title#</title>
+    
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  
+    
+  <!-- web fonts -->
+  <style type="text/css">
+#!google_webfonts#
+#!user_font_imports#
+  </style>    
+    
+  <!-- reveal.js -->
+  #!reveal_css#
+  #!reveal_theme_css#
+ 
+  <style type="text/css">
+#!slides_css#
+
+.reveal {
+  font-family: #!reveal_font#, sans-serif;
+}
+  
+.reveal h1,
+.reveal h2,
+.reveal h3,
+.reveal h4,
+.reveal h5,
+.reveal h6 {
+  font-family: #!reveal_heading_font#, Impact, sans-serif;
+}
+
+#!user_slides_css#
+
+  </style>
+  
+  <!-- reveal print css -->
+  #!reveal_print_css#
+  
+#!r_highlight#
+   
+#!mathjax#  
+
+#!preamble#
+
+#!slides_head#
+
+</head>
+
+<body>
+  <div class="reveal">
+  <div class="slides">
+
+#!slides#
+
+  </div>
+  </div>
+
+  #!reveal_head_js#
+  
+  #!reveal_js#
+    
+  <script type="text/javascript">
+
+// dynamically built function to get slide specific commands
+function commandsForSlide(indexh) {
+  var cmds = [];
+  switch(indexh) {
+#!slide_commands#
+    default:
+      break;
+  };
+  return cmds;
+}      
+    
+#!slides_js#
+   
+    Reveal.initialize({
+      controls: true,
+      progress: true,
+      history: true,
+      overview: true,
+      center: false,
+      rollingLinks: false,
+      #!reveal_config#
+      theme: 'simple', 
+      transition: '#!reveal_transition#',
+      transitionSpeed: '#!reveal_transition_speed#',
+      rtl: #!reveal_rtl#,
+      width: #!reveal_width#,
+      height: #!reveal_height#,
+    
+      dependencies: []
+    });
+
+    Reveal.addEventListener( 'ready', function( event ) {
+       // notify container
+      if (window.notifySlideChanged)
+        notifySlideChanged(event.indexh)
+    } );
+    
+    Reveal.addEventListener( 'slidechanged', function( event ) {
+         
+      // notify container
+      if (window.notifySlideChanged)
+        notifySlideChanged(event.indexh)
+     
+      // allow mathjax to re-render
+      if (window.MathJax)
+        window.MathJax.Hub.Rerender(event.currentSlide);
+    });
+    
+    // forward command key events to the rstudio frame
+   window.onkeydown = function(e) {
+
+      // allow 'o' to toggle overview mode
+      switch( e.keyCode ) {
+         case 79: case 42: window.Reveal.toggleOverview(); break;
+      }
+   
+      if (window.parent.presentationKeydown)
+         window.parent.presentationKeydown(e);
+   }
+   
+   window.onresize = function() { 
+     
+     // bail if autosize is disabled
+     if (!#!reveal_autosize#)
+       return;
+      
+     if(window.activeTimer)
+       clearTimeout(window.activeTimer);
+       
+     window.activeTimer = setTimeout(function() { 
+       window.location.reload(true);
+     }, 300);
+   }
+
+#!init_commands#   
+   
+  </script>
+
+</body>
+
+</html>

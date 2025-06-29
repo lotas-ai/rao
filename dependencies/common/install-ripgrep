@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+
+#
+# install-ripgrep
+#
+# Copyright (C) 2025 by Jorge Guerra, Lotas Inc.
+#
+# Unless you have received this program directly from Posit Software pursuant
+# to the terms of a commercial license agreement with Posit Software, then
+# this program is licensed to you under the terms of version 3 of the
+# GNU Affero General Public License. This program is distributed WITHOUT
+# ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+# MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+# AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+#
+#
+
+set -e
+
+source "$(dirname "${BASH_SOURCE[0]}")/../tools/rstudio-tools.sh"
+section "Installing ripgrep"
+
+# variables that control download + installation process
+RIPGREP_VERSION="14.1.1"
+RIPGREP_SUBDIR="ripgrep/${RIPGREP_VERSION}"
+RIPGREP_URL_BASE="https://github.com/BurntSushi/ripgrep/releases/download/${RIPGREP_VERSION}"
+
+# see if we already have binaries
+if [ -d "${RSTUDIO_TOOLS_ROOT}/${RIPGREP_SUBDIR}" ]; then
+    echo "ripgrep ${RIPGREP_VERSION} already installed"
+    exit 0
+fi
+
+# move to tools root
+sudo-if-necessary-for "${RSTUDIO_TOOLS_ROOT}" "$@"
+cd "${RSTUDIO_TOOLS_ROOT}"
+
+# enter ripgrep subdirectory
+mkdir -p "${RIPGREP_SUBDIR}"
+pushd "${RIPGREP_SUBDIR}"
+
+# determine archive based on platform
+PLATFORM="$(uname -s)-$(uname -m)"
+case "${PLATFORM}" in
+
+"Darwin-x86_64")
+  ARCHIVE="ripgrep-${RIPGREP_VERSION}-x86_64-apple-darwin.tar.gz"
+  EXTRACT_DIR="ripgrep-${RIPGREP_VERSION}-x86_64-apple-darwin"
+  ;;
+
+"Darwin-arm64")
+  ARCHIVE="ripgrep-${RIPGREP_VERSION}-aarch64-apple-darwin.tar.gz"
+  EXTRACT_DIR="ripgrep-${RIPGREP_VERSION}-aarch64-apple-darwin"
+  ;;
+
+"Linux-x86_64")
+  ARCHIVE="ripgrep-${RIPGREP_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
+  EXTRACT_DIR="ripgrep-${RIPGREP_VERSION}-x86_64-unknown-linux-gnu"
+  ;;
+
+"Linux-aarch64")
+  ARCHIVE="ripgrep-${RIPGREP_VERSION}-aarch64-unknown-linux-gnu.tar.gz"
+  EXTRACT_DIR="ripgrep-${RIPGREP_VERSION}-aarch64-unknown-linux-gnu"
+  ;;
+
+*)
+  echo "ripgrep binaries not available for platform '${PLATFORM}'."
+  exit 0
+  ;;
+
+esac
+
+# download and extract archive
+echo "Downloading ${ARCHIVE} from ${RIPGREP_URL_BASE}/${ARCHIVE}"
+download "${RIPGREP_URL_BASE}/${ARCHIVE}" "${ARCHIVE}"
+extract "${ARCHIVE}"
+rm -f "${ARCHIVE}"
+
+# copy ripgrep binary to current directory
+cp "${EXTRACT_DIR}/rg" .
+
+# remove transient download folder
+rm -rf "${EXTRACT_DIR}"
+
+# make ripgrep executable
+chmod 755 rg
+
+# verify installation
+./rg --version
+
+echo "ripgrep ${RIPGREP_VERSION} successfully installed"
+
+# and we're done!
+popd 

@@ -1,0 +1,329 @@
+/*
+ * ApplicationEndedPopupPanel.java
+ *
+ * Copyright (C) 2022 by Posit Software, PBC
+ *
+ * Unless you have received this program directly from Posit Software pursuant
+ * to the terms of a commercial license agreement with Posit Software, then
+ * this program is licensed to you under the terms of version 3 of the
+ * GNU Affero General Public License. This program is distributed WITHOUT
+ * ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+ * AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+ *
+ */
+package org.rstudio.studio.client.application.ui.appended;
+
+import com.google.gwt.aria.client.Roles;
+import com.google.gwt.core.client.GWT;
+import com.google.gwt.core.client.RunAsyncCallback;
+import com.google.gwt.dom.client.NativeEvent;
+import com.google.gwt.event.dom.client.KeyCodes;
+import com.google.gwt.resources.client.ClientBundle;
+import com.google.gwt.resources.client.CssResource;
+import com.google.gwt.resources.client.ImageResource;
+import com.google.gwt.resources.client.ImageResource.ImageOptions;
+import com.google.gwt.resources.client.ImageResource.RepeatStyle;
+import com.google.gwt.uibinder.client.UiBinder;
+import com.google.gwt.uibinder.client.UiField;
+import com.google.gwt.user.client.Command;
+import com.google.gwt.user.client.Event;
+import com.google.gwt.user.client.Window;
+
+import com.google.gwt.user.client.ui.HTML;
+import com.google.gwt.user.client.ui.HorizontalPanel;
+import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.PopupPanel;
+import com.google.gwt.user.client.ui.SimplePanel;
+import com.google.gwt.user.client.ui.VerticalPanel;
+import com.google.gwt.user.client.ui.Widget;
+import org.rstudio.core.client.resources.ImageResource2x;
+import org.rstudio.core.client.widget.CenterPanel;
+import org.rstudio.core.client.widget.DecorativeImage;
+import org.rstudio.core.client.widget.FocusHelper;
+import org.rstudio.core.client.widget.ModalDialogTracker;
+import org.rstudio.studio.client.application.StudioClientApplicationConstants;
+import org.rstudio.studio.client.application.Desktop;
+
+public class ApplicationEndedPopupPanel extends PopupPanel
+{
+   public static void showQuit()
+   {
+      asyncShow(QUIT, "", null);
+   }
+
+   public static void showMultiSessionQuit()
+   {
+      asyncShow(QUIT_MULTI, "", null);
+   }
+
+   public static void showSuicide(String reason)
+   {
+      String description = "<p>" + constants_.rFatalErrorMessage();
+      if (reason.length() > 0)
+         description += ": " + reason;
+      description += "</p>" + constants_.sessionTerminatedMessage();
+      asyncShow(SUICIDE, description, null);
+   }
+
+   public static void showDisconnected()
+   {
+      String description =
+         constants_.browserDisconnectedMessage();
+
+      asyncShow(DISCONNECTED, description, null);
+   }
+
+   public static void showOffline()
+   {
+      String description =
+         constants_.rStudioOfflineMessage();
+
+      asyncShow(OFFLINE, description, null);
+   }
+
+   public static void showMemoryLimitExceeded(String status)
+   {
+      String description = constants_.memoryLimitAbortedMessage() + "\n\n" + status;
+
+      asyncShow(MEMORY_LIMIT, description, null);
+   }
+
+   public static void prefetch(Command continuation)
+   {
+      asyncShow(PREFETCH, null, continuation);
+   }
+
+   private static void asyncShow(final int mode,
+                                 final String description,
+                                 final Command continuation)
+   {
+      GWT.runAsync(new RunAsyncCallback()
+      {
+         public void onFailure(Throwable reason)
+         {
+            Window.alert(description);
+
+            if (continuation != null)
+               continuation.execute();
+         }
+
+         public void onSuccess()
+         {
+            if (mode == PREFETCH)
+               return;
+            new ApplicationEndedPopupPanel(mode, description).center();
+
+            if (continuation != null)
+               continuation.execute();
+         }
+      });
+   }
+
+   private static final int PREFETCH = 0;
+   private static final int QUIT = 1;
+   private static final int SUICIDE = 2;
+   private static final int DISCONNECTED = 3;
+   private static final int OFFLINE = 4;
+   private static final int QUIT_MULTI = 5;
+   private static final int MEMORY_LIMIT = 6;
+
+   private ApplicationEndedPopupPanel(int mode, String description)
+   {
+      super(false, false);
+      setStylePrimaryName(RESOURCES.styles().applicationEndedPopupPanel());
+      setGlassEnabled(true);
+      setGlassStyleName(RESOURCES.styles().glass());
+
+      Roles.getAlertdialogRole().set(getElement());
+
+      // main panel
+      HorizontalPanel horizontalPanel = new HorizontalPanel();
+      horizontalPanel.setSpacing(10);
+
+      // create widgets and make mode dependent customizations
+      DecorativeImage image;
+      Label captionLabel = new Label();
+      captionLabel.setStylePrimaryName(RESOURCES.styles().captionLabel());
+      final FancyButton button = new FancyButton();
+      button.addClickHandler(event -> reloadApplication());
+      FocusHelper.setFocusDeferred(button);
+
+      switch(mode)
+      {
+      case QUIT:
+         image = new DecorativeImage(new ImageResource2x(RESOURCES.applicationQuit2x()));
+         captionLabel.setText(constants_.rSessionEndedCaption());
+         button.setText(constants_.startNewSessionText());
+         break;
+
+      case SUICIDE:
+         image = new DecorativeImage(new ImageResource2x(RESOURCES.applicationSuicide2x()));
+         captionLabel.setText(constants_.rSessionAbortedCaption());
+         button.setText(constants_.startNewSessionText());
+         break;
+
+      case DISCONNECTED:
+         image = new DecorativeImage(new ImageResource2x(RESOURCES.applicationDisconnected2x()));
+         captionLabel.setText(constants_.rSessionDisconnectedCaption());
+         button.setText(constants_.reconnectButtonText());
+         break;
+
+      case OFFLINE:
+         image = new DecorativeImage(new ImageResource2x(RESOURCES.applicationOffline2x()));
+         captionLabel.setText(constants_.temporarilyOfflineCaption());
+         button.setText(constants_.reconnectButtonText());
+         break;
+
+      case QUIT_MULTI:
+         image = new DecorativeImage(new ImageResource2x(RESOURCES.applicationQuit2x()));
+         captionLabel.setText(constants_.rSessionEndedCaption());
+         button.setText(constants_.reconnectButtonText());
+         break;
+
+      case MEMORY_LIMIT:
+         image = new DecorativeImage(new ImageResource2x(RESOURCES.applicationSuicide2x()));
+         captionLabel.setText(constants_.rSessionAbortedCaption());
+         button.setText(constants_.reconnectButtonText());
+         break;
+
+      default:
+         throw new IllegalArgumentException(constants_.unknownModeText() + mode);
+      }
+
+      // add image
+      horizontalPanel.add(image);
+
+      // captions and button
+      VerticalPanel contentPanel = new VerticalPanel();
+      contentPanel.setStylePrimaryName(RESOURCES.styles().contentPanel());
+      contentPanel.add(captionLabel);
+      HTML descriptionLabel = new HTML(description);
+      descriptionLabel.setStylePrimaryName(RESOURCES.styles().descriptionLabel());
+      contentPanel.add(descriptionLabel);
+      contentPanel.add(button);
+      horizontalPanel.add(contentPanel);
+
+      // center the horizontal panel within the popup
+      CenterPanel mainPanel = new CenterPanel(horizontalPanel);
+      mainPanel.setStylePrimaryName(RESOURCES.styles().mainPanel());
+
+      setWidget(((MyUiBinder)GWT.create(MyUiBinder.class)).createAndBindUi(this));
+      content_.setWidget(mainPanel);
+   }
+
+   @Override
+   public void onPreviewNativeEvent(Event.NativePreviewEvent event)
+   {
+      if (event.getTypeInt() == Event.ONKEYDOWN)
+      {
+         NativeEvent nativeEvent = event.getNativeEvent();
+         switch (nativeEvent.getKeyCode())
+         {
+            case KeyCodes.KEY_ENTER:
+
+               nativeEvent.preventDefault();
+               nativeEvent.stopPropagation();
+               reloadApplication();
+               break;
+         }
+      }
+   }
+
+   @Override
+   protected void onLoad()
+   {
+      super.onLoad();
+      ModalDialogTracker.onShow(this);
+   }
+
+   @Override
+   protected void onUnload()
+   {
+      super.onUnload();
+      ModalDialogTracker.onHide(this);
+   }
+
+   private void reloadApplication()
+   {
+      if (reloading_)
+         return;
+      reloading_ = true;
+
+      if (Desktop.isDesktop())
+      {
+         Desktop.getFrame().launchSession(true);
+      }
+      else
+      {
+         Window.Location.reload();
+      }
+   }
+
+   interface Styles extends CssResource
+   {
+      String applicationEndedPopupPanel();
+      String glass();
+      String mainPanel();
+      String contentPanel();
+      String captionLabel();
+      String descriptionLabel();
+
+      String NW();
+      String N();
+      String NE();
+      String W();
+      String C();
+      String E();
+      String SW();
+      String S();
+      String SE();
+   }
+
+   interface Resources extends ClientBundle
+   {
+      @Source("ApplicationEndedPopupPanel.css")
+      Styles styles();
+
+      @Source("applicationQuit_2x.png")
+      ImageResource applicationQuit2x();
+
+      @Source("applicationSuicide_2x.png")
+      ImageResource applicationSuicide2x();
+
+      @Source("applicationDisconnected_2x.png")
+      ImageResource applicationDisconnected2x();
+
+      @Source("applicationOffline_2x.png")
+      ImageResource applicationOffline2x();
+
+      ImageResource panelTopLeft();
+      @ImageOptions(repeatStyle = RepeatStyle.Horizontal)
+      ImageResource panelTop();
+      ImageResource panelTopRight();
+
+      @ImageOptions(repeatStyle = RepeatStyle.Vertical)
+      ImageResource panelLeft();
+      @ImageOptions(repeatStyle = RepeatStyle.Vertical)
+      ImageResource panelRight();
+
+      ImageResource panelBottomLeft();
+      @ImageOptions(repeatStyle = RepeatStyle.Horizontal)
+      ImageResource panelBottom();
+      ImageResource panelBottomRight();
+   }
+
+   interface MyUiBinder extends UiBinder<Widget, ApplicationEndedPopupPanel> {}
+
+   static Resources RESOURCES = GWT.create(Resources.class);
+   public static void ensureStylesInjected()
+   {
+      RESOURCES.styles().ensureInjected();
+   }
+
+   @UiField
+   SimplePanel content_;
+
+   private boolean reloading_ = false;
+   private static final StudioClientApplicationConstants constants_ = GWT.create(StudioClientApplicationConstants.class);
+}

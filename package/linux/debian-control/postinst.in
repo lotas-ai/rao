@@ -1,0 +1,124 @@
+#!/bin/sh
+
+# errors shouldn't cause script to exit
+set +e 
+
+# add rserver user account
+useradd -r -U rstudio-server
+
+# create softlink to admin script in /usr/sbin
+RSERVER_ADMIN_SCRIPT=/usr/sbin/rstudio-server
+ln -f -s ${CMAKE_INSTALL_PREFIX}/bin/rstudio-server $RSERVER_ADMIN_SCRIPT
+
+# create config directory and default config files
+mkdir -p /etc/rstudio
+if ! test -f /etc/rstudio/rserver.conf
+then
+  sh -c "printf '# Server Configuration File\n\n' > /etc/rstudio/rserver.conf"
+fi
+if ! test -f /etc/rstudio/rsession.conf
+then
+  sh -c "echo '# R Session Configuration File\n\n' > /etc/rstudio/rsession.conf"
+fi
+if ! test -f /etc/rstudio/database.conf
+then
+  cp ${CMAKE_INSTALL_PREFIX}/extras/conf/database.conf /etc/rstudio/
+  chown rstudio-server /etc/rstudio/database.conf
+  chmod 600 /etc/rstudio/database.conf
+fi
+
+# create directories for global custom themes and fonts
+mkdir -p /etc/rstudio/themes
+if ! test -f /etc/rstudio/themes/README.md
+then
+ cp ${CMAKE_INSTALL_PREFIX}/extras/themes/README.md /etc/rstudio/themes/README.md
+fi
+
+mkdir -p /etc/rstudio/fonts
+if ! test -f /etc/rstudio/fonts/README.md
+then
+ cp ${CMAKE_INSTALL_PREFIX}/extras/fonts/README.md /etc/rstudio/fonts/README.md
+fi
+
+# create var directories
+mkdir -p /var/run/rstudio-server
+mkdir -p /var/lock/rstudio-server
+mkdir -p /var/log/rstudio/rstudio-server
+mkdir -p /var/lib/rstudio-server
+mkdir -p /var/lib/rstudio-server/conf
+mkdir -p /var/lib/rstudio-server/body
+mkdir -p /var/lib/rstudio-server/proxy
+
+# suspend all sessions
+rstudio-server force-suspend-all > /dev/null 2>&1
+
+# check lsb release
+LSB_RELEASE=`lsb_release --id --short`
+
+# disable apparmor profile if it exists
+if test -e /etc/apparmor.d/rstudio-server
+then
+   if test $LSB_RELEASE = "Ubuntu"
+   then
+      # disable the existing apparmor profile as we no longer support apparmor
+      # disabling it ensures it is not deleted in case it was modified locally
+      ln -s /etc/apparmor.d/rstudio-server /etc/apparmor.d/disable/
+      apparmor_parser -R /etc/apparmor.d/rstudio-server 2>/dev/null
+   else
+      # delete the profile entirely on non-Ubuntu platforms as it has been known to cause issues
+      rm -f /etc/apparmor.d/rstudio-server
+      invoke-rc.d apparmor reload 2>/dev/null
+   fi
+fi
+
+# determine which init system is in use
+# a variation on:
+# https://wiki.ubuntu.com/SystemdForUpstartUsers#How_to_identify_which_init_system_you_are_currently_booting_with
+INIT_SYSTEM="unknown"
+if ps -p1 | grep systemd > /dev/null 2>&1; then
+    # If pid 1 is systemd, this is systemd.
+    INIT_SYSTEM="systemd"
+elif ps -p1 | grep init > /dev/null 2>&1; then
+    # If pid 1 is init and init tells us it is upstart, this is upstart.
+    if /sbin/init --version | grep upstart > /dev/null 2>&1; then
+        INIT_SYSTEM="upstart"
+    fi
+fi
+
+# add systemd, upstart, or init.d script and start the server
+if test "$INIT_SYSTEM" = "systemd"
+then
+   systemctl stop rstudio-server.service 2>/dev/null
+   systemctl disable rstudio-server.service 2>/dev/null
+  
+   if test -e /lib/systemd
+   then
+      SYSTEMD_PREFIX="/lib/systemd"
+   else
+      SYSTEMD_PREFIX="/usr/lib/systemd"
+   fi
+
+   cp ${CMAKE_INSTALL_PREFIX}/extras/systemd/rstudio-server.service $${EMPTY}{SYSTEMD_PREFIX}/system/rstudio-server.service
+  
+   systemctl daemon-reload
+   systemctl enable rstudio-server.service
+   $RSERVER_ADMIN_SCRIPT start
+
+   sleep 1
+   systemctl --no-pager status rstudio-server.service
+elif test $LSB_RELEASE = "Ubuntu" && test "$INIT_SYSTEM" = "upstart"
+then
+   cp ${CMAKE_INSTALL_PREFIX}/extras/upstart/rstudio-server.conf /etc/init/
+   initctl reload-configuration
+   initctl stop rstudio-server 2>/dev/null
+   $RSERVER_ADMIN_SCRIPT start
+else
+   cp ${CMAKE_INSTALL_PREFIX}/extras/init.d/debian/rstudio-server /etc/init.d/
+   chmod +x /etc/init.d/rstudio-server
+   update-rc.d rstudio-server defaults
+   /etc/init.d/rstudio-server stop 2>/dev/null
+   $RSERVER_ADMIN_SCRIPT start
+fi
+
+# clear error termination state
+set -e

@@ -1,0 +1,92 @@
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+    </style>
+</head>
+<body style="-webkit-app-region:drag">
+  <?xml version="1.0" encoding="utf-8"?>
+  <svg xmlns="http://www.w3.org/1999/svg" xmlns:xlink="http://www.w3.org/2000/xlink" viewBox="0 0 766 434">
+    <defs>
+      <style>
+        .cls-1 {
+          font-family: Arial, Helvetica, sans-serif;
+          font-size: 18px;
+          font-weight: 500;
+        }
+
+        .cls-2,
+        .cls-3 {
+          fill: #fff;
+        }
+
+        .cls-4 {
+          fill: #404041;
+        }
+
+        .cls-3 {
+          filter: url(#drop-shadow-1);
+        }
+
+        .cls-5 {
+          font-family: Arial, Helvetica, sans-serif;
+          font-size: 19px;
+          font-variation-settings: 'wght' 400, 'wdth' 100;
+        }
+
+        .cls-6 {
+          fill: #75aadb;
+        }
+        
+        .cls-7 {
+          font-family: Arial, Helvetica, sans-serif;
+          font-size: 72px;
+          font-weight: bold;
+        }
+        
+        .cls-8 {
+          font-family: Arial, Helvetica, sans-serif;
+          font-size: 24px;
+        }
+      </style>
+      <filter id="drop-shadow-1" x="0" y="0" width="766" height="434" filterUnits="userSpaceOnUse">
+        <feOffset dx="1" dy="1" />
+        <feGaussianBlur result="blur" stdDeviation="24" />
+        <feFlood flood-color="#000" flood-opacity=".5" />
+        <feComposite in2="blur" operator="in" />
+        <feComposite in="SourceGraphic" />
+      </filter>
+    </defs>
+    <g id="splash_rectangle">
+      <path class="cls-3"
+        d="M135.95,71.57h540.65c8.83,0,16,7.17,16,16v256.51c0,8.83-7.17,16-16,16H87.95c-8.83,0-16-7.17-16-16v-208.51c0-35.32,28.68-64,64-64Z" />
+    </g>
+    <!-- Main RAO Text -->
+    <text class="cls-7" x="120" y="180">
+      <tspan>Rao</tspan>
+    </text>
+    
+    <!-- From Lotas Text -->
+    <text class="cls-8" x="260" y="238">
+      <tspan>from Lotas</tspan>
+    </text>
+    
+    <!-- Version and Copyright Info -->
+    <g id="version_info">
+      <text class="cls-5" transform="translate(262.07 285.47)">
+        <tspan x="0" y="0">Version ${CPACK_PACKAGE_VERSION}</tspan>
+        <tspan x="0" y="24">Lotas</tspan>
+      </text>
+    </g>
+  </svg>
+  <script>
+    document.addEventListener('keydown', function(event) {
+        window.close();
+    });
+  </script>
+</html>

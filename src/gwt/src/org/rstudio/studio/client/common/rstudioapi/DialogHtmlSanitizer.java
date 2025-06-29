@@ -1,0 +1,107 @@
+/*
+ * DialogHtmlSanitizer.java
+ *
+ * Copyright (C) 2022 by Posit Software, PBC
+ *
+ * Unless you have received this program directly from Posit Software pursuant
+ * to the terms of a commercial license agreement with Posit Software, then
+ * this program is licensed to you under the terms of version 3 of the
+ * GNU Affero General Public License. This program is distributed WITHOUT
+ * ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+ * AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+ *
+ */
+
+package org.rstudio.studio.client.common.rstudioapi;
+
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
+import org.rstudio.core.client.StringUtil;
+
+import com.google.gwt.safehtml.shared.HtmlSanitizer;
+import com.google.gwt.safehtml.shared.SafeHtml;
+import com.google.gwt.safehtml.shared.SafeHtmlUtils;
+
+public final class DialogHtmlSanitizer implements HtmlSanitizer {
+   private static final Set<String> TAG_ALLOW_LIST = new HashSet<>(
+      Arrays.asList(
+         "p", "em", "strong", "b", "i", "a"
+      )
+   );
+
+   public static SafeHtml sanitizeHtml(String html) {
+      if (StringUtil.isNullOrEmpty(html)) {
+         html = "";
+      }
+      
+      return SafeHtmlUtils.fromTrustedString(dialogSanitize(html));
+   }
+
+   private static String dialogSanitize(String text) {
+      StringBuilder sanitized = new StringBuilder();
+
+      boolean firstSegment = true;
+      for (String segment : text.split("<", -1)) {
+         if (firstSegment) {
+            firstSegment = false;
+            sanitized.append(SafeHtmlUtils.htmlEscapeAllowEntities(segment));
+            continue;
+         }
+
+         int tagStart = 0;
+         int tagEnd = segment.indexOf('>');
+         String tag = null;
+         boolean isValidTag = false;
+         if (tagEnd > 0) {
+            if (StringUtil.charAt(segment, 0) == '/') {
+               tagStart = 1;
+            }
+            tag = StringUtil.substring(segment, tagStart, tagEnd).toLowerCase();
+            if (TAG_ALLOW_LIST.contains(tag)) {
+               isValidTag = true;
+            }
+            else {
+               // check for links
+               int tagSpace = segment.indexOf(' ');
+               if (tagSpace > 0) {
+                  String tagName = StringUtil.substring(segment, tagStart, tagSpace).toLowerCase();
+                  if (tagName == "a") {
+                     
+                     if (tag.matches("a href ?= ?\"https?://[^\"]+\"")) {
+                        tag = tag + " target=\"_blank\"";
+                        isValidTag = true;
+                     }
+                  }
+               }
+            }
+         }
+
+         if (isValidTag) {
+            if (tagStart == 0) {
+               sanitized.append('<');
+            } else {
+               sanitized.append("</");
+            }
+            sanitized.append(tag).append('>');
+
+            sanitized.append(SafeHtmlUtils.htmlEscapeAllowEntities(
+            StringUtil.substring(segment, tagEnd + 1)));
+         } else {
+            sanitized.append("&lt;").append(
+            SafeHtmlUtils.htmlEscapeAllowEntities(segment));
+         }
+      }
+
+      return sanitized.toString();
+   }
+
+   private DialogHtmlSanitizer() {
+   }
+
+   public SafeHtml sanitize(String html) {
+      return sanitizeHtml(html);
+   }
+}

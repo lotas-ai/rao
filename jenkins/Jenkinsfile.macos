@@ -1,0 +1,280 @@
+def utils
+
+pipeline {
+
+  agent { label 'macos && arm64' }
+
+  options {
+    // Timeout after no activity in the logs
+    timeout(time: 2, unit: 'HOURS', activity: true)
+    timestamps()
+    disableConcurrentBuilds()
+    buildDiscarder(logRotator(numToKeepStr: '100'))
+  }
+
+  parameters {
+      string(name: 'COMMIT_HASH', defaultValue: '')
+      booleanParam(name: 'DAILY', defaultValue: false, description: 'Runs daily build if true')
+      booleanParam(name: 'PUBLISH', defaultValue: false, description: 'Runs publish stage if true')
+      booleanParam(name: 'FORCE_BUILD_BINARIES', defaultValue: false, description: 'Force build binaries even if there are no changes, and even if they have already been built previously')
+      string(name: 'SLACK_CHANNEL', defaultValue: '#ide-builds', description: 'Slack channel to publish build message.')
+  }
+
+  environment {
+    PATH = "$HOME/opt/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+    OS = 'macos'
+    PACKAGE_OS = 'macOS'
+    RSTUDIO_VERSION = ""
+    RSTUDIO_VERSION_MAJOR = ""
+    RSTUDIO_VERSION_MINOR = ""
+    RSTUDIO_VERSION_PATCH = ""
+    RSTUDIO_VERSION_SUFFIX = ""
+    RSTUDIO_VERSION_FLOWER = ""
+    RSTUDIO_VERSION_FILENAME = ""
+    IS_PRO = false
+    FLAVOR = 'Electron'
+  }
+  stages {
+
+    stage('Load Utils') {
+      steps {
+        script {
+          utils = load "${env.WORKSPACE}/jenkins/utils.groovy"
+        }
+      }
+    }
+
+    stage('Clean Credentials') {
+      // https://issues.jenkins.io/browse/JENKINS-62249?focusedId=408066&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-408066
+      steps {
+        sh '''
+          printf "\\n" | git credential-osxkeychain erase host=github.com protocol=https
+        '''
+      }
+    }
+
+    stage ("Checkout") {
+      when { expression { params.COMMIT_HASH != '' } }
+
+      steps {
+        echo "Commit_hash value: ${params.COMMIT_HASH}"
+        retry(5) {
+          sleep(time: 5, unit: 'SECONDS')
+          checkout([$class: 'GitSCM',
+                    branches: [[name: "${params.COMMIT_HASH}"]],
+                    extensions: [],
+                    userRemoteConfigs: [[credentialsId: 'posit-jenkins-rstudio', url: "${GIT_URL}"]]])
+        }
+      }
+    }
+
+    stage('Versioning') {
+      steps {
+        script {
+          (RSTUDIO_VERSION,
+            RSTUDIO_VERSION_MAJOR,
+            RSTUDIO_VERSION_MINOR,
+            RSTUDIO_VERSION_PATCH,
+            RSTUDIO_VERSION_SUFFIX) = utils.getVersion(!params.DAILY)
+          RSTUDIO_VERSION_FLOWER = utils.getFlower()
+          IS_PRO = RSTUDIO_VERSION_SUFFIX.contains('pro')
+          RSTUDIO_VERSION_FILENAME = utils.getVersionFilename(RSTUDIO_VERSION) // Define here for use later in utils.rebuildCheck()
+        }
+
+        buildName "${RSTUDIO_VERSION_MAJOR}.${RSTUDIO_VERSION_MINOR}.${RSTUDIO_VERSION_PATCH}${RSTUDIO_VERSION_SUFFIX}"
+      }
+    }
+
+    stage('Install Dependencies') {
+      environment {
+        // boost won't compile without the brew version of openssl.
+        // only add it to the dep resolve step though, or the ide build will compile against the wrong openssl
+        PATH = '/usr/local/opt/openssl/bin:/usr/local/opt/openssl/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin'
+        GITHUB_LOGIN = credentials('posit-jenkins-rstudio')
+      }
+      steps {
+        sh 'cd dependencies/osx && RSTUDIO_GITHUB_LOGIN=$GITHUB_LOGIN ./install-dependencies-osx && cd ../..'
+      }
+    }
+
+    stage('Build and Sign') {
+
+      environment {
+        AWS_ACCOUNT_ID = '749683154838'
+        KEYCHAIN_PASSPHRASE = credentials('ide-keychain-passphrase')
+        BUILD_AGENT_TEMP = "${env.HOME}/tmp"
+        MACOS_DEVELOPER_CERTIFICATE = credentials('MACOS_DEVELOPER_CERTIFICATE')
+        MACOS_DEVELOPER_CERTIFICATE_KEY = credentials('MACOS_DEVELOPER_CERTIFICATE_KEY')
+      }
+
+      steps {
+        script {
+          ENV = utils.getBuildEnv(!params.DAILY)
+        }
+        script {
+          sh '''
+            set -e
+
+            # Create a keychain to hold the Developer ID certificate for signing
+            if [ ! -f "${BUILD_AGENT_TEMP}/buildagent.keychain" ]; then
+              security create-keychain -p ${KEYCHAIN_PASSPHRASE} ${BUILD_AGENT_TEMP}/buildagent.keychain
+            else
+              echo "Using keychain: ${BUILD_AGENT_TEMP}/buildagent.keychain"
+            fi
+
+            # Set a default keychain, and unlock it
+            security default-keychain -s ${BUILD_AGENT_TEMP}/buildagent.keychain
+            security unlock-keychain -p ${KEYCHAIN_PASSPHRASE} ${BUILD_AGENT_TEMP}/buildagent.keychain
+
+            # Turn off timeout
+            security set-keychain-settings
+
+            # Import the developer ID from Jenkins secrets
+            security import "${MACOS_DEVELOPER_CERTIFICATE}" -k ${BUILD_AGENT_TEMP}/buildagent.keychain -P "${MACOS_DEVELOPER_CERTIFICATE_KEY}" -T /usr/bin/codesign
+          '''
+        }
+        // Import the Developer ID certificate from Jenkins Secrets.
+        // build rstudio
+        dir ("package/osx") {
+          withAWS(role: 'build', roleAccount: AWS_ACCOUNT_ID) {
+            sh "${ENV} ./make-package clean --rstudio-target=Electron"
+          }
+        }
+      }
+    }
+
+    stage('Test') {
+      environment {
+        PATH = "${env.HOME}/opt/bin:${env.PATH}"
+      }
+      steps {
+        dir("package/osx/build/src/cpp") {
+          // attempt to run cpp unit tests
+          // problems with rsession finding openssl, so those tests
+          // are disabled until we solve it (#6890)
+          sh "arch -x86_64 ./rstudio-tests"
+          
+          // electron tests not working in CI environment, under investigation
+          // sh "cd ../../../../../src/node/desktop/ && $HOME/.yarn/bin/yarn && $HOME/.yarn/bin/yarn test"
+          }
+        }
+      }
+
+    stage('Notarize and Upload') {
+      when { expression { return params.PUBLISH } }
+      
+      environment {
+        PATH = "${env.HOME}/opt/bin:${env.PATH}"
+        PACKAGE_FILE = """${sh (
+          script: "basename `ls package/osx/build/RStudio-*.dmg`",
+          returnStdout: true
+        ).trim()}"""
+        BUILD_TYPE = """${sh (
+          script: "cat version/BUILDTYPE",
+          returnStdout: true
+        ).trim().toLowerCase()}"""
+        PRODUCT = "${utils.getProductName()}"
+        AWS_PATH = "${FLAVOR.toLowerCase()}/macos"
+      }
+      
+      stages {
+
+        stage("Notarize") {
+          environment {
+            APPLE_ID = credentials('ide-apple-notarizer')
+          }
+
+          steps {
+            sh "docker/jenkins/notarize-release.sh package/osx/build/${PACKAGE_FILE}"
+          }
+        }
+
+        stage("Upload Package") {
+          steps {
+            // this job is going to run on a macOS build agent, which cannot use an instance-profile
+            withAWS(role: 'ide-build', region: 'us-east-1') {
+              retry(5) {
+                script {
+                  utils.uploadPackageToS3 "package/osx/build/${PACKAGE_FILE}", "${AWS_PATH}/"
+                }
+              }
+            }
+          }
+        }
+        
+        stage("Sentry Upload") {
+          when { expression { return params.DAILY } }
+
+          environment {
+            SENTRY_API_KEY = credentials('ide-sentry-api-key')
+          }
+          
+          steps {
+            // upload debug symbols to Sentry
+            retry(5) {
+              // timeout sentry in 15 minutes
+              timeout(activity: true, time: 15) {
+                // upload Javascript source maps, but only once
+                dir ('package/osx/build/gwt') {
+                  script {
+                    utils.sentryUploadSourceMaps()
+                  }
+                }
+
+                // upload C++ debug information
+                dir ('package/osx/build/src/cpp') {
+                  script {
+                    utils.sentryUpload 'dsym'
+                  }
+                }
+              }
+            }
+          }
+        }
+        
+        stage("Publish") {
+          environment {
+            GITHUB_LOGIN = credentials('posit-jenkins-rstudio')
+            DAILIES_PATH = "${PRODUCT}/macos"
+          }
+
+          steps {
+            dir("package/osx/build") {
+              script {
+                // publish build to dailies page
+                utils.publishToDailiesSite PACKAGE_FILE, DAILIES_PATH, AWS_PATH
+              }
+            }
+          }
+        }
+
+        stage("Update Daily Build Redirects") {
+          environment {
+            RSTUDIO_ORG_PEM = credentials('www-rstudio-org-pem')
+          }
+
+          when { 
+            anyOf {
+              expression { return params.PUBLISH && params.DAILY }
+            }
+          }
+
+          steps {
+            script {
+              // upload daily build redirects
+              utils.updateDailyRedirects "${AWS_PATH}/${PACKAGE_FILE}"
+            }
+          }
+        }
+      }
+    }
+  }
+
+  post {
+    always {
+      deleteDir()
+      sendNotifications slack_channel: SLACK_CHANNEL
+    }
+  }
+
+}

@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+
+#
+# install-yaml-cpp
+#
+# Copyright (C) 2022 by Posit Software, PBC
+#
+# Unless you have received this program directly from Posit Software pursuant
+# to the terms of a commercial license agreement with Posit Software, then
+# this program is licensed to you under the terms of version 3 of the
+# GNU Affero General Public License. This program is distributed WITHOUT
+# ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+# MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+# AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+#
+#
+
+set -e
+
+source "$(dirname "${BASH_SOURCE[0]}")/../tools/rstudio-tools.sh"
+section "Installing yaml-cpp"
+
+YAML_CPP_VERSION="0.8.0"
+YAML_CPP_BRANCH="${YAML_CPP_VERSION}"
+YAML_CPP_DIRECTORY="${RSTUDIO_TOOLS_ROOT}/yaml-cpp/${YAML_CPP_VERSION}"
+
+if [ -e "${YAML_CPP_DIRECTORY}" ]; then
+	echo "${YAML_CPP_BRANCH} already installed at '${YAML_CPP_DIRECTORY}'."
+	exit 0
+fi
+
+# re-run as root if necessary
+sudo-if-necessary-for "${RSTUDIO_TOOLS_ROOT}" "$@"
+
+# lazy way to make sure parent directory of target is created
+mkdir -p "${YAML_CPP_DIRECTORY}"
+rm -rf "${YAML_CPP_DIRECTORY}"
+
+# check out the required branch of yaml-cpp
+if ! [ -e "${YAML_CPP_BRANCH}" ]; then
+	git clone                                \
+		--depth 1                            \
+		--branch "${YAML_CPP_BRANCH}"        \
+		"https://github.com/jbeder/yaml-cpp" \
+		"${YAML_CPP_DIRECTORY}"
+		
+fi
+
+# go to directory
+cd "${YAML_CPP_DIRECTORY}"
+
+# build on demand
+rm -rf build
+mkdir build
+cd build
+
+cmake                                    \
+	-DCMAKE_BUILD_TYPE=Release           \
+	-DCMAKE_POSITION_INDEPENDENT_CODE=On \
+	-DYAML_CPP_BUILD_TOOLS=Off           \
+	-DYAML_CPP_BUILD_TESTS=Off           \
+	..
+
+cmake --build .
+

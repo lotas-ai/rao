@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE module PUBLIC "-//Google Inc.//DTD Google Web Toolkit 2.8.2//EN" "http://www.gwtproject.org/doctype/2.9.0/gwt-module.dtd">
+<module rename-to='rstudio'>
+
+   <!-- GWT module dependencies                                    -->
+   <inherits name='com.google.gwt.user.User'/>
+   <inherits name='com.google.gwt.widgetideas.SliderBar'/>
+   <inherits name='com.sksamuel.gwt.GwtWebsockets'/>
+
+   <!-- Gin module dependencies                                    -->
+   <inherits name="com.google.gwt.inject.Inject"/>
+
+   <!-- Elemental module dependencies                              -->
+   <inherits name="elemental2.core.Core" />
+   <inherits name="elemental2.dom.Dom" />
+   <inherits name="elemental2.promise.Promise" />
+
+   <!-- Use default GWT style sheet                                -->
+   <!--<inherits name='com.google.gwt.user.theme.standard.Standard'/>-->
+
+   <!-- Detect RStudio Desktop builds -->
+   <define-property name="rstudio.desktop" values="true,false"/>
+   <property-provider name="rstudio.desktop"><![CDATA[
+      // true if desktop hooks are injected
+      if (window.desktop)
+         return "true";
+
+      // also true when run under Electron, which defers hook injection
+      return (window.navigator.userAgent.indexOf("Electron") > 0) ? "true" : "false";
+   ]]></property-provider>
+
+   <!-- Detect RStudio Electron builds -->
+   <define-property name="rstudio.electron" values="true,false"/>
+   <property-provider name="rstudio.electron"><![CDATA[
+      return window.navigator.userAgent.indexOf("Electron") > 0 ? "true" : "false";
+   ]]></property-provider>
+
+   <!-- Detect option to stop use of native OS file dialogs on Electron Desktop -->
+   <define-property name="rstudio.useNativeDialogs" values="true,false"/>
+   <property-provider name="rstudio.useNativeDialogs"><![CDATA[
+      try {
+         if (window.navigator.userAgent.indexOf("Electron") > 0) {
+            var cookieArr = window.document.cookie.split(";");
+            for (var i = 0; i < cookieArr.length; i++) {
+               var cookiePair = cookieArr[i].split("=");
+               if ('WEBDIALOG' === cookiePair[0].trim().toUpperCase()) {
+                  return "false";
+               }
+            }
+         }
+      } catch (e) {
+         console.error(e);
+      }
+      return "true";
+   ]]></property-provider>
+
+   <!-- Set the user agent. Note that we no longer support older IE. -->
+   <!-- Note that 'safari' here is effectively an alias for modern browsers. -->
+   <set-property name="user.agent" value="safari,gecko1_8" />
+
+   <!-- Define unit tests -->
+   <define-property name="rstudio.unittests" values="true,false"/>
+   <set-property name="rstudio.unittests" value="false"/>
+
+   <!-- RStudio module dependencies                                -->
+   <inherits name='org.rstudio.core.Core' />
+
+   <!-- Specify the app entry point class.                         -->
+   <entry-point class='org.rstudio.studio.client.RStudio'/>
+
+   <replace-with class="org.rstudio.studio.client.common.impl.WebWindowOpener">
+      <when-type-is class="org.rstudio.studio.client.common.WindowOpener" />
+   </replace-with>
+   <replace-with class="org.rstudio.studio.client.common.impl.DesktopWindowOpener">
+      <when-type-is class="org.rstudio.studio.client.common.WindowOpener" />
+      <when-property-is name="rstudio.desktop" value="true"/>
+   </replace-with>
+
+   <replace-with class="org.rstudio.studio.client.common.impl.WebFileDialogs">
+      <when-type-is class="org.rstudio.studio.client.common.FileDialogs" />
+   </replace-with>
+   <replace-with class="org.rstudio.studio.client.common.impl.DesktopFileDialogs">
+      <when-type-is class="org.rstudio.studio.client.common.FileDialogs" />
+      <all>
+         <when-property-is name="rstudio.desktop" value="true"/>
+         <when-property-is name="rstudio.useNativeDialogs" value="true"/>
+      </all>
+   </replace-with>
+
+   <replace-with class="org.rstudio.studio.client.application.ui.impl.WebApplicationHeader">
+      <when-type-is class="org.rstudio.studio.client.application.ui.ApplicationHeader" />
+   </replace-with>
+   <replace-with class="org.rstudio.studio.client.application.ui.impl.DesktopApplicationHeader">
+      <when-type-is class="org.rstudio.studio.client.application.ui.ApplicationHeader" />
+      <when-property-is name="rstudio.desktop" value="true"/>
+   </replace-with>
+
+    <replace-with class="org.rstudio.studio.client.workbench.views.plots.ui.export.impl.ExportPlotWeb">
+       <when-type-is class="org.rstudio.studio.client.workbench.views.plots.ui.export.ExportPlot"/>
+    </replace-with>
+    <replace-with class="org.rstudio.studio.client.workbench.views.plots.ui.export.impl.ExportPlotDesktop">
+       <when-type-is class="org.rstudio.studio.client.workbench.views.plots.ui.export.ExportPlot"/>
+       <when-property-is name="rstudio.desktop" value="true"/>
+    </replace-with>
+
+   <replace-with class="org.rstudio.studio.client.common.dialog.WebDialogBuilderFactory">
+      <when-type-is class="org.rstudio.studio.client.common.dialog.DialogBuilderFactory"/>
+   </replace-with>
+   <replace-with class="org.rstudio.studio.client.common.dialog.DesktopDialogBuilderFactory">
+      <when-type-is class="org.rstudio.studio.client.common.dialog.DialogBuilderFactory"/>
+      <all>
+         <when-property-is name="rstudio.desktop" value="true"/>
+         <when-property-is name="rstudio.useNativeDialogs" value="true"/>
+      </all>
+   </replace-with>
+
+   <replace-with class="org.rstudio.studio.client.common.impl.WebTextInput">
+      <when-type-is class="org.rstudio.studio.client.common.TextInput"/>
+   </replace-with>
+   <replace-with class="org.rstudio.studio.client.common.impl.DesktopTextInput">
+      <when-type-is class="org.rstudio.studio.client.common.TextInput"/>
+      <all>
+         <when-property-is name="rstudio.desktop" value="true"/>
+         <when-property-is name="rstudio.electron" value="false"/>
+      </all>
+   </replace-with>
+
+   <!--<set-configuration-property name="CssResource.style" value="pretty" />-->
+   <set-configuration-property name="UiBinder.useSafeHtmlTemplates" value="true" />
+
+   <!-- work around incompatibility between GWT 2.8 and Gin 2.1.2 -->
+   <set-configuration-property name="gin.classloading.exceptedPackages" value="com.google.gwt.core.client"/>
+
+   <!-- internationalization -->
+   <inherits name="com.google.gwt.i18n.I18N"/>
+   <set-configuration-property name="locale.useragent" value="Y"/>
+
+   <!-- Set order of precidence for locale settings -->
+   <set-configuration-property name="locale.searchorder" value="cookie"/>
+   <set-configuration-property name="locale.cookie" value="LOCALE"/>
+
+   <!-- Specify supported locales -->
+   <extend-property name="locale" values="en,fr"/>
+
+   <!-- Set default locale to en -->
+   <set-property-fallback name="locale" value="en"/>
+
+   <!-- Collapse properties -->
+   <set-property name="compiler.useSymbolMaps" value="true" />
+   <collapse-all-properties/>
+
+</module>

@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+
+#
+# install-dependencies-zypper
+#
+# Copyright (C) 2022 by Posit Software, PBC
+#
+# Unless you have received this program directly from Posit Software pursuant
+# to the terms of a commercial license agreement with Posit Software, then
+# this program is licensed to you under the terms of version 3 of the
+# GNU Affero General Public License. This program is distributed WITHOUT
+# ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+# MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+# AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+#
+#
+
+set -e
+
+# build/development tools
+sudo zypper --non-interactive in make
+sudo zypper --non-interactive in gcc
+sudo zypper --non-interactive in gcc-c++
+sudo zypper --non-interactive in gcc-fortran
+sudo zypper --non-interactive in build
+sudo zypper --non-interactive in jq
+
+# core system libraries
+sudo zypper --non-interactive in libbz2-devel
+sudo zypper --non-interactive in zlib-devel
+sudo zypper --non-interactive in libuuid-devel
+sudo zypper --non-interactive in libopenssl-devel
+sudo zypper --non-interactive in libpq-devel
+sudo zypper --non-interactive in libsqlite-devel
+sudo zypper --non-interactive in pam-devel
+
+# boost
+sudo zypper --non-interactive in boost-devel
+
+# pango cairo
+sudo zypper --non-interactive in pango-devel
+
+# gwt prereqs
+sudo zypper --non-interactive in java-1_7_0-openjdk-devel
+sudo zypper --non-interactive in ant
+
+# install headers needed by Qt (GL, xslt)
+sudo zypper --non-interactive in mesa-devel
+sudo zypper --non-interactive in libxslt-devel
+
+# overlay
+if [ -e install-overlay-zypper ]
+then
+  ./install-overlay-zypper
+fi
+
+# common
+cd ../common
+./install-common "$1"
+cd ../linux
+

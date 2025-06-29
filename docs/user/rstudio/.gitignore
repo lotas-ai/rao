@@ -1,0 +1,17 @@
+/.quarto/
+.DS_Store
+_site
+_freeze
+*.aux
+*.log
+*.tex
+*.toc
+
+.Rproj.user
+Makefile
+CMake*
+!CMakeLists.txt
+build-site.sh
+cmake_install.cmake
+_variables.yml
+rstudio-*-user-guide.*

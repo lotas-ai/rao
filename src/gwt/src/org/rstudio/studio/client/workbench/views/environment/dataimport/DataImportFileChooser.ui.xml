@@ -1,0 +1,40 @@
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui"
+    xmlns:rs="urn:import:org.rstudio.core.client.widget"
+    ui:generateFormat='com.google.gwt.i18n.server.PropertyCatalogFactory'
+    ui:generateKeys="com.google.gwt.i18n.server.keygen.MD5KeyGenerator"
+    ui:generateLocales="default">
+    <ui:style>
+        .modelChooser {
+            display: -ms-flexbox;
+            display: -webkit-flex;
+            display: flex;
+
+            -webkit-flex-direction: row;
+            -ms-flex-direction: row;
+            flex-direction: row;
+
+            -ms-flex-grow: 1;
+            -webkit-flex-grow: 1;
+            flex-grow: 1;
+        }
+        .modelTextBox {
+            margin-top: 3px;
+
+            display: -ms-flexbox;
+            display: -webkit-flex;
+            display: flex;
+
+            -ms-flex-grow: 1;
+            -webkit-flex-grow: 1;
+            flex-grow: 1;
+
+            padding-left: 5px;
+            padding-right: 5px;
+        }
+    </ui:style>
+    <g:HTMLPanel styleName="{style.modelChooser}">
+        <g:TextBox ui:field="locationTextBox_" styleName="{style.modelTextBox}"/>
+        <rs:ThemedButton ui:field="actionButton_" text="Browse..."><ui:attribute name="text" key="browseText"/></rs:ThemedButton>
+    </g:HTMLPanel>
+</ui:UiBinder> 

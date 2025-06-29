@@ -1,0 +1,10 @@
+client.extras
+qtcreator-build*/
+CMakeLists.txt.user
+/build
+cpp-build*/
+cmake-build-*/
+session32/*
+dbg/*
+rel/*
+rwd/*

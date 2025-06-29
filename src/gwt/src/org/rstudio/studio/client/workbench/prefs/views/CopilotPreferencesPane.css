@@ -1,0 +1,13 @@
+
+.button {
+	margin-left: 12px;
+	margin-top: -2px;
+}
+
+.copilotStatusLabel {
+	min-height: 20px;
+}
+
+.copilotTosLabel {
+	font-style: oblique;
+}

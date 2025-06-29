@@ -1,0 +1,20 @@
+@external rstudio-themes-dark;
+@external editor_dark, ace_editor_theme;
+
+.link {
+   overflow: hidden;
+   text-overflow: ellipsis;
+   color: #0000AA;
+}
+
+.linkUnderlined {
+   text-decoration: underline;
+}
+
+.link:hover {
+   text-decoration: underline;
+}
+
+.editor_dark .ace_editor_theme .link {
+   color: #b4b4d8;
+}

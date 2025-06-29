@@ -1,0 +1,186 @@
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui"
+    xmlns:rs="urn:import:org.rstudio.core.client.widget"
+    xmlns:rsdi="urn:import:org.rstudio.studio.client.workbench.views.environment.dataimport"
+    xmlns:rsw="urn:import:org.rstudio.core.client.widget"
+    xmlns:rsace="urn:import:org.rstudio.studio.client.workbench.views.source.editors.text"
+    ui:generateFormat='com.google.gwt.i18n.server.PropertyCatalogFactory'
+    ui:generateKeys="com.google.gwt.i18n.server.keygen.MD5KeyGenerator"
+    ui:generateLocales="default">
+    <ui:with field="res" type="org.rstudio.studio.client.workbench.views.environment.dataimport.res.DataImportResources"/>
+    <ui:with field="ElementIds" type="org.rstudio.core.client.ElementIds"/>
+    <ui:style>
+        .flexPanel {
+            display: -ms-flexbox;
+            display: -webkit-flex;
+            display: flex;
+
+            -webkit-flex-direction: column;
+            -ms-flex-direction: column;
+            flex-direction: column;
+
+            margin-bottom: 7px;
+        }
+        .codePreviewImportLabel {
+            margin-top: 14px;
+            margin-right: 5px;
+            margin-left: 5px;
+        }
+        .topImportLabel {
+            margin-top: 0px;
+            margin-right: 5px;
+            margin-left: 5px;
+         margin-bottom: 4px;
+        }
+        .gridViewerFrame {
+            margin-top: 3px;
+            border: 1px solid #999;
+            width: literal("calc(100% - 10px)");
+            height: 10px;
+            
+            -ms-flex-grow: 4;
+            -webkit-flex-grow: 4;
+            flex-grow: 4;
+            margin-right: 5px;
+            margin-left: 5px;
+        }
+        .optionsPanel {
+            display: -ms-flexbox;
+            display: -webkit-flex;
+            display: flex;
+
+            -ms-flex-grow: 1;
+            -webkit-flex-grow: 1;
+            flex-grow: 1;
+        }
+        .optionsElement {
+            display: -ms-flexbox;
+            display: -webkit-flex;
+            display: flex;
+
+            -ms-flex-grow: 1;
+            -webkit-flex-grow: 1;
+            flex-grow: 1;
+        }
+        .codePanel {
+            -ms-flex-grow: 10;
+            -webkit-flex-grow: 10;
+            flex-grow: 10;
+
+            display: -ms-flexbox;
+            display: -webkit-flex;
+            display: flex;
+
+            -ms-flex-direction: column;
+            -webkit-flex-direction: column;
+            flex-direction: column;
+
+            min-width: 100px;
+        }
+        .codeTextArea {
+            width: literal("calc(100% - 10px)");
+            height: 110px;
+            border: 1px solid #999;
+            background-color: #FFF;
+            margin-top: 5px;
+
+            margin-right: 5px;
+            margin-left: 5px;
+        }
+        .bottomPanel {
+            display: -ms-flexbox;
+            display: -webkit-flex;
+            display: flex;
+
+            -ms-flex-wrap: wrap;
+            -webkit-flex-wrap: wrap;
+            flex-wrap: wrap;
+        }
+        .copyButton {
+            margin-left: auto;
+            margin-top: 9px;
+            margin-right: 5px;
+            height: 20px;
+            cursor: pointer;
+        }
+        .dataPreviewHeader {
+            display: -ms-flexbox;
+            display: -webkit-flex;
+            display: flex;
+
+            -webkit-flex-direction: row;
+            -ms-flex-direction: row;
+            flex-direction: row;
+        }
+        .dataPreviewLabel {
+            display: -ms-flexbox;
+            display: -webkit-flex;
+            display: flex;
+
+            margin-top: 12px;
+            margin-right: 5px;
+            margin-left: 5px;
+        }
+        .headWithButton {
+            display: -ms-flexbox;
+            display: -webkit-flex;
+            display: flex;
+        }
+        .textEditor {
+            width: literal("calc(100% - 6px)");
+            height: literal("calc(100% - 6px)");
+            margin: 3px 3px 3px 3px;
+        }
+        .fileChooser {
+            display: -ms-flexbox;
+            display: -webkit-flex;
+            display: flex;
+
+            -webkit-flex-direction: row;
+            -ms-flex-direction: row;
+            flex-direction: row;
+
+            margin-right: 5px;
+            margin-left: 5px;
+        }
+    </ui:style>
+    <g:HTMLPanel styleName="{style.flexPanel}">
+        <rsw:FormLabel text="File/URL:" styleName="{style.topImportLabel}" for="{ElementIds.getDataImportFileUrl}">
+            <ui:attribute name="text" key="fileURL"/>
+        </rsw:FormLabel>
+        <rsdi:DataImportFileChooser ui:field="dataImportFileChooser_"
+                                    styleName="{style.fileChooser}"
+                                    elementId="{ElementIds.getDataImportFileUrl}"
+                                    ariaLabelSuffix="File/URL"/>
+        <g:HTMLPanel styleName="{style.dataPreviewHeader}">
+            <g:Label text="Data Preview:" styleName="{style.dataPreviewLabel}">
+                <ui:attribute name="text" key="dataPreviewText"/>
+            </g:Label>
+        </g:HTMLPanel>
+        <rs:GridViewerFrame ui:field="gridViewer_"
+                            styleName="{style.gridViewerFrame}"/>
+        <div class="{style.bottomPanel}">
+            <g:HTMLPanel styleName="{style.optionsPanel}">
+                <g:HTMLPanel ui:field="optionsHost_"
+                             styleName="{style.optionsElement}"/>
+            </g:HTMLPanel>
+            <g:HTMLPanel styleName="{style.codePanel}">
+                <div class="{style.headWithButton}">
+                    <rsw:FormLabel text="Code Preview:"
+                                   styleName="{style.codePreviewImportLabel}"
+                                   for="{ElementIds.getDataImportCodePreview}">
+                        <ui:attribute name="text" key="codePreviewText"/>
+                    </rsw:FormLabel>
+                    <rsw:ImageButton ui:field="copyButton_"
+                                     addStyleNames="{style.copyButton}"/>
+                </div>
+                <div class="{style.codeTextArea}">
+                    <div class="{style.textEditor}">
+                        <rsace:AceEditorWidget ui:field="codeArea_"
+                                               elementId="{ElementIds.getDataImportCodePreview}"/>
+                    </div>
+                </div>
+            </g:HTMLPanel>
+        </div>
+    </g:HTMLPanel>
+</ui:UiBinder> 

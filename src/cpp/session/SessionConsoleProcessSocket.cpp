@@ -1,0 +1,500 @@
+/*
+ * SessionConsoleProcessSocket.cpp
+ *
+ * Copyright (C) 2022 by Posit Software, PBC
+ *
+ * Unless you have received this program directly from Posit Software pursuant
+ * to the terms of a commercial license agreement with Posit Software, then
+ * this program is licensed to you under the terms of version 3 of the
+ * GNU Affero General Public License. This program is distributed WITHOUT
+ * ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+ * AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+ *
+ */
+
+#include <session/SessionConsoleProcessSocket.hpp>
+#include <session/SessionHttpConnectionListener.hpp>
+#include <session/SessionConsoleProcessSocketPacket.hpp>
+#include <session/SessionModuleContext.hpp>
+
+#include "http/SessionTcpIpHttpConnectionListener.hpp"
+
+#include <boost/make_shared.hpp>
+
+#include <shared_core/FilePath.hpp>
+#include <shared_core/json/Json.hpp>
+
+
+namespace rstudio {
+namespace session {
+namespace console_process {
+
+using namespace rstudio::core;
+using namespace boost::placeholders;
+
+namespace {
+
+// rapid reseeding via srand(time) causes same "random" sequence to be
+// returned by rand; only an issue for unit tests, really
+bool s_didSeedRand = false;
+
+} // anonymous namespace
+
+// Access to the socket singleton
+ConsoleProcessSocket& processSocket()
+{
+   static ConsoleProcessSocket s_instance;
+   return s_instance;
+}
+
+// Get the WebSocket port from the socket singleton
+int getWebSocketPort()
+{
+   return processSocket().port();
+}
+
+ConsoleProcessSocket::ConsoleProcessSocket()
+   :
+     port_(0),
+     serverRunning_(false),
+     activeConnections_(0)
+{
+}
+
+ConsoleProcessSocket::~ConsoleProcessSocket()
+{
+   try
+   {
+      stopServer();
+   }
+   CATCH_UNEXPECTED_EXCEPTION
+}
+
+Error ConsoleProcessSocket::ensureServerRunning()
+{
+   if (serverRunning_)
+      return Success();
+
+   long port = 0;
+   unsigned portRetries = 0;
+
+   // initialize seed for random port selection
+   if (!s_didSeedRand)
+   {
+      srand(static_cast<unsigned int>(time(nullptr)));
+      s_didSeedRand = true;
+   }
+
+   std::string portStr = session::options().terminalPort();
+   if (portStr.empty())
+   {
+      // no user-specified port; pick a random port
+      port = 3000 + (rand() % 5000);
+   }
+   else
+   {
+      // use user-specified port, but fallback to random if
+      // the port specified is invalid
+      port = safe_convert::stringTo(portStr, 3000 + (rand() % 5000));
+   }
+
+   try
+   {
+      pwsServer_.reset(new terminalServer());
+     
+      switch (session::options().webSocketLogLevel())
+      {
+         case 0:
+         default:
+            pwsServer_->set_access_channels(websocketpp::log::alevel::none);
+            pwsServer_->set_error_channels(websocketpp::log::elevel::none);
+            break;
+         case 1:
+            pwsServer_->set_access_channels(websocketpp::log::alevel::none);
+            pwsServer_->set_error_channels(websocketpp::log::elevel::all);
+            break;
+         case 2:
+            pwsServer_->set_access_channels(websocketpp::log::alevel::access_core);
+            pwsServer_->set_error_channels(websocketpp::log::elevel::none);
+            break;
+         case 3:
+            pwsServer_->set_access_channels(websocketpp::log::alevel::all);
+            pwsServer_->set_error_channels(websocketpp::log::elevel::all);
+            break;
+      }
+
+      pwsServer_->init_asio();
+      
+      pwsServer_->set_open_handshake_timeout(session::options().webSocketHandshakeTimeoutMs());
+      pwsServer_->set_close_handshake_timeout(session::options().webSocketHandshakeTimeoutMs());
+
+      pwsServer_->set_message_handler(
+               boost::bind(&ConsoleProcessSocket::onMessage, this, &*pwsServer_, _1, _2));
+      pwsServer_->set_http_handler(
+               boost::bind(&ConsoleProcessSocket::onHttp, this, &*pwsServer_, _1));
+      pwsServer_->set_close_handler(
+               boost::bind(&ConsoleProcessSocket::onClose, this, &*pwsServer_, _1));
+      pwsServer_->set_open_handler(
+               boost::bind(&ConsoleProcessSocket::onOpen, this, &*pwsServer_, _1));
+      pwsServer_->set_fail_handler(
+            boost::bind(&ConsoleProcessSocket::onFail, this, &*pwsServer_, _1));
+
+      // try to bind to the given port
+      do
+      {
+         try
+         {
+            if (session::options().standalone())
+            {
+               // if we are in standalone mode, try to bind to the same address
+               // that the server bound to
+               TcpIpHttpConnectionListener& listener =
+                     static_cast<TcpIpHttpConnectionListener&>(httpConnectionListener());
+
+               boost::asio::ip::tcp::endpoint endpoint = listener.getLocalEndpoint();
+               pwsServer_->listen(endpoint.address(), static_cast<uint16_t>(port));
+            }
+            else
+            {
+               // TODO (gary) can we just try ipv6 without sniffing, then do
+               // ipv4 if ipv6 fails?
+#if !defined(_WIN32) && !defined(__APPLE__)
+               if (core::FilePath("/proc/net/if_inet6").exists())
+               {
+                  // listen will fail without ipv6 support on the machine so we
+                  // only use it for machines with a ipv6 stack
+                  pwsServer_->listen(boost::asio::ip::tcp::v6(), port);
+               }
+               else
+#endif
+               {
+                  // no ipv6 support, fall back to ipv4
+                  pwsServer_->listen(boost::asio::ip::tcp::v4(), static_cast<uint16_t>(port));
+               }
+            }
+
+            pwsServer_->start_accept();
+            break;
+         }
+         catch (websocketpp::exception const& e)
+         {
+            // fail if this isn't the code we're expecting
+            // (we're only trying to deal with address in use errors here)
+            if (e.code() != websocketpp::transport::asio::error::pass_through)
+            {
+               return systemError(boost::system::errc::invalid_argument,
+                                  e.what(), ERROR_LOCATION);
+            }
+
+            // try another random port
+            port = 3000 + (rand() % 5000);
+         }
+      }
+      while (++portRetries < 20);
+
+      // if we used up all our retries, abort now
+      if (portRetries == 20)
+      {
+         return systemError(boost::system::errc::not_supported,
+                            "Couldn't find an available port",
+                            ERROR_LOCATION);
+      }
+
+      // start server
+      core::thread::safeLaunchThread(
+               boost::bind(&ConsoleProcessSocket::watchSocket, this),
+               &websocketThread_);
+
+      port_ = port;
+      serverRunning_ = true;
+   }
+   catch (websocketpp::exception const& e)
+   {
+      LOG_ERROR_MESSAGE(e.what());
+      return systemError(boost::system::errc::invalid_argument,
+                            e.what(), ERROR_LOCATION);
+   }
+   CATCH_UNEXPECTED_EXCEPTION
+
+   return Success();
+}
+
+void ConsoleProcessSocket::stopServer()
+{
+   try
+   {
+      if (serverRunning_)
+      {
+         releaseAllConnections();
+
+         pwsServer_->stop();
+         serverRunning_ = false;
+         port_ = 0;
+         websocketThread_.join();
+         pwsServer_.reset();
+      }
+   }
+   catch (websocketpp::exception const& e)
+   {
+      LOG_ERROR_MESSAGE(e.what());
+   }
+   CATCH_UNEXPECTED_EXCEPTION
+}
+
+Error ConsoleProcessSocket::listen(
+      const std::string& terminalHandle,
+      const ConsoleProcessSocketConnectionCallbacks& connectionCallbacks)
+{
+   if (!serverRunning_)
+   {
+      return systemError(boost::system::errc::not_connected,
+                         terminalHandle,
+                         ERROR_LOCATION);
+   }
+
+   ConsoleProcessSocketConnectionDetails details = connections_.get(terminalHandle);
+   details.handle_ = terminalHandle;
+   details.connectionCallbacks_ = connectionCallbacks;
+   connections_.set(terminalHandle, details);
+   return Success();
+}
+
+Error ConsoleProcessSocket::stopListening(const std::string& terminalHandle)
+{
+   ConsoleProcessSocketConnectionDetails details = connections_.get(terminalHandle);
+   if (details.handle_.compare(terminalHandle))
+   {
+      return systemError(boost::system::errc::invalid_argument,
+                         terminalHandle,
+                         ERROR_LOCATION);
+   }
+
+   details = connections_.collect(terminalHandle);
+   return Success();
+}
+
+Error ConsoleProcessSocket::sendRawText(const std::string& terminalHandle,
+                                        const std::string& message)
+{
+   // do we know about this handle?
+   ConsoleProcessSocketConnectionDetails details = connections_.get(terminalHandle);
+   if (details.handle_.compare(terminalHandle))
+   {
+      std::string msg = "Unknown handle: \"" + terminalHandle + "\"";
+      return systemError(boost::system::errc::not_connected, msg, ERROR_LOCATION);
+   }
+
+   // make sure this handle still refers to a connection before we try to
+   // send data over it
+   websocketpp::lib::error_code ec;
+   pwsServer_->get_con_from_hdl(details.hdl_, ec);
+   if (ec.value() > 0)
+   {
+      return systemError(boost::system::errc::not_connected,
+                         ec.message(), ERROR_LOCATION);
+   }
+
+   pwsServer_->send(details.hdl_, message, websocketpp::frame::opcode::text, ec);
+   if (ec)
+   {
+      return systemError(boost::system::errc::bad_message,
+                         ec.message(), ERROR_LOCATION);
+   }
+   return Success();
+}
+
+Error ConsoleProcessSocket::sendText(const std::string& terminalHandle,
+                                     const std::string& message)
+{
+   return sendRawText(terminalHandle, ConsoleProcessSocketPacket::textPacket(message));
+}
+
+Error ConsoleProcessSocket::sendPong(const std::string& terminalHandle)
+{
+   return sendRawText(terminalHandle, ConsoleProcessSocketPacket::keepAlivePacket());
+}
+
+void ConsoleProcessSocket::releaseAllConnections()
+{
+   connections_.clear();
+}
+
+int ConsoleProcessSocket::port() const
+{
+   return port_;
+}
+
+void ConsoleProcessSocket::watchSocket()
+{
+   pwsServer_->run();
+}
+
+void ConsoleProcessSocket::onMessage(terminalServer* s,
+                                     websocketpp::connection_hdl hdl,
+                                     terminalMessage_ptr msg)
+{
+   std::string handle = getHandle(s, hdl);   
+   std::string payload = msg->get_payload();
+   
+   // Check for AI cancellation message in JSON format first, before checking for handle
+   if (payload.find("\"type\":\"ai_cancel\"") != std::string::npos)
+   {
+      // Parse the JSON message
+      json::Value messageJson;
+      Error error = messageJson.parse(payload);
+      if (error)
+      {
+         std::cerr << "Error parsing message JSON: " << error.getSummary() << std::endl;
+         return;
+      }
+      
+      // Extract the request ID
+      std::string requestId;
+      if (messageJson.isObject() && messageJson.getObject().hasMember("id"))
+      {
+         json::Value idValue = messageJson.getObject()["id"];
+         
+         // Handle id as direct string
+         if (idValue.isString())
+         {
+            requestId = idValue.getString();
+         }
+         // Handle id as array with string element
+         else if (idValue.isArray() && idValue.getArray().getSize() > 0 && idValue.getArray()[0].isString())
+         {
+            requestId = idValue.getArray()[0].getString();
+         }
+         else
+         {
+            std::cerr << "Invalid id format in AI cancellation request. Expected string or array of strings." << std::endl;
+            return;
+         }
+      }
+      else
+      {
+         std::cerr << "Missing id in AI cancellation request" << std::endl;
+         return;
+      }
+            
+      // Create a cancellation file in the tmp directory
+      FilePath tmpDir = module_context::tempDir();
+      if (!tmpDir.exists())
+      {
+         Error dirError = tmpDir.ensureDirectory();
+         if (dirError)
+         {
+            std::cerr << "Error creating temporary directory: " << dirError.getSummary() << std::endl;
+            return;
+         }
+      }
+      
+      // Create the ai_cancel directory if it doesn't exist
+      FilePath cancelDir = tmpDir.completeChildPath("ai_cancel");
+      if (!cancelDir.exists())
+      {
+         Error dirError = cancelDir.ensureDirectory();
+         if (dirError)
+         {
+            std::cerr << "Error creating ai_cancel directory: " << dirError.getSummary() << std::endl;
+            return;
+         }
+      }
+      
+      // Create the cancellation file with the request ID
+      FilePath cancelFile = cancelDir.completeChildPath("cancel_" + requestId);
+      Error fileError = core::writeStringToFile(cancelFile, 
+                                               "Cancellation requested via WebSocket");
+      if (fileError)
+      {
+         std::cerr << "Error creating cancellation file: " << fileError.getSummary() << std::endl;
+         return;
+      }
+      
+      return;
+   }
+   
+   // If not an AI cancellation and no handle, exit
+   if (handle.empty())
+      return;
+      
+   ConsoleProcessSocketConnectionDetails details = connections_.get(handle);
+
+   if (ConsoleProcessSocketPacket::isKeepAlive(payload))
+   {
+      sendPong(handle);
+   }
+   else if (details.connectionCallbacks_.onReceivedInput)
+   {
+      details.connectionCallbacks_.onReceivedInput(ConsoleProcessSocketPacket::getMessage(payload));
+   }
+}
+
+void ConsoleProcessSocket::onClose(terminalServer* s, websocketpp::connection_hdl hdl)
+{
+   std::string handle = getHandle(s, hdl);
+   if (handle.empty())
+      return;
+
+   activeConnections_--;
+
+   ConsoleProcessSocketConnectionDetails details = connections_.get(handle);
+
+   if (details.connectionCallbacks_.onConnectionClosed)
+      details.connectionCallbacks_.onConnectionClosed();
+}
+
+void ConsoleProcessSocket::onOpen(terminalServer* s, websocketpp::connection_hdl hdl)
+{
+   std::string handle = getHandle(s, hdl);
+   if (handle.empty())
+      return;
+
+   activeConnections_++;
+
+   // add/update in connections map
+   ConsoleProcessSocketConnectionDetails details = connections_.get(handle);
+   details.handle_ = handle;
+   details.hdl_ = hdl;
+   connections_.set(handle, details);
+
+   // notify the specific connection, if available
+   if (details.connectionCallbacks_.onConnectionOpened)
+      details.connectionCallbacks_.onConnectionOpened();
+}
+
+void ConsoleProcessSocket::onHttp(terminalServer* s, websocketpp::connection_hdl hdl)
+{
+   // We could return diagnostics here if we had some, but for now just 404
+   terminalServer::connection_ptr con = s->get_con_from_hdl(hdl);
+   con->set_status(websocketpp::http::status_code::not_found);
+}
+
+void ConsoleProcessSocket::onFail(terminalServer* s, websocketpp::connection_hdl hdl)
+{
+   terminalServer::connection_ptr con = s->get_con_from_hdl(hdl);
+   std::string message = "Terminal websocket failure: " + con->get_ec().message();
+   LOG_ERROR_MESSAGE(message);
+}
+
+std::string ConsoleProcessSocket::getHandle(terminalServer* s, websocketpp::connection_hdl hdl)
+{
+   // determine handle from last part of url, e.g. xxxxx from "terminal/xxxxx/"
+   terminalServer::connection_ptr con = s->get_con_from_hdl(hdl);
+   std::string resource = con->get_resource();
+   if (resource.empty() || resource[resource.length() - 1] != '/')
+      return std::string();
+
+   // remove mandatory trailing slash
+   resource.resize(resource.length() - 1);
+
+   // everything after remaining final slash is the handle
+   size_t lastSlash = resource.find_last_of('/');
+   if (lastSlash == std::string::npos || lastSlash + 1 >= resource.length())
+      return std::string();
+   return resource.substr(lastSlash + 1);
+}
+
+} // namespace console_process
+} // namespace session
+} // namespace rstudio

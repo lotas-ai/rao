@@ -1,0 +1,19 @@
+{
+
+    "libs": [
+        "browser"
+    ],
+
+    "plugins": {
+        "complete_strings": {},
+        "requirejs": {
+            "baseURL": "./",
+            "paths": {
+                "ace": "../tools/ace/lib/ace/",
+                "mode": "./acemode/"
+            }
+        }
+    }
+
+
+}

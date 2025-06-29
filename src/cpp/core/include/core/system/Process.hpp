@@ -1,0 +1,469 @@
+/*
+ * Process.hpp
+ *
+ * Copyright (C) 2022 by Posit Software, PBC
+ *
+ * Unless you have received this program directly from Posit Software pursuant
+ * to the terms of a commercial license agreement with Posit Software, then
+ * this program is licensed to you under the terms of version 3 of the
+ * GNU Affero General Public License. This program is distributed WITHOUT
+ * ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+ * AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+ *
+ */
+
+
+#ifndef CORE_SYSTEM_PROCESS_HPP
+#define CORE_SYSTEM_PROCESS_HPP
+
+#include <vector>
+
+#include <boost/enable_shared_from_this.hpp>
+#include <boost/optional.hpp>
+#include <boost/utility.hpp>
+#include <boost/function.hpp>
+#include <boost/scoped_ptr.hpp>
+#include <boost/thread.hpp>
+#include <boost/date_time/posix_time/posix_time_types.hpp>
+
+#include <core/system/System.hpp>
+#include <core/system/Types.hpp>
+#include <shared_core/FilePath.hpp>
+
+namespace rstudio {
+namespace core {
+
+class Error;
+
+namespace system {
+
+extern const char* const kSmartTerm;
+extern const char* const kDumbTerm;
+extern const int kDefaultCols;
+extern const int kDefaultRows;
+
+namespace busy_detection {
+
+enum Mode
+{
+   Always = 0,
+   Never = 1,
+   List = 2,
+};
+
+} // BusyDetectionMode
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// Run child process synchronously
+//
+//
+
+// Struct for specifying pseudoterminal options
+struct Pseudoterminal
+{
+   Pseudoterminal(
+#ifdef _WIN32
+         const FilePath& winptyPath,
+         bool plainText,
+         bool conerr,
+#endif
+         int cols, int rows)
+      :
+#ifdef _WIN32
+        winptyPath(winptyPath),
+        plainText(plainText),
+        conerr(conerr),
+#endif
+        cols(cols), rows(rows)
+   {
+   }
+#ifdef _WIN32
+   FilePath winptyPath;
+   bool plainText;
+   bool conerr;
+#endif
+   int cols;
+   int rows;
+};
+
+// Struct for specifying process options
+struct ProcessOptions
+{
+   ProcessOptions()
+#ifdef _WIN32
+      : terminateChildren(false),
+        exitWithParent(false),
+        smartTerminal(false),
+        detachProcess(false),
+        createNewConsole(false),
+        breakawayFromJob(false),
+        cols(kDefaultCols),
+        rows(kDefaultRows),
+        redirectStdErrToStdOut(false),
+        reportHasSubprocs(false),
+        trackCwd(false),
+        callbacksRequireMainThread(true),
+        allowParentSuspend(false)
+#else
+      : terminateChildren(false),
+        exitWithParent(false),
+        smartTerminal(false),
+        detachSession(false),
+        cols(kDefaultCols),
+        rows(kDefaultRows),
+        redirectStdErrToStdOut(false),
+        reportHasSubprocs(false),
+        trackCwd(false),
+        threadSafe(false),
+        callbacksRequireMainThread(true),
+        allowParentSuspend(false)
+#endif
+   {
+   }
+
+   // environment variables to set for the child process
+   // if you want to simply merge in some additional environment
+   // variables you can use the helper functions in Environment.hpp
+   // to derive the desired environment
+   boost::optional<Options> environment;
+
+   // terminate should also terminate all children owned by the process
+   // NOTE: currently only supported on posix -- in the posix case this
+   // results in a call to ::setpgid(0,0) to create a new process group
+   // and the specification of -pid to kill so as to kill the child and
+   // all of its subprocesses
+   //
+   // NOTE: to support the same behavior on Win32 we'll need to use
+   // CreateJobObject/CREATE_BREAKAWAY_FROM_JOB to get the same effect;
+   // currently this implies CREATE_NEW_PROCESS_GROUP on Windows to get
+   // the same semantics around interruptions
+   bool terminateChildren;
+
+   // This process should also exit with a SIGTERM when the parent exits.
+   // NOTE: Currently only supported on posix. 
+   bool exitWithParent;
+
+   // Use kSmartTerm as terminal type and disable canonical line-by-line
+   // I/O processing
+   bool smartTerminal;
+   
+#ifndef _WIN32
+   // Calls ::setsid after fork for POSIX (no effect on Windows)
+   bool detachSession;
+#endif
+
+   // attach the child process to pseudoterminal pipes
+   boost::optional<Pseudoterminal> pseudoterminal;
+
+   // pseudoterminal size
+   int cols;
+   int rows;
+   
+#ifdef _WIN32
+   // Creates the process with DETACHED_PROCESS
+   bool detachProcess;
+
+   // Creates the process with CREATE_NEW_CONSOLE but with the console hidden
+   bool createNewConsole;
+
+   // create the process with CREATE_BREAKAWAY_FROM_JOB
+   bool breakawayFromJob;
+#endif
+
+   // interactive terminal shell
+   FilePath shellPath;
+
+   // interactive terminal shell arguments
+   std::vector<std::string> args;
+
+   bool redirectStdErrToStdOut;
+
+   // Periodically report if process has any child processes
+   bool reportHasSubprocs;
+
+   // Ignore these subprocesses when reporting
+   std::vector<std::string> ignoredSubprocs;
+
+   // Periodically track process' current working directory
+   bool trackCwd;
+
+   // Indicates whether or not to use special safety logic when forking the child
+   // which should be used in a mulithreaded process to ensure the child does not hang
+   // consequently, many of the options are ignored in this mode as it is very strict
+   // and cannot accomplish many things that the thread unsafe mode can
+   bool threadSafe;
+   
+   // Does this process have callbacks which must be invoked on the main thread?
+   // Set this flag if the callbacks registered for this process should only
+   // be invoked on the main thread.
+   bool callbacksRequireMainThread;
+
+   // If not empty, these two provide paths that stdout and stderr
+   // (respectively) should be redirected to. Note that this ONLY works
+   // if you use runCommand, not runProgram, as we use the shell to do
+   // the redirection.
+   core::FilePath stdOutFile;
+   core::FilePath stdErrFile;
+
+   // function to run within the child process immediately after the fork
+   // NOTE: only supported on posix as there is no fork on Win32
+   boost::function<void()> onAfterFork;
+
+   core::FilePath workingDir;
+
+   // user to run the process as - optional
+   // if non is specified, the launching user is used
+   std::string runAsUser;
+
+   // If this process is a child, this option indicates whether this process
+   // should be considered when determining if a parent process should be suspended
+   bool allowParentSuspend;
+};
+
+// Struct for returning output and exit status from a process
+struct ProcessResult
+{
+   ProcessResult() : exitStatus(-1) {}
+
+   // Standard output from process
+   std::string stdOut;
+
+   // Standard error from process
+   std::string stdErr;
+
+   // Process exit status. Potential values:
+   //   0   - successful execution
+   //   1   - application defined failure code (1, 2, 3, etc.)
+   //  15   - process killed by terminate()
+   //  -1   - unable to determine exit status
+   int exitStatus;
+};
+
+
+// Run a program synchronously. Note that if executable is not an absolute
+// path then runProgram will duplicate the actions of the shell in searching
+// for an executable to run. Some platform specific notes:
+//
+//  - Posix: The executable path is not executed by /bin/sh, rather it is
+//    executed directly by ::execvp. This means that shell metacharacters
+//    (e.g. stream redirection, piping, etc.) are not supported in the
+//    command string.
+//
+//  - Win32: The search for the executable path includes auto-appending .exe
+//    and .cmd (in that order) for the path search and invoking cmd.exe if
+//    the target is a batch (.cmd) file.
+//
+Error runProgram(const std::string& executable,
+                 const std::vector<std::string>& args,
+                 const std::string& input,
+                 const ProcessOptions& options,
+                 ProcessResult* pResult);
+
+Error runProgram(const std::string& executable,
+                 const std::vector<std::string>& args,
+                 const ProcessOptions& options,
+                 ProcessResult* pResult);
+
+// Run a command synchronously. The command will be passed to and executed
+// by a command shell (/bin/sh on posix, cmd.exe on windows).
+//
+// NOTE: UNC paths are not supported by cmd.exe on Windows, so prefer using
+// runProgram() if running a program that might ingest a file path. Note that
+// this might happen just by virtue of having a project on a network share,
+// since the working directory might then be the project directory itself!
+Error runCommand(const std::string& command,
+                 const ProcessOptions& options,
+                 ProcessResult* pResult);
+
+Error runCommand(const std::string& command,
+                 const std::string& input,
+                 const ProcessOptions& options,
+                 ProcessResult* pResult);
+
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// ProcessSupervisor -- run child processes asynchronously
+//
+// Any number of processes can be run by calling runProgram or runCommand and
+// their results will be delivered using the provided callbacks. Note that
+// the poll() method must be called periodically (e.g. during standard event
+// pumping / idle time) in  order to check for output & status of children.
+//
+// If you want to pair a call to runProgam or runCommand with an object which
+// will live for the lifetime of the child process you should create a
+// shared_ptr to that object and then bind the applicable members to the
+// callback function(s) -- the bind will keep the shared_ptr alive (see the
+// implementation of the single-callback version of runProgram for an example)
+//
+//
+
+// Operations that can be performed from within ProcessCallbacks
+class ProcessOperations : public boost::enable_shared_from_this<ProcessOperations>
+{
+public:
+   virtual ~ProcessOperations() {}
+
+   // Write (synchronously) to standard input
+   virtual Error writeToStdin(const std::string& input, bool eof) = 0;
+
+   // Operations which apply to Pseudoterminals (only available
+   // if ProcessOptions::pseudoterminal is specified)
+   virtual Error ptySetSize(int cols, int rows) = 0;
+   virtual Error ptyInterrupt() = 0;
+
+   // Terminate the process (SIGTERM)
+   virtual Error terminate() = 0;
+
+   // Return associated process-id
+   virtual PidType getPid() = 0;
+
+   boost::weak_ptr<ProcessOperations> getWeakPtr()
+   {
+      return weak_from_this();
+   }
+};
+
+// Callbacks for reporting various states and streaming output (note that
+// all callbacks are optional)
+struct ProcessCallbacks
+{
+   // Called after the process begins running (note: is called during
+   // the first call to poll and therefore after runAsync returns). Can
+   // be used for writing initial standard input to the child
+   boost::function<void(ProcessOperations&)> onStarted;
+
+   // Called periodically (at whatever interval poll is called) during the
+   // lifetime of the child process (will not be called until after the
+   // first call to onStarted). If it returns false then the child process
+   // is terminated.
+   boost::function<bool(ProcessOperations&)> onContinue;
+
+   // Streaming callback for standard output
+   boost::function<void(ProcessOperations&, const std::string&)> onStdout;
+
+   // Streaming callback for standard error
+   boost::function<void(ProcessOperations&, const std::string&)> onStderr;
+
+   boost::function<void(ProcessOperations&, const std::vector<char>&)>
+                                                  onConsoleOutputSnapshot;
+
+   // Called if an IO error occurs while reading from standard streams. The
+   // default behavior if no callback is specified is to log and then terminate
+   // the child (which will result in onExit being called w/ exitStatus == 15)
+   boost::function<void(ProcessOperations&, const Error&)> onError;
+
+   // Called after the process has exited. Passes exitStatus (see ProcessResult
+   // comment above for potential values)
+   boost::function<void(int)> onExit;
+
+   // Called periodically to report if this process has subprocesses (non-ignored, ignored)
+   boost::function<void(bool, bool)> onHasSubprocs;
+
+   // Called periodically to report current working directory of process
+   boost::function<void(const core::FilePath&)> reportCwd;
+};
+
+ProcessCallbacks createProcessCallbacks(
+               const std::string& input,
+               const boost::function<void(const ProcessResult&)>& onCompleted,
+               const boost::function<void(const Error&)>& onError = {});
+
+// Process supervisor
+class ProcessSupervisor : boost::noncopyable
+{
+public:
+   ProcessSupervisor();
+   virtual ~ProcessSupervisor();
+
+   // Run a child asynchronously, invoking callbacks as the process starts,
+   // produces output, and exits. Output callbacks are streamed/interleaved,
+   // but note that output is collected at a polling interval so it is
+   // possible that e.g. two writes to standard output which had an
+   // intervening write to standard input might still be concatenated. See
+   // comment on runProgram above for the semantics of the "executable"
+   // argument.
+   Error runProgram(const std::string& executable,
+                    const std::vector<std::string>& args,
+                    const ProcessOptions& options,
+                    const ProcessCallbacks& callbacks);
+
+   // Run a command asynchronously (same as above but uses a command shell
+   // rather than running the executable directly)
+   Error runCommand(const std::string& command,
+                    const ProcessOptions& options,
+                    const ProcessCallbacks& callbacks);
+
+   // Run an interactive terminal asynchronously (same as above but uses
+   // platform-specific implementation to determine what to execute).
+   Error runTerminal(const ProcessOptions& options,
+                     const ProcessCallbacks& callbacks);
+
+   // Run a child asynchronously, invoking the completed callback when the
+   // process exits. Note that if input is provided then then the standard
+   // input stream is closed (so EOF is sent) after the input is written.
+   // Note also that the standard error handler (log and terminate) is also
+   // used. If you want more customized behavior then you can use the more
+   // granular runProgram call above. See comment on runProgram above for the
+   // semantics of the "command" argument.
+   Error runProgram(
+            const std::string& executable,
+            const std::vector<std::string>& args,
+            const std::string& input,
+            const ProcessOptions& options,
+            const boost::function<void(const ProcessResult&)>& onCompleted);
+
+   // Run a command asynchronously (same as above but uses a command shell
+   // rather than running the executable directly)
+   Error runCommand(
+            const std::string& command,
+            const ProcessOptions& options,
+            const boost::function<void(const ProcessResult&)>& onCompleted);
+
+   Error runCommand(
+            const std::string& command,
+            const std::string& input,
+            const ProcessOptions& options,
+            const boost::function<void(const ProcessResult&)>& onCompleted);
+
+
+   // Check whether any children are currently running
+   bool hasRunningChildren();
+
+   // Check whether any children consider themselves active and do not allow
+   // parent suspension; non-active processes or processes that allow parent
+   // suspension may be terminated without warning.
+   bool hasDurableChildren();
+
+   // Poll for child (output and exit) events. returns true if there
+   // are still children being supervised after the poll
+   bool poll();
+
+   // Terminate all running children
+   void terminateAll();
+
+   // Wait for all children to exit. Returns false if the operation timed out
+   bool wait(
+      const boost::posix_time::time_duration& pollingInterval =
+         boost::posix_time::milliseconds(100),
+      const boost::posix_time::time_duration& maxWait =
+         boost::posix_time::time_duration(boost::posix_time::not_a_date_time));
+
+private:
+   struct Impl;
+   boost::scoped_ptr<Impl> pImpl_;
+   boost::recursive_mutex mutex_;
+};
+
+bool enableCallbacksRequireMainThread();
+
+void setEnableCallbacksRequireMainThread(bool enforce);
+
+} // namespace system
+} // namespace core
+} // namespace rstudio
+
+#endif // CORE_SYSTEM_PROCESS_HPP

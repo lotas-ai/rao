@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+
+#
+# prune-mathjax
+#
+# Copyright (C) 2022 by Posit Software, PBC
+#
+# Unless you have received this program directly from Posit Software pursuant
+# to the terms of a commercial license agreement with Posit Software, then
+# this program is licensed to you under the terms of version 3 of the
+# GNU Affero General Public License. This program is distributed WITHOUT
+# ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+# MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+# AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+#
+#
+
+#
+# This script takes a mathjax distribution and prunes out the files
+# which aren't required for local html preview
+#
+
+set -e
+
+if test -z "$1" 
+then
+   echo "usage: prune-mathjax <mathjax-dir>"
+   exit 1
+fi
+
+MATHJAX_DIR=$1
+
+rm -rf $MATHJAX_DIR/.gitignore
+rm -rf $MATHJAX_DIR/README.md
+rm -rf $MATHJAX_DIR/README-branch.txt
+rm -rf $MATHJAX_DIR/docs
+rm -rf $MATHJAX_DIR/test
+rm -rf $MATHJAX_DIR/unpacked
+
+rm -f $MATHJAX_DIR/config/AM_HTMLorMML-full.js
+rm -f $MATHJAX_DIR/config/AM_HTMLorMML.js
+rm -f $MATHJAX_DIR/config/default.js
+rm -f $MATHJAX_DIR/config/MML_HTMLorMML-full.js
+rm -f $MATHJAX_DIR/config/MML_HTMLorMML.js
+rm -f $MATHJAX_DIR/config/TeX-AMS_HTML-full.js
+rm -f $MATHJAX_DIR/config/TeX-AMS_HTML.js
+rm -f $MATHJAX_DIR/config/TeX-MML-AM_HTMLorMML-full.js
+rm -f $MATHJAX_DIR/config/TeX-MML-AM_HTMLorMML.js
+rm -f $MATHJAX_DIR/config/TeX-AMS-MML_HTMLorMML-full.js
+rm -rf $MATHJAX_DIR/config/local
+
+rm -rf $MATHJAX_DIR/fonts/HTML-CSS/TeX/svg
+rm -rf $MATHJAX_DIR/fonts/HTML-CSS/TeX/png
+rm -rf $MATHJAX_DIR/fonts/HTML-CSS/TeX/eot
+rm -rf $MATHJAX_DIR/fonts/HTML-CSS/TeX/woff
+rm -rf $MATHJAX_DIR/fonts/HTML-CSS/STIX-Web
+rm -rf $MATHJAX_DIR/fonts/HTML-CSS/Latin-Modern
+rm -rf $MATHJAX_DIR/fonts/HTML-CSS/Asana-Math
+rm -rf $MATHJAX_DIR/fonts/HTML-CSS/Gyre-Pagella
+rm -rf $MATHJAX_DIR/fonts/HTML-CSS/Gyre-Termes
+rm -rf $MATHJAX_DIR/fonts/HTML-CSS/Neo-Euler
+
+rm -rf $MATHJAX_DIR/jax/output/HTML-CSS/fonts/STIX-Web
+rm -rf $MATHJAX_DIR/jax/output/HTML-CSS/fonts/Latin-Modern
+rm -rf $MATHJAX_DIR/jax/output/HTML-CSS/fonts/Asana-Math
+rm -rf $MATHJAX_DIR/jax/output/HTML-CSS/fonts/Gyre-Pagella
+rm -rf $MATHJAX_DIR/jax/output/HTML-CSS/fonts/Gyre-Termes
+rm -rf $MATHJAX_DIR/jax/output/HTML-CSS/fonts/Neo-Euler
+
+rm -rf $MATHJAX_DIR/jax/output/SVG
+rm -rf $MATHJAX_DIR/jax/output/NativeMML
+
+rm -f $MATHJAX_DIR/latest.js
+rm -f $MATHJAX_DIR/CONTRIBUTING.md
+rm -f $MATHJAX_DIR/bower.json
+rm -f $MATHJAX_DIR/composer.json
+rm -f $MATHJAX_DIR/package.json
+rm -f $MATHJAX_DIR/.npmignore
+rm -f $MATHJAX_DIR/.travis.yml
+

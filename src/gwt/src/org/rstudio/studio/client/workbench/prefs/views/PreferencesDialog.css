@@ -1,0 +1,98 @@
+
+@external gwt-CheckBox gwt-Label;
+
+@eval PANEL_CONTAINER_WIDTH org.rstudio.studio.client.workbench.prefs.views.PreferencesDialogConstants.panelContainerWidth();
+@eval PANEL_CONTAINER_HEIGHT org.rstudio.studio.client.workbench.prefs.views.PreferencesDialogConstants.panelContainerHeight();
+
+.panelContainer {
+   width: PANEL_CONTAINER_WIDTH;
+   height: PANEL_CONTAINER_HEIGHT;
+}
+
+.panelContainerNoChooser {
+   width: 468px;
+   height: PANEL_CONTAINER_HEIGHT;
+}
+
+.sshKeyWidget {
+   margin-top: 20px;
+}
+
+.usingVcsHelp {
+   margin-top: 30px;
+}
+
+.newSection {
+   margin-top: 25px;
+}
+
+.alwaysCompletePanel {
+   margin-bottom: 11px;
+}
+
+.paneLayoutTable {
+   height: 160px;
+}
+
+.paneLayoutTable td.paneLayoutTable {
+   background-color: white;
+   vertical-align: top;
+   padding: 0px;
+   border: 0.5px solid #555555;
+   -moz-border-radius: 6px;
+   -webkit-border-radius: 6px;
+   border-radius: 6px;
+}
+
+.paneLayoutTable .label {
+   padding: 5px 5px 0px 5px;
+}
+
+.paneLayoutTable .gwt-CheckBox {
+   display: block;
+   margin: 0 0 0 8px;
+   max-height: 18px;
+   font-size: 11px;
+}
+
+.paneLayoutTable select {
+   margin: 5px 5px 5px 5px;
+}
+
+.themeChooser select {
+   width: 148px;
+   overflow-x: hidden;
+   overflow-y: scroll;
+}
+
+.themeInfobar {
+   border: solid 1px #ccc;
+   border-bottom: none;
+   display: none;
+}
+
+.themeInfobarShowing {
+   display: block;
+}
+
+.selectWidgetHelp {
+   margin-left: 8px;
+}
+
+.smallerText {
+   font-size: 0.9em;
+}
+
+.checkBoxAligned {
+   margin-left: 20px;
+}
+
+.visualModeWrapSelectWidget .gwt-Label {
+   margin-bottom: 1px;
+}
+
+
+.userDictEditButton {
+   margin-left: 8px !important;
+   margin-top: 2px !important;
+}

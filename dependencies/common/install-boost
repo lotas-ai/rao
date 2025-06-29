@@ -1,0 +1,156 @@
+#!/usr/bin/env bash
+
+#
+# install-boost
+#
+# Copyright (C) 2025 by Posit Software, PBC
+#
+# Unless you have received this program directly from Posit Software pursuant
+# to the terms of a commercial license agreement with Posit Software, then
+# this program is licensed to you under the terms of version 3 of the
+# GNU Affero General Public License. This program is distributed WITHOUT
+# ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+# MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+# AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+#
+#
+
+set -e
+
+# The version of Boost to be downloaded and built.
+BOOST_VERSION=1.87.0
+
+source "$(dirname "${BASH_SOURCE[0]}")/../tools/rstudio-tools.sh"
+section "Installing Boost ${BOOST_VERSION}"
+
+OWD=$(pwd)
+
+# constants
+BOOST_FOLDER="boost_${BOOST_VERSION//./_}"
+BOOST_TARBALL="${BOOST_FOLDER}.tar.bz2"
+BOOST_PREFIX="${RSTUDIO_TOOLS_ROOT}/boost/${BOOST_FOLDER}"
+BOOST_URL="${RSTUDIO_BUILDTOOLS}/Boost/${BOOST_TARBALL}"
+BOOST_BUILDDIR="/tmp/rstudio-build/${BOOST_FOLDER}"
+
+# help Boost find correct libraries with Homebrew
+if command -v brew &> /dev/null ; then
+   BREW_PREFIX="$(brew --prefix)"
+   BOOST_EXTRA="include=${BREW_PREFIX}/include library-path=${BREW_PREFIX}/lib"
+fi
+
+# set up compiler flags
+if is-darwin; then
+   CFLAGS="-fPIC -mmacos-version-min=${MACOSX_DEPLOYMENT_TARGET}"
+   CXXFLAGS="-fPIC -mmacos-version-min=${MACOSX_DEPLOYMENT_TARGET}"
+else
+   CFLAGS="-fPIC"
+   CXXFLAGS="-fPIC"
+fi
+
+# install if we aren't already installed
+if [ -e "${BOOST_PREFIX}" ]; then
+   info "Boost ${BOOST_VERSION} already installed at '${BOOST_PREFIX}'"
+   exit 0
+fi
+
+# re-run as root if necessary
+sudo-if-necessary-for "${RSTUDIO_TOOLS_ROOT}" "$@"
+
+# dump the BOOST variables we've defined
+declare -p | grep BOOST_ | cut -d' ' -f3 | sort
+
+# move to build directory
+mkdir -p "${BOOST_BUILDDIR}"
+cd "${BOOST_BUILDDIR}"
+
+# download boost
+if ! [ -f "${BOOST_TARBALL}" ]; then
+   subsection "Downloading ${BOOST_URL}"
+   download "${BOOST_URL}"
+fi
+
+# untar source; removing an existing build directory if one exists
+subsection "Extracting Boost"
+rm -rf "${BOOST_FOLDER}"
+tar --bzip2 -xf "${BOOST_TARBALL}"
+cd "${BOOST_FOLDER}"
+
+# use 'rstudio_boost' namespace instead of 'boost'
+R --no-save --no-restore -s <<- EOF
+
+# figure out which files to explore
+exts <- c("cpp", "h", "hpp", "inc", "inl", "ipp")
+pattern <- sprintf("[.](%s)$", paste(exts, collapse = "|"))
+
+# find all the files we might need to modify
+files <- list.files(
+   path       = c("boost", "libs"),
+   pattern    = pattern,
+   full.names = TRUE,
+   recursive  = TRUE
+)
+
+# skip examples
+files <- grep("/(examples?)/", files, value = TRUE, invert = TRUE)
+
+for (file in files) {
+   
+   # read the file as a string
+   contents <- readLines(file, warn = FALSE, encoding = "latin1")
+   original <- paste(contents, collapse = "\n")
+   replacement <- original
+   
+   # make replacements
+   replacement <- gsub(
+      pattern     = "namespace[[:space:]]+boost[[:space:]\\\\\\\\]*{",
+      replacement = "namespace rstudio_boost {} namespace boost = rstudio_boost; namespace rstudio_boost {",
+      x           = replacement,
+      perl        = TRUE
+   )
+   
+   # also needed for some macro Boost stuff
+   replacement <- gsub(
+      pattern     = "(boost)",
+      replacement = "(rstudio_boost)",
+      x           = replacement,
+      fixed       = TRUE
+   )
+   
+   # for nested namespaces
+   replacement <- gsub(
+      pattern     = "namespace boost::",
+      replacement = "namespace rstudio_boost::",
+      x           = replacement,
+      fixed       = TRUE
+   )
+   
+   if (!identical(original, replacement)) {
+      writeLines(replacement, con = file, useBytes = TRUE)
+      writeLines(sprintf("-- Updated \"%s\"", file))
+   }
+
+}
+
+EOF
+
+# bootstrap
+subsection "Bootstrapping Boost"
+./bootstrap.sh --prefix="${BOOST_PREFIX}" --without-icu --without-libraries=graph_parallel,mpi,python
+
+# build it
+subsection "Building Boost"
+./b2 -q ${BOOST_EXTRA}    \
+   cflags="${CFLAGS}"     \
+   cxxflags="${CXXFLAGS}" \
+   variant=release        \
+   link=static            \
+   threading=multi        \
+   install
+
+# clean up
+cd "${OWD}"
+is-interactive || rm -rf "${BOOST_BUILDDIR}"
+
+# all done
+yay "Boost ${BOOST_VERSION} installed to '${BOOST_PREFIX}'."
+

@@ -1,0 +1,57 @@
+@external rstudio-themes-dark;
+
+.smallButton {
+   display: block;
+   padding: 0;
+   margin: 0;
+   border: none;
+   background: transparent;
+   outline: none;
+}
+
+.buttonContent {
+   font-size: 9px;
+   color: black;
+   white-space: nowrap;
+   margin-top: 3px;
+   margin-left: 6px;
+   margin-right: 6px;
+   margin-bottom: 3px;
+}
+
+button.smallButton {
+   padding-bottom: 2px;
+}
+
+button.smallButton > table:first-child {
+   border: solid 1px #bbbbbb;
+   border-radius: 5px;
+   background: #f6f5f7;
+   box-shadow: 0 1px #ececec;
+   overflow: hidden;
+}
+
+.rstudio-themes-dark button.smallButton > table:first-child {
+   box-shadow: none;
+}
+
+button.smallButton:active > table:first-child {
+   background: #eaeaea;
+}
+
+.buttonCenter {
+   font-size: 10px;
+}
+
+.rstudio-themes-dark .buttonCenter {
+   color: white;
+}
+
+.rstudio-themes-dark button.smallButton > table:first-child {
+   border-color: rgb(45,60,75);
+   background: rgb(145,154,161);
+}
+
+.rstudio-themes-dark .buttonContent {
+   color: white;
+}

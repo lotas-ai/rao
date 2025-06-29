@@ -1,0 +1,51 @@
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+   xmlns:g="urn:import:com.google.gwt.user.client.ui">
+   <ui:with field="res" type="org.rstudio.studio.client.workbench.views.source.editors.text.rmd.ChunkContextResources" />
+   <ui:style>
+   div.progressBar
+   {
+      height: 6px;
+      width: 100px;
+      margin-top: 4px;
+      margin-right: 3px;
+      display: block;
+   }
+   
+   div.progressLabel
+   {
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      display: block;
+      text-align: right;
+      margin-right: 3px;
+      top: 1px;
+   }
+   
+   img.interrupt
+   {
+      margin: 0px;
+      margin-top: -2px;
+      width: 20px;
+      height: 13px;
+   }
+   
+   .root
+   {
+      margin-top: 1px;
+   }
+   </ui:style>
+   <g:HTMLPanel>
+     <g:HorizontalPanel styleName="{style.root}" ui:field="root_">
+       <g:Label styleName="{style.progressLabel}" ui:field="progressLabel_"
+                width="75px">
+       </g:Label>
+       <g:HTMLPanel styleName="{style.progressBar}" ui:field="progressBar_"
+                    width="150px">
+       </g:HTMLPanel>
+       <g:Image styleName="{style.interrupt}" resource="{res.interruptChunk2x}" 
+                ui:field="interruptButton_" altText="Interrupt">
+       </g:Image>
+     </g:HorizontalPanel>
+   </g:HTMLPanel>
+</ui:UiBinder> 

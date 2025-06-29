@@ -1,0 +1,75 @@
+/*
+ * REnvironment.hpp
+ *
+ * Copyright (C) 2022 by Posit Software, PBC
+ *
+ * Unless you have received this program directly from Posit Software pursuant
+ * to the terms of a commercial license agreement with Posit Software, then
+ * this program is licensed to you under the terms of version 3 of the
+ * GNU Affero General Public License. This program is distributed WITHOUT
+ * ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+ * AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+ *
+ */
+
+#ifndef CORE_R_UTIL_R_ENVIRONMENT_HPP
+#define CORE_R_UTIL_R_ENVIRONMENT_HPP
+
+#include <string>
+#include <vector>
+
+#include <shared_core/FilePath.hpp>
+#include <core/system/Types.hpp>
+
+namespace rstudio {
+namespace core {
+
+class Error;
+
+namespace r_util {
+
+typedef std::vector<std::pair<std::string,std::string> > EnvironmentVars;
+
+bool detectREnvironment(const FilePath& whichRScript,
+                        const FilePath& ldPathsScript,
+                        const std::string& ldLibraryPath,
+                        std::string* pRScriptPath,
+                        std::string* pVersion,
+                        EnvironmentVars* pVars,
+                        std::string* pErrMsg,
+                        const std::string& prelaunchScript = "",
+                        const std::string& module = "",
+                        const FilePath& modulesBinaryPath = FilePath());
+
+void setREnvironmentVars(const EnvironmentVars& vars);
+void setREnvironmentVars(const EnvironmentVars& vars,
+                         core::system::Options* pEnv);
+
+std::string rLibraryPath(const FilePath& rHomePath,
+                         const FilePath& rLibPath,
+                         const FilePath& ldPathsScript,
+                         const std::string& ldLibraryPath);
+
+Error rVersion(const FilePath& rHomePath,
+               const FilePath& rScriptPath,
+               const std::string& ldLibraryPath,
+               std::string* pVersion);
+
+Error rVersion(const FilePath& rHomePath,
+               const FilePath& rScriptPath,
+               const std::string& ldLibraryPath,
+               const std::string& prelaunchScript,
+               const std::string& module,
+               const FilePath& moduleBinaryPath,
+               std::string* pVersion);
+
+void ensureLang();
+
+} // namespace r_util
+} // namespace core 
+} // namespace rstudio
+
+
+#endif // CORE_R_UTIL_R_ENVIRONMENT_HPP
+

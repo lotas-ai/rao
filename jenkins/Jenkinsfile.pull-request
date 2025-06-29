@@ -1,0 +1,167 @@
+def utils
+
+pipeline {
+  agent {
+    label 'linux-4x && x86_64'
+  }
+
+  options {
+    timestamps()
+    disableConcurrentBuilds()
+    buildDiscarder(logRotator(numToKeepStr: '10'))
+  }
+
+  environment {
+    GITHUB_LOGIN = credentials('posit-jenkins-rstudio')
+    JENKINS_CREDENTIALS = credentials('jenkins-api-creds')
+    OS = 'jammy'
+    ARCH = 'x86_64'
+    FLAVOR = 'Server'
+    TYPE = 'DEB'
+    AWS_ACCOUNT_ID = '749683154838'
+    RSTUDIO_VERSION_FLOWER = ''
+    IS_PRO = false
+    BASE_IMAGE = ""
+  }
+
+  stages {
+    stage('Load Utils') {
+      steps {
+        script {
+          sh 'printenv'
+          sh "echo 'Loading utils from ${env.WORKSPACE}/jenkins/utils.groovy'"
+          utils = load "${env.WORKSPACE}/jenkins/utils.groovy"
+          utils.addRemoteRef("${env.CHANGE_TARGET}")
+          RSTUDIO_VERSION_FLOWER = readFile(file: 'version/RELEASE').replaceAll(" ", "-").toLowerCase().trim()
+          IS_PRO = JOB_URL.contains('Pro')
+          BASE_IMAGE = "jenkins/ide:pro-jammy-x86_64-${RSTUDIO_VERSION_FLOWER}"
+          // Invert the check and use regex - passing true makes this return true if 
+          //there are any changes outside of 'docs' and 'version/news'
+          BUILD = utils.hasChangesIn('docs/|version/news/', true)
+        }
+      }
+    }
+
+    stage('Checkout') {
+      steps {
+        checkout([
+          $class: 'GitSCM',
+          branches: scm.branches,
+          doGenerateSubmoduleConfigurations: true,
+          extensions: scm.extensions + [[$class: 'SubmoduleOption', parentCredentials: true]],
+          userRemoteConfigs: scm.userRemoteConfigs])
+      }
+    }
+
+    // Initializes the pending checks for the PR so they show up in progress
+    stage('Initialize Pending Checks') {
+      steps {
+        script {
+          utils.postReviewCheck(title: "Snyk Code Scan")
+          utils.postReviewCheck(title: "Detect Secrets")
+        }
+      }
+    }
+
+    stage("Build and Scan") {
+      parallel {
+
+        stage('Snyk Code Scan') {
+          environment {
+            SNYK_TOKEN = credentials('snyk-auth-token')
+            TMP_SNYK_PATH = "/tmp/snyk-code-scan"
+            STAGE_NODE_URL = utils.getStageUrl(STAGE_NAME)
+          }
+          agent {
+            dockerfile {
+              filename 'docker/jenkins/Dockerfile.snyk'
+              registryCredentialsId 'ecr:us-east-1:aws-build-role'
+              registryUrl 'https://263245908434.dkr.ecr.us-east-1.amazonaws.com'
+              additionalBuildArgs "--build-arg BASE_IMAGE=${BASE_IMAGE}" + ' --build-arg GITHUB_LOGIN=${GITHUB_LOGIN}'
+              reuseNode true
+            }
+          }
+          steps {
+            catchError(buildResult: null, stageResult: 'FAILURE') {
+              sh "mkdir --parents ${TMP_SNYK_PATH}"
+              sh "for FILE in \$(git diff --name-only origin/${env.CHANGE_TARGET}...HEAD); do if [ -f \$FILE ]; then cp --parents \$FILE ${TMP_SNYK_PATH}; fi; done"
+              sh "for FILE in \$(git ls-files | grep '/.snyk'); do cp --parents \$FILE ${TMP_SNYK_PATH}; done"
+              script {
+                utils.postReviewCheck(
+                  title: 'Snyk Code Scan',
+                  status: 'in_progress',
+                  summary: utils.getResultsMarkdownLink("Snyk Code Scan", STAGE_NODE_URL),
+                )
+                (exitCode, text) = utils.runCmd("snyk code test ${TMP_SNYK_PATH}")
+                // - exit code 0: sucessful scan, no vulns identified in code
+                // - exit code 1: unsuccessful scan, code had vulns (real or false positive)
+                // - exit code 3: scan was not-applicable to files. This is typical for docs or NEWS commits
+                // 
+                // In the case of code 3, we don't want to post anything in order to avoid generating confusion
+                if (exitCode != 3) {
+                  status = exitCode == 0 ? "success" : "failure"
+                  text = !IS_PRO ? RUN_DISPLAY_URL : sh(returnStdout: true, script: "echo \"${text}\" | sed '/^Testing/d' | sed '/./,\$!d' | jq -Rs .")
+                  utils.postReviewCheck(
+                    title: 'Snyk Code Scan',
+                    status: status,
+                    details: text,
+                  )
+                  if (status == "failure") {
+                    throw new Exception("Snyk Code Scan failed")
+                  }   
+                } else {
+                  utils.postReviewCheck(
+                    title: 'Snyk Code Scan',
+                    status: 'skipped',
+                    details: 'No code to scan',
+                  )
+                }
+              }
+            }
+          }
+          post {
+            always {
+              sh "rm -r ${TMP_SNYK_PATH}"
+            }
+          }
+        }
+
+        stage('Detect Secrets') {
+          environment {
+            STAGE_NODE_URL = utils.getStageUrl(STAGE_NAME)
+          }
+          steps {
+            catchError(buildResult: null, stageResult: 'FAILURE') {
+              script {
+
+                utils.runCheckCmd("docker compose -f ./git_hooks/secrets/docker-compose.yml run run-detect-secrets run-hook-all", "Detect Secrets", STAGE_NODE_URL, !IS_PRO)         
+              }
+            }
+          }
+        }
+
+        stage('Build') {
+
+          when {
+            expression {
+              return BUILD
+            }
+          }
+
+          steps {
+            build job: "IDE/${env.JOB_URL.contains('Pro') ? 'Pro' : 'OS'}-Builds/pull-requests/${env.JOB_URL.contains('Pro') ? 'pro' : 'open-source'}-pull-request-build/${env.GIT_BRANCH}"
+          }
+        }
+      }
+    }
+
+  }
+
+  post {
+    always {
+      script {
+        utils.finishReviewChecks(currentBuild.result)
+      }
+    }
+  }
+}

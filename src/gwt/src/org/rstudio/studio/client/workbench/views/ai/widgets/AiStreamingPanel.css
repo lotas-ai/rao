@@ -1,0 +1,782 @@
+/* External declarations for unobfuscated classes */
+@external aiConversation, aiMessage, aiMessageUser, aiMessageAssistant, aiMessageSender, aiMessageContent, aiTypingIndicator, aiTypingText, aiStreamingContent, markdown-content, assistant, text, ai-streaming-panel, user, aiConsoleEditorWrapper, aiConsoleWrapper, aiConsoleHeader, aiEditFilePanel, aiEditFileExplanation, aiEditFileEditor, aiEditFileButtons, aiEditFileAcceptButton, aiEditFileCancelButton, editFileCommand, editFileWidgetContainer, aiEditFileHeader, aiEditFileWrapper, aiEditFileWidget, diff-stats, diff-stats-container, addition, removal, ace_text-layer, ace_cursor-layer, ace_gutter-cell, ace_gutter, ace_gutter-layer, ace_line, ace_layer, ace_scroller, ace_content, ace_text, ace_editor, ace_cursor, ace_editor_theme, gwt-Button, ace_diff_added, ace_diff_deleted, ace_theme-monokai, ace_theme-twilight, ace_theme-vibrant_ink, ace_marker-layer, ace_test_line_0, ace_test_line_1, ace_test_line_2, thinking-message, thinking-content, thinking-text, assistant-container, thinking-message-container;
+
+/* Main streaming panel */
+.aiStreamingPanel {
+    padding: 12px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 800px;
+    margin: 0 auto;
+    line-height: 1.6;
+    /* Ensure text remains selectable */
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    pointer-events: auto;
+}
+
+/* Individual message container */
+.message {
+    padding: 8px;
+    border-radius: 8px;
+    position: relative;
+    animation: fadeIn 0.3s ease-in;
+    /* Ensure text remains selectable */
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    pointer-events: auto;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* User message styling */
+.userMessage {
+    background-color: #e3f2fd;
+    border-left: 4px solid #2196f3;
+    margin-left: 40px;
+    margin-bottom: 12px;
+}
+
+/* Assistant message styling */
+.assistantMessage {
+    background-color: #f5f5f5;
+    border-left: 4px solid #4caf50;
+    margin-right: 40px;
+}
+
+/* Message content */
+.messageContent {
+    font-size: 14px;
+    color: #444;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    /* Ensure text remains selectable */
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    pointer-events: auto;
+}
+
+/* Streaming content container */
+.streamingContent {
+    position: relative;
+    /* Ensure text remains selectable */
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    pointer-events: auto;
+}
+
+/* Individual content delta */
+.contentDelta {
+    display: inline;
+    position: relative;
+    /* Ensure text remains selectable */
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    pointer-events: auto;
+}
+
+/* Typing indicator */
+.typingIndicator {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    animation: pulse 1.5s infinite;
+    font-style: italic;
+    color: #666;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* External classes for advanced styling */
+.aiConversation {
+    padding: 12px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 800px;
+    margin: 0 auto;
+    line-height: 1.6;
+    /* Ensure text remains selectable */
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    pointer-events: auto;
+}
+
+.aiMessage {
+    padding: 8px;
+    border-radius: 8px;
+    position: relative;
+    animation: fadeIn 0.3s ease-in;
+    /* Ensure text remains selectable */
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    pointer-events: auto;
+}
+
+.aiMessageUser {
+    background-color: #e3f2fd;
+    border-left: 4px solid #2196f3;
+    margin-left: 40px;
+    margin-bottom: 12px;
+}
+
+.aiMessageAssistant {
+    background-color: #f5f5f5;
+    border-left: 4px solid #4caf50;
+    margin-right: 40px;
+}
+
+.aiMessageSender {
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.aiMessageContent {
+    font-size: 14px;
+    color: #444;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    /* Ensure text remains selectable */
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    pointer-events: auto;
+}
+
+.aiTypingIndicator {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: #f0f0f0;
+    border-radius: 8px;
+    margin-right: 40px;
+    animation: pulse 1.5s infinite;
+}
+
+.aiTypingText {
+    font-style: italic;
+    color: #666;
+    margin-left: 10px;
+}
+
+.aiStreamingContent {
+    position: relative;
+    /* Ensure text remains selectable */
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    pointer-events: auto;
+}
+
+/* Code blocks styling */
+.aiMessageContent pre {
+    background-color: #f8f8f8;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    overflow-x: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    /* Ensure code remains selectable */
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    pointer-events: auto;
+}
+
+.aiMessageContent code {
+    background-color: #f0f0f0;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    /* Ensure code remains selectable */
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    pointer-events: auto;
+}
+
+/* Additional classes for dynamically generated content */
+.text {
+    /* Ensure text remains selectable */
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    pointer-events: auto;
+}
+
+.markdown-content {
+    /* Ensure markdown content remains selectable */
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    pointer-events: auto;
+}
+
+.markdown-content * {
+    /* Ensure all markdown elements remain selectable */
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    pointer-events: auto;
+}
+
+/* Override any global styles that might disable selection */
+.ai-streaming-panel * {
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+    pointer-events: auto !important;
+}
+
+.assistant * {
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+    pointer-events: auto !important;
+}
+
+.user * {
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+    pointer-events: auto !important;
+}
+
+/* AI Console Widget Styles */
+.aiConsoleWidget {
+   margin: 10px 0;
+   border: 1px solid #ddd;
+   border-radius: 4px;
+   background-color: #f8f8f8;
+   padding: 8px;
+   font-family: monospace;
+}
+
+.aiConsoleExplanation {
+   color: #666;
+   font-size: 12px;
+   margin-bottom: 8px;
+   font-family: sans-serif;
+}
+
+.aiConsoleEditorContainer {
+   display: flex;
+   align-items: flex-start;
+   width: 100%;
+   max-width: 100%;
+   box-sizing: border-box;
+}
+
+.aiConsoleWrapper {
+   width: 100%;
+   max-width: 100%;
+   margin-bottom: 8px;
+   box-sizing: border-box;
+   overflow: hidden;
+}
+
+.aiConsoleHeader {
+   width: 100%;
+   margin: 0;
+   box-sizing: border-box;
+   font-family: sans-serif;
+}
+
+.aiConsolePrompt {
+   color: #000;
+   font-weight: bold;
+   font-family: monospace;
+   margin-right: 8px;
+   padding-top: 2px;
+   flex-shrink: 0;
+}
+
+.aiConsoleEditor {
+   flex: 1;
+   min-height: 24px;
+   border: none;
+   padding: 4px;
+   font-family: monospace;
+   background-color: transparent;
+}
+
+/* Hide the gutter (green line) for console and terminal editors */
+.aiConsoleEditor .ace_gutter,
+.aiTerminalEditor .ace_gutter {
+   display: none !important;
+}
+
+.aiConsoleEditor .ace_gutter-layer,
+.aiTerminalEditor .ace_gutter-layer {
+   display: none !important;
+}
+
+.aiConsoleEditorWrapper {
+   flex: 1;
+   min-height: 24px;
+}
+
+.aiConsoleEditor:focus {
+   outline: none;
+   border-color: #4CAF50;
+   box-shadow: 0 0 3px rgba(76, 175, 80, 0.3);
+}
+
+.aiConsoleButtons {
+   display: flex;
+   gap: 8px;
+   margin-top: 8px;
+   pointer-events: auto !important;
+}
+
+.aiConsoleRunButton {
+   background-color: #4CAF50;
+   color: white;
+   border: none;
+   padding: 6px 12px;
+   border-radius: 3px;
+   cursor: pointer !important;
+   font-size: 12px;
+   pointer-events: auto !important;
+   position: relative !important;
+   z-index: 999 !important;
+}
+
+.aiConsoleRunButton:hover {
+   background-color: #45a049;
+}
+
+.aiConsoleRunButton:disabled {
+   background-color: #cccccc;
+   cursor: not-allowed;
+}
+
+.aiConsoleCancelButton {
+   background-color: #f44336;
+   color: white;
+   border: none;
+   padding: 6px 12px;
+   border-radius: 3px;
+   cursor: pointer !important;
+   font-size: 12px;
+   pointer-events: auto !important;
+   position: relative !important;
+   z-index: 999 !important;
+}
+
+.aiConsoleCancelButton:hover {
+   background-color: #da190b;
+}
+
+.aiConsoleCancelButton:disabled {
+   background-color: #cccccc;
+   cursor: not-allowed;
+}
+
+/* Force all console widget buttons to be clickable */
+.aiConsoleWidget button {
+   pointer-events: auto !important;
+   cursor: pointer !important;
+   position: relative !important;
+   z-index: 999 !important;
+}
+
+.aiConsoleWidget .gwt-Button {
+   pointer-events: auto !important;
+   cursor: pointer !important;
+   position: relative !important;
+   z-index: 999 !important;
+}
+
+/* Console command message styling */
+.message.consoleCommand {
+   background-color: #f9f9f9;
+   border-left: 4px solid #4CAF50;
+   padding: 10px;
+   margin: 10px 0;
+}
+
+.consoleWidgetContainer {
+   width: 100%;
+}
+
+/* AI Terminal Widget Styles */
+.aiTerminalWidget {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background-color: #2d2d2d;
+    color: #f0f0f0;
+    padding: 10px;
+    margin: 10px 0;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+}
+
+.aiTerminalExplanation {
+    color: #b0b0b0;
+    font-size: 12px;
+    margin-bottom: 8px;
+    font-style: italic;
+}
+
+.aiTerminalPanel {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 10px;
+    background-color: #1e1e1e;
+    border-radius: 4px;
+    padding: 8px;
+}
+
+.aiTerminalPrompt {
+    color: #00ff00;
+    font-weight: bold;
+    margin-right: 8px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    flex-shrink: 0;
+    line-height: 1.4;
+}
+
+.aiTerminalEditor {
+    flex: 1;
+    background-color: transparent !important;
+    border: none !important;
+    color: #f0f0f0 !important;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+}
+
+.aiTerminalEditor:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+.aiTerminalButtons {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.aiTerminalRunButton {
+    background-color: #4caf50;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.aiTerminalRunButton:hover {
+    background-color: #45a049;
+}
+
+.aiTerminalRunButton:disabled {
+    background-color: #666;
+    cursor: not-allowed;
+}
+
+.aiTerminalCancelButton {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.aiTerminalCancelButton:hover {
+    background-color: #da190b;
+}
+
+.aiTerminalCancelButton:disabled {
+    background-color: #666;
+    cursor: not-allowed;
+}
+
+.message.terminalCommand {
+    background-color: #2d2d2d;
+    border-left: none;
+    color: #f0f0f0;
+}
+
+.terminalWidgetContainer {
+    width: 100%;
+    margin: 10px 0;
+}
+
+.terminalCommand {
+   background-color: #f8f9fa;
+   border-left: none;
+   margin: 10px 0;
+   padding: 0;
+}
+
+/* Edit File Widget Styles */
+.aiEditFilePanel {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    margin: 8px 0;
+    padding: 12px;
+}
+
+.aiEditFileHeader {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 8px;
+    font-style: normal;
+    width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.aiEditFileExplanation {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 8px;
+    font-style: normal;
+}
+
+.aiEditFileEditor {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin: 8px 0;
+    min-height: 200px;
+}
+
+/* Ace editor styling for edit file widgets - similar to console */
+.aiEditFileWrapper .ace_editor {
+    background-color: transparent !important;
+}
+
+.aiEditFileWrapper .ace_gutter,
+.aiEditFileWrapper .ace_gutter-layer {
+    display: none !important;
+}
+
+/* Ensure ace editor theme colors work properly */
+.aiEditFileWrapper.ace_editor_theme .ace_text-layer {
+    color: inherit;
+}
+
+.aiEditFileWrapper.ace_editor_theme .ace_cursor {
+    color: inherit;
+}
+
+/* Container for diff-stats to ensure proper positioning */
+.diff-stats-container {
+    position: absolute;
+    right: 8px;
+    bottom: 3px;
+    line-height: inherit;
+}
+
+/* Diff stats styling */
+.diff-stats {
+    font-family: monospace;
+    font-size: 11px;
+    font-weight: normal;
+    white-space: nowrap;
+    display: inline-block;
+}
+
+/* Green color for additions - same as Accept button */
+.diff-stats .addition {
+    color: #4CAF50 !important;
+    font-weight: bold;
+    display: inline;
+}
+
+/* Red color for removals - same as Cancel button */
+.diff-stats .removal {
+    color: #f44336 !important;
+    font-weight: bold;
+    display: inline;
+    margin-left: 4px;
+}
+
+.aiEditFileButtons {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    justify-content: flex-end;
+}
+
+.aiEditFileAcceptButton {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 3px;
+    cursor: pointer !important;
+    font-size: 12px;
+    pointer-events: auto !important;
+    position: relative !important;
+    z-index: 999 !important;
+}
+
+.aiEditFileAcceptButton:hover {
+    background-color: #45a049;
+}
+
+.aiEditFileAcceptButton:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.aiEditFileCancelButton {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 3px;
+    cursor: pointer !important;
+    font-size: 12px;
+    pointer-events: auto !important;
+    position: relative !important;
+    z-index: 999 !important;
+}
+
+.aiEditFileCancelButton:hover {
+    background-color: #da190b;
+}
+
+.aiEditFileCancelButton:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+/* Edit file command message styling */
+.message.editFileCommand {
+    background-color: #f9f9f9;
+    border-left: 4px solid #2196F3;
+    padding: 10px;
+    margin: 10px 0;
+}
+
+.editFileWidgetContainer {
+    width: 100%;
+}
+
+/* ACE Editor Diff Highlighting Styles */
+.ace_diff_added {
+    background-color: #d4edda !important;
+    border-left: 3px solid #28a745 !important;
+    position: relative;
+}
+
+.ace_diff_deleted {
+    background-color: #f8d7da !important;
+    border-left: 3px solid #dc3545 !important;
+    position: relative;
+}
+
+/* Ensure diff highlighting works across different themes */
+div.ace_diff_added,
+.ace_theme-monokai .ace_diff_added,
+.ace_theme-twilight .ace_diff_added,
+.ace_theme-vibrant_ink .ace_diff_added {
+    background-color: #d4edda !important;
+    border-left: 3px solid #28a745 !important;
+}
+
+div.ace_diff_deleted,
+.ace_theme-monokai .ace_diff_deleted,
+.ace_theme-twilight .ace_diff_deleted,
+.ace_theme-vibrant_ink .ace_diff_deleted {
+    background-color: #f8d7da !important;
+    border-left: 3px solid #dc3545 !important;
+}
+
+/* Test classes for diff highlighting */
+.ace_test_line_0 {
+    background-color: rgba(76, 175, 80, 0.2) !important; /* Green - added (same as accept button #4CAF50) */
+}
+
+.ace_test_line_1 {
+    background-color: rgba(244, 67, 54, 0.2) !important; /* Red - deleted (same as cancel button #f44336) */
+}
+
+.ace_test_line_2 {
+    background-color: white !important;
+}
+
+/* Thinking message styles for streaming panel */
+.thinking-message-container {
+   margin-bottom: 12px;
+}
+
+.thinking-message {
+   opacity: 0.8;
+   font-style: italic;
+   background-color: transparent;
+   text-align: left;
+   word-wrap: break-word;
+   max-width: 100%;
+   position: relative;
+   clear: both;
+   padding: 8px;
+   border-radius: 8px;
+   animation: fadeIn 0.3s ease-in;
+}
+
+.thinking-content {
+   display: flex;
+   align-items: center;
+}
+
+.thinking-text {
+   animation: thinking-pulse 1.5s infinite ease-in-out;
+   font-family: sans-serif;
+   font-size: 14px;
+   color: #666;
+}
+
+@keyframes thinking-pulse {
+   0%, 100% { 
+      opacity: 0.7; 
+      transform: scale(0.98); 
+   }
+   50% { 
+      opacity: 1; 
+      transform: scale(1.02); 
+   }
+}

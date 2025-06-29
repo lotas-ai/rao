@@ -1,0 +1,39 @@
+@external dialogTop, dialogContent;
+
+.labelCell {
+   padding-right: 6px;
+}
+
+.buttonCell button {
+   position: relative;
+   top: 0px;
+   left: 0px;
+   margin-left: 0;
+}
+
+.progressCell img {
+   position: relative;
+   top: 1px;
+}
+
+.progressDialog .dialogTop {
+   display: none;
+}
+
+.progressDialog .dialogContent {
+   margin-top: 4px;
+}
+
+.progressDialog {
+   position: fixed !important;
+   top: 0 !important;
+}
+
+.displayWidget {
+   background-color: white;
+   border: solid #CCC 1px !important;
+   margin: 0;
+   margin-bottom: -6px;
+   height: 250px;
+}
+

@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -e
+
+# Update this when updating to a new base GWT release
+GWT_VER=2.10.1
+
+# This script is intended to run from the rstudio/gwt/tools folder
+RUN_DIR=$(pwd)
+
+GWT_DIR=${RUN_DIR}/../lib/gwt
+INST_DIR=${GWT_DIR}/gwt-rstudio
+
+if [ ! -d gwt ] || [ ! -d gwt/gwt ] || [ ! -d gwt/tools ]; then
+    echo Error: gwt sources not found, use "sync-gwt" script to clone
+    exit 1
+fi
+
+# make sure we have Java 1.8 compiler
+command -v javac >/dev/null 2>&1 || { echo >&2 "javac required but not found: exiting."; exit 1; }
+if javac -version 2>&1 | grep -q 'javac 1\.8\.'; then
+    echo Building with JDK 1.8.
+else
+    echo Error: javac version 1.8 required but not found
+    echo Error: consider setting JAVA_HOME to a Java 8 installation
+    exit 1
+fi
+
+# Build GWT disto with custom version
+cd "${RUN_DIR}"/gwt/gwt
+ant clean dist -Dgwt.version="${GWT_VER}"
+
+GWT_ZIP=${RUN_DIR}/gwt/gwt/build/dist/gwt-${GWT_VER}.zip
+if [ ! -f "${GWT_ZIP}" ]; then
+    echo Error: GWT build unsuccessful
+    exit 1
+fi
+
+# Delete existing distro, extract new one
+rm -rf "${INST_DIR}"
+unzip -qd "${GWT_DIR}" "${GWT_ZIP}"
+mv "${GWT_DIR}"/gwt-${GWT_VER} "${INST_DIR}"
+
+# Delete javadoc, samples
+rm -rf "${INST_DIR}"/doc/javadoc
+find "${INST_DIR}"/samples/* -maxdepth 0 -not -name "build.xml" -type d -exec rm -rf {} \;
+
+echo Success. GWT built and installed to "${INST_DIR}"

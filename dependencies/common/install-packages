@@ -1,0 +1,181 @@
+#!/usr/bin/env bash
+
+#
+# install-packages
+#
+# Copyright (C) 2022 by Posit Software, PBC
+#
+# Unless you have received this program directly from Posit Software pursuant
+# to the terms of a commercial license agreement with Posit Software, then
+# this program is licensed to you under the terms of version 3 of the
+# GNU Affero General Public License. This program is distributed WITHOUT
+# ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+# MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+# AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+#
+#
+set -e
+
+source "$(dirname "${BASH_SOURCE[0]}")/../tools/rstudio-tools.sh"
+section "Installing R Packages"
+
+# the default packages we install, when no lockfile is provided
+PACKAGES=(
+  digest
+  purrr
+  rmarkdown
+  testthat
+  xml2
+  yaml
+  httr2
+  curl
+  jsonlite
+  commonmark
+  htmltools
+  processx
+)
+
+# install dir
+INSTALL_DIR="$(pwd)"
+
+# read lockfile if provided
+PLATFORM="$1"
+LOCKFILE="$(dirname "${BASH_SOURCE[0]}")/lockfiles/${PLATFORM}/renv.lock"
+
+if [ -e "${LOCKFILE}" ]; then
+  info "Using lockfile ${LOCKFILE} for package installation."
+else
+  info "Lockfile ${LOCKFILE} doesn't exist; using latest versions of packages."
+  unset LOCKFILE
+fi
+
+# utility function; used when bundling development versions of packages
+install () {
+
+  PACKAGE=$1
+  PACKAGE_DIR=$PACKAGE
+  PACKAGE_VERSION=$2
+  PACKAGE_GITHUB_ROOT=$3
+  PACKAGE_BUILD_OPTIONS=$4
+
+  # git clone if necessary
+  if [ ! -d "$PACKAGE_DIR" ]
+  then
+    if [[ -z "$RSTUDIO_GITHUB_LOGIN" ]]; then
+      # no supplied credentials, clone directly
+      git clone "https://github.com/$PACKAGE_GITHUB_ROOT/$PACKAGE.git"
+    else
+      # credentials supplied, use them
+      git clone "https://$RSTUDIO_GITHUB_LOGIN@github.com/$PACKAGE_GITHUB_ROOT/$PACKAGE.git"
+    fi
+  fi
+
+  # clean and checkout target branch
+  cd $PACKAGE_DIR
+  git checkout .
+  git clean -df .
+  git pull
+  git checkout $PACKAGE_VERSION
+
+  # append GitHub fields to DESCRIPTION
+  # NOTE: older-style Github prefix required by Packrat 0.5.0;
+  #       newer-style Remote prefix required by renv.
+  PACKAGE_SHA1=`git rev-parse $PACKAGE_VERSION`
+  cat <<EOF >> DESCRIPTION
+GithubRepo: $PACKAGE
+GithubUsername: rstudio
+GithubRef: $PACKAGE_VERSION
+GithubSHA1: $PACKAGE_SHA1
+RemoteType: github
+RemoteHost: api.github.com
+RemoteRepo: $PACKAGE
+RemoteUsername: rstudio
+RemoteRef: $PACKAGE_VERSION
+RemoteSha: $PACKAGE_SHA1
+Origin: RStudioIDE
+EOF
+
+  # create source package (remove previous first)
+  cd ..
+  PACKAGE_ARCHIVE_PATTERN="$PACKAGE*.tar.gz"
+  rm -f $PACKAGE_ARCHIVE_PATTERN
+
+  # build package without vignettes, since vignettes may need e.g. knitr to build
+  R CMD build --no-build-vignettes $PACKAGE_BUILD_OPTIONS "$PACKAGE"
+
+  # modify filename to include SHA1
+  PACKAGE_ARCHIVE=`ls $PACKAGE_ARCHIVE_PATTERN`
+  PACKAGE_ARCHIVE_STEM=${PACKAGE_ARCHIVE%.tar.gz}
+  PACKAGE_ARCHIVE_SHA1=${PACKAGE_ARCHIVE_STEM}_${PACKAGE_SHA1}.tar.gz
+  mv $PACKAGE_ARCHIVE $PACKAGE_ARCHIVE_SHA1
+
+}
+
+# Packages embedded with the IDE. See also:
+#   src/cpp/session/CMakeLists.txt
+#   DependencyManager.java: "Dependency.embeddedPackage" vs. ".cranPackage"
+
+# we often embed these packages but are not currently
+# install rmarkdown main rstudio
+# install rsconnect main rstudio
+# install renv master rstudio
+
+# first, make sure the user library is available, for dev configurations
+cat <<- EOF | R -s
+
+# make sure user library exists
+dir.create(Sys.getenv("R_LIBS_USER"), recursive = TRUE, showWarnings = FALSE)
+
+EOF
+
+# next, install packages
+cat <<- EOF | R -s
+
+# print R information
+writeLines("# R version ----")
+print(R.version)
+writeLines("")
+
+# set up repositories
+options(repos = c(CRAN = "https://cran.rstudio.com"))
+
+# print out system information
+writeLines("# System information ----")
+info <- as.list(Sys.info())
+str(info)
+writeLines("")
+
+# for root / jenkins on Linux, use site library
+if (info[["sysname"]] == "Linux" && info[["user"]] %in% c("root", "jenkins") && length(.Library.site)) {
+   .libPaths(.Library.site)
+}
+
+# notify user
+writeLines("# Library paths ----")
+writeLines(paste("-", .libPaths(), collapse = "\n"))
+writeLines("")
+
+# install renv
+installed <- tryCatch(packageVersion("renv") > "0.17.3", error = function(e) FALSE)
+if (!installed) {
+  writeLines("Installing latest version of renv ...")
+  install.packages("renv", repos = "https://rstudio.r-universe.dev")
+}
+
+lockfile <- "${LOCKFILE}"
+if (nzchar(lockfile)) {
+  # if we were provided a lockfile, use it
+  writeLines(paste("Using lockfile:", lockfile))
+  renv::restore(lockfile = lockfile)
+} else {
+  # otherwise, install preset list of packages from CRAN
+  packages <- scan(text = "${PACKAGES[@]}", what = character())
+  writeLines(paste("Installing packages:", paste(packages, collapse = ", ")))
+  renv::install(packages)
+}
+
+EOF
+
+# back to install-dir
+cd "$INSTALL_DIR"
+

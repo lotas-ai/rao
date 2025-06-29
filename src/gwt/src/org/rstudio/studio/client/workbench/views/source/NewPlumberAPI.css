@@ -1,0 +1,17 @@
+@CHARSET "UTF-8";
+
+.image {
+   margin-right: 12px;
+}
+
+.label {
+   margin-bottom: 2px;
+}
+
+.invalidAPIName {
+   background-color: #f2dede;
+}
+
+.apiNameTextBox {
+   width: 250px;
+}

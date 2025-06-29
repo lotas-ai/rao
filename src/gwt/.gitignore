@@ -1,0 +1,16 @@
+bin/
+extras/
+gen/
+log/
+sdk/
+war/
+
+# ignore log files dumped by a crashing GWT devmode
+javac.*
+/*.log
+
+# ignore development properties file
+*_dev.properties
+
+# ignore local VSCode settings
+.vscode/

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<!--
+#
+# offline.htm
+#
+# Copyright (C) 2022 by Posit Software, PBC
+#
+# This program is licensed to you under the terms of version 3 of the
+# GNU Affero General Public License. This program is distributed WITHOUT
+# ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+# MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+# AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+#
+-->
+
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>RStudio Offline</title>
+  <link rel="stylesheet" href="rstudio.css" type="text/css" />
+
+  <style id="page-style">
+    #border {
+      border: 4px solid var(--lt-grey);
+      padding: 8px;
+      -moz-border-radius: 10px;
+      -webkit-border-radius: 10px;
+      margin: 0 auto;
+    }
+
+    #image {
+      filter:
+        drop-shadow(0 1px 0 var(--lt-grey))
+        drop-shadow(1px 0 0 var(--lt-grey))
+        drop-shadow(0 -1px 0 var(--lt-grey))
+        drop-shadow(-1px 0 0 var(--lt-grey));
+    }
+
+    @media (prefers-color-scheme: dark) {
+      #image {
+        filter:
+          invert(1)
+          hue-rotate(180deg)
+          drop-shadow(0 1px 0 var(--lt-grey))
+          drop-shadow(1px 0 0 var(--lt-grey))
+          drop-shadow(0 -1px 0 var(--lt-grey))
+          drop-shadow(-1px 0 0 var(--lt-grey));
+      }
+    }
+  </style>
+
+</head>
+
+<body>
+  <header role="banner">
+    <div id="banner">
+      <picture>
+        <source
+          id="logo-reverse"
+          srcset="images/Posit-ProductLogo_rst-server-reverse.svg"
+          media="(prefers-color-scheme: dark)"
+        />
+        <img
+          id="logo-full-color"
+          src="images/Posit-ProductLogo_rst-server-full-color.svg"
+          height="27"
+          alt="RStudio Logo"
+        />
+      </picture>
+    </div>
+  </header>
+
+  <div id="border">
+    <div id="image-container">
+      <img alt id="image" src="images/offline.png" />
+    </div>
+    <div>
+      <h2 id="caption">RStudio Temporarily Offline</h2>
+      <div id="detail">
+        RStudio is temporarily offline due to system maintenance. We
+        apologize for the inconvenience, please try again in a few minutes.
+      </div>
+    </div>
+  </div>
+  <script>
+    function getBaseUri() {
+      var baseUri = "#!base_uri#";
+      if (!baseUri) {
+        baseUri = window.location.href;
+      }
+      var index = baseUri.lastIndexOf("#!request_uri#");
+      if (index > 0) {
+        return baseUri.substring(0, index);
+      }
+      return "";
+    }
+
+    var style = document.getElementById("page-style");
+
+    var iconLink = document.createElement("link");
+    iconLink.href = getBaseUri() + "/images/Posit-Product_rst-server-favicon.svg";
+    iconLink.rel = "shortcut icon";
+    style.insertAdjacentElement("beforebegin", iconLink);
+
+    document.getElementById("logo-reverse").srcset = getBaseUri() + "images/Posit-ProductLogo_rst-server-reverse.svg";
+    document.getElementById("logo-full-color").src = getBaseUri() + "images/Posit-ProductLogo_rst-server-full-color.svg";
+
+    document.getElementById("image").src = getBaseUri() + "/images/offline.png";
+  </script>
+</body>
+</html>

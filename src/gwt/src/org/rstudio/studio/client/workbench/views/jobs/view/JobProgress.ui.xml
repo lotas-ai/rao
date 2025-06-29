@@ -1,0 +1,51 @@
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+   xmlns:g="urn:import:com.google.gwt.user.client.ui"
+   xmlns:rw="urn:import:org.rstudio.core.client.widget">
+   <ui:style>
+   
+   .name, .elapsed, .status
+   {
+      text-overflow: ellipsis;
+      overflow: hidden;
+      word-wrap: nowrap;
+   }
+
+   .host
+   {
+      width: 100%;
+      display: flex;
+      overflow: hidden;
+      align-items: center;
+   }
+
+   .host div
+   {
+      margin-left: 2px;
+      margin-right: 2px;
+   }
+
+   .progress {
+      flex: auto;
+      text-align: right;
+   }
+
+   .elapsed
+   {
+      padding-right: 5px;
+      padding-right: 5px;
+   }
+
+   </ui:style>
+   <g:HTMLPanel styleName="{style.host}">
+      <g:Label styleName="{style.name}" ui:field="name_"></g:Label>
+      <g:HTMLPanel styleName="{style.progress}">
+         <g:Label styleName="{style.status}" ui:field="status_"></g:Label>
+         <rw:ProgressBar ui:field="progress_"></rw:ProgressBar>
+      </g:HTMLPanel>
+      <g:HTMLPanel>
+         <rw:ToolbarButton ui:field="stop_"></rw:ToolbarButton>
+         <rw:ToolbarButton ui:field="replay_"></rw:ToolbarButton>
+      </g:HTMLPanel>
+      <g:Label styleName="{style.elapsed}" ui:field="elapsed_"></g:Label>
+   </g:HTMLPanel>
+</ui:UiBinder>

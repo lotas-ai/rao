@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -ex
+
+BRANCH=rstudio/kousa-dogwood
+
+PROGRAMS=("git" "npm")
+for PROGRAM in "${PROGRAMS[@]}"; do
+    if ! command -v "${PROGRAM}" &> /dev/null; then
+        echo "program '${PROGRAM}' not found; exiting"
+    fi
+done
+
+# check out our copy of ace
+if [ ! -d rstudio-ace ]; then
+    git clone git@github.com:rstudio/rstudio-ace.git
+    cd rstudio-ace
+    git remote add upstream git@github.com:ajaxorg/ace.git
+    cd ..
+fi
+
+cd rstudio-ace
+git fetch
+git reset --hard "origin/${BRANCH}"
+git submodule update --init --recursive --force
+npm install
+cd ..
+
+./build-ace

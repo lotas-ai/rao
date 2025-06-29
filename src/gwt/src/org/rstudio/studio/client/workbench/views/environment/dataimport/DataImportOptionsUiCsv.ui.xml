@@ -1,0 +1,188 @@
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+    xmlns:g="urn:import:com.google.gwt.user.client.ui"
+    xmlns:rs="urn:import:org.rstudio.core.client.widget"
+    ui:generateFormat='com.google.gwt.i18n.server.PropertyCatalogFactory'
+    ui:generateKeys="com.google.gwt.i18n.server.keygen.MD5KeyGenerator"
+    ui:generateLocales="default">
+    <ui:with field="res" type="org.rstudio.core.client.theme.res.ThemeResources"/>
+    <ui:with field="ElementIds" type="org.rstudio.core.client.ElementIds"/>
+    <ui:style>
+        .mainPanel {
+            display: -ms-flexbox;
+            display: -webkit-flex;
+            display: flex;
+
+            -webkit-flex-direction: column;
+            -ms-flex-direction: column;
+            flex-direction: column;
+
+            -ms-flex-grow: 1;
+            -webkit-flex-grow: 1;
+            flex-grow: 1;
+        }
+        .optionsBlock {
+            display: -ms-flexbox;
+            display: -webkit-flex;
+            display: flex;
+
+            -webkit-flex-direction: row;
+            -ms-flex-direction: row;
+            flex-direction: row;
+
+            -ms-flex-grow: 1;
+            -webkit-flex-grow: 1;
+            flex-grow: 1;
+
+            border: 1px solid #999;
+            background-color: #F7F8F9;
+            padding-top: 10px;
+            padding-left: 10px;
+            padding-bottom: 3px;
+
+            margin-top: 3px;
+            margin-right: 5px;
+            margin-left: 5px;
+        }
+        .optionsColumn {
+            display: -ms-flexbox;
+            display: -webkit-flex;
+            display: flex;
+
+            -webkit-flex-direction: column;
+            -ms-flex-direction: column;
+            flex-direction: column;
+
+            -ms-flex-grow: 1;
+            -webkit-flex-grow: 1;
+            flex-grow: 1;
+
+            padding-right: 5px;
+        }
+        .optionsLabel {
+            margin-top: 14px;
+
+            margin-left: 5px;
+            margin-right: 5px;
+
+         margin-bottom: 2px;
+        }
+        .nameTextBox {
+            -ms-flex-grow: 1;
+            -webkit-flex-grow: 1;
+            flex-grow: 1;
+            padding-left: 5px;
+            padding-right: 5px;
+        }
+        .skipTextBox {
+            max-width: 50px;
+            text-align: right;
+            padding-left: 5px;
+            padding-right: 5px;
+        }
+        .optionsRow {
+            height: 23px;
+        }
+        .optionsListBox {
+            width: 95px;
+        }
+        input:disabled+label {
+            color: #999;
+        }
+        .localeListBox {
+            width: 50px;
+            text-align: right;
+            padding-left: 5px;
+            padding-right: 5px;
+        }
+    </ui:style>
+    <g:HTMLPanel styleName="{style.mainPanel}">
+        <rs:FormLabel ui:field="optionsLabel_" text="Import Options:" styleName="{style.optionsLabel}"><ui:attribute
+                name="text" key="importOptionsText"/></rs:FormLabel>
+        <div ui:field="optionsGroup_" class="{style.optionsBlock}">
+            <table class="{style.optionsColumn}">
+                <tr class="{style.optionsRow}">
+                    <td><rs:FormLabel text="Name:" for="{ElementIds.getDataImportOptionsName}"><ui:attribute name="text" key="nameText"/></rs:FormLabel></td>
+                    <td>
+                        <rs:FormTextBox ui:field="nameTextBox_" styleName="{style.nameTextBox}"
+                                        elementId="{ElementIds.getDataImportOptionsName}"/>
+                    </td>
+                </tr>
+                <tr class="{style.optionsRow}">
+                    <td><rs:FormLabel text="Skip:" for="{ElementIds.getDataImportOptionsSkip}"><ui:attribute name="text" key="skipText"/></rs:FormLabel></td>
+                    <td>
+                        <rs:FormTextBox ui:field="skipTextBox_" styleName="{style.skipTextBox}"
+                                        elementId="{ElementIds.getDataImportOptionsSkip}"/>
+                    </td>
+                </tr>
+            </table>
+            <table class="{style.optionsColumn}">
+                <tr class="{style.optionsRow}">
+                    <td colspan="2">
+                        <g:CheckBox ui:field="columnNamesCheckBox_" text="First Row as Names"><ui:attribute name="text" key="firstRowText"/></g:CheckBox>
+                    </td>
+                </tr>
+                <tr class="{style.optionsRow}">
+                    <td colspan="2">
+                        <g:CheckBox ui:field="trimSpacesCheckBox_" text="Trim Spaces"><ui:attribute name="text" key="trimSpacesText"/></g:CheckBox>
+                    </td>
+                </tr>
+                <tr class="{style.optionsRow}">
+                    <td colspan="2">
+                        <g:CheckBox ui:field="openDataViewerCheckBox_" text="Open Data Viewer"><ui:attribute name="text" key="openDataViewerText"/></g:CheckBox>
+                    </td>
+                </tr>
+            </table>
+            <table class="{style.optionsColumn}">
+                <tr class="{style.optionsRow}">
+                    <td><rs:FormLabel text="Delimiter:" for="{ElementIds.getDataImportOptionsDelimiter}"><ui:attribute
+                            name="text" key="delimiterText"/></rs:FormLabel></td>
+                    <td>
+                        <rs:FormListBox ui:field="delimiterListBox_" styleName="{style.optionsListBox}"
+                                        elementId="{ElementIds.getDataImportOptionsDelimiter}"/>
+                    </td>
+                </tr>
+                <tr class="{style.optionsRow}">
+                    <td><rs:FormLabel text="Quotes:" for="{ElementIds.getDataImportOptionsQuotes}"><ui:attribute
+                            name="text" key="quotesText"/></rs:FormLabel></td>
+                    <td>
+                        <rs:FormListBox ui:field="quotesListBox_" styleName="{style.optionsListBox}"
+                                        elementId="{ElementIds.getDataImportOptionsQuotes}"/>
+                    </td>
+                </tr>
+                <tr class="{style.optionsRow}">
+                    <td><ui:msg key="localeText">Locale:</ui:msg></td>
+                    <td>
+                        <g:Button ui:field="localeButton_" styleName="{style.optionsListBox}">
+                            <ui:msg key="configureText">Configure...</ui:msg>
+                        </g:Button>
+                    </td>
+                </tr>
+            </table>
+            <table class="{style.optionsColumn}">
+                <tr class="{style.optionsRow}">
+                    <td><rs:FormLabel text="Escape:" for="{ElementIds.getDataImportOptionsEscape}"><ui:attribute
+                            name="text" key="escapeText"/></rs:FormLabel></td>
+                    <td>
+                        <rs:FormListBox ui:field="escapeListBox_" styleName="{style.optionsListBox}"
+                                        elementId="{ElementIds.getDataImportOptionsEscape}" />
+                    </td>
+                </tr>
+                <tr class="{style.optionsRow}">
+                    <td><rs:FormLabel text="Comment:" for="{ElementIds.getDataImportOptionsComment}"><ui:attribute
+                            name="text" key="commentText"/></rs:FormLabel></td>
+                    <td>
+                        <rs:FormListBox ui:field="commentListBox_" styleName="{style.optionsListBox}"
+                                        elementId="{ElementIds.getDataImportOptionsComment}"/>
+                    </td>
+                </tr>
+                <tr class="{style.optionsRow}">
+                    <td><rs:FormLabel text="NA:" for="{ElementIds.getDataImportOptionsNa}" /></td>
+                    <td>
+                        <rs:FormListBox ui:field="naListBox_" styleName="{style.optionsListBox}"
+                                        elementId="{ElementIds.getDataImportOptionsNa}"/>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </g:HTMLPanel>
+</ui:UiBinder>

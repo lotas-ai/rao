@@ -1,0 +1,23 @@
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+             xmlns:g="urn:import:com.google.gwt.user.client.ui">
+<ui:with field="res" type="org.rstudio.studio.client.workbench.views.source.editors.text.ChunkHtmlPreview.Resources" />
+<ui:style>
+.wrapper
+{
+  height: 100%;
+  width: 100%;
+  text-align: center;
+}
+
+.icon
+{
+  margin-top: 5px;
+  width: 63px;
+  height: 32px;
+}
+</ui:style>
+<g:HTMLPanel styleName="{style.wrapper}">
+   <g:Image altText="HTML Widget" styleName="{style.icon}" resource="{res.htmlWidgetIcon2x}">
+</g:Image>
+</g:HTMLPanel>
+</ui:UiBinder>

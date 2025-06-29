@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+#
+# install-mathjax
+#
+# Copyright (C) 2022 by Posit Software, PBC
+#
+# Unless you have received this program directly from Posit Software pursuant
+# to the terms of a commercial license agreement with Posit Software, then
+# this program is licensed to you under the terms of version 3 of the
+# GNU Affero General Public License. This program is distributed WITHOUT
+# ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+# MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+# AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+#
+#
+
+set -e
+
+source "$(dirname "${BASH_SOURCE[0]}")/../tools/rstudio-tools.sh"
+section "Installing Mathjax"
+
+URL="${RSTUDIO_BUILDTOOLS}"
+
+# download and extract mathjax if necessary
+MATHJAX_DIR="${RSTUDIO_TOOLS_ROOT}/mathjax-27"
+if [ -d "$MATHJAX_DIR" ]; then
+   echo "Mathjax already installed at '${MATHJAX_DIR}'"
+   exit 0
+fi
+
+sudo-if-necessary-for "${RSTUDIO_TOOLS_ROOT}" "$@"
+cd "${RSTUDIO_TOOLS_ROOT}"
+
+# NOTE: Unpacks to 'mathjax-27' directory
+MATHJAX=mathjax-2.7.9.zip
+download "${URL}/${MATHJAX}"
+rm -rf "${MATHJAX_DIR}"
+unzip -q "$MATHJAX"
+rm "$MATHJAX"
+

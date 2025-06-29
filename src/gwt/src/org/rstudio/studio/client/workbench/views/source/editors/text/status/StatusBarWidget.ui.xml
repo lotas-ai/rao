@@ -1,0 +1,110 @@
+<ui:UiBinder xmlns:ui='urn:ui:com.google.gwt.uibinder'
+             xmlns:g='urn:import:com.google.gwt.user.client.ui'
+             xmlns:sb='urn:import:org.rstudio.studio.client.workbench.views.source.editors.text.status'>
+
+   <ui:image field='statusBarTile' src='statusBarTile.png' repeatStyle='Horizontal'/>
+   <ui:data field='statusBarSeparator' src='statusBarSeparator.png'/>
+
+   <ui:style>
+      @url SEPARATOR statusBarSeparator;
+      @external gwt-Label;
+      @external rstudio-themes-dark;
+      @external windows;
+
+      @external rstudio-themes-default, rstudio-themes-dark-grey, rstudio-themes-alternate;
+
+      @eval THEME_DEFAULT_BORDER org.rstudio.core.client.theme.ThemeColors.defaultBorder;
+      @eval THEME_DARKGREY_BORDER org.rstudio.core.client.theme.ThemeColors.darkGreyBorder;
+      @eval THEME_ALTERNATE_BORDER org.rstudio.core.client.theme.ThemeColors.alternateBorder;
+
+
+      @sprite .statusBar {
+         gwt-image: 'statusBarTile';
+         width: 100%;
+         font-size: 11px;
+         color: #3c474d;
+      }
+      .statusBar {
+         background-image: none;
+         border-top: solid 1px #d6dadc;
+      }
+      .statusBar div {
+         display: inline;
+         height: 16px;
+         white-space: nowrap;
+      }
+      .statusBar .gwt-Label {
+         position: relative;
+         top: 1px;
+      }
+      body.windows .statusBar .gwt-Label {
+         top: 0px;
+      }
+      .statusBar img {
+         position: relative;
+         top: 2px;
+         margin-left: 6px;
+      }
+      .statusBar img.scopeIcon {
+         top: 2px;
+         margin-left: 4px;
+      }
+      .statusBar .element {
+         display: block;
+         cursor: default;
+         padding-left: 5px;
+         padding-right: 6px;
+         border-right: solid 1px #d6dadc;
+      }
+      .statusBar .element.pos {
+         min-width: 45px;
+         text-align: center;
+      }
+      .statusBar .element.last {
+         background-image: none;
+      }
+      .statusBar .element.last {
+         border-right: none;
+      }
+      .rstudio-themes-dark .statusBar {
+         color: white;
+      }
+      .rstudio-themes-default .statusBar,
+      .rstudio-themes-default .statusBar .element {
+         border-color: THEME_DEFAULT_BORDER;
+      }
+      .rstudio-themes-dark-grey .statusBar,
+      .rstudio-themes-dark-grey .statusBar .element {
+         border-color: THEME_DARKGREY_BORDER;
+      }
+      .rstudio-themes-alternate .statusBar,
+      .rstudio-themes-alternate .statusBar .element  {
+         border-color: THEME_ALTERNATE_BORDER;
+      }
+   </ui:style>
+
+   <g:HorizontalPanel styleName="{style.statusBar}">
+      <sb:StatusBarElementWidget ui:field="position_"
+                                 styleName="{style.element} {style.pos}"
+                                 showArrows="false"/>
+      <g:Image ui:field="scopeIcon_"
+               styleName="{style.scopeIcon}"/>
+               
+      <sb:StatusBarElementWidget ui:field="scope_"
+                                 styleName="{style.element}"
+                                 showArrows="true"/>
+                                 
+      <sb:StatusBarElementWidget ui:field="message_"
+                                 styleName="{style.element}"
+                                 showArrows="false"/>
+                                 
+      <sb:NotebookProgressWidget ui:field="progress_"
+                                 styleName="{style.element} {style.last}" 
+                                 visible="false" />
+                              
+      <sb:StatusBarElementWidget ui:field="language_"
+                                 styleName="{style.element} {style.last}"
+                                 showArrows="true"
+                                 popupAlignment="right"/>
+   </g:HorizontalPanel>
+</ui:UiBinder>

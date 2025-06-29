@@ -1,0 +1,401 @@
+{
+    "$id": "https://rstudio.com/rstudio.state.json",
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "RStudio User State",
+    "type": "object",
+    "properties": {
+        "general": {
+            "type": "object",
+            "properties": {
+                "ignoredUpdateVersions": {
+                    "type": "array",
+                    "description": "A list of ignored updates. Ignored updates will not trigger an available update.",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "default": {
+                "ignoredUpdateVersions": [],
+                "clipboardMonitoring": true
+            }
+        },
+        "font": {
+            "type": "object",
+            "properties": {
+                "proportionalFont": {
+                    "type": "string"
+                },
+                "fixedWidthFont": {
+                    "type": "string"
+                }
+            },
+            "description": "Font options from the Appearance category",
+            "default": {
+                "proportionalFont": "",
+                "fixedWidthFont": ""
+            }
+        },
+        "view": {
+            "type": "object",
+            "properties": {
+                "zoomLevel": {
+                    "type": "number",
+                    "description": "UI zoom level, 1.0 == 100%",
+                    "minimum": 0.25,
+                    "maximum": 5.0
+                },
+                "windowBounds": {
+                    "type": "object",
+                    "description": "Window location and size",
+                    "properties": {
+                        "width": { "type": "number" },
+                        "height": { "type": "number" },
+                        "x": { "type": "number" },
+                        "y": { "type": "number" },
+                        "maximized": { "type": "boolean" }
+                    }
+                },
+                "accessibility": {
+                    "type": "boolean",
+                    "description": "Screen reader support" 
+                },
+                "disableRendererAccessibility": {
+                    "type": "boolean",
+                    "description": "Disable Electron accessibility support"
+                }
+             },
+            "default": {
+                "zoomLevel": 1.0,
+                "windowBounds": { "width": 1200, "height": 900, "x": 0, "y": 0, "maximized": false },
+                "accessibility": false,
+                "disableRendererAccessibility": false
+            }
+        },
+        "remote_session": {
+            "type": "object",
+            "properties": {
+                "lastRemoteSessionUrl": {
+                    "type": "string"
+                },
+                "authCookies": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "tempAuthCookies": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "default": {
+                "lastRemoteSessionUrl": "",
+                "authCookies": [],
+                "tempAuthCookies": []
+            }
+        },
+        "renderer": {
+            "type": "object",
+            "properties": {
+                "engine": {
+                    "type": "string",
+                    "enum": ["auto", "desktop", "gles", "software"]
+                },
+                "useGpuExclusionList": {
+                    "type": "boolean"
+                },
+                "useGpuDriverBugWorkarounds": {
+                    "type": "boolean"
+                }
+            },
+            "default": {
+                "engine": "auto",
+                "useGpuExclusionList": true,
+                "useGpuDriverBugWorkarounds": true
+            }
+        },
+        "platform": {
+            "type": "object",
+            "properties": {
+                "windows": {
+                    "type": "object",
+                    "properties": {
+                        "rBinDir": { "type": "string" },
+                        "preferR64": { "type": "boolean" }
+                    }
+                },
+                "macos": {
+                    "type": "object",
+                    "properties": {
+                        "checkForRosetta": {
+                            "type": "boolean",
+                            "default": true,
+                            "description": "Whether to check for a Rosetta 2 installation on Apple Silicon Macs."
+                        }
+                    }
+                }
+            },
+            "default": {
+                "windows": {
+                    "rBinDir": "",
+                    "preferR64": true,
+                    "rExecutablePath": ""
+                  },
+                "macos": {
+                    "checkForRosetta": true
+                }
+            }
+        },
+        "context_id": {
+            "type": "string",
+            "default": "",
+            "description": "A unique identifier representing the user and machine."
+        },
+        "auto_created_profile": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether we have automatically created an .Rprofile for this user."
+        },
+        "theme": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "description": "The name of the theme."
+                },
+                "url": {
+                    "type": "string",
+                    "description": "The relative path/URL to the theme."
+                },
+                "isDark": {
+                    "type": "boolean",
+                    "description": "Whether the theme should be treated as a dark theme."
+                }
+            },
+            "default": {
+                "name": "Textmate (default)",
+                "url": "theme/default/textmate.rstheme",
+                "isDark": false
+            },
+            "description": "The color theme to apply."
+        },
+        "default_project_location": {
+            "type": "string",
+            "default": "",
+            "description": "The directory path under which to place new projects by default. Shadows a uipref."
+        },
+        "clear_hidden": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to clear hidden objects along with visible objects when clearing the workspace. Set automatically to remember last action."
+        },
+        "export_plot_options": {
+            "type": "object",
+            "properties": {
+                "width": {
+                    "type": "integer"
+                },
+                "height": {
+                    "type": "integer"
+                },
+                "format": {
+                    "type": "string"
+                },
+                "keepRatio": {
+                    "type": "boolean"
+                },
+                "viewAfterSave": {
+                    "type": "boolean"
+                },
+                "copyAsMetafile": {
+                    "type": "boolean"
+                },
+                "useDevicePixelRatio": {
+                    "type": "boolean"
+                }
+            },
+            "default": {
+                "width": 550,
+                "height": 450,
+                "keepRatio": false,
+                "format": "PNG",
+                "viewAfterSave": false,
+                "copyAsMetafile": false,
+                "useDevicePixelRatio": true
+            },
+            "description": "The most recently used plot export options."
+        },
+        "export_viewer_options": {
+            "type": "object",
+            "properties": {
+                "width": {
+                    "type": "integer"
+                },
+                "height": {
+                    "type": "integer"
+                },
+                "format": {
+                    "type": "string"
+                },
+                "keepRatio": {
+                    "type": "boolean"
+                },
+                "viewAfterSave": {
+                    "type": "boolean"
+                },
+                "copyAsMetafile": {
+                    "type": "boolean"
+                }
+            },
+            "default": {},
+            "description": "The most recently used viewer export options."
+        },
+        "save_plot_as_pdf_options": {
+            "type": "object",
+            "properties": {
+                "width": {
+                    "type": "integer"
+                },
+                "height": {
+                    "type": "integer"
+                },
+                "portrait": {
+                    "type": "boolean"
+                },
+                "cairo_pdf": {
+                    "type": "boolean"
+                },
+                "viewAfterSave": {
+                    "type": "boolean"
+                }
+            },
+            "default": {},
+            "description": "The most recently used options for saving a plot as a PDF."
+        },
+        "compile_r_notebook_prefs": {
+            "type": "object",
+            "properties": {
+                "author": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": ["default", "stitch", "spin"]
+                }
+            },
+            "default": {},
+            "description": "Most recently used settings for compiling a notebook from an R script."
+        },
+        "compile_r_markdown_notebook_prefs": {
+            "type": "object",
+            "properties": {
+                "format": {
+                    "type": "string",
+                    "enum": ["html_document", "pdf_document", "word_document"]
+                }
+            },
+            "default": {
+                "format": "html_document"
+            },
+            "description": "Most recently used settings for compiling a notebook using R Markdown."
+        },
+        "show_publish_ui": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to show UI for publishing content."
+        },
+        "enable_rsconnect_publish_ui": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to show UI for publishing content to Posit Connect."
+        },
+        "publish_account": {
+            "type": "object",
+            "default": {
+                "name": "",
+                "server": ""
+            },
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "server": {
+                    "type": "string"
+                }
+            },
+            "description": "The default (last) account used for publishing"
+        },
+        "document_outline_width": {
+            "type": "integer",
+            "default": 110,
+            "description": "The preferred width, in pixels, of the document outline pane."
+        },
+        "connect_via": {
+            "type": "string",
+            "enum": ["connect-r-console", "connect-new-r-script", "connect-new-r-notebook", "connect-copy-to-clipboard"],
+            "default": "connect-r-console",
+            "description": "How to create new connections to data sources."
+        },
+        "error_handler_type": {
+            "type": "string",
+            "enum": ["message", "traceback", "break", "notebook", "custom"],
+            "default": "traceback",
+            "description": "The kind of handler to invoke when errors occur."
+        },
+        "using_mingw_gcc49": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether or not the MinGW compiler with GCC 4.9 is used."
+        },
+        "visual_mode_confirmed": {
+            "type": "boolean",
+            "default": false,
+            "description": "Whether or not the use of Visual Mode has been confirmed."
+        },
+        "bibliography_default_type": {
+            "type": "string",
+            "enum": ["bib", "yaml", "json"],
+            "default": "bib",
+            "description": "The default type for new bibliographies."
+        },
+        "citation_default_in_text": {
+            "type": "boolean",
+            "default": false,
+            "description": "The default style for inserting citations."
+        },
+        "zotero_connection_type": {
+            "type": "string",
+            "enum": ["auto", "none", "local", "web"],
+            "default": "auto",
+            "title": "Zotero connection type",
+            "description": "Zotero connection type (local or web)"
+        },
+        "zotero_use_better_bibtex": {
+            "type": "boolean",
+            "default": false,
+            "title": "Use Better BibTeX for citation keys and BibTeX export",
+            "description": "Whether to use Better BibTeX when suggesting citation keys and writing citations to BibTeX bibliographies"
+        },
+        "zotero_api_key": {
+            "type": "string",
+            "default": "",
+            "title": "Zotero API Key",
+            "description": "Key for making Zotero API calls"  
+        },
+        "zotero_data_dir": {
+            "type": "string",
+            "default": "",
+            "title": "Zotero Data Directory",
+            "description": "Directory containing Zotero data files" 
+        },
+        "quarto_website_sync_editor": {
+            "type": "boolean",
+            "default": false,
+            "title": "Quarto Website Sync Editor",
+            "description": "Sync source editor to Quarto website preview navigation."
+        }
+    }
+}

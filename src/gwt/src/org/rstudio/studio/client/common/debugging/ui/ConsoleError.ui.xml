@@ -1,0 +1,98 @@
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+   xmlns:rw='urn:import:org.rstudio.core.client.widget'
+   xmlns:g="urn:import:com.google.gwt.user.client.ui">
+   <ui:style>
+   @eval proportionalFont org.rstudio.core.client.theme.ThemeFonts.getProportionalFont();
+   
+   .consoleErrorBox {
+      position: relative;
+      overflow: hidden;
+      margin: 5px 5px 5px 0px;
+      padding: 5px 0px 5px 14px;
+      white-space: pre-line;
+   }
+
+   .consoleErrorCommands {
+      top: 5px;
+      float: right;
+      margin-right: 10px;
+      margin-left: 5px;
+      margin-bottom: 15px;
+      line-height: 80%;
+      position: relative;
+      user-select: none;
+      -ms-user-select: none;
+      -moz-user-select: none;
+      -webkit-user-select: none;
+   }
+   
+   .errorCommandText {
+      font-family: proportionalFont;
+      font-size: 80%;
+      opacity: 0.50;
+      cursor: pointer;
+   }
+   
+   .errorCommandText:hover {
+      opacity: 1;
+   }
+   
+   .errorCommandImage {
+      cursor: pointer;
+      width: 9px !important;
+      height: 9px !important;
+   }
+   
+   .errorMessage {
+      white-space: pre;
+      display: inline;
+      word-wrap: break-word;
+      word-break: break-word;
+   }
+
+   .errorMessage:before {
+      content: "";
+      margin-left: -0.6em;
+   }
+   
+   .framePanel {
+      margin-top: 0.5em;
+      margin-left: 0.3em;
+   }
+   </ui:style>
+   <ui:image src="traceback_2x.png"
+             width="9"
+             height="9"
+             field="traceback"></ui:image>
+   <ui:image src="rerun_2x.png"
+             width="9"
+             height="9"
+             field="rerun"></ui:image>
+   <g:HTMLPanel styleName="{style.consoleErrorBox} ace_console_error">
+     <g:HTMLPanel styleName="{style.consoleErrorCommands}">
+        <g:HTMLPanel>
+           <rw:DecorativeImage resource="{traceback}"
+                  ui:field="showTracebackImage"
+                  width="9"
+                  height="9"
+                  styleName="{style.errorCommandImage} show_traceback_image"/>
+           <g:Anchor styleName="{style.errorCommandText} show_traceback_text" ui:field="showTracebackText">
+              Show Traceback
+           </g:Anchor>
+        </g:HTMLPanel>
+        <g:HTMLPanel>
+           <rw:DecorativeImage resource="{rerun}"
+                    ui:field="rerunImage"
+                    width="9"
+                    height="9"
+                    styleName="{style.errorCommandImage} rerun_image"/>
+           <g:Anchor styleName="{style.errorCommandText} rerun_text" ui:field="rerunText">
+              Rerun with Debug
+           </g:Anchor>
+        </g:HTMLPanel>
+     </g:HTMLPanel>
+     <g:HTML ui:field="errorMessage" styleName="{style.errorMessage}"></g:HTML>
+     <g:HTMLPanel ui:field="framePanel" visible="false" styleName="{style.framePanel} stack_trace">
+     </g:HTMLPanel>
+   </g:HTMLPanel>
+</ui:UiBinder> 

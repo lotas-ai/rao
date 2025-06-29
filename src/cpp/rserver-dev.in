@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+
+#
+# rserver-dev
+#
+# Copyright (C) 2022 by Posit Software, PBC
+#
+# Unless you have received this program directly from Posit Software pursuant
+# to the terms of a commercial license agreement with Posit Software, then
+# this program is licensed to you under the terms of version 3 of the
+# GNU Affero General Public License. This program is distributed WITHOUT
+# ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+# MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+# AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+#
+#
+#
+# remove stream files/dirs
+cleanupStreams()
+{
+   rm -rf /tmp/rstudio-server
+}
+cleanupStreams
+
+# generic cleanup routine
+cleanup()
+{
+   killall -SIGUSR2 rsession 2>/dev/null
+   killall -SIGUSR2 rworkspaces 2>/dev/null
+   cleanupStreams
+   exit $?
+}
+trap cleanup SIGINT
+
+echo "[i] Starting RStudio Server. Please connect at http://rstudio-localhost:8787."
+RS_CRASH_HANDLER_PATH="$(pwd)/server/crash-handler-proxy/crash-handler-proxy" \
+   RS_CRASHPAD_HANDLER_PATH="${RSTUDIO_TOOLS_ROOT}/crashpad/crashpad/out/Default/crashpad_handler" \
+   RS_DB_MIGRATIONS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/server/db" \
+   RSTUDIO_PROJECT_ROOT="@RSTUDIO_PROJECT_ROOT@" \
+   server/rserver --server-user $(whoami) --auth-none=1 --config-file conf/rserver-dev.conf "$@"
+

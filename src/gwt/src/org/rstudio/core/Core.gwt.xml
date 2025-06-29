@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE module PUBLIC "-//Google Inc.//DTD Google Web Toolkit 2.8.2//EN" "http://www.gwtproject.org/doctype/2.9.0/gwt-module.dtd">
+<module>
+   <inherits name='com.google.gwt.user.User'/>
+   <inherits name='com.google.gwt.json.JSON' />
+   <inherits name='com.google.gwt.http.HTTP' />
+
+   <inherits name='org.rstudio.studio.RStudio' />
+
+   <!-- Elemental module dependencies                              -->
+   <inherits name="elemental2.core.Core" />
+   <inherits name="elemental2.dom.Dom" />
+   <inherits name="elemental2.promise.Promise" />
+
+   <generate-with class="org.rstudio.core.rebind.command.CommandBundleGenerator" >
+      <when-type-assignable
+            class="org.rstudio.core.client.command.CommandBundle"/>
+   </generate-with>
+   <generate-with class="org.rstudio.core.rebind.command.CommandBinderGenerator" >
+      <when-type-assignable
+            class="org.rstudio.core.client.command.CommandBinder"/>
+   </generate-with>
+   <generate-with class="org.rstudio.core.rebind.AsyncShimGenerator" >
+      <when-type-assignable
+            class="org.rstudio.core.client.AsyncShim"/>
+   </generate-with>
+   <generate-with class="org.rstudio.core.rebind.JavaScriptPassthroughGenerator" >
+      <when-type-assignable
+            class="org.rstudio.core.client.js.JavaScriptPassthrough"/>
+   </generate-with>
+   <generate-with class="org.rstudio.core.rebind.command.JsObjectInjectorGenerator" >
+      <when-type-assignable
+            class="org.rstudio.core.client.js.JsObjectInjector"/>
+   </generate-with>
+   <generate-with class="org.rstudio.core.rebind.JavaScriptSerializerGenerator">
+      <when-type-assignable
+            class="org.rstudio.core.client.js.JavaScriptSerializer"/>
+   </generate-with>
+
+   <replace-with class="org.rstudio.core.client.dom.impl.DomUtilsStandardImpl">
+      <when-type-is class="org.rstudio.core.client.dom.impl.DomUtilsImpl" />
+   </replace-with>
+
+   <replace-with class="org.rstudio.core.client.BrowseCapFirefox">
+      <when-type-is class="org.rstudio.core.client.BrowseCap"/>
+      <when-property-is name="user.agent" value="gecko1_8" />
+   </replace-with>
+   <replace-with class="org.rstudio.core.client.BrowseCapSafari">
+      <when-type-is class="org.rstudio.core.client.BrowseCap"/>
+      <any>
+         <when-property-is name="user.agent" value="safari" />
+      </any>
+   </replace-with>
+
+   <replace-with class="org.rstudio.core.client.theme.ThemeFonts.WebThemeFontLoader">
+      <when-type-is class="org.rstudio.core.client.theme.ThemeFonts.ThemeFontLoader"/>
+   </replace-with>
+   <replace-with class="org.rstudio.core.client.theme.ThemeFonts.DesktopThemeFontLoader">
+      <when-type-is class="org.rstudio.core.client.theme.ThemeFonts.ThemeFontLoader"/>
+      <when-property-is name="rstudio.desktop" value="true"/>
+   </replace-with>
+   <replace-with class="org.rstudio.core.client.theme.ThemeFonts.EmptyThemeFontLoader">
+      <when-type-is class="org.rstudio.core.client.theme.ThemeFonts.ThemeFontLoader"/>
+      <when-property-is name="rstudio.unittests" value="true"/>
+   </replace-with>
+
+</module>

@@ -1,0 +1,20 @@
+<ui:UiBinder xmlns:ui="urn:ui:com.google.gwt.uibinder"
+   xmlns:g="urn:import:com.google.gwt.user.client.ui"
+   ui:generateFormat='com.google.gwt.i18n.server.PropertyCatalogFactory'
+   ui:generateKeys="com.google.gwt.i18n.server.keygen.MD5KeyGenerator"
+   ui:generateLocales="default">
+   <ui:style>
+   
+   </ui:style>
+   <g:HTMLPanel>
+      <g:HTML>
+      <p>
+         <ui:msg key="publishRPubsText">RPubs is a free service from RStudio for sharing documents on the web. Click Publish to get started.</ui:msg>
+      </p>
+      <p>
+         <strong><ui:msg key="importantRPubsText">IMPORTANT: All documents published to RPubs are publicly visible.</ui:msg>
+         </strong><ui:msg key="publishDocumentsText">You should only publish documents you wish to share publicly.</ui:msg>
+      </p>
+      </g:HTML>
+   </g:HTMLPanel>
+</ui:UiBinder> 

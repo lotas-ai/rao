@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+
+#
+# install-quarto
+#
+# Copyright (C) 2022 by Posit Software, PBC
+#
+# Unless you have received this program directly from Posit Software pursuant
+# to the terms of a commercial license agreement with Posit Software, then
+# this program is licensed to you under the terms of version 3 of the
+# GNU Affero General Public License. This program is distributed WITHOUT
+# ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+# MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+# AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+#
+#
+
+set -e
+
+source "$(dirname "${BASH_SOURCE[0]}")/../tools/rstudio-tools.sh"
+section "Installing Quarto"
+
+# variables that control download + installation process
+# specify a version to pin for releases
+QUARTO_VERSION=1.7.31
+
+# update to latest Quarto release
+# QUARTO_VERSION=`curl https://quarto.org/docs/download/_download.json | jq ".version" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+'`
+# QUARTO_VERSION=`curl https://quarto.org/docs/download/_prerelease.json | jq ".version" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+'`
+
+QUARTO_URL_BASE="https://github.com/quarto-dev/quarto-cli/releases/download/v${QUARTO_VERSION}"
+#QUARTO_URL_BASE="${RSTUDIO_BUILDTOOLS}/quarto/${QUARTO_VERSION}"
+
+QUARTO_SUBDIR="quarto"
+
+# check installed version
+QUARTO_BIN="${RSTUDIO_TOOLS_ROOT}/${QUARTO_SUBDIR}/bin/quarto"
+if test -f "${QUARTO_BIN}"; then
+   INSTALLED_QUARTO_VERSION=`${QUARTO_BIN} --version`
+   if [ $INSTALLED_QUARTO_VERSION == $QUARTO_VERSION ]; then
+      echo "Quarto ${QUARTO_VERSION} already installed"
+      exit 0
+   fi
+fi
+
+# move to tools root
+sudo-if-necessary-for "${RSTUDIO_TOOLS_ROOT}" "$@"
+cd "${RSTUDIO_TOOLS_ROOT}"
+
+# reset quarto subdirectory
+rm -rf "${QUARTO_SUBDIR}"
+mkdir -p "${QUARTO_SUBDIR}"
+pushd "${QUARTO_SUBDIR}"
+
+# determine archive based on platform
+PLATFORM="$(uname)-$(getconf LONG_BIT)"
+case "${PLATFORM}" in
+
+"Darwin-64")
+  SUBDIR="macos"
+  FILES=(
+    "quarto-${QUARTO_VERSION}-macos.tar.gz"
+  )
+  ;;
+
+"Linux-64")
+  SUBDIR="linux"
+  if [ "$(arch)" == "aarch64" ]; then
+    ARCH="arm64"
+  else
+    ARCH="amd64"
+  fi
+  if [ "$OS_DISTRO" == "centos7" ]; then
+    echo "Quarto binaries are not available for CentOS/AL2"
+    exit 0
+  fi
+  
+  FILES=(
+    "quarto-${QUARTO_VERSION}-linux-${ARCH}.tar.gz"
+  )
+
+  ;;
+
+*)
+  echo "Quarto binaries not available for platform '${PLATFORM}'."
+  exit 0
+  ;;
+
+esac
+
+# download and extract files 
+for FILE in "${FILES[@]}"; do
+   echo "Downloading ${FILE} from ${QUARTO_URL_BASE}/${FILE}"
+   download "${QUARTO_URL_BASE}/${FILE}" "${FILE}"
+   extract "${FILE}"
+   rm -f "${FILE}"
+   if [ $PLATFORM == "Linux-64" ]; then
+     mv "${QUARTO_SUBDIR}-${QUARTO_VERSION}" "../${QUARTO_SUBDIR}-${QUARTO_VERSION}"
+     popd
+     rm -rf "${QUARTO_SUBDIR}"
+     mv "${QUARTO_SUBDIR}-${QUARTO_VERSION}" "${QUARTO_SUBDIR}"
+   fi
+done
+
+# ensure WASM files don't have the execute bit set; when they do, it causes
+# errors on Linux platforms where file(1) can't identify them
+if [ "$(uname)" = "Linux" ]; then
+   find "${QUARTO_SUBDIR}" -iname "*.wasm" | xargs chmod 644
+fi
+

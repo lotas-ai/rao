@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+#
+# install-hosts
+#
+# Copyright (C) 2022 by Posit Software, PBC
+#
+# Unless you have received this program directly from Posit Software pursuant
+# to the terms of a commercial license agreement with Posit Software, then
+# this program is licensed to you under the terms of version 3 of the
+# GNU Affero General Public License. This program is distributed WITHOUT
+# ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+# MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+# AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+#
+#
+
+set -e
+
+source "$(dirname "${BASH_SOURCE[0]}")/../tools/rstudio-tools.sh"
+
+if is-jenkins; then
+   exit 0
+fi
+
+section "Updating /etc/hosts"
+
+ENTRY="127.0.0.1  rstudio-localhost"
+if grep -q "${ENTRY}" /etc/hosts; then
+   info "/etc/hosts is already up-to-date."
+   exit 0
+fi
+
+# re-run as root if necessary
+sudo-if-necessary-for /etc/hosts "$@"
+info "Adding ${ENTRY} to /etc/hosts."
+echo "${ENTRY}" >> /etc/hosts
+

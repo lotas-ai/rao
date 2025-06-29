@@ -1,0 +1,14 @@
+---
+BasedOnStyle: LLVM
+IndentWidth: 3
+UseTab: Never
+BreakBeforeBraces: Allman
+AllowShortIfStatementsOnASingleLine: false
+IndentCaseLabels: false
+SpaceAfterCStyleCast: true
+PointerAlignment: Left
+BinPackArguments: false
+BinPackParameters: false
+BreakConstructorInitializers: BeforeColon
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+---

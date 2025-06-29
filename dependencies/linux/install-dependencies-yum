@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+
+#
+# install-dependencies-yum
+#
+# Copyright (C) 2022 by Posit Software, PBC
+#
+# Unless you have received this program directly from Posit Software pursuant
+# to the terms of a commercial license agreement with Posit Software, then
+# this program is licensed to you under the terms of version 3 of the
+# GNU Affero General Public License. This program is distributed WITHOUT
+# ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+# MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+# AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+#
+#
+
+set -e
+
+# build/development tools
+sudo yum install -y make
+sudo yum install -y gcc
+sudo yum install -y gcc-c++
+sudo yum install -y rpmdevtools
+sudo yum install -y wget
+sudo yum install -y jq
+sudo yum install -y whois
+
+# core system libraries
+sudo yum install -y libuuid-devel
+sudo yum install -y openssl-devel
+sudo yum install -y bzip2-devel
+sudo yum install -y zlib-devel
+sudo yum install -y pam-devel
+sudo yum install -y libuser-devel
+
+# pandoc dependencies
+sudo yum install -y libffi
+
+# boost
+sudo yum install -y boost-devel
+
+# pango cairo
+sudo yum install -y pango-devel
+
+# gwt prereqs
+sudo yum install -y java-1.8.0-openjdk
+sudo yum install -y java-1.8.0-openjdk-devel
+sudo yum install -y ant
+sudo yum install -y xml-commons-apis
+
+# required for Qt
+sudo yum install -y libxslt-devel
+sudo yum install -y mesa-libGL-devel
+sudo yum install -y libXScrnSaver-devel
+sudo yum install -y fakeroot
+sudo yum install -y postgresql-devel
+
+# overlay
+if [ -e install-overlay-yum ]
+then
+  ./install-overlay-yum
+fi
+
+# common
+cd ../common
+./install-common "$1"
+cd ../linux
+

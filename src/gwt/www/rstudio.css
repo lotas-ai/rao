@@ -1,0 +1,172 @@
+/*
+ * rstudio.css
+ *
+ * Copyright (C) 2022 by Posit Software, PBC
+ *
+ * This program is licensed to you under the terms of version 3 of the
+ * GNU Affero General Public License. This program is distributed WITHOUT
+ * ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
+ * MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
+ * AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
+ *
+ */
+
+:root {
+  --bg-col: #fff;
+  --fg-col: #000;
+  --slt-grey: #e6e8ea;
+  --lt-grey: #cecfd4;
+  --shadow-amt: 10%;
+  --primary: #527ca3;
+  --d-primary: #447099;
+  --primary-fg: white;
+}
+
+html, body {
+  background-color: var(--bg-col);
+  color: var(--fg-col);
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 100vh;
+  margin: 0;
+  overflow: auto;
+}
+
+#posit-logo {
+  fill: var(--fg-col);
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    --bg-col: #191919;
+    --fg-col: #fff;
+    --slt-grey: #292929;
+    --lt-grey: #404040;
+    --shadow-amt: 45%;
+  }
+
+  a,
+  a:visited {
+    color: #bb86fc;
+  }
+
+  img[src^="images/progress_large.gif"] {
+    filter: invert(1) hue-rotate(180deg);
+    mix-blend-mode: screen;
+  }
+}
+
+body,
+td {
+  font-family: Lucida Grande, Lucida Sans Unicode, Helvetica, sans-serif;
+  font-size: 11pt;
+}
+
+#banner {
+  background-color: var(--slt-grey);
+  margin: 30px 30px 70px;
+  padding: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  position: relative;
+  justify-content:flex-end;
+  flex-wrap: wrap;
+}
+
+#banner picture {
+  margin-right: auto;
+  height: 27px;
+}
+
+#logo {
+  margin-right: auto;
+}
+
+#logo, #logo > a {
+  display: flex;
+}
+
+#licensed-to {
+  margin-left: 2px;
+  text-align: right;
+}
+
+#license-prefix {
+  opacity: 0.6;
+  font-weight: normal;
+}
+
+#border {
+  width: 550px;
+  min-height: 150px;
+  padding: 1.5em;
+  background-color: var(--slt-grey);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  box-shadow: 0 2px 12px 0 rgb(0 0 0 / var(--shadow-amt));
+  border: 1px solid var(--lt-grey);
+  border-radius: 4px;
+}
+
+#border > :last-child {
+  flex: 1;
+}
+
+#image-container {
+  margin-right: 1em;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: stretch;
+  position: relative;
+  overflow: hidden;
+}
+
+#iewarn {
+  color: #888;
+  width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+#caption {
+  text-align: left;
+  border-bottom: 4px solid #e0e2e5;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  margin-right: 10px;
+  font-size: 16px;
+  font-weight: normal;
+}
+
+#detail {
+  margin-top: 8px;
+  margin-right: 10px;
+}
+
+a img {
+  border: none;
+}
+
+#login-html {
+  margin: 30px 20px 70px 20px;
+  padding: 8px;
+}
+
+.visuallyhidden {
+  position: absolute;
+  clip: rect(0 0 0 0);
+  border: 0;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+}

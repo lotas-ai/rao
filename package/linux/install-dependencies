@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+set -e
+
+# install cmake if not already installed or version is too low
+install_cmake=false
+if ! command -v cmake &> /dev/null; then
+   install_cmake=true
+else 
+   cmake_version=$(cmake --version | grep -oP "cmake version \K[\w.]+")
+   echo "CMake Version: ${cmake_version}"
+   version_array=(${cmake_version//./ })
+   if ((${version_array[0]} < 3)) || 
+      ( ((${version_array[0]} == 3)) && ((${version_array[1]} < 25)) ) ||
+      ( ((${version_array[0]} == 3)) && ((${version_array[1]} == 25)) && ((${version_array[2]} < 2)) ); then
+      install_cmake=true
+   fi
+fi
+
+if $install_cmake ; then
+ 	CMAKE_VERSION=cmake-3.25.2
+	CMAKE_TARBALL=$CMAKE_VERSION.tar.gz
+	wget https://www.cmake.org/files/v3.25/$CMAKE_TARBALL
+	tar xf $CMAKE_TARBALL
+	cd $CMAKE_VERSION
+	./bootstrap 
+	make
+	sudo make install
+        
+        # after installing the new cmake, we need to forget the old locations
+        # otherwise, cmake will crash
+        hash -r
+
+	cd ..
+	rm -rf $CMAKE_VERSION
+	rm -f $CMAKE_TARBALL
+fi
+
+# install patchelf
+if ! command -v patchelf &> /dev/null; then
+	wget https://nixos.org/releases/patchelf/patchelf-0.9/patchelf-0.9.tar.gz
+	tar xzvf patchelf-0.9.tar.gz
+	cd patchelf-0.9
+	./configure
+	make
+	sudo make install
+	cd ..
+	rm -rf patchelf-0.9
+	rm -f patchelf-0.9.tar.gz
+fi
+
