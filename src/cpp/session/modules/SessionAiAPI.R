@@ -553,7 +553,6 @@
               "Content-Type" = "application/json",
               "Accept" = "text/event-stream"
             ),
-            httr::config(http_version = 1.1),
             httr::timeout(3600),  # 1-hour timeout for streaming requests (essentially long enough that the cancellation will have to be form a large gap in streaming deltas)
             httr::write_stream(function(x) {
               if (length(x) > 0) {
