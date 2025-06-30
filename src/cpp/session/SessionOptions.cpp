@@ -727,10 +727,17 @@ void Options::resolveCopilotPath(const FilePath& resourcePath, std::string* pPat
 
 void Options::resolveRipgrepPath(const FilePath& resourcePath, std::string* pPath)
 {
-   // ripgrep binary is in a version-specific subdirectory
    FilePath resolvedPath = resourcePath.completePath(*pPath);
    FilePath versionPath = resolvedPath.completeChildPath("14.1.1");
+   
+#ifdef _WIN32
+   // On Windows, ripgrep binary is in a platform-specific subdirectory
+   FilePath platformPath = versionPath.completeChildPath("ripgrep-14.1.1-x86_64-pc-windows-msvc");
+   *pPath = platformPath.getAbsolutePath();
+#else
+   // On Linux, ripgrep binary is directly in the version directory
    *pPath = versionPath.getAbsolutePath();
+#endif
 }
 
 void Options::resolveRsclangPath(const FilePath& resourcePath,
