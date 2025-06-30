@@ -467,6 +467,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
     */
    public void createUserMessageSynchronously(String messageId, String content)
    {
+      // Reset conversation name generation flag for new user query
+      conversationNameAttemptedForThisTurn_ = false;
+      
       Element conversationElement = getActiveConversationContainer();
       if (conversationElement == null)
       {
@@ -659,7 +662,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
             }
             
             // Trigger conversation name generation only for non-cancelled responses
-            if (!isCancelled) {
+            // Only attempt once per user query turn
+            if (!isCancelled && !conversationNameAttemptedForThisTurn_) {
+               conversationNameAttemptedForThisTurn_ = true;
                triggerConversationNameCheck();
             }
          }
@@ -1224,6 +1229,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       editFileWidgets_.clear();
       editFileStreamingContent_.clear();
       
+      // Reset conversation name generation flags
+      conversationNameAttemptedForThisTurn_ = false;
+      
       // Update scroll manager streaming status after clearing
       updateScrollManagerStreamingStatus();
    }
@@ -1693,6 +1701,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    
    // Scroll management
    private AiScrollManager scrollManager_;
+   
+   // Track whether we've already attempted conversation name generation for the current user query
+   private boolean conversationNameAttemptedForThisTurn_ = false;
 
    /**
     * Call the global JavaScript function to create revert buttons
