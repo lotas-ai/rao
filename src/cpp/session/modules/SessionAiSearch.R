@@ -534,8 +534,12 @@
                   enclosing_block <- .rs.find_enclosing_code_block(filename, line_number)
                   if (!is.null(enclosing_block)) {
                      file_content <- enclosing_block$content
+                     start_line <- enclosing_block$start_line
+                     end_line <- enclosing_block$end_line
                   } else {
                      file_content <- all_lines[line_number]
+                     start_line <- line_number
+                     end_line <- line_number
                   }
                }
             }

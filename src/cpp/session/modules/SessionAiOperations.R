@@ -650,7 +650,8 @@
    file_existed <- !is.null(.rs.get_effective_file_content(filename)) || file.exists(filename)
    
    # Create directory structure if filename contains slashes
-   if (grepl("/", filename) || grepl("\\\\", filename)) {
+   # Skip directory creation for special __UNSAVED patterns (these are virtual identifiers, not real paths)
+   if (!startsWith(filename, "__UNSAVED") && (grepl("/", filename) || grepl("\\\\", filename))) {
       file_dir <- dirname(filename)
       if (!dir.exists(file_dir)) {
          dir.create(file_dir, recursive = TRUE, showWarnings = FALSE)
@@ -1278,11 +1279,13 @@
 })
 
 .rs.addFunction("find_enclosing_code_block", function(file_path, line_number) {
-   if (!file.exists(file_path)) {
+   # Get file content from either disk or open editor (handles unsaved files)
+   file_content <- .rs.get_effective_file_content(file_path)
+   if (is.null(file_content)) {
       return(NULL)
    }
    
-   all_lines <- readLines(file_path, warn = FALSE)
+   all_lines <- strsplit(file_content, "\n")[[1]]
    
    code_blocks <- list()
    

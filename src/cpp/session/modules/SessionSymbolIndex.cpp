@@ -1112,8 +1112,10 @@ Error SymbolIndex::buildIndex(const FilePath& dir) {
             // Check if anything has changed since the last indexing
             dirChanged = hasDirectoryChanged(dir);
             if (!dirChanged) {
-               // Nothing changed, just keep the loaded index
+               // Nothing changed on disk, but we still need to re-index open documents
+               // since unsaved files can change without affecting disk files
                indexBuilt_ = true;
+               indexOpenDocuments();
                return Success();
             }
          }
@@ -3434,7 +3436,9 @@ void SymbolIndex::indexOpenDocuments() {
       std::string filePath;
       if (!pDoc->path().empty()) {
          // Document has a file path - use it and override any existing symbols for this file
-         filePath = module_context::resolveAliasedPath(pDoc->path()).getAbsolutePath();
+         std::string originalPath = pDoc->path();
+         FilePath resolvedPath = module_context::resolveAliasedPath(originalPath);
+         filePath = resolvedPath.getAbsolutePath();
          
          // Remove existing symbols for this file since we're replacing with editor content
          removeSymbolsForFile(filePath);
@@ -3459,6 +3463,9 @@ void SymbolIndex::indexOpenDocuments() {
             }
          }
          
+         // Remove existing symbols for this unsaved file since we're replacing with current editor content
+         // This ensures deleted/moved symbols are properly cleaned up
+         removeSymbolsForFile(filePath);
       }
       
       // Index the content based on document type for open documents

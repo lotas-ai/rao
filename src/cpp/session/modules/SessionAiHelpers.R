@@ -1410,31 +1410,28 @@ tryCatch({
       if (!is.null(insert_line)) {
          previous_content <- ""
       } else if (!is.null(start_line) && !is.null(end_line)) {
-         # Line range mode: get only the specified range as previous content
-         if (!is.null(args$filename)) {
-            file_path <- if (startsWith(args$filename, "/") || startsWith(args$filename, "~") || grepl("^[A-Za-z]:", args$filename)) {
-               args$filename
-            } else {
-               file.path(getwd(), args$filename)
+         # First try to find the function_call_output that corresponds to this edit_file call
+         function_output <- NULL
+         for (entry in conversation_log) {
+            if (!is.null(entry$type) && entry$type == "function_call_output" &&
+                !is.null(entry$call_id) && 
+                !is.null(edit_file_entry$function_call$call_id) &&
+                entry$call_id == edit_file_entry$function_call$call_id) {
+               function_output <- entry
+               break
             }
-            
-            # Use get_effective_file_content to get the full file content, then extract range
-            full_file_content <- .rs.get_effective_file_content(file_path)
-            if (!is.null(full_file_content) && nchar(full_file_content) > 0) {
-               tryCatch({
-                  all_lines <- strsplit(full_file_content, "\n", fixed = TRUE)[[1]]
-                  if (start_line <= length(all_lines) && end_line <= length(all_lines) && start_line <= end_line) {
-                     previous_content <- paste(all_lines[start_line:end_line], collapse = "\n")
-                  } else {
-                     previous_content <- ""
-                  }
-               }, error = function(e) {
-                  previous_content <- ""
-                  cat("DEBUG: Error processing file content for line range:", e$message, "\n")
-               })
-            } else {
-               previous_content <- ""
-            }
+         }
+         
+         # function_call_output always exists for edit_file calls, so this should never be null
+         if (is.null(function_output) || is.null(function_output$output)) {
+            stop("ERROR: function_call_output missing for edit_file call")
+         }
+         
+         previous_content <- function_output$output
+         # Use the line numbers from the function_call_output if they exist and are valid
+         if (!is.null(function_output$start_line) && !is.null(function_output$end_line)) {
+            start_line <- function_output$start_line
+            end_line <- function_output$end_line
          }
       } else if (is_keyword_edit) {
          # Find the function_call_output that corresponds to this edit_file call
