@@ -494,6 +494,12 @@
    }
    
    generated_name <- .rs.backend_generate_conversation_name(user_assistant_messages)
+   
+   # Handle NULL response (e.g., from cancellation)
+   if (is.null(generated_name)) {
+      return("New conversation")
+   }
+   
    generated_name <- gsub("[\"'`]", "", generated_name)
    generated_name <- trimws(generated_name)
    

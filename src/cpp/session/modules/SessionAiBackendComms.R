@@ -981,7 +981,6 @@
       if (length(valid_summaries) > 0) {
         most_recent_query <- max(valid_summaries)
         previous_summary <- summaries$summaries[[as.character(most_recent_query)]]
-        message("DEBUG: Using fallback summary for query ", most_recent_query, " instead of ", target_query_number - 1, "\n")
       }
     }
   }
@@ -1299,7 +1298,6 @@
           timestamp = summary_entry$timestamp,
           summary_text = summary_entry$summary_text
         )
-        message("DEBUG: Using fallback summary for query ", most_recent_query, " instead of ", target_summary_query, " for API call\n")
       }
     }
   }
