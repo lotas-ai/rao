@@ -120,6 +120,19 @@
   return(result)
 })
 
+.rs.addFunction("get_symbols_for_file", function(file_path) {
+  # Validate
+  if (!is.character(file_path) || length(file_path) != 1)
+    stop("File path must be a single character string")
+  
+  # Call C++ implementation
+  result <- .Call("rs_getSymbolsForFile", file_path)
+  
+  # Return the result with a nice class
+  class(result) <- c("rs_symbols", class(result))
+  return(result)
+})
+
 # Function to index a specific symbol (file or directory)
 .rs.addFunction("index_specific_symbol", function(path) {
   # Validate

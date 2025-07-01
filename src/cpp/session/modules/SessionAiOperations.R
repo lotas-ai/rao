@@ -1279,173 +1279,67 @@
 })
 
 .rs.addFunction("find_enclosing_code_block", function(file_path, line_number) {
-   # Get file content from either disk or open editor (handles unsaved files)
-   file_content <- .rs.get_effective_file_content(file_path)
-   if (is.null(file_content)) {
+   tryCatch({
+      # Get symbols for this specific file (handles unsaved files efficiently)
+      file_symbols <- .rs.get_symbols_for_file(file_path)
+      
+      if (length(file_symbols) == 0) {
+         return(NULL)
+      }
+      
+      # Find the narrowest symbol that contains the line (exclude file symbols)
+      enclosing_symbol <- NULL
+      smallest_range <- Inf
+      
+      for (symbol in file_symbols) {
+      # Skip the file symbol itself
+      if (symbol$type == "file") {
+         next
+      }
+      
+      start_line <- as.numeric(symbol$line_start)
+      end_line <- as.numeric(symbol$line_end)
+      
+      if (!is.na(start_line) && !is.na(end_line) && 
+            start_line <= line_number && line_number <= end_line) {
+         
+         range_size <- end_line - start_line + 1
+         if (range_size < smallest_range) {
+            smallest_range <- range_size
+            enclosing_symbol <- symbol
+         }
+      }
+      }
+      
+      if (is.null(enclosing_symbol)) {
       return(NULL)
-   }
-   
-   all_lines <- strsplit(file_content, "\n")[[1]]
-   
-   code_blocks <- list()
-   
-   func_start_pattern <- "^\\s*([a-zA-Z0-9_\\.]+)\\s*<-\\s*function\\s*\\("
-   func_start_pattern2 <- "^\\s*function\\s*\\("
-   arrow_func_pattern <- "^\\s*([a-zA-Z0-9_\\.]+)\\s*<-\\s*\\(.*\\)\\s*=>\\s*\\{"
-   
-   in_function <- FALSE
-   function_start_line <- NULL
-   function_name <- NULL
-   brace_count <- 0
-   
-   in_chunk <- FALSE
-   chunk_start_line <- NULL
-   chunk_pattern <- "^\\s*```\\{r.*\\}\\s*$"
-   chunk_end_pattern <- "^\\s*```\\s*$"
-   
-   for (i in seq_along(all_lines)) {
-      line <- all_lines[i]
-      
-      if (!in_function) {
-         func_match <- regexpr(func_start_pattern, line, perl = TRUE)
-         if (func_match > 0) {
-            in_function <- TRUE
-            function_start_line <- i
-            match_text <- regmatches(line, func_match)
-            function_name <- gsub(func_start_pattern, "\\1", match_text)
-            
-            brace_count <- brace_count + sum(gregexpr("\\{", line, perl = TRUE)[[1]] > 0)
-            brace_count <- brace_count - sum(gregexpr("\\}", line, perl = TRUE)[[1]] > 0)
-            
-            if (grepl("\\{", line, perl = TRUE)) {
-               brace_count <- brace_count + 1
-            }
-            next
-         }
-         
-         func_match <- regexpr(func_start_pattern2, line, perl = TRUE)
-         if (func_match > 0) {
-            in_function <- TRUE
-            function_start_line <- i
-            function_name <- "anonymous"
-            
-            brace_count <- brace_count + sum(gregexpr("\\{", line, perl = TRUE)[[1]] > 0)
-            brace_count <- brace_count - sum(gregexpr("\\}", line, perl = TRUE)[[1]] > 0)
-            
-            if (grepl("\\{", line, perl = TRUE)) {
-               brace_count <- brace_count + 1
-            }
-            next
-         }
-         
-         func_match <- regexpr(arrow_func_pattern, line, perl = TRUE)
-         if (func_match > 0) {
-            in_function <- TRUE
-            function_start_line <- i
-            match_text <- regmatches(line, func_match)
-            function_name <- gsub(arrow_func_pattern, "\\1", match_text)
-            
-            brace_count <- brace_count + sum(gregexpr("\\{", line, perl = TRUE)[[1]] > 0)
-            brace_count <- brace_count - sum(gregexpr("\\}", line, perl = TRUE)[[1]] > 0)
-            next
-         }
-      } else {
-         brace_count <- brace_count + sum(gregexpr("\\{", line, perl = TRUE)[[1]] > 0)
-         brace_count <- brace_count - sum(gregexpr("\\}", line, perl = TRUE)[[1]] > 0)
-         
-         if (brace_count <= 0) {
-            code_blocks <- c(code_blocks, list(list(
-               type = "function",
-               name = function_name,
-               start_line = function_start_line,
-               end_line = i,
-               content = paste(all_lines[function_start_line:i], collapse = "\n")
-            )))
-            
-            in_function <- FALSE
-            function_start_line <- NULL
-            function_name <- NULL
-            brace_count <- 0
-         }
       }
       
-      if (!in_chunk && grepl(chunk_pattern, line, perl = TRUE)) {
-         in_chunk <- TRUE
-         chunk_start_line <- i
-      } else if (in_chunk && grepl(chunk_end_pattern, line, perl = TRUE)) {
-         code_blocks <- c(code_blocks, list(list(
-            type = "chunk",
-            name = paste0("chunk_", chunk_start_line),
-            start_line = chunk_start_line,
-            end_line = i,
-            content = paste(all_lines[chunk_start_line:i], collapse = "\n")
-         )))
-         
-         in_chunk <- FALSE
-         chunk_start_line <- NULL
+      # Get the content of the enclosing symbol
+      content <- .rs.get_effective_file_content(file_path)
+      if (is.null(content) || length(content) == 0) {
+      return(NULL)
       }
-   }
-   
-   if (in_function && !is.null(function_start_line)) {
-      code_blocks <- c(code_blocks, list(list(
-         type = "function",
-         name = function_name,
-         start_line = function_start_line,
-         end_line = length(all_lines),
-         content = paste(all_lines[function_start_line:length(all_lines)], collapse = "\n")
-      )))
-   }
-   
-   if (in_chunk && !is.null(chunk_start_line)) {
-      code_blocks <- c(code_blocks, list(list(
-         type = "chunk",
-         name = paste0("chunk_", chunk_start_line),
-         start_line = chunk_start_line,
-         end_line = length(all_lines),
-         content = paste(all_lines[chunk_start_line:length(all_lines)], collapse = "\n")
-      )))
-   }
-   
-   code_blocks <- c(code_blocks, list(list(
-      type = "file",
-      name = basename(file_path),
-      start_line = 1,
-      end_line = length(all_lines),
-      content = paste(all_lines, collapse = "\n")
-   )))
-   
-   most_relevant <- NULL
-   
-   for (block in code_blocks) {
-      if (block$type == "function" && 
-          block$start_line <= line_number && 
-          block$end_line >= line_number) {
-         most_relevant <- block
-         break
+      
+      content_lines <- strsplit(content, "\n")[[1]]
+      start_line <- as.numeric(enclosing_symbol$line_start)
+      end_line <- as.numeric(enclosing_symbol$line_end)
+      
+      if (start_line > length(content_lines) || end_line > length(content_lines)) {
+      return(NULL)
       }
-   }
-   
-   if (is.null(most_relevant)) {
-      for (block in code_blocks) {
-         if (block$type == "chunk" && 
-             block$start_line <= line_number && 
-             block$end_line >= line_number) {
-            most_relevant <- block
-            break
-         }
-      }
-   }
-   
-   if (is.null(most_relevant)) {
-      for (block in code_blocks) {
-         if (block$type == "file") {
-            most_relevant <- block
-            break
-         }
-      }
-   }
-   
-   return(most_relevant)
+      
+      extracted_content <- paste(content_lines[start_line:end_line], collapse = "\n")
+      
+      return(list(
+      content = extracted_content,
+      start_line = start_line,
+      end_line = end_line
+      ))
+      
+   }, error = function(e) {
+      return(NULL)
+   })
 })
 
 .rs.addFunction("extract_rmd_code_chunks", function(filename) {

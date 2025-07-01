@@ -416,6 +416,9 @@ public:
    // Get all symbols
    std::vector<Symbol> getAllSymbols();
    
+   // Add new method to get symbols for a specific file
+   std::vector<Symbol> getSymbolsForFile(const std::string& filePath);
+   
    // Check if index is built
    bool isIndexBuilt() const { return indexBuilt_; }
    
@@ -469,7 +472,7 @@ private:
    std::vector<std::string> pendingFiles_;
    
    // Position tracking for directory traversal (0 = complete, >0 = in progress)
-   std::vector<size_t> traversalPath_; // Tracks the complete path through directory hierarchy
+       std::vector<std::pair<std::string, size_t>> traversalPath_; // Tracks directory path and position pairs
    
    // Timestamp for indexing timeout
    std::chrono::time_point<std::chrono::steady_clock> indexingStartTime_;
@@ -935,6 +938,105 @@ std::vector<Symbol> SymbolIndex::getAllSymbols() {
    return allSymbols;
 }
 
+std::vector<Symbol> SymbolIndex::getSymbolsForFile(const std::string& filePath) {
+   std::lock_guard<std::mutex> lock(mutex_);
+   
+   // If the map is empty and we have a current working directory, try to load from storage
+   if (symbolMap_.empty() && !currentWorkingDir_.empty()) {
+      FilePath dir(currentWorkingDir_);
+      std::string dirId = getDirectoryId(dir.getAbsolutePath());
+      if (!dirId.empty()) {
+         Error error = loadIndexFromStorageNoLock(dirId);
+         if (error)
+            LOG_ERROR(error);
+      }
+   }
+   
+   std::vector<Symbol> fileSymbols;
+   
+   // First, try to find symbols with the exact file path
+   for (const auto& pair : symbolMap_) {
+      for (const Symbol& symbol : pair.second) {
+         if (symbol.filePath == filePath) {
+            fileSymbols.push_back(symbol);
+         }
+      }
+   }
+   
+   // If no symbols found and this might be an unsaved file, try alternative patterns
+   if (fileSymbols.empty()) {
+      // Get all open documents to check for unsaved files
+      std::vector<boost::shared_ptr<source_database::SourceDocument>> docs;
+      Error error = source_database::list(&docs);
+      if (!error) {
+         for (const auto& pDoc : docs) {
+            if (pDoc->path().empty()) {
+               // This is an unsaved document
+               std::string tempName = pDoc->getProperty("tempName");
+               if (!tempName.empty()) {
+                  // Check if the filePath matches any of the unsaved patterns
+                  bool matches = false;
+                  
+                  if (filePath == tempName) {
+                     matches = true;
+                  } else {
+                     std::string unsavedPattern1 = "__UNSAVED__/" + tempName;
+                     std::string unsavedPattern2;
+                     if (!pDoc->id().empty() && pDoc->id().length() >= 4) {
+                        unsavedPattern2 = "__UNSAVED_" + pDoc->id().substr(0, 4) + "__/" + tempName;
+                     }
+                     
+                     if (filePath == unsavedPattern1 || 
+                         (!unsavedPattern2.empty() && filePath == unsavedPattern2)) {
+                        matches = true;
+                     }
+                  }
+                  
+                  if (matches) {
+                     // Find symbols for this unsaved file using its internal path
+                     std::string internalPath;
+                     if (!pDoc->id().empty() && pDoc->id().length() >= 4) {
+                        internalPath = "__UNSAVED_" + pDoc->id().substr(0, 4) + "__/" + tempName;
+                     } else {
+                        internalPath = "__UNSAVED__/" + tempName;
+                     }
+                     
+                     for (const auto& pair : symbolMap_) {
+                        for (const Symbol& symbol : pair.second) {
+                           if (symbol.filePath == internalPath) {
+                              fileSymbols.push_back(symbol);
+                           }
+                        }
+                     }
+                     break; // Found the matching document, no need to continue
+                  }
+               }
+            } else {
+               // This is a saved document, check if the normalized paths match
+               FilePath docPath = module_context::resolveAliasedPath(pDoc->path());
+               std::string normalizedDocPath = docPath.getAbsolutePath();
+               
+               FilePath inputPath = module_context::resolveAliasedPath(filePath);
+               std::string normalizedInputPath = inputPath.getAbsolutePath();
+               
+               if (normalizedDocPath == normalizedInputPath && fileSymbols.empty()) {
+                  // Try again with the normalized path
+                  for (const auto& pair : symbolMap_) {
+                     for (const Symbol& symbol : pair.second) {
+                        if (symbol.filePath == normalizedDocPath) {
+                           fileSymbols.push_back(symbol);
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      }
+   }
+   
+   return fileSymbols;
+}
+
 void SymbolIndex::traverseDirectory(const FilePath& dir, size_t& filesIndexed) {
    
    std::vector<FilePath> children;
@@ -954,22 +1056,26 @@ void SymbolIndex::traverseDirectory(const FilePath& dir, size_t& filesIndexed) {
    if (filesIndexed >= MAX_FILES_PER_BATCH || hasTimedOut()) {
       // We've already reached our limit, so store our position and stop
       if (!children.empty()) {
-         // If this is a new traversal path, add the starting position
-         if (traversalPath_.empty() || traversalPath_.back() != 1) {
-            traversalPath_.push_back(1); // Start position for next run
-         }
+         // Save position 1 for this directory to resume here next time
+         traversalPath_.push_back(std::make_pair(dir.getAbsolutePath(), 1));
       }
       return;
    }
    
    // Start from the saved position in this directory's children list
    size_t startPosition = 0;
+   std::string dirPath = dir.getAbsolutePath();
    
-   // If we have a valid traversal path and we're at the right level
-   if (!traversalPath_.empty()) {
-      // Get the position for this level and remove it from the path
-      startPosition = traversalPath_.back();
-      traversalPath_.pop_back();
+   // Look for a saved position for this specific directory
+   auto it = std::find_if(traversalPath_.begin(), traversalPath_.end(),
+                         [&dirPath](const std::pair<std::string, size_t>& entry) {
+                            return entry.first == dirPath;
+                         });
+   
+   if (it != traversalPath_.end()) {
+      // Found a saved position for this directory
+      startPosition = it->second;
+      traversalPath_.erase(it);
    }
    
    // Process each child starting from the saved position
@@ -983,7 +1089,7 @@ void SymbolIndex::traverseDirectory(const FilePath& dir, size_t& filesIndexed) {
          
          // If we're at the end of this directory's children, don't add to path
          if (i < children.size() - 1) {
-            traversalPath_.push_back(nextPosition);
+            traversalPath_.push_back(std::make_pair(dir.getAbsolutePath(), nextPosition));
          }
          
          return;
@@ -1006,9 +1112,12 @@ void SymbolIndex::traverseDirectory(const FilePath& dir, size_t& filesIndexed) {
          // Stop if we've reached the maximum or timed out
          if (filesIndexed >= MAX_FILES_PER_BATCH || hasTimedOut()) {
             // Save position for next call
-            traversalPath_.push_back(i + 1);
+            traversalPath_.push_back(std::make_pair(dir.getAbsolutePath(), i + 1));
             return;
          }
+         
+         // Save the current traversal path size before recursion
+         size_t pathSizeBeforeRecursion = traversalPath_.size();
          
          // Recursively process subdirectory
          traverseDirectory(child, filesIndexed);
@@ -1016,9 +1125,18 @@ void SymbolIndex::traverseDirectory(const FilePath& dir, size_t& filesIndexed) {
          // If we hit the limit during recursion, we need to stop and
          // preserve our position in the parent directory
          if (filesIndexed >= MAX_FILES_PER_BATCH || hasTimedOut()) {
-            // Add this directory's position to the traversal path
-            // so we can continue with this child next time
-            traversalPath_.push_back(i);
+            // Check if the recursive call added new positions (saved its own state)
+            // OR if it consumed existing positions (completed partially)
+            if (traversalPath_.size() > pathSizeBeforeRecursion) {
+               // Recursion added new positions - it hit a limit and saved state
+            } else {
+               // Recursion either completed fully or consumed existing positions
+               // In either case, we should continue with the NEXT child (i+1) next time
+               size_t nextPosition = i + 1;
+               if (nextPosition < children.size()) {
+                  traversalPath_.push_back(std::make_pair(dir.getAbsolutePath(), nextPosition));
+               }
+            }
             return;
          }
       } else {
@@ -1088,6 +1206,7 @@ Error SymbolIndex::buildIndex(const FilePath& dir) {
       // reset traversal path
       if (workingDir != currentWorkingDir_) {
          traversalPath_.clear();
+         dirChanged = true;
       }
       
       currentWorkingDir_ = workingDir;
@@ -4006,6 +4125,18 @@ SEXP rs_buildSymbolIndexQuick(SEXP dirPathSEXP) {
    return r::sexp::create(true, &protect);
 }
 
+SEXP rs_getSymbolsForFile(SEXP filePathSEXP) {
+   std::string filePath = r::sexp::asString(filePathSEXP);
+   
+   if (!symbol_index::SymbolIndex::getInstance().isIndexBuilt()) {
+      r::exec::error("Symbol index has not been built");
+      return R_NilValue;
+   }
+   
+   std::vector<symbol_index::Symbol> symbols = symbol_index::SymbolIndex::getInstance().getSymbolsForFile(filePath);
+   return symbolVectorToRObject(symbols);
+}
+
 // R functions registrations
 Error initSymbolIndex()
 {
@@ -4019,6 +4150,7 @@ Error initSymbolIndex()
    RS_REGISTER_CALL_METHOD(rs_indexSpecificSymbol, 1);
    RS_REGISTER_CALL_METHOD(rs_removeSymbolIndex, 0);
    RS_REGISTER_CALL_METHOD(rs_buildSymbolIndexQuick, 1);
+   RS_REGISTER_CALL_METHOD(rs_getSymbolsForFile, 1);
    
    return Success();
 }
@@ -4334,8 +4466,11 @@ Error SymbolIndex::saveIndexToStorage(const std::string& dirId)
    
    // Save the traversal path
    json::Array pathArray;
-   for (size_t pos : traversalPath_) {
-      pathArray.push_back(static_cast<int>(pos));
+   for (const auto& pathPair : traversalPath_) {
+      json::Object pathEntry;
+      pathEntry["directory"] = pathPair.first;
+      pathEntry["position"] = static_cast<int>(pathPair.second);
+      pathArray.push_back(pathEntry);
    }
    indexObj["traversal_path"] = pathArray;
    
@@ -4406,16 +4541,23 @@ Error SymbolIndex::loadIndexFromStorageNoLock(const std::string& dirId)
    // Load traversal path if available
    if (indexObj.find("traversal_path") != indexObj.end() && indexObj["traversal_path"].isArray()) {
       json::Array pathArray = indexObj["traversal_path"].getArray();
-      for (const json::Value& posValue : pathArray) {
-         if (posValue.isInt()) {
-            traversalPath_.push_back(static_cast<size_t>(posValue.getInt()));
+      for (const json::Value& pathValue : pathArray) {
+         if (pathValue.isObject()) {
+            // New format: directory/position pairs
+            json::Object pathEntry = pathValue.getObject();
+            std::string directory = pathEntry["directory"].getString();
+            size_t position = static_cast<size_t>(pathEntry["position"].getInt());
+            traversalPath_.push_back(std::make_pair(directory, position));
+         } else if (pathValue.isInt()) {
+            // Old format: just positions (for backward compatibility)
+            traversalPath_.push_back(std::make_pair("", static_cast<size_t>(pathValue.getInt())));
          }
       }
    } else if (indexObj.find("traversal_position") != indexObj.end()) {
       // For backward compatibility with older storage format
       size_t position = static_cast<size_t>(indexObj["traversal_position"].getInt());
       if (position > 0) {
-         traversalPath_.push_back(position);
+         traversalPath_.push_back(std::make_pair("", position));
       }
    }
    
