@@ -42,6 +42,8 @@ async function fetchLatestVersionInfo(): Promise<UpdateInfo | null> {
       metadataUrl = `${S3_BASE_URL}/latest-mac.json`;
     } else if (platform === 'win32') {
       metadataUrl = `${S3_BASE_URL}/latest-win.json`;
+    } else if (platform === 'linux') {
+      metadataUrl = `${S3_BASE_URL}/latest-linux.json`;
     } else {
       logger().logDebug('Unsupported platform for updates');
       return null;
@@ -56,7 +58,7 @@ async function fetchLatestVersionInfo(): Promise<UpdateInfo | null> {
     }
     
     // Determine file extension based on platform
-    const fileExt = platform === 'darwin' ? '.dmg' : '.exe';
+    const fileExt = platform === 'darwin' ? '.dmg' : platform === 'win32' ? '.exe' : '.deb';
     const fileName = `Rao-v${metadata.version}${fileExt}`;
     
     // Use downloadUrl from metadata if available, otherwise use default URL
