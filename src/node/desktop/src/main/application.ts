@@ -396,19 +396,8 @@ export class Application implements AppState {
 
     this.setDockMenu();
     
-    // Debug the update checking process
-    console.log("===== APPLICATION.TS: About to check for updates =====");
-    logger().logInfo("APPLICATION.TS: About to call checkForUpdatesOnStartup() - this should appear in logs");
-    
-    try {
-      // Check for updates on startup
-      checkForUpdatesOnStartup();
-      console.log("===== APPLICATION.TS: checkForUpdatesOnStartup() called successfully =====");
-      logger().logInfo("APPLICATION.TS: checkForUpdatesOnStartup() call completed");
-    } catch (error) {
-      console.error("===== APPLICATION.TS: Error in checkForUpdatesOnStartup() =====", error);
-      logger().logError(`APPLICATION.TS: Error in checkForUpdatesOnStartup(): ${error}`);
-    }
+    // Check for updates on startup
+    checkForUpdatesOnStartup();
 
     return run();
   }

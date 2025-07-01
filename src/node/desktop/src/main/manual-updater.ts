@@ -13,9 +13,6 @@
  *
  */
 
-// Module load detection
-console.log('===== MANUAL-UPDATER MODULE LOADING =====');
-
 import { app, dialog, shell } from 'electron';
 import { logger } from '../core/logger';
 import * as https from 'https';
@@ -36,7 +33,6 @@ interface UpdateInfo {
  * Fetch latest version info from the S3 bucket
  */
 async function fetchLatestVersionInfo(): Promise<UpdateInfo | null> {
-  console.log('===== MANUAL-UPDATER: fetchLatestVersionInfo called =====');
   try {
     // Determine platform-specific metadata URL
     const platform = process.platform;
@@ -85,7 +81,6 @@ async function fetchLatestVersionInfo(): Promise<UpdateInfo | null> {
     
     return updateInfo;
   } catch (error) {
-    console.error('===== MANUAL-UPDATER: fetchLatestVersionInfo error =====', error);
     logger().logError(`Error fetching update info: ${error}`);
     return null;
   }
@@ -95,7 +90,6 @@ async function fetchLatestVersionInfo(): Promise<UpdateInfo | null> {
  * Fetch JSON from a URL
  */
 function fetchJson(url: string): Promise<any> {
-  console.log(`===== MANUAL-UPDATER: fetchJson called for ${url} =====`);
   return new Promise((resolve, reject) => {
     logger().logDebug(`Update check: starting HTTPS request to ${url}`);
     
@@ -128,13 +122,11 @@ function fetchJson(url: string): Promise<any> {
     });
     
     request.on('error', (error) => {
-      console.error('===== MANUAL-UPDATER: fetchJson HTTPS request error =====', error);
       logger().logError(`Update check: HTTPS request error: ${error.message}`);
       reject(error);
     });
     
     request.setTimeout(10000, () => {
-      console.error('===== MANUAL-UPDATER: fetchJson request timeout =====');
       logger().logError('Update check: request timeout after 10 seconds');
       request.destroy();
       reject(new Error('Request timeout'));
@@ -146,18 +138,15 @@ function fetchJson(url: string): Promise<any> {
  * Check if an update is available
  */
 export async function checkForUpdates(showNoUpdateDialog = true): Promise<boolean> {
-  console.log(`===== MANUAL-UPDATER: checkForUpdates called (showNoUpdateDialog: ${showNoUpdateDialog}) =====`);
   logger().logInfo(`Update check: starting check (showNoUpdateDialog: ${showNoUpdateDialog})`);
   
   try {
     const currentVersion = app.getVersion();
-    console.log(`===== MANUAL-UPDATER: Current app version: ${currentVersion} =====`);
     logger().logInfo(`Update check: current version is ${currentVersion}`);
     
     const updateInfo = await fetchLatestVersionInfo();
     
     if (!updateInfo) {
-      console.error('===== MANUAL-UPDATER: Failed to get update info =====');
       logger().logError('Update check: failed to get update info');
       if (showNoUpdateDialog) {
         await dialog.showMessageBox({
@@ -205,7 +194,6 @@ export async function checkForUpdates(showNoUpdateDialog = true): Promise<boolea
       
       return true;
     } else {
-      console.log('===== MANUAL-UPDATER: No update available =====');
       logger().logInfo('Update check: no update available');
       if (showNoUpdateDialog) {
         await dialog.showMessageBox({
@@ -219,7 +207,6 @@ export async function checkForUpdates(showNoUpdateDialog = true): Promise<boolea
     
     return false;
   } catch (error) {
-    console.error('===== MANUAL-UPDATER: Error checking for updates =====', error);
     logger().logError(`Error checking for updates: ${error}`);
     
     if (showNoUpdateDialog) {
@@ -240,7 +227,6 @@ export async function checkForUpdates(showNoUpdateDialog = true): Promise<boolea
  * Check for updates with user feedback (can be called from menu item)
  */
 export function checkForUpdatesManually(): Promise<boolean> {
-  console.log('===== MANUAL-UPDATER: checkForUpdatesManually called =====');
   return checkForUpdates(true);
 }
 
@@ -248,25 +234,11 @@ export function checkForUpdatesManually(): Promise<boolean> {
  * Silent check for updates on startup (no dialogs if no update available)
  */
 export function checkForUpdatesOnStartup(): void {
-  console.log('===== MANUAL-UPDATER: checkForUpdatesOnStartup called =====');
   logger().logInfo('Update check: scheduling startup update check in 2 seconds');
   
   // Small delay to let app finish startup
   setTimeout(() => {
-    console.log('===== MANUAL-UPDATER: 2 second timeout completed, starting update check =====');
     logger().logInfo('Update check: starting silent startup update check');
-    
-    try {
-      void checkForUpdates(false).then(result => {
-        console.log(`===== MANUAL-UPDATER: Update check completed with result: ${result} =====`);
-        logger().logInfo(`Update check: completed with result: ${result}`);
-      }).catch(err => {
-        console.error('===== MANUAL-UPDATER: Error in update check =====', err);
-        logger().logError(`Update check error: ${err}`);
-      });
-    } catch (error) {
-      console.error('===== MANUAL-UPDATER: Exception during update check =====', error);
-      logger().logError(`Exception during update check: ${error}`);
-    }
+    void checkForUpdates(false);
   }, 2000);
 } 
