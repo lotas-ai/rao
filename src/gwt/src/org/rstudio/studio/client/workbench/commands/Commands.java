@@ -559,6 +559,7 @@ public abstract class
    public abstract AppCommand layoutZoomAi();
    public abstract AppCommand aiBack();
    public abstract AppCommand aiAttach();
+   public abstract AppCommand aiAttachImage();
    public abstract AppCommand aiStop();
    public abstract AppCommand aiForward();
    public abstract AppCommand aiHome();

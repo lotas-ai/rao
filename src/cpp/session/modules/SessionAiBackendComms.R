@@ -261,6 +261,83 @@
   return(result)
 })
 
+.rs.addFunction("prepare_image_context_data", function() {
+  conversation_index <- .rs.get_current_conversation_index()
+  base_ai_dir <- .rs.get_ai_base_dir()
+  conversations_dir <- file.path(base_ai_dir, "conversations")
+  conversation_dir <- file.path(conversations_dir, paste0("conversation_", conversation_index))
+  csv_path <- file.path(conversation_dir, "images.csv")
+    
+  if (!file.exists(csv_path)) {
+    return(NULL)
+  }
+  
+  images <- tryCatch({
+    read.csv(csv_path, stringsAsFactors = FALSE)
+  }, error = function(e) {
+    return(NULL)
+  })
+    
+  if (is.null(images) || nrow(images) == 0) {
+    return(NULL)
+  }
+  
+  image_context_data <- list()
+  
+  for (i in seq_len(nrow(images))) {
+    # Use local_path (the copied file in images_attached folder)
+    local_path <- images$local_path[i]
+    
+    if (file.exists(local_path)) {
+      # Read image as base64
+      image_base64 <- tryCatch({
+        # Read the image file as binary
+        raw_data <- readBin(local_path, "raw", file.info(local_path)$size)
+        # Convert to base64
+        base64enc::base64encode(raw_data)
+      }, error = function(e) {
+        NULL
+      })
+      
+      if (!is.null(image_base64)) {
+        # Determine MIME type from file extension
+        file_ext <- tolower(tools::file_ext(local_path))
+        mime_type <- switch(file_ext,
+          "png" = "image/png",
+          "jpg" = "image/jpeg", 
+          "jpeg" = "image/jpeg",
+          "gif" = "image/gif",
+          "bmp" = "image/bmp",
+          "svg" = "image/svg+xml",
+          "image/png"  # default
+        )
+                
+        image_info <- list(
+          filename = images$filename[i],
+          original_path = images$file_path[i],
+          local_path = local_path,
+          mime_type = mime_type,
+          base64_data = image_base64,
+          timestamp = images$timestamp[i]
+        )
+        
+        image_context_data[[length(image_context_data) + 1]] <- image_info
+      }
+    }
+  }
+    
+  if (length(image_context_data) == 0) {
+    return(NULL)
+  }
+  
+  result <- list(
+    has_images = TRUE,
+    images = image_context_data
+  )
+    
+  return(result)
+})
+
 .rs.addFunction("extract_symbols_for_backend", function(conversation) {
   return(.rs.check_message_for_symbols(conversation))
 })

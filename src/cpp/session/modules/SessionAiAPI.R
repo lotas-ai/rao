@@ -475,11 +475,25 @@
     result$open_files <- list()
   })
   
+  # 5. Attached images for context
+  tryCatch({
+    image_context <- .rs.prepare_image_context_data()
+    
+    if (!is.null(image_context) && !is.null(image_context$has_images) && image_context$has_images) {
+      result$attached_images <- image_context$images
+    } else {
+      result$attached_images <- list()
+    }
+  }, error = function(e) {
+    result$attached_images <- list()
+  })
+  
   # Return the structured result (or NULL if everything is empty)
   if (length(result$direct_context) == 0 && 
       length(result$keywords) == 0 && 
       length(result$environment_variables) == 0 && 
-      length(result$open_files) == 0) {
+      length(result$open_files) == 0 &&
+      length(result$attached_images) == 0) {
     return(NULL)
   }  
   return(result)

@@ -161,4 +161,17 @@ public interface AiServerOperations
    void getCurrentConversationIndex(ServerRequestCallback<Double> requestCallback);
    
    void getDiffDataForEditFile(String messageId, ServerRequestCallback<com.google.gwt.core.client.JavaScriptObject> requestCallback);
+
+   // Image operations
+   void saveAiImage(String imagePath, ServerRequestCallback<java.lang.Void> requestCallback);
+   
+   void createTempImageFile(String dataUrl, String fileName, ServerRequestCallback<String> requestCallback);
+   
+   void listImages(ServerRequestCallback<JsArrayString> requestCallback);
+   
+   void deleteImage(String imagePath, ServerRequestCallback<Void> requestCallback);
+   
+   void deleteAllImages(ServerRequestCallback<java.lang.Void> requestCallback);
+   
+   void checkImageContentDuplicate(String imagePath, ServerRequestCallback<Boolean> requestCallback);
 }

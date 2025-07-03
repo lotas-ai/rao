@@ -48,6 +48,7 @@ import org.rstudio.core.client.widget.Operation;
 import org.rstudio.studio.client.workbench.views.ai.model.ApiKeyManagementResult;
 import org.rstudio.studio.client.workbench.views.ai.model.CreateAiConversationResult;
 import org.rstudio.studio.client.workbench.views.ai.AiPane;
+import org.rstudio.studio.client.workbench.views.ai.AiPaneImages;
 import org.rstudio.studio.client.workbench.views.ai.AiViewManager;
 import org.rstudio.studio.client.common.FileDialogs;
 import org.rstudio.studio.client.workbench.model.RemoteFileSystemContext;
@@ -286,7 +287,45 @@ public class Ai extends BasePresenter implements ShowAiEvent.Handler
          });
    }
 
-
+   public void onAiAttachImage() { 
+      AiPane pane = (AiPane)view_;
+            
+      // Use the injected FileSystemContext or get one from RStudioGinjector if null
+      RemoteFileSystemContext context = fsContext_;
+      if (context == null) {
+         context = RStudioGinjector.INSTANCE.getRemoteFileSystemContext();
+      }
+      
+      // Open a file selection dialog for images
+      fileDialogs_.openFile(
+         "Choose Image to Attach",
+         context,
+         FileSystemItem.createDir(session_.getSessionInfo().getInitialWorkingDir()),
+         "Image Files (*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.svg)|*.png;*.jpg;*.jpeg;*.gif;*.bmp;*.svg",
+         false,
+         new ProgressOperationWithInput<FileSystemItem>() {
+            public void execute(FileSystemItem input, ProgressIndicator indicator)
+            {
+               if (input == null)
+                  return;
+               
+               indicator.onCompleted();
+               
+               // Get the selected file path
+               final String imagePath = input.getPath();
+                              
+               // Use the images manager to attach the image (with limit checking)
+               AiPaneImages imagesManager = pane.getImagesManager();
+               
+               if (imagesManager == null) {
+                  globalDisplay_.showErrorMessage("Error", "Images manager is not initialized. This is a bug.");
+                  return;
+               }
+               
+               imagesManager.attachImage(imagePath);
+            }
+         });
+   }
 
    @Handler public void onPrintAi() { view_.print(); }
    @Handler public void onAiPopout() { view_.popout(); }

@@ -1009,7 +1009,138 @@ Error cleanupConversationAttachments(const json::JsonRpcRequest& request,
    return Success();
 }
 
+// Add server-side implementation for saving AI images
+Error saveAiImage(const json::JsonRpcRequest& request,
+                 json::JsonRpcResponse* p_response,
+                 const std::string& image_path)
+{
+   // Call R function to save image information
+   Error error = r::exec::RFunction(".rs.save_ai_image", 
+                                    image_path).call();
+   if (error)
+      return error;
+   
+   return Success();
+}
 
+// Add server-side implementation for saving image data URLs
+Error createTempImageFile(const json::JsonRpcRequest& request,
+                         json::JsonRpcResponse* p_response,
+                         const std::string& data_url,
+                         const std::string& file_name)
+{
+   // Call R function to create temporary image file
+   SEXP result_sexp;
+   r::sexp::Protect rp;
+   
+   Error error = r::exec::RFunction(".rs.create_temp_image_file")
+         .addParam(data_url)
+         .addParam(file_name)
+         .call(&result_sexp, &rp);
+   
+   if (error) {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   // Convert the R result to a string (the temp file path)
+   std::string temp_path;
+   if (TYPEOF(result_sexp) == STRSXP && r::sexp::length(result_sexp) > 0) {
+      temp_path = r::sexp::asString(STRING_ELT(result_sexp, 0));
+   }
+   
+   p_response->setResult(temp_path);
+   return Success();
+}
+
+// Add server-side implementation for listing images
+Error listImages(const json::JsonRpcRequest& request,
+               json::JsonRpcResponse* p_response)
+{
+   // Call the R function to list images
+   SEXP result_sexp;
+   r::sexp::Protect rp;
+   
+   // Call the R function and get the result
+   Error error = r::exec::RFunction(".rs.list_ai_images").call(&result_sexp, &rp);
+   if (error) {
+      LOG_ERROR(error);
+      return error;
+   }
+         
+   // Convert the R result to a JSON array of strings
+   json::Array imagesArray;
+   
+   if (TYPEOF(result_sexp) == STRSXP) {
+      // Handle character vector
+      int n = Rf_length(result_sexp);
+      
+      for (int i = 0; i < n; i++) {
+         std::string path = r::sexp::asString(STRING_ELT(result_sexp, i));
+         imagesArray.push_back(path);
+      }
+   }
+   
+   p_response->setResult(imagesArray);
+   return Success();
+}
+
+// Add server-side implementation for deleting a specific image
+Error deleteImage(const json::JsonRpcRequest& request,
+                 json::JsonRpcResponse* p_response,
+                 const std::string& image_path)
+{
+   // Call the R function to delete the image
+   Error error = r::exec::RFunction(".rs.delete_ai_image")
+         .addParam(image_path)
+         .call();
+   
+   if (error)
+      LOG_ERROR(error);
+   
+   return Success();
+}
+
+// Add server-side implementation for deleting all images
+Error deleteAllImages(const json::JsonRpcRequest& request,
+                    json::JsonRpcResponse* p_response)
+{
+   // Call the R function to delete all images
+   Error error = r::exec::RFunction(".rs.delete_all_ai_images").call();
+   
+   if (error)
+      LOG_ERROR(error);
+   
+   return Success();
+}
+
+// Add server-side implementation for checking image content duplicates
+Error checkImageContentDuplicate(const json::JsonRpcRequest& request,
+                                json::JsonRpcResponse* p_response,
+                                const std::string& image_path)
+{
+   // Call the R function to check for duplicate image content
+   SEXP result_sexp;
+   r::sexp::Protect rp;
+   
+   Error error = r::exec::RFunction(".rs.check_image_content_duplicate")
+         .addParam(image_path)
+         .call(&result_sexp, &rp);
+   
+   if (error) {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   // Convert the R result to a boolean
+   bool isDuplicate = false;
+   if (TYPEOF(result_sexp) == LGLSXP) {
+      isDuplicate = Rf_asLogical(result_sexp) == TRUE;
+   }
+   
+   p_response->setResult(isDuplicate);
+   return Success();
+}
 
 Error markButtonAsRun(const json::JsonRpcRequest& request,
                      json::JsonRpcResponse* p_response,
@@ -2738,6 +2869,44 @@ Error initialize()
                      return error;
                   return saveAiAttachment(request, p_response, file_path);
                })))
+      (bind(module_context::registerRpcMethod, "save_ai_image", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  std::string image_path;
+                  Error error = json::readParam(request.params, 0, &image_path);
+                  if (error)
+                     return error;
+                  return saveAiImage(request, p_response, image_path);
+               })))
+      (bind(module_context::registerRpcMethod, "create_temp_image_file", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  std::string data_url, file_name;
+                  Error error = json::readParams(request.params, &data_url, &file_name);
+                  if (error)
+                     return error;
+                  return createTempImageFile(request, p_response, data_url, file_name);
+               })))
+      (bind(module_context::registerRpcMethod, "list_images", listImages))
+      (bind(module_context::registerRpcMethod, "delete_image", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  std::string image_path;
+                  Error error = json::readParam(request.params, 0, &image_path);
+                  if (error)
+                     return error;
+                  return deleteImage(request, p_response, image_path);
+               })))
+      (bind(module_context::registerRpcMethod, "delete_all_images", deleteAllImages))
+      (bind(module_context::registerRpcMethod, "check_image_content_duplicate", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  std::string image_path;
+                  Error error = json::readParam(request.params, 0, &image_path);
+                  if (error)
+                     return error;
+                  return checkImageContentDuplicate(request, p_response, image_path);
+               })))
       (bind(module_context::registerRpcMethod, "delete_folder", 
             boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
                [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
@@ -2960,6 +3129,7 @@ Error initialize()
       (bind(sourceModuleRFile, "SessionAiConversationHandlers.R"))
       (bind(sourceModuleRFile, "SessionAiSearch.R"))
       (bind(sourceModuleRFile, "SessionAiAttachments.R"))
+      (bind(sourceModuleRFile, "SessionAiImages.R"))
       (bind(sourceModuleRFile, "SessionAiContext.R"))
       (bind(sourceModuleRFile, "SessionAiBackendComms.R"));    // then attachment functions
    

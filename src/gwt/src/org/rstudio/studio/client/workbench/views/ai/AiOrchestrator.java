@@ -425,6 +425,13 @@ public class AiOrchestrator
             // Hide thinking message in iframe
             aiPane_.getSearch().hideThinkingMessage(aiPane_);
          }
+         
+         // Clear attached images after AI exchange is complete
+         // Images should be cleared when the conversation exchange ends, not at the start
+         AiPaneImages imagesManager = aiPane_.getImagesManager();
+         if (imagesManager != null) {
+            imagesManager.deleteAllImages();
+         }
       }
    }
    
@@ -455,6 +462,13 @@ public class AiOrchestrator
          } else if (aiPane_.getSearch() != null) {
             // Hide thinking message in iframe
             aiPane_.getSearch().hideThinkingMessage(aiPane_);
+         }
+         
+         // Clear attached images after AI exchange fails
+         // Images should be cleared when the conversation exchange ends, including error cases
+         AiPaneImages imagesManager = aiPane_.getImagesManager();
+         if (imagesManager != null) {
+            imagesManager.deleteAllImages();
          }
       }
    }

@@ -193,10 +193,14 @@ public class AiPane extends WorkbenchPane
 
       // Initialize the attachments menu
       attachmentsManager_ = new AiPaneAttachments(this, server, globalDisplay);
+
+      // Initialize the images manager  
+      imagesManager_ = new AiPaneImages(this, server, globalDisplay);
       
       // Use the conversations manager to initialize the menu
       history_ = conversationsManager_.initConversationMenu(commands);
       attachmentsMenu_ = attachmentsManager_.initAttachmentsMenu(commands);
+      imagesMenu_ = imagesManager_.initImagesMenu(commands);
 
       // Handles resizing of the window to hide the conversation menu and attachments menu when the window is resized
       Window.addResizeHandler(new ResizeHandler()
@@ -205,6 +209,7 @@ public class AiPane extends WorkbenchPane
          {
             history_.getMenu().hide();
             attachmentsMenu_.getMenu().hide();
+            imagesMenu_.getMenu().hide();
          }
       });
 
@@ -809,6 +814,7 @@ public class AiPane extends WorkbenchPane
 
    private final AiToolbarLinkMenu history_;
    private final AiAttachmentsMenu attachmentsMenu_;
+   private final AiImagesMenu imagesMenu_;
    /* Package-private to allow access from AiPaneLifecycle */
    Label title_;
    Label overlayTitle_; // Stable title that doesn't change during navigation
@@ -1082,6 +1088,9 @@ public class AiPane extends WorkbenchPane
    // Add a new private member variable for attachments manager
    private AiPaneAttachments attachmentsManager_;
 
+   // Add a new private member variable for images manager
+   private AiPaneImages imagesManager_;
+
    // Add a private member for the attachments menu button
    private Element attachmentsMenuButton_;
 
@@ -1237,9 +1246,166 @@ public class AiPane extends WorkbenchPane
       }
    }
 
+   // Add a method to update the images list
+   public void refreshImagesList() 
+   {
+      if (imagesManager_ != null && imagesMenu_ != null && toolbars_ != null) {
+         // Get the image menu container from toolbars
+         SimplePanel imageMenuContainer = toolbars_.getImageMenuContainer();
+         if (imageMenuContainer == null) return;
+         
+         // Load the images first
+         server_.listImages(new ServerRequestCallback<JsArrayString>() {
+            @Override
+            public void onResponseReceived(JsArrayString response) {
+               // Update the menu with the loaded images
+               imagesManager_.loadImages(imagesMenu_);
+               
+               // Add a handler to revert the arrow direction when the menu closes
+               if (imagesMenu_.getMenu() != null) {
+                  imagesMenu_.getMenu().addCloseHandler(event -> {
+                     // Find and update the arrow to point upward when menu closes
+                     if (imageMenuLabel_ != null) {
+                        Element titleEl = imageMenuLabel_.getElement();
+                        for (int i = 0; i < titleEl.getChildCount(); i++) {
+                           com.google.gwt.dom.client.Node node = titleEl.getChild(i);
+                           if (Element.is(node)) {
+                              Element elem = Element.as(node);
+                              if (elem.getClassName().contains("ai-image-dropdown-arrow")) {
+                                 elem.setInnerHTML("&#9652;"); // Reset to up triangle
+                                 break;
+                              }
+                           }
+                        }
+                     }
+                  });
+               }
+               
+               // Update menu visibility based on image count
+               if (response == null || response.length() == 0) {
+                  // If we have an image menu widget, hide it
+                  if (imageMenuContainer != null) {
+                     imageMenuContainer.clear();
+                  }
+               } else {
+                  // There are images, make sure the menu is added
+                  if (imageMenuContainer != null) {
+                     // Create a new menu label
+                     imageMenuLabel_ = new Label();
+                     imageMenuLabel_.addStyleName(RES.styles().topicTitle());
+                     
+                     // Set the text to show count of attached images
+                     int imageCount = response.length();
+                     String labelText;
+                     if (imageCount == 1) {
+                        labelText = "1 image attached";
+                     } else {
+                        labelText = imageCount + " images attached";
+                     }
+                     imageMenuLabel_.setText(labelText);
+                     
+                     // Style the label to show it's a menu
+                     Element titleElement = imageMenuLabel_.getElement();
+                     titleElement.getStyle().setMarginLeft(0, Unit.PX);
+                     titleElement.getStyle().setCursor(Style.Cursor.POINTER);
+                     
+                     // Add a triangle pointing upward using an inline-block element
+                     Element arrowSpan = Document.get().createSpanElement();
+                     arrowSpan.setClassName("ai-image-dropdown-arrow");
+                     arrowSpan.getStyle().setDisplay(Style.Display.INLINE_BLOCK);
+                     arrowSpan.getStyle().setMarginLeft(3, Unit.PX);
+                     arrowSpan.getStyle().setPosition(Style.Position.RELATIVE);
+                     arrowSpan.getStyle().setTop(0, Unit.PX);
+                     arrowSpan.setInnerHTML("&#9652;"); // Unicode up triangle
+                     titleElement.appendChild(arrowSpan);
+                     
+                     // Create a wrapper for the label
+                     SimpleMenuLabel menuLabel = new SimpleMenuLabel(imageMenuLabel_);
+                     
+                     // Create a clickable widget that shows the menu
+                     imageMenuWidget_ = menuLabel;
+                     imageMenuWidget_.addDomHandler(new ClickHandler() {
+                        @Override
+                        public void onClick(ClickEvent event) {
+                           // Position the menu with smart placement (up or down based on available space)
+                           imagesMenu_.getMenu().setPopupPositionAndShow(new PopupPanel.PositionCallback() {
+                              @Override
+                              public void setPosition(int offsetWidth, int offsetHeight) {
+                                 Element titleEl = imageMenuLabel_.getElement();
+                                 int left = titleEl.getAbsoluteLeft();
+                                 
+                                 // Get window dimensions and element position
+                                 int windowHeight = Window.getClientHeight();
+                                 int topPosition = titleEl.getAbsoluteTop();
+                                 int elementHeight = titleEl.getOffsetHeight();
+                                 int bottomPosition = topPosition + elementHeight;
+                                 
+                                 // Calculate space above and below
+                                 int spaceAbove = topPosition;
+                                 int spaceBelow = windowHeight - bottomPosition;
+                                 
+                                 // Determine if we should show menu upward or downward
+                                 if (spaceBelow < offsetHeight && spaceAbove > offsetHeight) {
+                                    // Not enough space below but enough space above - show upward
+                                    imagesMenu_.getMenu().setPopupPosition(left, topPosition - offsetHeight);
+                                    
+                                    // Update the arrow to point downward when menu is above
+                                    for (int i = 0; i < titleEl.getChildCount(); i++) {
+                                       com.google.gwt.dom.client.Node node = titleEl.getChild(i);
+                                       if (Element.is(node)) {
+                                          Element elem = Element.as(node);
+                                          if (elem.getClassName().contains("ai-image-dropdown-arrow")) {
+                                             elem.setInnerHTML("&#9662;"); // Down triangle
+                                             break;
+                                          }
+                                       }
+                                    }
+                                 } else {
+                                    // Default: show downward
+                                    imagesMenu_.getMenu().setPopupPosition(left, bottomPosition);
+                                    
+                                    // Ensure arrow is pointing upward when menu is below
+                                    for (int i = 0; i < titleEl.getChildCount(); i++) {
+                                       com.google.gwt.dom.client.Node node = titleEl.getChild(i);
+                                       if (Element.is(node)) {
+                                          Element elem = Element.as(node);
+                                          if (elem.getClassName().contains("ai-image-dropdown-arrow")) {
+                                             elem.setInnerHTML("&#9652;"); // Up triangle
+                                             break;
+                                          }
+                                       }
+                                    }
+                                 }
+                              }
+                           });
+                        }
+                     }, ClickEvent.getType());
+                     
+                     // Clear and add to container
+                     imageMenuContainer.clear();
+                     imageMenuContainer.add(imageMenuWidget_);
+                  }
+               }
+            }
+            
+            @Override
+            public void onError(ServerError error) {
+               // On error, clear the menu container
+               SimplePanel imageMenuContainer = toolbars_.getImageMenuContainer();
+               if (imageMenuContainer != null) {
+                  imageMenuContainer.clear();
+               }
+               // Don't show error message for images - fail silently
+            }
+         });
+      }
+   }
+
    private Toolbar searchToolbar_;
    private SimplePanel attachmentMenuContainer_;
    private Widget attachmentMenuWidget_;
+   private Label imageMenuLabel_;
+   private Widget imageMenuWidget_;
    private Widget cancelButton_;
    private boolean cancelButtonShown_ = false;
    private SmallButton toggleFrameButton_;
@@ -2639,6 +2805,11 @@ public class AiPane extends WorkbenchPane
    public AiPaneAttachments getAttachmentsManager()
    {
       return attachmentsManager_;
+   }
+
+   public AiPaneImages getImagesManager()
+   {
+      return imagesManager_;
    }
 
    /**

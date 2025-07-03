@@ -4475,7 +4475,7 @@ public class RemoteServer implements Server, AiServerOperations
 
    @Override
    public void svnAdd(ArrayList<String> paths,
-                      ServerRequestCallback<ProcessResult> requestCallback)
+                       ServerRequestCallback<ProcessResult> requestCallback)
    {
       JSONArray params = new JSONArray();
       params.set(0, JSONUtils.toJSONStringArray(paths));
@@ -4484,7 +4484,7 @@ public class RemoteServer implements Server, AiServerOperations
 
    @Override
    public void svnDelete(ArrayList<String> paths,
-                         ServerRequestCallback<ProcessResult> requestCallback)
+                          ServerRequestCallback<ProcessResult> requestCallback)
    {
       JSONArray params = new JSONArray();
       params.set(0, JSONUtils.toJSONStringArray(paths));
@@ -4493,7 +4493,7 @@ public class RemoteServer implements Server, AiServerOperations
 
    @Override
    public void svnRevert(ArrayList<String> paths,
-                         ServerRequestCallback<ProcessResult> requestCallback)
+                          ServerRequestCallback<ProcessResult> requestCallback)
    {
       JSONArray params = new JSONArray();
       params.set(0, JSONUtils.toJSONStringArray(paths));
@@ -4502,8 +4502,8 @@ public class RemoteServer implements Server, AiServerOperations
 
    @Override
    public void svnResolve(String accept,
-                          ArrayList<String> paths,
-                          ServerRequestCallback<ProcessResult> requestCallback)
+                           ArrayList<String> paths,
+                           ServerRequestCallback<ProcessResult> requestCallback)
    {
       JSONArray params = new JSONArray();
       params.set(0, new JSONString(accept));
@@ -4521,7 +4521,7 @@ public class RemoteServer implements Server, AiServerOperations
    public void svnUpdate(ServerRequestCallback<ConsoleProcess> requestCallback)
    {
       sendRequest(RPC_SCOPE, SVN_UPDATE,
-                  new ConsoleProcessCallbackAdapter(requestCallback));
+                   new ConsoleProcessCallbackAdapter(requestCallback));
    }
 
    @Override
@@ -4533,22 +4533,22 @@ public class RemoteServer implements Server, AiServerOperations
 
    @Override
    public void svnCommit(ArrayList<String> paths,
-                         String message,
-                         ServerRequestCallback<ConsoleProcess> requestCallback)
+                          String message,
+                          ServerRequestCallback<ConsoleProcess> requestCallback)
    {
       JSONArray params = new JSONArray();
       params.set(0, JSONUtils.toJSONStringArray(paths));
       params.set(1, new JSONString(message));
 
       sendRequest(RPC_SCOPE, SVN_COMMIT, params,
-                  new ConsoleProcessCallbackAdapter(requestCallback));
+                   new ConsoleProcessCallbackAdapter(requestCallback));
    }
 
    @Override
    public void svnDiffFile(String path,
-                           Integer contextLines,
-                           boolean noSizeWarning,
-                           ServerRequestCallback<DiffResult> requestCallback)
+                            Integer contextLines,
+                            boolean noSizeWarning,
+                            ServerRequestCallback<DiffResult> requestCallback)
    {
       JSONArray params = new JSONArray();
       params.set(0, new JSONString(path));
@@ -4559,9 +4559,9 @@ public class RemoteServer implements Server, AiServerOperations
 
    @Override
    public void svnApplyPatch(String path,
-                             String patch,
-                             String sourceEncoding,
-                             ServerRequestCallback<Void> requestCallback)
+                              String patch,
+                              String sourceEncoding,
+                              ServerRequestCallback<Void> requestCallback)
    {
       JSONArray params = new JSONArray();
       params.set(0, new JSONString(path));
@@ -4579,7 +4579,7 @@ public class RemoteServer implements Server, AiServerOperations
       JSONArray params = new JSONArray();
       params.set(0, new JSONNumber(revision));
       params.set(1, path == null ? JSONNull.getInstance()
-                                 : new JSONString(path.getPath()));
+                                  : new JSONString(path.getPath()));
       params.set(2, new JSONString(StringUtil.notNull(searchText)));
 
       sendRequest(RPC_SCOPE, SVN_HISTORY_COUNT, params, requestCallback);
@@ -4587,16 +4587,16 @@ public class RemoteServer implements Server, AiServerOperations
 
    @Override
    public void svnHistory(int revision,
-                          FileSystemItem path,
-                          int skip,
-                          int maxentries,
-                          String searchText,
-                          ServerRequestCallback<RpcObjectList<CommitInfo>> requestCallback)
+                           FileSystemItem path,
+                           int skip,
+                           int maxentries,
+                           String searchText,
+                           ServerRequestCallback<RpcObjectList<CommitInfo>> requestCallback)
    {
       JSONArray params = new JSONArray();
       params.set(0, new JSONNumber(revision));
       params.set(1, path == null ? JSONNull.getInstance()
-                                 : new JSONString(path.getPath()));
+                                  : new JSONString(path.getPath()));
       params.set(2, new JSONNumber(skip));
       params.set(3, new JSONNumber(maxentries));
       params.set(4, new JSONString(StringUtil.notNull(searchText)));
@@ -4606,8 +4606,8 @@ public class RemoteServer implements Server, AiServerOperations
 
    @Override
    public void svnShow(int rev,
-                       boolean noSizeWarning,
-                       ServerRequestCallback<String> requestCallback)
+                        boolean noSizeWarning,
+                        ServerRequestCallback<String> requestCallback)
    {
       JSONArray params = new JSONArray();
       params.set(0, new JSONNumber(rev));
@@ -4618,8 +4618,8 @@ public class RemoteServer implements Server, AiServerOperations
 
    @Override
    public void svnShowFile(int rev,
-                           String filename,
-                           ServerRequestCallback<String> requestCallback)
+                            String filename,
+                            ServerRequestCallback<String> requestCallback)
    {
       JSONArray params = new JSONArray();
       params.set(0, new JSONNumber(rev));
@@ -4693,7 +4693,7 @@ public class RemoteServer implements Server, AiServerOperations
 
    @Override
    public void viewerSaveAsWebPage(String targetPath,
-                                   ServerRequestCallback<Void> requestCallback)
+                                    ServerRequestCallback<Void> requestCallback)
    {
       sendRequest(RPC_SCOPE,
             "viewer_save_as_web_page",
@@ -4732,7 +4732,7 @@ public class RemoteServer implements Server, AiServerOperations
 
 
    public void previewHTML(HTMLPreviewParams params,
-                           ServerRequestCallback<Boolean> callback)
+                            ServerRequestCallback<Boolean> callback)
    {
       sendRequest(RPC_SCOPE, PREVIEW_HTML, params, callback);
    }
@@ -4749,18 +4749,18 @@ public class RemoteServer implements Server, AiServerOperations
    }
 
    public void rpubsIsPublished(String htmlFile,
-                                ServerRequestCallback<Boolean> requestCallback)
+                                 ServerRequestCallback<Boolean> requestCallback)
    {
       sendRequest(RPC_SCOPE, "rpubs_is_published", htmlFile, requestCallback);
    }
 
    public void rpubsUpload(String contextId,
-                           String title,
-                           String rmdFile,
-                           String htmlFile,
-                           String uploadId,
-                           boolean isUpdate,
-                           ServerRequestCallback<Boolean> requestCallback)
+                            String title,
+                            String rmdFile,
+                            String htmlFile,
+                            String uploadId,
+                            boolean isUpdate,
+                            ServerRequestCallback<Boolean> requestCallback)
    {
       JSONArray params = new JSONArray();
       params.set(0, new JSONString(contextId));
@@ -4773,30 +4773,30 @@ public class RemoteServer implements Server, AiServerOperations
    }
 
    public void rpubsTerminateUpload(String contextId,
-                                    ServerRequestCallback<Void> requestCallback)
+                                     ServerRequestCallback<Void> requestCallback)
    {
       sendRequest(RPC_SCOPE,
-                  RPUBS_TERMINATE_UPLOAD,
-                  contextId,
-                  requestCallback);
+                   RPUBS_TERMINATE_UPLOAD,
+                   contextId,
+                   requestCallback);
    }
 
    @Override
    public void setPresentationSlideIndex(
-                                 int index,
-                                 ServerRequestCallback<Void> requestCallback)
+                                  int index,
+                                  ServerRequestCallback<Void> requestCallback)
    {
       sendRequest(RPC_SCOPE, SET_PRESENTATION_SLIDE_INDEX, index, requestCallback);
    }
 
    @Override
    public void setWorkingDirectory(String path,
-                                   ServerRequestCallback<Void> requestCallback)
+                                    ServerRequestCallback<Void> requestCallback)
    {
       sendRequest(RPC_SCOPE,
-                  SET_WORKING_DIRECTORY,
-                  path,
-                  requestCallback);
+                   SET_WORKING_DIRECTORY,
+                   path,
+                   requestCallback);
    }
 
    @Override
@@ -4805,9 +4805,9 @@ public class RemoteServer implements Server, AiServerOperations
                               ServerRequestCallback<Void> requestCallback)
    {
       sendRequest(RPC_SCOPE,
-                  CREATE_STANDALONE_PRESENTATION,
-                  StringUtil.notNull(targetFile),
-                  requestCallback);
+                   CREATE_STANDALONE_PRESENTATION,
+                   StringUtil.notNull(targetFile),
+                   requestCallback);
    }
 
    @Override
@@ -4815,8 +4815,8 @@ public class RemoteServer implements Server, AiServerOperations
                               ServerRequestCallback<String> requestCallback)
    {
       sendRequest(RPC_SCOPE,
-                  CREATE_DESKTOP_VIEW_IN_BROWSER_PRESENTATION,
-                  requestCallback);
+                   CREATE_DESKTOP_VIEW_IN_BROWSER_PRESENTATION,
+                   requestCallback);
    }
 
 
@@ -4825,14 +4825,14 @@ public class RemoteServer implements Server, AiServerOperations
              ServerRequestCallback<PresentationRPubsSource> requestCallback)
    {
       sendRequest(RPC_SCOPE,
-                  CREATE_PRESENTATION_RPUBS_SOURCE,
-                  requestCallback);
+                   CREATE_PRESENTATION_RPUBS_SOURCE,
+                   requestCallback);
    }
 
    @Override
    public void presentationExecuteCode(
-                                 String code,
-                                 ServerRequestCallback<Void> requestCallback)
+                                  String code,
+                                  ServerRequestCallback<Void> requestCallback)
    {
       sendRequest(RPC_SCOPE, PRESENTATION_EXECUTE_CODE, code, requestCallback);
    }
@@ -4847,7 +4847,7 @@ public class RemoteServer implements Server, AiServerOperations
 
    @Override
    public void showPresentationPane(String filePath,
-                                    ServerRequestCallback<Void> requestCallback)
+                                     ServerRequestCallback<Void> requestCallback)
    {
       sendRequest(RPC_SCOPE, SHOW_PRESENTATION_PANE, filePath, requestCallback);
    }
@@ -4860,8 +4860,8 @@ public class RemoteServer implements Server, AiServerOperations
 
    @Override
    public void tutorialQuizResponse(
-                           int slideIndex, int answer, boolean correct,
-                           ServerRequestCallback<Void> requestCallback)
+                            int slideIndex, int answer, boolean correct,
+                            ServerRequestCallback<Void> requestCallback)
    {
       JSONArray params = new JSONArray();
       params.set(0, new JSONNumber(slideIndex));
@@ -4872,9 +4872,9 @@ public class RemoteServer implements Server, AiServerOperations
 
    @Override
    public void tutorialStarted(String tutorialName,
-                               String tutorialPackage,
-                               String tutorialUrl,
-                               ServerRequestCallback<Void> requestCallback)
+                                String tutorialPackage,
+                                String tutorialUrl,
+                                ServerRequestCallback<Void> requestCallback)
    {
       JSONArray params = new JSONArrayBuilder()
             .add(tutorialName)
@@ -4887,7 +4887,7 @@ public class RemoteServer implements Server, AiServerOperations
 
    @Override
    public void tutorialStop(String tutorialUrl,
-                            ServerRequestCallback<Void> requestCallback)
+                             ServerRequestCallback<Void> requestCallback)
    {
       JSONArray params = new JSONArrayBuilder()
             .add(tutorialUrl)
@@ -4898,7 +4898,7 @@ public class RemoteServer implements Server, AiServerOperations
 
    @Override
    public void tutorialMetadata(String tutorialUrl,
-                                ServerRequestCallback<JsObject> requestCallback)
+                                 ServerRequestCallback<JsObject> requestCallback)
    {
       JSONArray params = new JSONArrayBuilder()
             .add(tutorialUrl)
@@ -4910,43 +4910,43 @@ public class RemoteServer implements Server, AiServerOperations
 
    @Override
    public void getSlideNavigationForFile(
-                     String filePath,
-                     ServerRequestCallback<SlideNavigation> requestCallback)
+                      String filePath,
+                      ServerRequestCallback<SlideNavigation> requestCallback)
    {
       sendRequest(RPC_SCOPE,
-                  GET_SLIDE_NAVIGATION_FOR_FILE,
-                  filePath,
-                  requestCallback);
+                   GET_SLIDE_NAVIGATION_FOR_FILE,
+                   filePath,
+                   requestCallback);
    }
 
    @Override
    public void getSlideNavigationForCode(
-                     String code,
-                     String baseDir,
-                     ServerRequestCallback<SlideNavigation> requestCallback)
+                      String code,
+                      String baseDir,
+                      ServerRequestCallback<SlideNavigation> requestCallback)
    {
       JSONArray params = new JSONArray();
       params.set(0, new JSONString(code));
       params.set(1, new JSONString(baseDir));
       sendRequest(RPC_SCOPE,
-                  GET_SLIDE_NAVIGATION_FOR_CODE,
-                  params,
-                  requestCallback);
+                   GET_SLIDE_NAVIGATION_FOR_CODE,
+                   params,
+                   requestCallback);
    }
 
    @Override
    public void clearPresentationCache(
-                                  ServerRequestCallback<Void> requestCallback)
+                                   ServerRequestCallback<Void> requestCallback)
    {
       sendRequest(RPC_SCOPE, CLEAR_PRESENTATION_CACHE, requestCallback);
    }
 
 
    public void compilePdf(FileSystemItem targetFile,
-                          String encoding,
-                          SourceLocation sourceLocation,
-                          String completedAction,
-                          ServerRequestCallback<Boolean> requestCallback)
+                           String encoding,
+                           SourceLocation sourceLocation,
+                           String completedAction,
+                           ServerRequestCallback<Boolean> requestCallback)
    {
       JSONArray params = new JSONArray();
       params.set(0, new JSONString(targetFile.getPath()));
@@ -4962,7 +4962,7 @@ public class RemoteServer implements Server, AiServerOperations
    }
 
    public void terminateCompilePdf(
-                           ServerRequestCallback<Boolean> requestCallback)
+                            ServerRequestCallback<Boolean> requestCallback)
    {
       sendRequest(RPC_SCOPE, TERMINATE_COMPILE_PDF, requestCallback);
    }
@@ -4974,8 +4974,8 @@ public class RemoteServer implements Server, AiServerOperations
 
    @Override
    public void synctexForwardSearch(String rootDocument,
-                                    SourceLocation sourceLocation,
-                                    ServerRequestCallback<PdfLocation> callback)
+                                     SourceLocation sourceLocation,
+                                     ServerRequestCallback<PdfLocation> callback)
    {
       JSONArray params = new JSONArray();
       params.set(0, new JSONString(rootDocument));
@@ -4985,9 +4985,9 @@ public class RemoteServer implements Server, AiServerOperations
 
    @Override
    public void applyForwardConcordance(
-                                String rootDocument,
-                                SourceLocation sourceLocation,
-                                ServerRequestCallback<SourceLocation> callback)
+                                 String rootDocument,
+                                 SourceLocation sourceLocation,
+                                 ServerRequestCallback<SourceLocation> callback)
    {
       JSONArray params = new JSONArray();
       params.set(0, new JSONString(rootDocument));
@@ -4997,15 +4997,15 @@ public class RemoteServer implements Server, AiServerOperations
 
    @Override
    public void synctexInverseSearch(PdfLocation pdfLocation,
-                                    ServerRequestCallback<SourceLocation> callback)
+                                     ServerRequestCallback<SourceLocation> callback)
    {
       sendRequest(RPC_SCOPE, SYNCTEX_INVERSE_SEARCH, pdfLocation, callback);
    }
 
    @Override
    public void applyInverseConcordance(
-                               SourceLocation sourceLocation,
-                               ServerRequestCallback<SourceLocation> callback)
+                                 SourceLocation sourceLocation,
+                                 ServerRequestCallback<SourceLocation> callback)
    {
       JSONArray params = new JSONArray();
       params.set(0, new JSONObject(sourceLocation));
@@ -5014,8 +5014,8 @@ public class RemoteServer implements Server, AiServerOperations
 
 
    public void checkSpelling(
-                         JsArrayString words,
-                         ServerRequestCallback<JsArrayInteger> requestCallback)
+                          JsArrayString words,
+                          ServerRequestCallback<JsArrayInteger> requestCallback)
    {
       JSONArray params = new JSONArray();
       params.set(0, new JSONArray(words));
@@ -5023,8 +5023,8 @@ public class RemoteServer implements Server, AiServerOperations
    }
 
    public void suggestionList(
-                     String word,
-                     ServerRequestCallback<JsArrayString> requestCallback)
+                      String word,
+                      ServerRequestCallback<JsArrayString> requestCallback)
    {
       JSONArray params = new JSONArray();
       params.set(0, new JSONString(word));
@@ -5038,15 +5038,15 @@ public class RemoteServer implements Server, AiServerOperations
    }
 
    public void addCustomDictionary(
-                              String dictPath,
-                              ServerRequestCallback<JsArrayString> callback)
+                               String dictPath,
+                               ServerRequestCallback<JsArrayString> callback)
    {
       sendRequest(RPC_SCOPE, ADD_CUSTOM_DICTIONARY, dictPath, callback);
    }
 
    public void removeCustomDictionary(
-                              String name,
-                              ServerRequestCallback<JsArrayString> callback)
+                               String name,
+                               ServerRequestCallback<JsArrayString> callback)
    {
       sendRequest(RPC_SCOPE, REMOVE_CUSTOM_DICTIONARY, name, callback);
    }
@@ -5060,16 +5060,16 @@ public class RemoteServer implements Server, AiServerOperations
 
    @Override
    public void beginFind(String handle,
-                         String searchString,
-                         boolean regex,
-                         boolean isWholeWord,
-                         boolean ignoreCase,
-                         FileSystemItem directory,
-                         JsArrayString includeFilePatterns,
-                         JsArrayString excludeFilePatterns,
-                         boolean useGitGrep, 
-                         boolean excludeGitIgnore,
-                         ServerRequestCallback<String> requestCallback)
+                          String searchString,
+                          boolean regex,
+                          boolean isWholeWord,
+                          boolean ignoreCase,
+                          FileSystemItem directory,
+                          JsArrayString includeFilePatterns,
+                          JsArrayString excludeFilePatterns,
+                          boolean useGitGrep, 
+                          boolean excludeGitIgnore,
+                          ServerRequestCallback<String> requestCallback)
    {
       JSONArray params = new JSONArray();
       params.set(0, new JSONString(handle));
@@ -5078,7 +5078,7 @@ public class RemoteServer implements Server, AiServerOperations
       params.set(3, JSONBoolean.getInstance(isWholeWord));
       params.set(4, JSONBoolean.getInstance(ignoreCase));
       params.set(5, new JSONString(directory == null ? ""
-                                                     : directory.getPath()));
+                                                      : directory.getPath()));
       params.set(6, new JSONArray(includeFilePatterns));
       params.set(7, new JSONArray(excludeFilePatterns));
       params.set(8, JSONBoolean.getInstance(useGitGrep));
@@ -5088,7 +5088,7 @@ public class RemoteServer implements Server, AiServerOperations
 
    @Override
    public void stopFind(String findOperationHandle,
-                        ServerRequestCallback<Void> requestCallback)
+                         ServerRequestCallback<Void> requestCallback)
    {
       sendRequest(RPC_SCOPE, STOP_FIND, findOperationHandle, requestCallback);
    }
@@ -7752,6 +7752,12 @@ public class RemoteServer implements Server, AiServerOperations
    private static final String DELETE_ATTACHMENT = "delete_attachment";
    private static final String DELETE_ALL_ATTACHMENTS = "delete_all_attachments";
    private static final String CLEANUP_CONVERSATION_ATTACHMENTS = "cleanup_conversation_attachments";
+
+   private static final String SAVE_AI_IMAGE = "save_ai_image";
+   private static final String CREATE_TEMP_IMAGE_FILE = "create_temp_image_file";
+   private static final String LIST_IMAGES = "list_images";
+   private static final String DELETE_IMAGE = "delete_image";
+   private static final String DELETE_ALL_IMAGES = "delete_all_images";
    private static final String MARK_BUTTON_AS_RUN = "mark_button_as_run";
    private static final String GET_FILE_NAME_FOR_MESSAGE_ID = "get_file_name_for_message_id";
    private static final String IS_CONVERSATION_EMPTY = "is_conversation_empty";
@@ -7760,6 +7766,8 @@ public class RemoteServer implements Server, AiServerOperations
    private static final String BROWSE_FOR_FILE = "browse_for_file";
    private static final String CANCEL_ACTIVE_API_REQUEST = "cancel_active_api_request";
    private static final String PROCESS_AI_OPERATION = "process_ai_operation";
+
+   private static final String CHECK_IMAGE_CONTENT_DUPLICATE = "check_image_content_duplicate";
 
    private static class PendingRpcRequest 
    {
@@ -7847,6 +7855,41 @@ public class RemoteServer implements Server, AiServerOperations
    public void cleanupConversationAttachments(int conversationId, ServerRequestCallback<java.lang.Void> requestCallback)
    {
       sendRequest(RPC_SCOPE, CLEANUP_CONVERSATION_ATTACHMENTS, conversationId, requestCallback);
+   }
+
+   @Override
+   public void saveAiImage(String imagePath, ServerRequestCallback<java.lang.Void> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(imagePath));
+      sendRequest(RPC_SCOPE, SAVE_AI_IMAGE, params, requestCallback);
+   }
+
+   @Override
+   public void createTempImageFile(String dataUrl, String fileName, ServerRequestCallback<String> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(dataUrl));
+      params.set(1, new JSONString(fileName));
+      sendRequest(RPC_SCOPE, CREATE_TEMP_IMAGE_FILE, params, requestCallback);
+   }
+
+   @Override
+   public void listImages(ServerRequestCallback<JsArrayString> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, LIST_IMAGES, requestCallback);
+   }
+
+   @Override
+   public void deleteImage(String imagePath, ServerRequestCallback<java.lang.Void> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, DELETE_IMAGE, imagePath, requestCallback);
+   }
+
+   @Override
+   public void deleteAllImages(ServerRequestCallback<java.lang.Void> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, DELETE_ALL_IMAGES, requestCallback);
    }
 
    @Override
@@ -8009,6 +8052,14 @@ public class RemoteServer implements Server, AiServerOperations
    public void processAiOperation(JavaScriptObject operationParams, ServerRequestCallback<JavaScriptObject> requestCallback)
    {
       sendRequest(RPC_SCOPE, PROCESS_AI_OPERATION, operationParams, requestCallback);
+   }
+
+   @Override
+   public void checkImageContentDuplicate(String imagePath, ServerRequestCallback<Boolean> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(imagePath));
+      sendRequest(RPC_SCOPE, CHECK_IMAGE_CONTENT_DUPLICATE, params, requestCallback);
    }
 
 }

@@ -81,6 +81,11 @@ import com.google.gwt.event.dom.client.MouseOverEvent;
 import com.google.gwt.event.dom.client.MouseOutEvent;
 import com.google.gwt.event.dom.client.MouseOverHandler;
 import com.google.gwt.event.dom.client.MouseOutHandler;
+import com.google.gwt.user.client.DOM;
+import com.google.gwt.user.client.Event;
+import com.google.gwt.user.client.EventListener;
+import com.google.gwt.user.client.ui.Focusable;
+import com.google.gwt.core.client.JavaScriptObject;
 
 /**
  * Provides the toolbars and main widget for the AI pane.
@@ -134,6 +139,10 @@ public class AiToolbars
       // Create a simpler container with clean styling for the search content
       FlowPanel contentPanel = new FlowPanel();
       contentPanel.setStyleName("rstudio-AiSearchContentPanel");
+      
+      // Add image drag and drop support to the entire content panel
+      // This allows users to drag images anywhere in the AI pane
+      addPerCharacterTracking(contentPanel.getElement());
       
       // Add a placeholder label at the top with light gray rounded rectangle (top corners only)
       FlowPanel topPlaceholderPanel = new FlowPanel();
@@ -270,9 +279,6 @@ public class AiToolbars
          Element input = inputs.getItem(i);
          input.setAttribute("placeholder", "Ask anything");
          
-         // Add per-character text tracking to this specific input
-         addPerCharacterTracking(input);
-         
          // Completely remove all borders and outlines from the input
          input.getStyle().setProperty("border", "none !important");
          input.getStyle().setProperty("borderRadius", "0");
@@ -294,9 +300,6 @@ public class AiToolbars
       NodeList<Element> textareas = searchWidgetWidget.getElement().getElementsByTagName("textarea");
       for (int i = 0; i < textareas.getLength(); i++) {
          Element textarea = textareas.getItem(i);
-         
-         // Add per-character text tracking to textareas too
-         addPerCharacterTracking(textarea);
          
          // Remove focus borders from textareas
          textarea.getStyle().setProperty("border", "none !important");
@@ -333,14 +336,16 @@ public class AiToolbars
       
       // Style the toolbar to blend in with the search container and raise bottom edge even more
       searchToolbar_.getElement().getStyle().setMarginTop(0, Unit.PX); // Move toolbar even higher up
+      searchToolbar_.getElement().getStyle().setMarginBottom(0, Unit.PX);
       searchToolbar_.getElement().getStyle().setProperty("borderTop", "none");
       searchToolbar_.getElement().getStyle().setPaddingTop(2, Unit.PX); // Even less padding on top
       searchToolbar_.getElement().getStyle().setPaddingBottom(0, Unit.PX); // Remove bottom padding entirely
-      searchToolbar_.getElement().getStyle().setHeight(25, Unit.PX); // Further reduced height to raise bottom edge even more
       searchToolbar_.getElement().getStyle().setBackgroundColor("#ffffff");
       searchToolbar_.getElement().getStyle().setWidth(100, Unit.PCT);
       searchToolbar_.getElement().getStyle().setBorderWidth(0, Unit.PX);
       searchToolbar_.getElement().getStyle().setProperty("zIndex", "102"); // Bring toolbar to front
+      searchToolbar_.getElement().getStyle().setProperty("display", "flex");
+      searchToolbar_.getElement().getStyle().setProperty("alignItems", "center");
       
       // Also reduce the wrapper's bottom margin/padding - move up 2px more
       searchAndToolbarWrapper.getElement().getStyle().setProperty("marginBottom", "0px");
@@ -353,6 +358,7 @@ public class AiToolbars
       attachButton.getElement().getStyle().setPaddingLeft(5, Unit.PX);
       attachButton.getElement().getStyle().setPaddingTop(2, Unit.PX);
       attachButton.getElement().getStyle().setPaddingBottom(2, Unit.PX);
+      searchToolbar_.getElement().getStyle().setProperty("zIndex", "1000");
       attachButton.getElement().getStyle().setProperty("transform", "scale(1.1)");
       attachButton.getElement().getStyle().setBackgroundColor("transparent");
       attachButton.getElement().getStyle().setMarginTop(0, Unit.PX);
@@ -361,6 +367,27 @@ public class AiToolbars
       // Container for attachment menu that will appear to the right of the button
       attachmentMenuContainer_ = new SimplePanel();
       // searchToolbar_.addLeftWidget(attachmentMenuContainer_); // DISABLED: Comment out to hide attachment menu container
+      
+      // Add the image attachment button in place of the old attachment button
+      ToolbarButton imageButton = commands_.aiAttachImage().createToolbarButton();
+      imageButton.getElement().getStyle().setMarginLeft(0, Unit.PX);
+      imageButton.getElement().getStyle().setMarginRight(0, Unit.PX);
+      imageButton.getElement().getStyle().setPaddingRight(0, Unit.PX);
+      imageButton.getElement().getStyle().setPaddingLeft(0, Unit.PX);
+      imageButton.getElement().getStyle().setPaddingTop(0, Unit.PX);
+      imageButton.getElement().getStyle().setPaddingBottom(0, Unit.PX);
+      imageButton.getElement().getStyle().setProperty("transform", "scale(1.1)");
+      imageButton.getElement().getStyle().setBackgroundColor("transparent");
+      imageButton.getElement().getStyle().setProperty("overflow", "visible"); // Allow content to show outside button bounds
+      imageButton.getElement().getStyle().setMarginTop(-7, Unit.PX); // Move up slightly to match send button height
+      searchToolbar_.addLeftWidget(imageButton);
+      
+      // Container for image menu that will appear to the right of the button
+      imageMenuContainer_ = new SimplePanel();
+      imageMenuContainer_.getElement().getStyle().setProperty("verticalAlign", "bottom");
+      imageMenuContainer_.getElement().getStyle().setProperty("display", "inline-flex");
+      imageMenuContainer_.getElement().getStyle().setProperty("alignItems", "center");
+      searchToolbar_.addLeftWidget(imageMenuContainer_);
       
       // Create a circular button with a right-pointing triangle
       FlowPanel sendButton = new FlowPanel();
@@ -553,6 +580,8 @@ public class AiToolbars
          public void execute() {
             // Check if there are attachments to display
             pane_.refreshAttachmentsList();
+            // Check if there are images to display
+            pane_.refreshImagesList();
          }
       });
       
@@ -951,6 +980,11 @@ public class AiToolbars
       return attachmentMenuContainer_;
    }
    
+   public SimplePanel getImageMenuContainer()
+   {
+      return imageMenuContainer_;
+   }
+   
    public SearchDisplay getSearchWidget()
    {
       return searchWidget_;
@@ -1038,6 +1072,7 @@ public class AiToolbars
    private FindTextBox findTextBox_;
    private Toolbar searchToolbar_;
    private SimplePanel attachmentMenuContainer_;
+   private SimplePanel imageMenuContainer_;
    private SearchDisplay searchWidget_;
    private Label title_;
    private Label overlayTitle_;
@@ -1128,8 +1163,6 @@ public class AiToolbars
          element.dispatchEvent(event);
       }
    }-*/;
-
-
 
    /**
     * Transforms the send button (triangle) into a cancel button (square)
@@ -1366,18 +1399,162 @@ public class AiToolbars
 
    private native void addPerCharacterTracking(Element element) /*-{
       if (element) {
-         // Paste event - fires when user pastes text
+         var self = this;
+         
+         // Paste event - fires when user pastes text or images
          element.addEventListener("paste", function(event) {
-            var pastedText = "";
-            if (event.clipboardData && event.clipboardData.getData) {
-               pastedText = event.clipboardData.getData('text/plain');
-            }
-            
-            // Search for the pasted text in open files
-            if (pastedText && pastedText.trim().length > 0) {
-               this.@org.rstudio.studio.client.workbench.views.ai.AiToolbars::searchPastedTextInOpenFiles(Ljava/lang/String;)(pastedText);
+            // Check if clipboardData is available
+            if (event.clipboardData) {
+               // Handle clipboard images
+               var items = event.clipboardData.items;
+               if (items && items.length > 0) {
+                  var hasImage = false;
+                  for (var i = 0; i < items.length; i++) {
+                     var item = items[i];
+                     
+                     if (item.kind === 'file' && item.type.startsWith('image/')) {
+                        hasImage = true;
+                        
+                        var file = item.getAsFile();
+                        if (file) {
+                           // Call the image handler method
+                           self.@org.rstudio.studio.client.workbench.views.ai.AiToolbars::handlePastedImage(*)(file);
+                        }
+                     }
+                  }
+                  
+                  if (hasImage) {
+                     // Prevent default paste behavior for images
+                     event.preventDefault();
+                     return;
+                  }
+               }
+               
+               // Handle text paste (existing functionality)
+               var pastedText = event.clipboardData.getData('text/plain');
+               
+               if (pastedText && pastedText.trim().length > 0) {
+                  this.@org.rstudio.studio.client.workbench.views.ai.AiToolbars::searchPastedTextInOpenFiles(Ljava/lang/String;)(pastedText);
+               }
             }
          }.bind(this));
+         
+         // Drag and drop events for images
+         element.addEventListener("dragover", function(event) {
+            // Check if any of the dragged items might be files
+            var mightHaveFiles = false;
+            if (event.dataTransfer.items) {
+               for (var i = 0; i < event.dataTransfer.items.length; i++) {
+                  var item = event.dataTransfer.items[i];
+                  
+                  // During dragover, files might be represented as:
+                  // - kind: 'file' (direct file drag)
+                  // - kind: 'string' with type: 'text/uri-list' (file path)
+                  if (item.kind === 'file' || 
+                      (item.kind === 'string' && item.type === 'text/uri-list')) {
+                     mightHaveFiles = true;
+                     break;
+                  }
+               }
+            }
+            
+            // Also check if dataTransfer.files length > 0 (sometimes available during dragover)
+            if (!mightHaveFiles && event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+               mightHaveFiles = true;
+            }
+            
+            if (mightHaveFiles) {
+               event.preventDefault();
+               event.stopPropagation();
+               
+               // Add visual feedback
+               element.style.backgroundColor = '#e8f4fd';
+               element.style.borderColor = '#0078d4';
+            }
+         });
+         
+         element.addEventListener("dragleave", function(event) {
+            // Remove visual feedback
+            element.style.backgroundColor = '';
+            element.style.borderColor = '';
+         });
+         
+         element.addEventListener("drop", function(event) {
+            // Remove visual feedback
+            element.style.backgroundColor = '';
+            element.style.borderColor = '';
+            
+            var foundImage = false;
+            
+            // First check for dropped files (direct file objects)
+            if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+               for (var i = 0; i < event.dataTransfer.files.length; i++) {
+                  var file = event.dataTransfer.files[i];
+                  
+                  if (file.type.startsWith('image/')) {
+                     foundImage = true;
+                     
+                     // Call the image handler method
+                     self.@org.rstudio.studio.client.workbench.views.ai.AiToolbars::handleDroppedImage(*)(file);
+                  }
+               }
+            } else {
+               // If no direct files, try to get file paths from text/uri-list
+               var uriList = event.dataTransfer.getData('text/uri-list');
+               if (uriList && uriList.trim().length > 0) {
+                  // Split by lines and process each URI
+                  var uris = uriList.split('\n');
+                  for (var i = 0; i < uris.length; i++) {
+                     var uri = uris[i].trim();
+                     if (uri && !uri.startsWith('#')) { // Skip comments
+                        // Check if this URI looks like an image file
+                        var imageExtensions = ['png', 'jpg', 'jpeg', 'gif', 'bmp', 'svg', 'webp'];
+                        var isImage = false;
+                        for (var j = 0; j < imageExtensions.length; j++) {
+                           if (uri.toLowerCase().endsWith('.' + imageExtensions[j])) {
+                              isImage = true;
+                              break;
+                           }
+                        }
+                        
+                        if (isImage) {
+                           foundImage = true;
+                           
+                           // Try to load the file from the URI
+                           var filePath = uri;
+                           if (filePath.startsWith('file://')) {
+                              filePath = decodeURIComponent(filePath.substring(7));
+                           }
+                           
+                           // Try to create a File object from the path using fetch
+                           var promise = fetch(uri);
+                           promise.then(function(response) { 
+                              return response.blob(); 
+                           }).then(function(blob) {
+                              // Create a File object from the blob
+                              var fileName = filePath.split('/').pop() || 'dropped_image.png';
+                              var file = new File([blob], fileName, { type: blob.type || 'image/png' });
+                              
+                              // Call the image handler method
+                              self.@org.rstudio.studio.client.workbench.views.ai.AiToolbars::handleDroppedImage(*)(file);
+                           });
+                           
+                           // Handle errors separately
+                           promise['catch'](function(error) {
+                              console.log("Could not load image file from:", uri);
+                           });
+                        }
+                     }
+                  }
+               }
+            }
+            
+            if (foundImage) {
+               event.preventDefault();
+               event.stopPropagation();
+               return;
+            }
+         });
       }
    }-*/;
    
@@ -1409,4 +1586,265 @@ public class AiToolbars
             }
          });
    }
+   
+   /**
+    * Handle pasted image from clipboard
+    * @param file The image file from clipboard
+    */
+   private void handlePastedImage(JavaScriptObject file) {
+      // Convert JavaScriptObject to File
+      if (file == null) {
+         return;
+      }
+      
+      // Get file details
+      String fileName = getFileProperty(file, "name");
+      String fileType = getFileProperty(file, "type");
+      
+      // Check if it's actually an image
+      if (fileType == null || !fileType.startsWith("image/")) {
+         return;
+      }
+      
+      // Convert the file to a data URL and save it
+      processImageFile(file, "pasted_image_" + System.currentTimeMillis() + getFileExtension(fileType));
+   }
+   
+   /**
+    * Handle dropped image from file system
+    * @param file The image file dropped from the file system
+    */
+   private void handleDroppedImage(JavaScriptObject file) {
+      // Convert JavaScriptObject to File
+      if (file == null) {
+         return;
+      }
+      
+      // Get file details
+      String fileName = getFileProperty(file, "name");
+      String fileType = getFileProperty(file, "type");
+      
+      // Check if it's actually an image
+      if (fileType == null || !fileType.startsWith("image/")) {
+         return;
+      }
+      
+      // Use the original filename if available, otherwise generate one
+      String outputFileName = fileName;
+      if (outputFileName == null || outputFileName.isEmpty()) {
+         outputFileName = "dropped_image_" + System.currentTimeMillis() + getFileExtension(fileType);
+      }
+      
+      // Convert the file to a data URL and save it
+      processImageFile(file, outputFileName);
+   }
+   
+   /**
+    * Process an image file by converting it to a data URL and saving it via server
+    * @param file The image file (JavaScriptObject)
+    * @param fileName The filename to use for the saved image
+    */
+   private void processImageFile(JavaScriptObject file, String fileName) {
+      // Convert file to data URL using FileReader
+      readFileAsDataURL(file, new FileReadCallback() {
+         @Override
+         public void onSuccess(String dataUrl) {
+            // Save the data URL via server
+            saveImageDataUrl(dataUrl, fileName);
+         }
+         
+         @Override
+         public void onError(String error) {
+            RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage("Error", "Failed to read image file: " + error);
+         }
+      });
+   }
+   
+   /**
+    * Save an image data URL with proper limit checking and duplicate detection
+    * @param dataUrl The data URL of the image
+    * @param fileName The filename to use
+    */
+   private void saveImageDataUrl(String dataUrl, String fileName) {
+      // Step 1: Check current image count for the 3-image limit before doing anything
+      AiPaneImages imagesManager = pane_.getImagesManager();
+      if (imagesManager != null) {
+         imagesManager.getCurrentImageCount(new ServerRequestCallback<Integer>() {
+            @Override
+            public void onResponseReceived(Integer currentCount) {
+               if (currentCount >= 3) {
+                  RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage("Image Limit Reached", 
+                     "Only 3 images can be attached per message. Please remove an existing image before adding a new one.");
+                  return;
+               }
+               
+               // Step 2: Create temporary file to check for duplicates
+               createTempImageForDuplicateCheck(dataUrl, fileName);
+            }
+            
+            @Override
+            public void onError(ServerError error) {
+               String errorMessage = (error != null) ? error.getMessage() : "Unknown error occurred";
+               RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage("Error", "Failed to check current image count: " + errorMessage);
+            }
+         });
+      } else {
+         // If no images manager, fail immediately
+         RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage("Error", "Images manager not available");
+         return;
+      }
+   }
+   
+   /**
+    * Create a temporary image file and check for duplicates before saving permanently
+    */
+   private void createTempImageForDuplicateCheck(String dataUrl, String fileName) {
+      // Create temp file using a modified server call that doesn't add to conversation CSV
+      pane_.getAiServerOperations().createTempImageFile(dataUrl, fileName, new ServerRequestCallback<String>() {
+         @Override
+         public void onResponseReceived(String tempFilePath) {
+            // Step 3: Check for content duplicates using the temp file
+            pane_.getAiServerOperations().checkImageContentDuplicate(tempFilePath, new ServerRequestCallback<Boolean>() {
+               @Override
+               public void onResponseReceived(Boolean isDuplicate) {
+                  if (isDuplicate) {
+                     // Delete temp file and show error
+                     deleteTempFile(tempFilePath);
+                     RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage("Duplicate Image", 
+                        "This image content is already attached to the conversation.");
+                     return;
+                  }
+                  
+                  // Step 4: No duplicate found, use attachment system to save properly
+                  AiPaneImages imagesManager = pane_.getImagesManager();
+                  if (imagesManager == null) {
+                     deleteTempFile(tempFilePath);
+                     RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage("Error", "Images manager not available");
+                     return;
+                  }
+                  
+                  // Copy from temp to final location and add to CSV
+                  imagesManager.attachImage(tempFilePath);
+               }
+               
+               @Override
+               public void onError(ServerError error) {
+                  // If duplicate check fails, assume it's not a duplicate and proceed
+                  AiPaneImages imagesManager = pane_.getImagesManager();
+                  if (imagesManager == null) {
+                     deleteTempFile(tempFilePath);
+                     RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage("Error", "Images manager not available");
+                     return;
+                  }
+                  
+                  imagesManager.attachImage(tempFilePath);
+               }
+            });
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            String errorMessage = (error != null) ? error.getMessage() : "Unknown error";
+            RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage("Error", "Failed to create temporary image file: " + errorMessage);
+         }
+      });
+   }
+   
+   /**
+    * Clean up temporary files
+    */
+   private void deleteTempFile(String tempFilePath) {
+      // Clean up temp file - don't show errors if this fails
+      pane_.getAiServerOperations().deleteImage(tempFilePath, new ServerRequestCallback<Void>() {
+         @Override
+         public void onResponseReceived(Void v) {
+            // Temp file deleted successfully
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            // Ignore temp file deletion errors
+         }
+      });
+   }
+   
+   /**
+    * Get file extension for a given MIME type
+    * @param mimeType The MIME type
+    * @return The file extension including the dot
+    */
+   private String getFileExtension(String mimeType) {
+      if (mimeType == null) return ".png";
+      
+      switch (mimeType.toLowerCase()) {
+         case "image/jpeg":
+         case "image/jpg":
+            return ".jpg";
+         case "image/png":
+            return ".png";
+         case "image/gif":
+            return ".gif";
+         case "image/bmp":
+            return ".bmp";
+         case "image/svg+xml":
+            return ".svg";
+         case "image/webp":
+            return ".webp";
+         default:
+            return ".png"; // Default fallback
+      }
+   }
+   
+   /**
+    * Get a string property from a JavaScript File object
+    * @param file The file object
+    * @param property The property name
+    * @return The property value
+    */
+   private native String getFileProperty(JavaScriptObject file, String property) /*-{
+      return file && file[property] ? file[property] : null;
+   }-*/;
+   
+   /**
+    * Get a double property from a JavaScript File object
+    * @param file The file object
+    * @param property The property name
+    * @return The property value
+    */
+   private native double getFilePropertyDouble(JavaScriptObject file, String property) /*-{
+      return file && file[property] ? file[property] : 0;
+   }-*/;
+   
+   /**
+    * Interface for file read callbacks
+    */
+   private interface FileReadCallback {
+      void onSuccess(String dataUrl);
+      void onError(String error);
+   }
+   
+   /**
+    * Read a file as data URL using FileReader
+    * @param file The file to read
+    * @param callback The callback to invoke when done
+    */
+   private native void readFileAsDataURL(JavaScriptObject file, FileReadCallback callback) /*-{
+      if (!file) {
+         callback.@org.rstudio.studio.client.workbench.views.ai.AiToolbars.FileReadCallback::onError(Ljava/lang/String;)("File is null");
+         return;
+      }
+      
+      var reader = new FileReader();
+      
+      reader.onload = function(e) {
+         callback.@org.rstudio.studio.client.workbench.views.ai.AiToolbars.FileReadCallback::onSuccess(Ljava/lang/String;)(e.target.result);
+      };
+      
+      reader.onerror = function(e) {
+         var errorMsg = e.target.error ? e.target.error.message : "Unknown FileReader error";
+         callback.@org.rstudio.studio.client.workbench.views.ai.AiToolbars.FileReadCallback::onError(Ljava/lang/String;)(errorMsg);
+      };
+      
+      reader.readAsDataURL(file);
+   }-*/;
 }

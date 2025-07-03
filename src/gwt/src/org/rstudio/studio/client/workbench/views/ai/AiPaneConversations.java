@@ -294,6 +294,8 @@ public class AiPaneConversations
       
       // Refresh the attachments menu to reflect the current conversation's attachments
       pane_.refreshAttachmentsList();
+      // Refresh the images menu to reflect the current conversation's images
+      pane_.refreshImagesList();
    }
    
    /**
@@ -553,6 +555,7 @@ public class AiPaneConversations
                      // The most recent conversation is empty, reuse it
                      switchToConversation(conversationId, false);
                      pane_.refreshAttachmentsList();
+                     pane_.refreshImagesList();
                   } else {
                      // The conversation is not empty, create a new one
                      createBrandNewConversation();
@@ -626,6 +629,7 @@ public class AiPaneConversations
                   @Override
                   public void run() {
                      pane_.refreshAttachmentsList();
+                     pane_.refreshImagesList();
                   }
                };
                refreshTimer.schedule(100); // 100ms delay

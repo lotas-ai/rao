@@ -3453,6 +3453,13 @@ See `/src/gwt/tools/i18n-helpers/README.md`.
         desc="Attach file"
         image="icon_attachment_16"/>
 
+   <cmd id="aiAttachImage"
+        label="Attach Image"
+        buttonLabel=""
+        context="ai"
+        desc="Attach image for conversation"
+        image="icon_image_16"/>
+
    <cmd id="aiForward"
         label="Next Ai Topic"
         buttonLabel=""

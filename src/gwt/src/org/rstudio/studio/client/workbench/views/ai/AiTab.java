@@ -35,6 +35,7 @@ public class AiTab extends DelayLoadWorkbenchTab<Ai>
       @Handler public abstract void onAiHome();
       @Handler public abstract void onAiSearch();
       @Handler public abstract void onAiAttach();
+      @Handler public abstract void onAiAttachImage();
       
 
       public abstract void bringToFront();

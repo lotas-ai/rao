@@ -44,6 +44,16 @@ Main AI query endpoint with streaming SSE responses.
         "minutes_since_last_update": "number",
         "is_active": "boolean"
       }
+    ],
+    "attached_images": [
+      {
+        "filename": "string",
+        "original_path": "string",
+        "local_path": "string",
+        "mime_type": "string",
+        "base64_data": "string",
+        "timestamp": "string"
+      }
     ]
   },
   "auth": {

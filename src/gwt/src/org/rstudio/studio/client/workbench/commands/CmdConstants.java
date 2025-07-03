@@ -3079,6 +3079,14 @@ public interface CmdConstants extends Constants {
     String aiAttachButtonLabel();
     @DefaultStringValue("Attach file") // $NON-NLS-1$
     String aiAttachDesc();
+
+    // aiAttachImage
+    @DefaultStringValue("Attach Image") // $NON-NLS-1$
+    String aiAttachImageLabel();
+    @DefaultStringValue("") // $NON-NLS-1$
+    String aiAttachImageButtonLabel();
+    @DefaultStringValue("Attach image for conversation") // $NON-NLS-1$
+    String aiAttachImageDesc();
     
     // aiForward
     @DefaultStringValue("Next conversation") // $NON-NLS-1$
