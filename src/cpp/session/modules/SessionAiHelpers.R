@@ -875,7 +875,7 @@ tryCatch({
     return(output_text)
 })
 
-.rs.addFunction("check_required_packages", function(pkgs = c("httr2", "httr", "jsonlite", "curl", "commonmark", "htmltools", "base64enc", "processx", "callr")) {
+.rs.addFunction("check_required_packages", function(pkgs = c("httr2", "httr", "jsonlite", "curl", "commonmark", "htmltools", "base64enc", "processx", "callr", "magick")) {
   installed <- vapply(pkgs, function(pkg) {
      location <- find.package(pkg, quiet = TRUE)
      length(location) > 0

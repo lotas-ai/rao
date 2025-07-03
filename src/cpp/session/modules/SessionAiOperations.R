@@ -1564,6 +1564,9 @@
       return(invisible(FALSE))
    }
    
+   # Ensure required packages (including magick) are installed
+   .rs.check_required_packages()
+   
    paths <- .rs.get_ai_file_paths()
    plots_dir <- file.path(paths$ai_dir, 'plots')
    if (!dir.exists(plots_dir)) {
@@ -1588,16 +1591,37 @@
       plot_name <- paste0('plot_', format(Sys.time(), '%Y%m%d_%H%M%S'))
       
       tryCatch({
-         plot_bin <- readBin(plot$filepath, 'raw', file.info(plot$filepath)$size)
-         plot_b64 <- base64enc::base64encode(plot_bin)
+         # Use intelligent resizing to keep plots under 100KB
+         resize_result <- .rs.resize_image_for_ai(plot$filepath, target_size_kb = 100)
+         
+         # Use resized plot data
+         plot_b64 <- resize_result$base64_data
+         
+         # Use format from resize result or fallback to file extension
+         if (!is.null(resize_result$format)) {
+            mime_type <- switch(toupper(resize_result$format),
+               "PNG" = "image/png",
+               "JPEG" = "image/jpeg",
+               "JPG" = "image/jpeg",
+               "image/png"  # default fallback
+            )
+         } else {
+            mime_type <- "image/png"
+            if (grepl("\\.jpe?g$", plot$filepath, ignore.case = TRUE)) {
+               mime_type <- "image/jpeg"
+            }
+         }
+         
+         # Log resizing info if plot was resized
+         if (resize_result$resized) {
+            cat("DEBUG: Plot resized from", resize_result$original_size_kb, "KB to", resize_result$final_size_kb, "KB\n")
+            if (!is.null(resize_result$new_dimensions)) {
+               cat("DEBUG: Plot dimensions:", resize_result$new_dimensions, "\n")
+            }
+         }
          
          plots_data[[plot_name]] <- plot_b64
          plot_names_for_log <- c(plot_names_for_log, plot_name)
-         
-         mime_type <- "image/png"
-         if (grepl("\\.jpe?g$", plot$filepath, ignore.case = TRUE)) {
-            mime_type <- "image/jpeg"
-         }
          
          base64_data <- paste0("data:", mime_type, ";base64,", plot_b64)
          

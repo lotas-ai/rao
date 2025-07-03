@@ -356,11 +356,11 @@ public class AiToolbars
       attachButton.getElement().getStyle().setProperty("transform", "scale(1.1)");
       attachButton.getElement().getStyle().setBackgroundColor("transparent");
       attachButton.getElement().getStyle().setMarginTop(0, Unit.PX);
-      searchToolbar_.addLeftWidget(attachButton);
+      // searchToolbar_.addLeftWidget(attachButton); // DISABLED: Comment out to hide attachments icon
       
       // Container for attachment menu that will appear to the right of the button
       attachmentMenuContainer_ = new SimplePanel();
-      searchToolbar_.addLeftWidget(attachmentMenuContainer_);
+      // searchToolbar_.addLeftWidget(attachmentMenuContainer_); // DISABLED: Comment out to hide attachment menu container
       
       // Create a circular button with a right-pointing triangle
       FlowPanel sendButton = new FlowPanel();

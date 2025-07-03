@@ -292,7 +292,132 @@
    ))
 })
 
+# Image resizing helper function to ensure images are under 100KB
+.rs.addFunction("resize_image_for_ai", function(image_path, target_size_kb = 100) {
+   
+   # Load image with magick
+   img <- magick::image_read(image_path)
+   info <- magick::image_info(img)
+   
+   original_width <- info$width
+   original_height <- info$height
+   original_format <- info$format
+   
+   # Start with original image
+   current_img <- img
+   resize_attempts <- 0
+   max_attempts <- 10
+   
+   # Target PNG format for consistency (good compression + wide support)
+   target_format <- "PNG"
+   
+   # If it's already PNG, try quality reduction first
+   if (toupper(original_format) == "PNG") {
+      # For PNG, try different compression levels
+      current_img <- magick::image_convert(current_img, "PNG")
+   } else if (toupper(original_format) %in% c("JPEG", "JPG")) {
+      # For JPEG, start with quality 85
+      current_img <- magick::image_convert(current_img, "JPEG", quality = 85)
+      target_format <- "JPEG"
+   } else {
+      # Convert other formats to PNG
+      current_img <- magick::image_convert(current_img, "PNG")
+   }
+   
+   # Function to check current size
+   check_size <- function(img) {
+      temp_bin <- magick::image_write(img, format = target_format)
+      temp_b64 <- base64enc::base64encode(temp_bin)
+      nchar(temp_b64) / 1024
+   }
+   
+   current_size_kb <- check_size(current_img)
+   
+   # If already under target, return as-is
+   if (current_size_kb <= target_size_kb) {
+      final_bin <- magick::image_write(current_img, format = target_format)
+      final_b64 <- base64enc::base64encode(final_bin)
+      
+      return(list(
+         success = TRUE,
+         base64_data = final_b64,
+         original_size_kb = round(file.info(image_path)$size / 1024, 1),
+         final_size_kb = round(current_size_kb, 1),
+         resized = FALSE,
+         format = target_format
+      ))
+   }
+   
+   # Need to resize - start with reasonable scaling factors
+   scale_factors <- c(0.8, 0.7, 0.6, 0.5, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15)
+   
+   for (scale in scale_factors) {
+      resize_attempts <- resize_attempts + 1
+      if (resize_attempts > max_attempts) break
+      
+      new_width <- round(original_width * scale)
+      new_height <- round(original_height * scale)
+      
+      # Don't go below reasonable minimum sizes
+      if (new_width < 100 || new_height < 100) {
+         new_width <- max(100, new_width)
+         new_height <- max(100, new_height)
+      }
+      
+      resized_img <- magick::image_resize(img, paste0(new_width, "x", new_height))
+      
+      # Apply format-specific optimizations
+      if (target_format == "JPEG") {
+         # Reduce JPEG quality progressively
+         quality <- max(50, 95 - (resize_attempts * 5))
+         resized_img <- magick::image_convert(resized_img, "JPEG", quality = quality)
+      } else {
+         # PNG - apply compression
+         resized_img <- magick::image_convert(resized_img, "PNG")
+      }
+      
+      current_size_kb <- check_size(resized_img)
+      
+      if (current_size_kb <= target_size_kb) {
+         final_bin <- magick::image_write(resized_img, format = target_format)
+         final_b64 <- base64enc::base64encode(final_bin)
+         
+         return(list(
+            success = TRUE,
+            base64_data = final_b64,
+            original_size_kb = round(file.info(image_path)$size / 1024, 1),
+            final_size_kb = round(current_size_kb, 1),
+            resized = TRUE,
+            scale_factor = scale,
+            new_dimensions = paste0(new_width, "x", new_height),
+            format = target_format
+         ))
+      }
+      
+      current_img <- resized_img
+   }
+   
+   # If we get here, even maximum compression didn't work
+   # Return the most compressed version we achieved
+   final_bin <- magick::image_write(current_img, format = target_format)
+   final_b64 <- base64enc::base64encode(final_bin)
+   
+   return(list(
+      success = TRUE,
+      base64_data = final_b64,
+      original_size_kb = round(file.info(image_path)$size / 1024, 1),
+      final_size_kb = round(current_size_kb, 1),
+      resized = TRUE,
+      scale_factor = scale_factors[length(scale_factors)],
+      format = target_format,
+      warning = paste0("Could not compress below ", round(current_size_kb, 1), "KB after maximum compression")
+   ))
+})
+
 .rs.addFunction("handle_view_image", function(function_call, current_log, related_to_id, request_id) {
+   # Ensure required packages (including magick) are installed
+   .rs.check_required_packages()
+   
    arguments <- .rs.safe_parse_function_arguments(function_call)
    
    image_path <- arguments$image_path
@@ -405,23 +530,49 @@
    image_msg_id <- NULL
    
    if (file_exists) {
-      image_bin <- readBin(image_path, 'raw', file.info(image_path)$size)
+      # Use intelligent resizing to keep images under 100KB
+      resize_result <- .rs.resize_image_for_ai(image_path, target_size_kb = 100)
       
-      image_b64 <- base64enc::base64encode(image_bin)
+      # Use resized image data
+      image_b64 <- resize_result$base64_data
       
-      # Enhanced MIME type detection
-      file_ext <- tolower(tools::file_ext(image_path))
-      mime_type <- switch(file_ext,
-         "png" = "image/png",
-         "jpg" = "image/jpeg", 
-         "jpeg" = "image/jpeg",
-         "gif" = "image/gif",
-         "svg" = "image/svg+xml",
-         "bmp" = "image/bmp",
-         "tiff" = "image/tiff",
-         "webp" = "image/webp",
-         "image/png"  # default fallback
-      )
+      # Use format from resize result or fallback to file extension
+      if (!is.null(resize_result$format)) {
+         mime_type <- switch(toupper(resize_result$format),
+            "PNG" = "image/png",
+            "JPEG" = "image/jpeg",
+            "JPG" = "image/jpeg",
+            "image/png"  # default fallback
+         )
+      } else {
+         file_ext <- tolower(tools::file_ext(image_path))
+         mime_type <- switch(file_ext,
+            "png" = "image/png",
+            "jpg" = "image/jpeg", 
+            "jpeg" = "image/jpeg",
+            "gif" = "image/gif",
+            "svg" = "image/svg+xml",
+            "bmp" = "image/bmp",
+            "tiff" = "image/tiff",
+            "webp" = "image/webp",
+            "image/png"  # default fallback
+         )
+      }
+      
+      # Update function response with resizing info
+      if (resize_result$resized) {
+         function_response <- paste0("Success: Image resized from ", resize_result$original_size_kb, "KB to ", resize_result$final_size_kb, "KB (", basename(image_path), ")")
+         if (!is.null(resize_result$new_dimensions)) {
+            function_response <- paste0(function_response, " - resized to ", resize_result$new_dimensions)
+         }
+      } else {
+         function_response <- paste0("Success: Image loaded at ", resize_result$final_size_kb, "KB (", basename(image_path), ")")
+      }
+      
+      # Add any warnings
+      if (!is.null(resize_result$warning)) {
+         function_response <- paste0(function_response, " - Warning: ", resize_result$warning)
+      }
       
       image_data <- paste0("data:", mime_type, ";base64,", image_b64)
       
