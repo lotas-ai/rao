@@ -150,10 +150,21 @@
       },
       "read_file" = {
          target_file <- if (!is.null(arguments$filename)) basename(arguments$filename) else "unknown"
+         
+         # Add line range information if available
+         line_info <- ""
+         if (!is.null(arguments$start_line_one_indexed) && !is.null(arguments$end_line_one_indexed_inclusive)) {
+            line_info <- paste0(" (", arguments$start_line_one_indexed, "-", arguments$end_line_one_indexed_inclusive, ")")
+         } else if (!is.null(arguments$start_line_one_indexed)) {
+            line_info <- paste0(" (", arguments$start_line_one_indexed, "-end)")
+         } else if (!is.null(arguments$end_line_one_indexed_inclusive)) {
+            line_info <- paste0(" (1-", arguments$end_line_one_indexed_inclusive, ")")
+         }
+         
          if (is_thinking) {
-            paste0("Reading ", target_file, suffix)
+            paste0("Reading ", target_file, line_info, suffix)
          } else {
-            paste0("Read ", target_file)
+            paste0("Read ", target_file, line_info)
          }
       },
       "view_image" = {
