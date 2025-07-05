@@ -1603,10 +1603,6 @@
       if (!is.null(last_event_data$function_call)) {
         result$function_call <- last_event_data$function_call
       }
-
-    } else if (nchar(accumulated_response) > 0) {
-      # Use accumulated response as fallback
-      result$response <- accumulated_response
     }
     
     # Include end_turn flag if present in the streaming event

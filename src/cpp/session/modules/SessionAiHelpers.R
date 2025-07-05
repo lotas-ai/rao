@@ -1377,7 +1377,9 @@ tryCatch({
          return(NULL)
       })
       
-      if (is.null(args) || is.null(args$filename)) {
+      filename <- args$filename
+      
+      if (is.null(filename)) {
          cat("DEBUG: No filename found in edit_file arguments\n")
          return(list(diff = list()))
       }
@@ -1389,8 +1391,17 @@ tryCatch({
          return(list(diff = list()))
       }
       
+      # Check if this is the new apply edit workflow
+      # This is detected by checking if the assistant message has related_to pointing to an edit_file
+      # with the new parameter structure (the backend normalizes target_file to filename, but we can
+      is_apply_edit <- !is.null(args$instructions) && !is.null(args$code_edit)
+      
       # Parse the code block content to get the actual file content
-      cleaned_content <- .rs.parse_code_block_content(new_content, args$filename)
+      if (is_apply_edit) {
+         cleaned_content <- new_content
+      } else {
+         cleaned_content <- .rs.parse_code_block_content(new_content, filename)
+      }
       
       # Get the previous content (what existed before the edit)
       # Handle different edit modes based on line parameters
@@ -1404,7 +1415,7 @@ tryCatch({
       # Check if this is a keyword-based edit (not "start" or "end")
       # Also exclude cases where keyword is just the filename (common for new file creation)
       is_keyword_edit <- !is.null(args$keyword) && args$keyword != "start" && args$keyword != "end" && 
-                        args$keyword != args$filename && args$keyword != basename(args$filename)
+                        args$keyword != filename && args$keyword != basename(filename)
       
       # Handle different edit modes for previous content extraction
       if (!is.null(insert_line)) {
@@ -1433,7 +1444,7 @@ tryCatch({
             start_line <- function_output$start_line
             end_line <- function_output$end_line
          }
-      } else if (is_keyword_edit) {
+      } else if (is_keyword_edit || is_apply_edit) {
          # Find the function_call_output that corresponds to this edit_file call
          function_output <- NULL
          for (entry in conversation_log) {
@@ -1459,11 +1470,11 @@ tryCatch({
          }
       } else {
          # For non-keyword edits (start/end/filename), use the entire file content
-         if (!is.null(args$filename)) {
-            file_path <- if (startsWith(args$filename, "/") || startsWith(args$filename, "~") || grepl("^[A-Za-z]:", args$filename)) {
-               args$filename
+         if (!is.null(filename)) {
+            file_path <- if (startsWith(filename, "/") || startsWith(filename, "~") || grepl("^[A-Za-z]:", filename)) {
+               filename
             } else {
-               file.path(getwd(), args$filename)
+               file.path(getwd(), filename)
             }
             
             # Use get_effective_file_content to get content from editor if open, otherwise from disk
@@ -1585,7 +1596,7 @@ tryCatch({
          }
          
          # Format filename with diff stats using the same logic as conversation history loading
-         filename_with_stats <- basename(args$filename)
+         filename_with_stats <- basename(filename)
          if (added_count > 0 || deleted_count > 0) {
             # Format diff stats with CSS classes for proper styling
             addition_text <- paste0('<span class="addition">+', added_count, '</span>')
@@ -1619,7 +1630,7 @@ tryCatch({
          .rs.store_diff_data(message_id, diff_result$diff, previous_content, cleaned_content)
          
          # Format filename with diff stats using the same logic as conversation history loading
-         filename_with_stats <- basename(args$filename)
+         filename_with_stats <- basename(filename)
          if (diff_result$added > 0 || diff_result$deleted > 0) {
             # Format diff stats with CSS classes for proper styling
             addition_text <- paste0('<span class="addition">+', diff_result$added, '</span>')

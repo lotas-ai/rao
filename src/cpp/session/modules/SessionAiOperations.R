@@ -9,6 +9,51 @@
 # AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
 #
 
+.rs.addFunction("filter_edited_code_using_diff_data", function(edited_code, edit_file_message_id) {
+   # Filter the edited_code to only include lines that should be in the final file
+   # (unchanged and added lines, excluding deleted lines)
+   
+   # Get the diff data from conversation_diffs.json
+   diffs_data <- .rs.read_conversation_diffs()
+   msg_id_char <- as.character(edit_file_message_id)
+   
+   if (is.null(diffs_data$diffs) || is.null(diffs_data$diffs[[msg_id_char]])) {
+      # No diff data found, return the edited_code as-is
+      return(edited_code)
+   }
+   
+   diff_data <- diffs_data$diffs[[msg_id_char]]$diff_data
+   if (is.null(diff_data) || length(diff_data) == 0) {
+      # No diff data found, return the edited_code as-is
+      return(edited_code)
+   }
+   
+   # Split the edited_code into lines
+   edited_lines <- strsplit(edited_code, "\n", fixed = TRUE)[[1]]
+   
+   # Match each line in the editor with the corresponding diff entry
+   final_lines <- character(0)
+   for (i in seq_along(diff_data)) {
+      if (i <= length(edited_lines)) {
+         diff_entry <- diff_data[[i]]
+         line_type <- diff_entry$type
+         
+         # Only include lines that are "added" or "unchanged" (skip "deleted" lines)
+         if (!is.null(line_type) && line_type != "deleted") {
+            # Use the actual content from the editor (which may have been edited by the user)
+            final_lines <- c(final_lines, edited_lines[i])
+         }
+      }
+   }
+   
+   # Join the final lines back into a single string
+   if (length(final_lines) == 0) {
+      return("")
+   }
+   
+   return(paste(final_lines, collapse = "\n"))
+})
+
 .rs.addFunction("update_diff_with_editor_content", function(edited_code, edit_file_message_id, diff_data) {
    # Update diff data with current editor content and save it
    # Returns the updated diff_data
@@ -568,7 +613,6 @@
    return(result)
 })
 
-
 .rs.addFunction("accept_edit_file_command", function(edited_code, message_id, request_id) {
    
    conversation_index <- .rs.get_current_conversation_index()
@@ -589,10 +633,10 @@
    edit_file_entry <- NULL
    for (entry in conversation_log) {
       if (!is.null(entry$id) && entry$id == edit_file_message_id && 
-          !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
-          entry$function_call$name == "edit_file") {
-         edit_file_entry <- entry
-         break
+         !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
+         entry$function_call$name == "edit_file") {
+      edit_file_entry <- entry
+      break
       }
    }
    
@@ -600,29 +644,25 @@
       cat("DEBUG accept_edit_file_command: No edit_file function call found for message ID:", latest_message_id, "\n")
       return(FALSE)
    }
-   
-   # Extract filename and line parameters from edit_file arguments
+
+   # Extract filename from edit_file arguments
    edit_args <- tryCatch({
       if (is.character(edit_file_entry$function_call$arguments)) {
-         jsonlite::fromJSON(edit_file_entry$function_call$arguments, simplifyVector = FALSE)
+      jsonlite::fromJSON(edit_file_entry$function_call$arguments, simplifyVector = FALSE)
       } else {
-         edit_file_entry$function_call$arguments
+      edit_file_entry$function_call$arguments
       }
    }, error = function(e) {
       return(NULL)
    })
-   
-   start_line <- edit_args$start_line
-   end_line <- edit_args$end_line
-   insert_line <- edit_args$insert_line
-   
+
    if (is.null(edit_args) || is.null(edit_args$filename)) {
       cat("DEBUG accept_edit_file_command: No filename found in edit_file arguments\n")
       return(FALSE)
    }
-   
+
    filename <- edit_args$filename
-   
+
    if (is.null(filename) || filename == "" || is.na(filename)) {
       return(FALSE)
    }
@@ -633,15 +673,10 @@
       # File is open in editor
       doc_info <- .rs.get_open_document_by_path(filename)
       if (!is.null(doc_info) && !is.null(doc_info$dirty)) {
-         original_was_unsaved <- as.logical(doc_info$dirty)
+      original_was_unsaved <- as.logical(doc_info$dirty)
       }
    }
-   
-   # DEBUG: Log the original state
-   if (.rs.is_file_open_in_editor(filename)) {
-      doc_info <- .rs.get_open_document_by_path(filename)
-   }
-   
+
    # Get original content using effective file content (editor if open, otherwise disk)
    original_file_content <- .rs.get_effective_file_content(filename)
    if (is.null(original_file_content)) {
@@ -654,182 +689,44 @@
    if (!startsWith(filename, "__UNSAVED") && (grepl("/", filename) || grepl("\\\\", filename))) {
       file_dir <- dirname(filename)
       if (!dir.exists(file_dir)) {
-         dir.create(file_dir, recursive = TRUE, showWarnings = FALSE)
+      dir.create(file_dir, recursive = TRUE, showWarnings = FALSE)
       }
    }
 
-   # Handle different edit modes based on line parameters
-   if (!is.null(insert_line)) {
-      # Insert mode: add new content after specified line
-      new_lines <- strsplit(edited_code, "\n")[[1]]
-      
-      if (file_existed && nchar(original_file_content) > 0) {
-         existing_lines <- strsplit(original_file_content, "\n")[[1]]
-         
-         # Insert new content after insert_line
-         if (insert_line == 0) {
-            # Insert at beginning
-            processed_code <- c(new_lines, existing_lines)
-         } else if (insert_line >= length(existing_lines)) {
-            # Insert at end
-            processed_code <- c(existing_lines, new_lines)
-         } else {
-            # Insert in middle
-            before_lines <- existing_lines[1:insert_line]
-            after_lines <- existing_lines[(insert_line + 1):length(existing_lines)]
-            processed_code <- c(before_lines, new_lines, after_lines)
-         }
-      } else {
-         # New file, just use the new content
-         processed_code <- new_lines
-      }
-      
-   } else if (!is.null(start_line) && !is.null(end_line)) {
-      # Line range mode: process diff to extract only non-deleted lines
-      diff_data <- .rs.get_diff_data_for_edit_file(edit_file_message_id)
-      
-      # Update diff data with current editor content from edited_code
-      diff_data <- .rs.update_diff_with_editor_content(edited_code, edit_file_message_id, diff_data)
-            
-      # Process diff to get only the lines that should remain (not deleted)
-      processed_range_lines <- character(0)
-      
-      for (i in seq_along(diff_data$diff)) {
-         diff_entry <- diff_data$diff[[i]]
-         editor_line <- diff_entry$content
-            
-         if (diff_entry$type == "unchanged" || diff_entry$type == "added") {
-            # This line should be in the final output
-            processed_range_lines <- c(processed_range_lines, editor_line)
-         }
-      }
-      
-      # Now replace the range in the original file
-      if (file_existed && nchar(original_file_content) > 0) {
-         existing_lines <- strsplit(original_file_content, "\n")[[1]]
-         
-         if (start_line <= length(existing_lines) && end_line <= length(existing_lines) && start_line <= end_line) {
-            # Replace the specified range with processed content
-            before_lines <- if (start_line > 1) existing_lines[1:(start_line - 1)] else character(0)
-            after_lines <- if (end_line < length(existing_lines)) existing_lines[(end_line + 1):length(existing_lines)] else character(0)
-            processed_code <- c(before_lines, processed_range_lines, after_lines)
-         } else {
-            stop("Invalid line range in edit_file command")
-         }
-      } else {
-         # New file, just use the processed content
-         processed_code <- processed_range_lines
-      }
-      
-   } else {
-      # Use diff data consistently for all edit modes to respect user modifications
-      diff_data <- .rs.get_diff_data_for_edit_file(edit_file_message_id)
-      
-      # Update diff data with current editor content from edited_code
-      diff_data <- .rs.update_diff_with_editor_content(edited_code, edit_file_message_id, diff_data)
-      
-      # Extract only the lines that should be in the final result (added + unchanged)
-      processed_lines <- character(0)
-      
-      for (i in seq_along(diff_data$diff)) {
-         diff_entry <- diff_data$diff[[i]]
-         editor_line <- diff_entry$content
-         
-         if (diff_entry$type == "unchanged" || diff_entry$type == "added") {
-            # This line should be in the final output
-            processed_lines <- c(processed_lines, editor_line)
-         }
-         # Skip lines with type == "deleted" - they're removed from final result
-      }
-      
-      # For different edit types, we need to combine the processed diff content with original file structure
-      is_start_edit <- !is.null(diff_data$is_start_edit) && diff_data$is_start_edit
-      is_end_edit <- !is.null(diff_data$is_end_edit) && diff_data$is_end_edit
-      is_keyword_edit <- !is.null(edit_args$keyword) && edit_args$keyword != "start" && edit_args$keyword != "end"
-      
-      if (is_start_edit) {
-         # For start edits: processed diff content + existing file content
-         if (file_existed && nchar(original_file_content) > 0) {
-            existing_lines <- strsplit(original_file_content, "\n")[[1]]
-            processed_code <- c(processed_lines, existing_lines)
-         } else {
-            processed_code <- processed_lines
-         }
-         
-      } else if (is_end_edit) {
-         # For end edits: existing file content + processed diff content
-         if (file_existed && nchar(original_file_content) > 0) {
-            existing_lines <- strsplit(original_file_content, "\n")[[1]]
-            processed_code <- c(existing_lines, processed_lines)
-         } else {
-            processed_code <- processed_lines
-         }
-         
-      } else if (is_keyword_edit) {
-         # For keyword edits: replace the keyword section with processed diff content
-         function_output <- NULL
-         for (entry in conversation_log) {
-            if (!is.null(entry$type) && entry$type == "function_call_output" &&
-               !is.null(entry$call_id) && 
-               !is.null(edit_file_entry$function_call$call_id) &&
-               entry$call_id == edit_file_entry$function_call$call_id) {
-               function_output <- entry
-               break
-            }
-         }
-         
-         if (!is.null(function_output) && !is.null(function_output$output)) {
-            original_keyword_content <- function_output$output
-            
-            if (file_existed && nchar(original_file_content) > 0) {
-               original_lines <- strsplit(original_file_content, "\n")[[1]]
-               keyword_lines <- strsplit(original_keyword_content, "\n")[[1]]
-               
-               # Try to find and replace the keyword section
-               replacement_made <- FALSE
-               for (start_search in seq_along(original_lines)) {
-                  if (start_search + length(keyword_lines) - 1 <= length(original_lines)) {
-                     section_match <- all(original_lines[start_search:(start_search + length(keyword_lines) - 1)] == keyword_lines)
-                     
-                     if (section_match) {
-                        before_lines <- if (start_search > 1) original_lines[1:(start_search - 1)] else character(0)
-                        after_lines <- if (start_search + length(keyword_lines) <= length(original_lines)) original_lines[(start_search + length(keyword_lines)):length(original_lines)] else character(0)
-                        processed_code <- c(before_lines, processed_lines, after_lines)
-                        replacement_made <- TRUE
-                        break
-                     }
-                  }
-               }
-               
-               if (!replacement_made) {
-                  # Fallback: use processed diff content only
-                  processed_code <- processed_lines
-               }
-            } else {
-               processed_code <- processed_lines
-            }
-         } else {
-            # Fallback: use processed diff content
-            processed_code <- processed_lines
-         }
-      } else {
-         # Full file replacement - use processed diff content as-is
-         processed_code <- processed_lines
-      }
-   }
+   # The edited_code contains the full file content including deleted lines for diff display
+   # Filter out deleted lines using the conversation_diffs.json data
+   final_content <- .rs.filter_edited_code_using_diff_data(edited_code, edit_file_message_id)
 
-   final_content <- paste(processed_code, collapse = "\n")
-   
    # Handle different scenarios based on whether original file was saved or unsaved
    if (original_was_unsaved) {
       # Original file was unsaved - update editor without saving to disk
       # For accept operations, always mark_clean = FALSE to keep document marked as dirty
       success <- tryCatch({
-         .rs.invokeRpc("update_open_document_content", filename, final_content, FALSE)
+      .rs.invokeRpc("update_open_document_content", filename, final_content, FALSE)
       }, error = function(e) {
-         FALSE
+      FALSE
       })
       
+      if (success) {
+      file_written <- TRUE
+      # Check if this is a file creation (no previous content) or modification
+      if (is.null(original_file_content) || nchar(original_file_content) == 0) {
+         # This is a file creation - record as such
+         .rs.record_file_creation(filename)
+      } else {
+         # This is a file modification - record with was_unsaved flag
+         .rs.record_file_modification_with_diff_with_state(filename, original_file_content, final_content, original_was_unsaved)
+      }
+      }
+   } else {
+      # Original file was saved - update both editor and disk
+      # Check if content has actually changed
+      current_content <- .rs.get_effective_file_content(filename)
+      content_changed <- is.null(current_content) || current_content != final_content
+      
+      if (content_changed) {
+      # Apply edit using the routing system (which handles both editor and disk)
+      success <- .rs.apply_file_edit(filename, final_content)
       if (success) {
          file_written <- TRUE
          # Check if this is a file creation (no previous content) or modification
@@ -841,26 +738,6 @@
             .rs.record_file_modification_with_diff_with_state(filename, original_file_content, final_content, original_was_unsaved)
          }
       }
-   } else {
-      # Original file was saved - update both editor and disk
-      # Check if content has actually changed
-      current_content <- .rs.get_effective_file_content(filename)
-      content_changed <- is.null(current_content) || current_content != final_content
-      
-      if (content_changed) {
-         # Apply edit using the routing system (which handles both editor and disk)
-         success <- .rs.apply_file_edit(filename, final_content)
-         if (success) {
-            file_written <- TRUE
-            # Check if this is a file creation (no previous content) or modification
-            if (is.null(original_file_content) || nchar(original_file_content) == 0) {
-               # This is a file creation - record as such
-               .rs.record_file_creation(filename)
-            } else {
-               # This is a file modification - record with was_unsaved flag
-               .rs.record_file_modification_with_diff_with_state(filename, original_file_content, final_content, original_was_unsaved)
-            }
-          }
       }
    }
    
@@ -893,54 +770,16 @@
    
    # Replace the pending message with acceptance
    pending_entry_index <- pending_entries[1]
-   
-   # Get the actual line range from the diff data to show where the edit appears in the final file
-   diff_data <- .rs.get_diff_data_for_edit_file(edit_file_message_id)
-   line_info <- ""
-   
-   if (!is.null(diff_data) && !is.null(diff_data$diff) && length(diff_data$diff) > 0) {
-      # Extract line numbers from the diff data - look for new_line values that show where content appears in the final file
-      new_line_numbers <- c()
-      for (diff_entry in diff_data$diff) {
-         if (!is.null(diff_entry$new_line) && !is.na(diff_entry$new_line) && diff_entry$new_line > 0) {
-            # Only include lines that are actually in the final file (added or unchanged)
-            if (!is.null(diff_entry$type) && (diff_entry$type == "added" || diff_entry$type == "unchanged")) {
-               new_line_numbers <- c(new_line_numbers, diff_entry$new_line)
-            }
-         }
-      }
-      
-      if (length(new_line_numbers) > 0) {
-         new_line_numbers <- sort(unique(new_line_numbers))
-         if (length(new_line_numbers) == 1) {
-            line_info <- as.character(new_line_numbers[1])
-         } else {
-            # Show range from first to last line
-            line_info <- paste0(min(new_line_numbers), "-", max(new_line_numbers))
-         }
-      } else {
-         # Fallback: use line count if no specific line numbers found
-         line_count <- length(processed_code)
-         if (line_count > 0) {
-            line_info <- paste0("1-", line_count)
-         } else {
-            line_info <- "1"
-         }
-      }
-   } else {
-      # Fallback: use line count if no diff data available
-      line_count <- length(processed_code)
-      if (line_count > 0) {
-         line_info <- paste0("1-", line_count)
-      } else {
-         line_info <- "1"
-      }
-   }
-   
-   # Create enhanced procedural message with actual line and file information
+
+   # Count lines in the final file
+   final_lines <- strsplit(final_content, "\n")[[1]]
+   line_count <- length(final_lines)
+   line_info <- if (line_count > 1) paste0("1-", line_count) else "1"
+
+   # Create procedural message with actual line and file information
    acceptance_message <- paste0("Edit file command accepted by user. The edit now constitutes lines ", 
-                               line_info, " of the file ", basename(filename))
-   
+                              line_info, " of the file ", basename(filename))
+
    conversation_log[[pending_entry_index]]$content <- acceptance_message
    # Keep procedural flag so this remains hidden from UI
    conversation_log[[pending_entry_index]]$procedural <- TRUE
@@ -1009,7 +848,7 @@
       )
       return(result)
    }
-  })
+})
 
 .rs.addJsonRpcHandler("revert_ai_message", function(message_id) {
    .rs.revert_ai_message(message_id)
@@ -2938,6 +2777,9 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
                   )
                ))
             }
+            
+            # Update conversation display to show the edit_file widget
+            .rs.update_conversation_display()
             
             response_message <- if (!is.null(streaming_result$cancelled) && streaming_result$cancelled) {
                "Partial edit_file response preserved after cancellation"

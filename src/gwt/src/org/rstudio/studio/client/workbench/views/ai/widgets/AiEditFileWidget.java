@@ -547,8 +547,6 @@ public class AiEditFileWidget extends Composite
          return;
       }
       
-   
-      
       // Clear any existing highlighting
       clearDiffHighlighting();
       
