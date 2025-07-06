@@ -153,7 +153,9 @@
          
          # Add line range information if available
          line_info <- ""
-         if (!is.null(arguments$start_line_one_indexed) && !is.null(arguments$end_line_one_indexed_inclusive)) {
+         if (!is.null(arguments$should_read_entire_file) && arguments$should_read_entire_file == TRUE) {
+            line_info <- " (1-end)"
+         } else if (!is.null(arguments$start_line_one_indexed) && !is.null(arguments$end_line_one_indexed_inclusive)) {
             line_info <- paste0(" (", arguments$start_line_one_indexed, "-", arguments$end_line_one_indexed_inclusive, ")")
          } else if (!is.null(arguments$start_line_one_indexed)) {
             line_info <- paste0(" (", arguments$start_line_one_indexed, "-end)")
@@ -230,173 +232,7 @@
    return(NULL)
 })
 
-.rs.addFunction("handle_cancel_edit", function(normalized_function_call, conversation_log, related_to_id, request_id) {
-   # Handle cancel_edit function call
-   # 1. Find corresponding edit_file function call using related_to_id
-   # 2. Update existing function_call_output for edit_file with cancel_edit explanation
-   # 3. Create assistant message only if one doesn't already exist
-   # 4. Return continue_silent status
-   
-   # Parse cancel_edit arguments to get explanation
-   cancel_edit_args <- tryCatch({
-      if (is.character(normalized_function_call$arguments)) {
-         jsonlite::fromJSON(normalized_function_call$arguments, simplifyVector = FALSE)
-      } else {
-         normalized_function_call$arguments
-      }
-   }, error = function(e) {
-      cat("DEBUG handle_cancel_edit: Error parsing arguments:", e$message, "\n")
-      return(list(explanation = "Edit cancelled by model"))
-   })
-      
-   explanation <- if (!is.null(cancel_edit_args$explanation)) {
-      cancel_edit_args$explanation
-   } else {
-      "Edit cancelled by model"
-   }
-      
-   # Use related_to_id to find the edit_file function call
-   edit_file_entry <- NULL
-   edit_file_call_id <- NULL
-      
-      # related_to_id is required and should never be null
-   if (is.null(related_to_id)) {
-      stop("related_to_id is required and cannot be NULL in handle_cancel_edit")
-   }
-   
-   for (entry in conversation_log) {
-      if (!is.null(entry$id) && entry$id == related_to_id &&
-          !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
-          entry$function_call$name == "edit_file") {
-         edit_file_entry <- entry
-         edit_file_call_id <- entry$function_call$call_id
-         break
-      }
-   }
-      
-   if (is.null(edit_file_entry)) {
-      # No edit_file found - this shouldn't happen, but handle gracefully
-      stop("cancel_edit received but no corresponding edit_file found for related_to_id:", related_to_id)
-   }
-   
-   # Read fresh conversation log that includes the cancel_edit function call FIRST
-   conversation_log <- .rs.read_conversation_log()
-   
-   # Debug: check what's in the fresh conversation log
-   for (i in seq_along(conversation_log)) {
-      entry <- conversation_log[[i]]
-      content_preview <- if (!is.null(entry$content)) substr(entry$content, 1, 30) else "NO_CONTENT"
-      function_name <- if (!is.null(entry$function_call) && !is.null(entry$function_call$name)) entry$function_call$name else "NO_FUNC"
-   }
-   
-   # Find and update existing function_call_output for the edit_file
-   existing_output_index <- NULL
-   
-   for (i in seq_along(conversation_log)) {
-      entry <- conversation_log[[i]]
-      if (!is.null(entry$type) && entry$type == "function_call_output" && 
-          !is.null(entry$call_id) && entry$call_id == edit_file_call_id) {
-         existing_output_index <- i
-         break
-      }
-   }
-   
-   if (!is.null(existing_output_index)) {
-      # Update existing function_call_output
-      conversation_log[[existing_output_index]]$output <- explanation
-   } else {
-      # Create new function_call_output if none exists
-      function_output_id <- .rs.get_next_message_id()
-      edit_file_output <- list(
-         id = function_output_id,
-         type = "function_call_output",
-         call_id = edit_file_call_id,
-         output = explanation,
-         related_to = edit_file_entry$id,
-         procedural = TRUE
-      )
-      conversation_log <- c(conversation_log, list(edit_file_output))
-   }
-   
-   # Check if assistant message already exists for this edit_file
-   existing_assistant_message <- NULL
-   for (i in seq_along(conversation_log)) {
-      entry <- conversation_log[[i]]
-      if (!is.null(entry$role) && entry$role == "assistant" && 
-          !is.null(entry$related_to) && entry$related_to == edit_file_entry$id) {
-         existing_assistant_message <- entry
-         content_preview <- if (!is.null(entry$content)) substr(entry$content, 1, 50) else "NO_CONTENT"
-         break
-      }
-   }
-   
-   # FIRST: Transform the cancel_edit function call into a plain assistant message
-   cancel_edit_call_id <- normalized_function_call$call_id
-   
-   # Find the cancel_edit function call and transform it
-   for (i in seq_along(conversation_log)) {
-      if (!is.null(conversation_log[[i]]$function_call) && 
-          !is.null(conversation_log[[i]]$function_call$call_id)) {
-         entry_call_id <- if (is.list(conversation_log[[i]]$function_call$call_id)) {
-            conversation_log[[i]]$function_call$call_id[[1]]
-         } else {
-            conversation_log[[i]]$function_call$call_id
-         }
-         
-         if (entry_call_id == cancel_edit_call_id) {
-            
-            # Transform this entry from function call to plain assistant message
-            conversation_log[[i]]$content <- "The model chose to cancel the edit."
-            conversation_log[[i]]$function_call <- NULL  # Remove the function call
-            
-            break
-         }
-      }
-   }
-   
-   # Assistant message has been transformed above - no additional creation/update needed
-   
-   # Write updated conversation log
-   for (i in seq_along(conversation_log)) {
-      entry <- conversation_log[[i]]
-      content_preview <- if (!is.null(entry$content)) substr(entry$content, 1, 30) else "NO_CONTENT"
-   }
-   .rs.write_conversation_log(conversation_log)
-   
-   # Update display to show the cancellation
-   .rs.update_conversation_display()
-   
-   # Return continue_and_display status - cancel_edit should update display then continue
-   # The related_to_id should be the original user message ID that triggered the edit_file
-   if (is.null(edit_file_entry$related_to)) {
-      stop("edit_file entry missing required related_to field - this should never happen as related_to is required")
-   }
-   user_message_id <- edit_file_entry$related_to
-   
-   # CRITICAL FIX: Check for cancellation before returning continue_silent
-   # If cancelled, return done to stop the conversation chain
-   if (.rs.get_conversation_var("ai_cancelled")) {
-      return(list(
-         status = "done",
-         data = list(
-            message = "Edit cancelled by model - request cancelled, stopping conversation chain",
-            related_to_id = user_message_id,
-            conversation_index = .rs.get_current_conversation_index(),
-            request_id = request_id
-         )
-      ))
-   }
-   
-   return(list(
-      status = "continue_silent",
-      data = list(
-         message = "Edit cancelled by model",
-         related_to_id = user_message_id,
-         conversation_index = .rs.get_current_conversation_index(),
-         request_id = request_id
-      )
-   ))
-})
+
 
 .rs.addFunction("extract_command_and_explanation", function(function_call_entry, function_result = NULL) {
    # Extract command and explanation from function call entry
@@ -2372,8 +2208,6 @@
       function_result <- .rs.handle_delete_file(normalized_function_call, conversation_log, related_to_id, request_id)
    } else if (function_name == "run_file") {
       function_result <- .rs.handle_run_file(normalized_function_call, conversation_log, related_to_id, request_id)
-   } else if (function_name == "cancel_edit") {
-      function_result <- .rs.handle_cancel_edit(normalized_function_call, conversation_log, related_to_id, request_id)
    } else {
       # Fallback for unknown function calls
       function_output_id <- .rs.get_next_message_id()
@@ -2418,18 +2252,6 @@
             content = function_message,
             request_id = request_id
          ))
-      }
-   }
-   
-   # Handle cancel_edit special case
-   if (function_name == "cancel_edit") {
-      # cancel_edit returns a special status and should not create widgets or continue with normal processing
-      if (is.list(function_result) && !is.null(function_result$status) && function_result$status == "continue_silent") {
-         operation_result <- .rs.create_ai_operation_result(
-            status = "continue_silent",
-            data = function_result$data  # Pass through the complete data from handle_cancel_edit
-         )
-         return(operation_result)
       }
    }
    
