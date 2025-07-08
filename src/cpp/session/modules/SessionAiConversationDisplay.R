@@ -564,12 +564,18 @@
                      }
                      
                      # Use the related_to (edit_file function call ID) as the widget ID to match streaming events
+                     
+                     # PRE-COMPUTE DIFF DATA HERE instead of having Java call back to R
+                     diff_data <- .rs.get_diff_data_for_edit_file(entry$related_to)
+                     
                      .rs.send_ai_operation("edit_file_command", list(
                         message_id = as.numeric(entry$related_to),  # Use related_to to match streaming
                         filename = filename_with_stats,
                         content = cleaned_content,
                         explanation = paste("Edit", basename(filename)),
-                        request_id = related_request_id  # Use the request_id from edit_file function call
+                        request_id = related_request_id,  # Use the request_id from edit_file function call
+                        skip_diff_highlighting = FALSE,
+                        diff_data = diff_data  # Send as structured object, not JSON string - becomes JavaScriptObject on Java side
                      ))
                      items_created <- items_created + 1
                      

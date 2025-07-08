@@ -1678,6 +1678,7 @@ tryCatch({
       }
    }, error = function(e) {
       cat("DEBUG: Error in get_diff_data_for_edit_file:", e$message, "\n")
+      return(list(diff = list()))
    })
 })
 
@@ -2171,102 +2172,3 @@ tryCatch({
    # For saved files with duplicates, return the full path to distinguish them
    return(file_path)
 })
-
-# Update edit_file widget with diff format (replaces code_edit content with assistant response diff)
-.rs.addFunction("update_edit_file_with_diff", function(edit_file_function_call_id, response_content) {
-   tryCatch({
-      # Get conversation log to find the edit_file function call
-      conversation_log <- .rs.read_conversation_log()
-      
-      # Find the edit_file function call
-      edit_file_entry <- NULL
-      for (entry in conversation_log) {
-         if (!is.null(entry$id) && entry$id == edit_file_function_call_id && 
-             !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
-             entry$function_call$name == "edit_file") {
-            edit_file_entry <- entry
-            break
-         }
-      }
-      
-      if (is.null(edit_file_entry)) {
-         cat("DEBUG: Could not find edit_file function call with ID:", edit_file_function_call_id, "\n")
-         return(FALSE)
-      }
-      
-      # Parse function call arguments
-      args <- .rs.safe_parse_function_arguments(edit_file_entry$function_call)
-      if (is.null(args)) {
-         cat("DEBUG: Could not parse edit_file function call arguments\n")
-         return(FALSE)
-      }
-      
-      filename <- args$filename %||% "unknown"
-      
-      # Parse and clean the response content to remove code block markers
-      cleaned_content <- .rs.parse_code_block_content(response_content, filename)
-      
-      # Check if this is a cancelled edit
-      is_cancelled_edit <- (!is.null(response_content) && response_content == "The model chose to cancel the edit.")
-      
-      if (is_cancelled_edit) {
-         # For cancelled edits, send completion event with cancellation message
-         .rs.enqueClientEvent("ai_stream_data", list(
-            messageId = as.numeric(edit_file_function_call_id),
-            delta = paste0("CANCELLED:", response_content),
-            isComplete = TRUE,
-            isEditFile = TRUE,
-            filename = basename(filename),
-            requestId = edit_file_entry$request_id,
-            sequence = .rs.get_next_ai_operation_sequence(),
-            replaceContent = TRUE  # Signal to replace existing content completely
-         ))
-      } else {
-         # Get diff data for proper formatting
-         diff_data <- .rs.get_diff_data_for_edit_file(edit_file_function_call_id)
-         
-         if (!is.null(diff_data) && !is.null(diff_data$diff) && length(diff_data$diff) > 0) {
-            # Create unified diff format from the diff data
-            diff_lines <- .rs.convert_to_unified_diff_format(diff_data$diff, NULL, NULL)
-            # Use lapply instead of sapply to preserve empty content and NULL values
-            content_list <- lapply(diff_lines, function(line) {
-               if (is.null(line) || is.null(line$content)) "" else line$content
-            })
-            unified_diff_content <- paste(content_list, collapse = "\n")
-            
-            # Get filename with diff stats for display and update widget title
-            filename_with_stats <- diff_data$filename_with_stats %||% basename(filename)
-            
-            # Send completion event with unified diff content to replace code_edit content
-            .rs.enqueClientEvent("ai_stream_data", list(
-               messageId = as.numeric(edit_file_function_call_id),
-               delta = unified_diff_content,
-               isComplete = TRUE,
-               isEditFile = TRUE,
-               filename = filename_with_stats,  # Updated filename with diff stats
-               requestId = edit_file_entry$request_id,
-               sequence = .rs.get_next_ai_operation_sequence(),
-               replaceContent = TRUE  # Signal to replace existing content completely
-            ))
-         } else {
-            # Fallback: send completion event with cleaned content (no diff highlighting)
-            .rs.enqueClientEvent("ai_stream_data", list(
-               messageId = as.numeric(edit_file_function_call_id),
-               delta = cleaned_content,
-               isComplete = TRUE,
-               isEditFile = TRUE,
-               filename = basename(filename),
-               requestId = edit_file_entry$request_id,
-               sequence = .rs.get_next_ai_operation_sequence(),
-               replaceContent = TRUE  # Signal to replace existing content completely
-            ))
-         }
-      }
-      
-      return(TRUE)
-   }, error = function(e) {
-      cat("ERROR in update_edit_file_with_diff:", e$message, "\n")
-      return(FALSE)
-   })
-})
-

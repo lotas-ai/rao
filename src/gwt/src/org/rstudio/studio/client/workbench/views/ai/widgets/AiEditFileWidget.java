@@ -69,6 +69,21 @@ public class AiEditFileWidget extends Composite
                           boolean isCancelled,
                           boolean skipDiffHighlighting)
    {
+      this(messageId, filename, content, explanation, requestId, isEditable, handler, isCancelled, skipDiffHighlighting, null);
+   }
+   
+   // NEW CONSTRUCTOR: Accepts pre-computed diffData from R 
+   public AiEditFileWidget(String messageId, 
+                          String filename,
+                          String content, 
+                          String explanation,
+                          String requestId,
+                          boolean isEditable,
+                          EditFileCommandHandler handler,
+                          boolean isCancelled,
+                          boolean skipDiffHighlighting,
+                          com.google.gwt.core.client.JavaScriptObject diffData)
+   {
       messageId_ = messageId;
       filename_ = filename;
       explanation_ = explanation;
@@ -77,6 +92,7 @@ public class AiEditFileWidget extends Composite
       isEditable_ = isEditable;
       isCancelled_ = isCancelled;
       skipDiffHighlighting_ = skipDiffHighlighting;
+      preComputedDiffData_ = diffData;
       diffMarkers_ = JsArrayInteger.createArray().cast();
       
       initWidget(createWidget(content, filename));
@@ -84,11 +100,10 @@ public class AiEditFileWidget extends Composite
       
       // Only apply diff highlighting if not cancelled and not skipped
       if (!isCancelled_ && !skipDiffHighlighting_) {
-         // Apply diff highlighting after widget is fully rendered and ACE editor is ready
+         // Apply diff highlighting immediately
          com.google.gwt.core.client.Scheduler.get().scheduleDeferred(() -> {
-            if (editor_ != null) {
-               // Use a more robust approach - wait for ACE editor to be fully initialized
-               waitForAceEditorAndApplyDiffHighlighting();
+            if (editor_ != null && preComputedDiffData_ != null) {
+               applyDiffHighlighting();
             }
          });
       }
@@ -504,6 +519,7 @@ public class AiEditFileWidget extends Composite
    private final boolean isEditable_;
    private final boolean isCancelled_;
    private final boolean skipDiffHighlighting_;
+   private final com.google.gwt.core.client.JavaScriptObject preComputedDiffData_;
 
    private AceEditor editor_;
    private Button acceptButton_;
@@ -513,40 +529,6 @@ public class AiEditFileWidget extends Composite
    private JsArrayInteger diffMarkers_; // Store diff marker IDs for cleanup
 
    /**
-    * Get pre-computed diff data from R backend
-    */
-   private void getDiffDataFromBackend()
-   {
-      // Make RPC call to get diff results (already computed on R side)
-      org.rstudio.studio.client.server.ServerRequestCallback<com.google.gwt.core.client.JavaScriptObject> callback = 
-         new org.rstudio.studio.client.server.ServerRequestCallback<com.google.gwt.core.client.JavaScriptObject>() {
-            @Override
-            public void onResponseReceived(com.google.gwt.core.client.JavaScriptObject diffResult) {
-               // Apply diff highlighting using the pre-computed diff data
-               if (diffResult != null) {
-                  applyDiffHighlightingFromRData(diffResult);
-                  
-                  // Extract and display diff stats from the response (same as normal conversation loading)
-                  updateFilenameWithDiffStatsFromResponse(diffResult);
-               }
-            }
-            
-            @Override
-            public void onError(org.rstudio.studio.client.server.ServerError error) {
-               Debug.log("DEBUG: Failed to get diff data: " + error.getMessage());
-               // Continue without diff highlighting
-            }
-         };
-      
-      // Call R function to get pre-computed diff data for this message ID
-      org.rstudio.studio.client.workbench.views.ai.AiPane aiPane = 
-         org.rstudio.studio.client.workbench.views.ai.AiPane.getCurrentInstance();
-      if (aiPane != null) {
-         aiPane.getAiServerOperations().getDiffDataForEditFile(messageId_, callback);
-      }
-   }
-   
-   /**
     * Apply diff highlighting using pre-computed diff data from R
     */
    private void applyDiffHighlightingFromRData(com.google.gwt.core.client.JavaScriptObject diffResult)
@@ -554,6 +536,9 @@ public class AiEditFileWidget extends Composite
       if (diffResult == null) {
          return;
       }
+      
+      // Update filename header with diff stats from the R response
+      updateFilenameWithDiffStatsFromResponse(diffResult);
       
       // Extract diff array from result
       com.google.gwt.core.client.JsArray<com.google.gwt.core.client.JavaScriptObject> diffArray = getDiffArray(diffResult);
@@ -749,8 +734,10 @@ public class AiEditFileWidget extends Composite
     */
    public void applyDiffHighlighting()
    {      
-      // This method now just calls the backend to get pre-computed diff data
-      getDiffDataFromBackend();
+      // Use pre-computed diff data instead of calling backend
+      if (preComputedDiffData_ != null) {
+         applyDiffHighlightingFromRData(preComputedDiffData_);
+      }
    }
    
    /**
@@ -950,69 +937,13 @@ public class AiEditFileWidget extends Composite
    }-*/;
    
    /**
-    * Refresh diff highlighting (useful when content changes)
+    * Refresh diff highlighting (re-apply current diff data)
     */
    public void refreshDiffHighlighting()
    {
-      // Schedule diff highlighting refresh to happen after DOM updates
-      com.google.gwt.core.client.Scheduler.get().scheduleDeferred(() -> {
+      if (!skipDiffHighlighting_) {
          applyDiffHighlighting();
-      });
-   }
-
-   /**
-    * Use a more robust approach to wait for the ACE editor to be fully initialized before applying diff highlighting
-    */
-   private void waitForAceEditorAndApplyDiffHighlighting()
-   {
-      // Use a timer-based approach to wait for ACE editor to be fully ready
-      com.google.gwt.user.client.Timer timer = new com.google.gwt.user.client.Timer() {
-         private int attempts = 0;
-         private final int maxAttempts = 100;
-         
-         @Override
-         public void run() {
-            attempts++;
-            
-            if (editor_ != null && isAceEditorReady()) {
-               applyDiffHighlighting();
-            } else if (attempts < maxAttempts) {
-               schedule(10); // Try again in 10ms
-            } else {
-               Debug.log("DEBUG: ACE editor still not ready after " + maxAttempts + " attempts, giving up on diff highlighting");
-            }
-         }
-      };
-      timer.schedule(10); // Start with 10ms delay
-   }
-   
-   /**
-    * Check if the ACE editor is fully initialized and ready for markers
-    */
-   private boolean isAceEditorReady()
-   {
-      if (editor_ == null) {
-         return false;
       }
-      
-      try {
-         // Check if the ACE editor has a valid session and renderer
-         return editor_.getSession() != null && 
-                editor_.getWidget() != null && 
-                editor_.getWidget().getElement() != null &&
-                editor_.getWidget().getElement().getOffsetHeight() > 0;
-      } catch (Exception e) {
-         Debug.log("DEBUG: Exception checking ACE editor readiness: " + e.getMessage());
-         return false;
-      }
-   }
-   
-   /**
-    * Public method to manually trigger diff highlighting for testing
-    */
-   public void triggerDiffHighlighting()
-   {
-      applyDiffHighlighting();
    }
 
    /**

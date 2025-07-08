@@ -72,60 +72,6 @@
    return(paste(final_lines, collapse = "\n"))
 })
 
-.rs.addFunction("update_diff_with_editor_content", function(edited_code, edit_file_message_id, diff_data) {
-   # Update diff data with current editor content and save it
-   # Returns the updated diff_data
-   
-   edited_lines <- strsplit(edited_code, "\n")[[1]]
-   diff_lines_count <- length(diff_data$diff)
-   edited_lines_count <- length(edited_lines)
-   
-   # Check if line counts match (with tolerance for leading/trailing empty lines)
-   lines_match <- diff_lines_count == edited_lines_count
-   
-   if (!lines_match) {
-      # Handle simple cases: leading/trailing empty lines
-      if (abs(diff_lines_count - edited_lines_count) <= 2) {
-         # Try to handle minor differences by padding or trimming
-         if (diff_lines_count > edited_lines_count) {
-            # Add empty lines to edited_lines to match
-            while (length(edited_lines) < diff_lines_count) {
-               edited_lines <- c(edited_lines, "")
-            }
-         } else {
-            # Trim edited_lines to match (remove trailing empty lines)
-            while (length(edited_lines) > diff_lines_count && 
-                   edited_lines[length(edited_lines)] == "") {
-               edited_lines <- edited_lines[-length(edited_lines)]
-            }
-         }
-         lines_match <- length(edited_lines) == diff_lines_count
-      }
-      
-      if (!lines_match) {
-         stop("Line count mismatch in edit_file: diff has ", diff_lines_count, 
-              " lines but edited_code has ", edited_lines_count, 
-              " lines. Advanced line handling not yet implemented.")
-      }
-   }
-   
-   # Update each diff entry's content with the corresponding line from edited_code
-   for (i in seq_along(diff_data$diff)) {
-      diff_data$diff[[i]]$content <- edited_lines[i]
-   }
-   
-   # Save the updated diff data back to conversation_diffs.json
-   diffs_data <- .rs.read_conversation_diffs()
-   msg_id_char <- as.character(edit_file_message_id)
-   if (!is.null(diffs_data$diffs[[msg_id_char]])) {
-      # Update the existing diff entry with modified content - save just the diff array
-      diffs_data$diffs[[msg_id_char]]$diff_data <- diff_data$diff
-      .rs.write_conversation_diffs(diffs_data)
-   }
-   
-   return(diff_data)
-})
-
 .rs.addFunction("generate_function_call_message", function(function_name, arguments, is_thinking = FALSE) {
    # Generate user-friendly message for function calls
    # is_thinking: TRUE for "Searching..." style, FALSE for "Searched..." style
@@ -2633,8 +2579,10 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
                ))
             }
             
-            # Immediately create edit_file widget with diff format instead of waiting for conversation display update
-            .rs.update_edit_file_with_diff(related_to_id, response_content)
+            # Immediately trigger conversation recreation to show edit_file with diff format
+            # Instead of sending individual stream events, use the background recreation system
+            # to rebuild the entire conversation with the proper diff formatting
+            .rs.update_conversation_display()
             
             response_message <- if (!is.null(streaming_result$cancelled) && streaming_result$cancelled) {
                "Partial edit_file response preserved after cancellation"

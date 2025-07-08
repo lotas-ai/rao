@@ -396,6 +396,7 @@ public class ClientEventDispatcher
             String filename = getStringFromRData(jsData, "filename", "");
             String content = getStringFromRData(jsData, "content", "");
             boolean skipDiffHighlighting = getBooleanFromRData(jsData, "skip_diff_highlighting");
+            com.google.gwt.core.client.JavaScriptObject diffData = getJavaScriptObjectFromRData(jsData, "diff_data");
             
             // Clean up filename to remove HTML diff markup
             if (filename != null && filename.contains("<span")) {
@@ -427,7 +428,7 @@ public class ClientEventDispatcher
                 "start_background_recreation".equals(operationType) ||
                 "finish_background_recreation".equals(operationType)) {
                
-               callAddOperationEvent(sequence, operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting);
+               callAddOperationEvent(sequence, operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting, diffData);
             } else {
                // Unknown operation type - skip
             }
@@ -1470,10 +1471,22 @@ public class ClientEventDispatcher
       }
       return defaultValue;
    }
+   
+   /**
+    * Extract JavaScriptObject from R data - using the established AiOrchestrator pattern
+    */
+   private com.google.gwt.core.client.JavaScriptObject getJavaScriptObjectFromRData(JavaScriptObject obj, String key) {
+      com.google.gwt.json.client.JSONObject jsonObj = new com.google.gwt.json.client.JSONObject(obj);
+      com.google.gwt.json.client.JSONValue value = jsonObj.get(key);
+      if (value != null && value.isObject() != null) {
+         return value.isObject().getJavaScriptObject();  // Get the underlying JavaScriptObject
+      }
+      return null;
+   }
      
-     private native void callAddOperationEvent(int sequence, String operationType, String messageId, String command, String explanation, String requestId, String filename, String content, boolean skipDiffHighlighting) /*-{
+   private native void callAddOperationEvent(int sequence, String operationType, String messageId, String command, String explanation, String requestId, String filename, String content, boolean skipDiffHighlighting, com.google.gwt.core.client.JavaScriptObject diffData) /*-{
       if ($wnd.aiAddOperationEvent) {
-         $wnd.aiAddOperationEvent(sequence, operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting);
+         $wnd.aiAddOperationEvent(sequence, operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting, diffData);
       }
    }-*/;
    

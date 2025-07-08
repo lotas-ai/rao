@@ -55,6 +55,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       final String filename;
       final String content;
       final boolean skipDiffHighlighting;
+      final com.google.gwt.core.client.JavaScriptObject diffData;
       
       // Constructor for stream events
       QueuedEvent(AiStreamDataEvent event)
@@ -69,10 +70,11 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          this.filename = null;
          this.content = null;
          this.skipDiffHighlighting = false;
+         this.diffData = null;
       }
       
       // Constructor for operation events
-      QueuedEvent(String operationType, String messageId, String command, String explanation, String requestId, String filename, String content, boolean skipDiffHighlighting)
+      QueuedEvent(String operationType, String messageId, String command, String explanation, String requestId, String filename, String content, boolean skipDiffHighlighting, com.google.gwt.core.client.JavaScriptObject diffData)
       {
          this.type = "operation";
          this.streamEvent = null;
@@ -84,6 +86,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          this.filename = filename;
          this.content = content;
          this.skipDiffHighlighting = skipDiffHighlighting;
+         this.diffData = diffData;
       }
    }
 
@@ -303,9 +306,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    /**
     * Add a sequence-ordered operation event to the processing queue
     */
-   public void addOperationEvent(int sequence, String operationType, String messageId, String command, String explanation, String requestId, String filename, String content, boolean skipDiffHighlighting)
+   public void addOperationEvent(int sequence, String operationType, String messageId, String command, String explanation, String requestId, String filename, String content, boolean skipDiffHighlighting, com.google.gwt.core.client.JavaScriptObject diffData)
    {
-      QueuedEvent queuedEvent = new QueuedEvent(operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting);
+      QueuedEvent queuedEvent = new QueuedEvent(operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting, diffData);
       
       // Special case: clear_conversation always processes immediately regardless of sequence
       // because it signals that R is rebuilding the conversation from scratch
@@ -354,7 +357,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
             createTerminalCommandSynchronously(event.messageId, event.command, event.explanation, event.requestId);
             break;
          case "edit_file_command":  // Handle both formats from R
-            createEditFileCommandSynchronously(event.messageId, event.filename, event.content, event.explanation, event.requestId, event.skipDiffHighlighting);
+            createEditFileCommandSynchronously(event.messageId, event.filename, event.content, event.explanation, event.requestId, event.skipDiffHighlighting, event.diffData);
             break;
          case "create_user_message":
             createUserMessageSynchronously(event.messageId, event.content);
@@ -421,11 +424,11 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
                throw new RuntimeException("Edit file event missing required filename for messageId: " + messageId);
             }
             String requestId = event.getRequestId();
-            createEditFileCommandSynchronously(messageId, filename, "", "Edit file", requestId, false);
+            createEditFileCommandSynchronously(messageId, filename, "", "Edit file", requestId, false, (com.google.gwt.core.client.JavaScriptObject) null);
          }
          
          // Add content to widget (or replace if replaceContent flag is set)
-         addContentToEditFileWidget(messageId, event.getDelta(), event.isComplete(), event.isCancelled(), event.getReplaceContent());
+         addContentToEditFileWidget(messageId, event.getDelta(), event.isComplete(), event.isCancelled(), event.getReplaceContent(), (com.google.gwt.core.client.JavaScriptObject) null);
       }
       else
       {
@@ -450,7 +453,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          }
          
          // Update content synchronously (no async markdown rendering during streaming)
-         updateAssistantMessageContentSynchronously(messageId, event.getDelta(), event.isComplete(), event.isCancelled());
+         updateAssistantMessageContentSynchronously(messageId, event.getDelta(), event.isComplete(), event.isCancelled(), (com.google.gwt.core.client.JavaScriptObject) null);
          
          // Mark text completion when complete
          if (event.isComplete() && !event.isCancelled())
@@ -623,7 +626,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    /**
     * Update assistant message content synchronously with real-time markdown rendering
     */
-   private void updateAssistantMessageContentSynchronously(String messageId, String delta, boolean isComplete, boolean isCancelled)
+   private void updateAssistantMessageContentSynchronously(String messageId, String delta, boolean isComplete, boolean isCancelled, com.google.gwt.core.client.JavaScriptObject diffData)
    {
       String currentContent = streamingMessages_.get(messageId);
       if (currentContent == null)
@@ -752,7 +755,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    /**
     * Create edit file command widget synchronously
     */
-   private void createEditFileCommandSynchronously(String messageId, String filename, String content, String explanation, String requestId, boolean skipDiffHighlighting)
+   private void createEditFileCommandSynchronously(String messageId, String filename, String content, String explanation, String requestId, boolean skipDiffHighlighting, com.google.gwt.core.client.JavaScriptObject diffData)
    {
       // Hide thinking message when AI response (function call) starts
       hideThinkingMessage();
@@ -782,7 +785,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       // Create the edit file widget with appropriate cancellation flag and diff highlighting control
       // For cancelled edits: isEditable = false (no buttons), isCancelled = true
       org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget = 
-         new org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget(messageId, filename, actualContent, explanation, requestId, !isCancelled, handler, isCancelled, skipDiffHighlighting);
+         new org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget(messageId, filename, actualContent, explanation, requestId, !isCancelled, handler, isCancelled, skipDiffHighlighting, diffData);
       
       editFileWidgets_.put(messageId, editFileWidget);
       
@@ -865,13 +868,13 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
     */
    private void addContentToEditFileWidget(String messageId, String delta, boolean isComplete, boolean isCancelled)
    {
-      addContentToEditFileWidget(messageId, delta, isComplete, isCancelled, false);
+      addContentToEditFileWidget(messageId, delta, isComplete, isCancelled, false, (com.google.gwt.core.client.JavaScriptObject) null);
    }
 
    /**
     * Add content to edit file widget with replaceContent option
     */
-   private void addContentToEditFileWidget(String messageId, String delta, boolean isComplete, boolean isCancelled, boolean replaceContent)
+   private void addContentToEditFileWidget(String messageId, String delta, boolean isComplete, boolean isCancelled, boolean replaceContent, com.google.gwt.core.client.JavaScriptObject diffData)
    {
       org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget = editFileWidgets_.get(messageId);
       if (editFileWidget == null)
@@ -1391,7 +1394,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          preservedContent = streamingMessages_.get(messageId);
          // Force completion but mark as cancelled to preserve content in display
          if (preservedContent != null && !preservedContent.isEmpty()) {
-            updateAssistantMessageContentSynchronously(messageId, "", true, true);
+            updateAssistantMessageContentSynchronously(messageId, "", true, true, (com.google.gwt.core.client.JavaScriptObject) null);
          }
       }
       
@@ -1400,7 +1403,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          String editFileContent = editFileStreamingContent_.get(messageId);
          if (editFileContent != null && !editFileContent.isEmpty()) {
             // Keep the content in the edit file widget but mark as cancelled
-            addContentToEditFileWidget(messageId, "", true, true);
+            addContentToEditFileWidget(messageId, "", true, true, false, (com.google.gwt.core.client.JavaScriptObject) null);
             if (preservedContent == null) {
                preservedContent = editFileContent;
             }
