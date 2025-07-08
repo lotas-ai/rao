@@ -1543,41 +1543,6 @@ Error getCurrentConversationIndex(const json::JsonRpcRequest& request,
    return Success();
 }
 
-Error getDiffDataForEditFile(const json::JsonRpcRequest& request,
-                            json::JsonRpcResponse* p_response,
-                            const std::string& message_id)
-{
-   // Call R function to get diff data for edit file
-   SEXP result_sexp;
-   r::sexp::Protect rp;
-   Error error = r::exec::RFunction(".rs.get_diff_data_for_edit_file", message_id).call(&result_sexp, &rp);
-   if (error)
-   {
-      LOG_ERROR(error);
-      // Return empty diff result on error
-      json::Object emptyResult;
-      emptyResult["diff"] = json::Array();
-      p_response->setResult(emptyResult);
-      return Success();
-   }
-   
-   // Convert R result to JSON
-   json::Value jsonResult;
-   error = r::json::jsonValueFromObject(result_sexp, &jsonResult);
-   if (error)
-   {
-      LOG_ERROR(error);
-      // Return empty diff result on conversion error
-      json::Object emptyResult;
-      emptyResult["diff"] = json::Array();
-      p_response->setResult(emptyResult);
-      return Success();
-   }
-   
-   p_response->setResult(jsonResult);
-   return Success();
-}
-
 Error getTerminalWebsocketPort(const json::JsonRpcRequest& request,
                          json::JsonRpcResponse* p_response)
 {
@@ -2810,15 +2775,6 @@ Error initialize()
       (bind(module_context::registerRpcMethod, "is_file_open_in_editor", isFileOpenInEditor))
       (bind(module_context::registerRpcMethod, "update_open_document_content", updateOpenDocumentContent))
       (bind(module_context::registerRpcMethod, "get_all_open_documents", getAllOpenDocuments))
-      (bind(module_context::registerRpcMethod, "get_diff_data_for_edit_file", 
-            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
-               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
-                  std::string message_id;
-                  Error error = json::readParam(request.params, 0, &message_id);
-                  if (error)
-                     return error;
-                  return getDiffDataForEditFile(request, p_response, message_id);
-               })))
       (bind(module_context::registerRpcMethod, "remove_context_item", removeContextItem))
       (bind(module_context::registerRpcMethod, "clear_context_items", clearContextItems))
       (bind(module_context::registerRpcMethod, "add_terminal_output_to_conversation", 

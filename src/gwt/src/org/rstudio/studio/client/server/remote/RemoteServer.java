@@ -1882,12 +1882,6 @@ public class RemoteServer implements Server, AiServerOperations
    }
 
    @Override
-   public void getDiffDataForEditFile(String messageId, ServerRequestCallback<com.google.gwt.core.client.JavaScriptObject> requestCallback)
-   {
-      sendRequest(RPC_SCOPE, "get_diff_data_for_edit_file", messageId, requestCallback);
-   }
-
-   @Override
    public void deleteFolder(String path, ServerRequestCallback<java.lang.Void> requestCallback)
    {
       sendRequest(RPC_SCOPE, DELETE_FOLDER, path, requestCallback);

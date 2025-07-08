@@ -160,8 +160,6 @@ public interface AiServerOperations
    
    void getCurrentConversationIndex(ServerRequestCallback<Double> requestCallback);
    
-   void getDiffDataForEditFile(String messageId, ServerRequestCallback<com.google.gwt.core.client.JavaScriptObject> requestCallback);
-
    // Image operations
    void saveAiImage(String imagePath, ServerRequestCallback<java.lang.Void> requestCallback);
    
