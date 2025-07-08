@@ -177,7 +177,7 @@ export async function checkForUpdates(showNoUpdateDialog = true): Promise<boolea
         type: 'info',
         title: 'Update Available',
         message: `A new version (${updateInfo.version}) is available!`,
-        detail: `${formattedNotes}\n\n─────────────────────────────\n\nWould you like to download it now?`,
+        detail: `${formattedNotes}\n\nWould you like to download it now?`,
         buttons: ['Download', 'Later'],
         defaultId: 0,
         cancelId: 1,
