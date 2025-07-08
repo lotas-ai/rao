@@ -36,6 +36,7 @@ public class AiStreamDataEvent extends GwtEvent<AiStreamDataEvent.Handler>
       private int sequence;
       private boolean isCancelled;
       private boolean isFunctionCall;
+      private boolean replaceContent;
       
       public Data(String messageId, String delta, boolean isComplete)
       {
@@ -48,6 +49,7 @@ public class AiStreamDataEvent extends GwtEvent<AiStreamDataEvent.Handler>
          this.sequence = 0;
          this.isCancelled = false;
          this.isFunctionCall = false;
+         this.replaceContent = false;
       }
       
       public Data(String messageId, String delta, boolean isComplete, boolean isEditFile, String filename)
@@ -61,6 +63,7 @@ public class AiStreamDataEvent extends GwtEvent<AiStreamDataEvent.Handler>
          this.sequence = 0;
          this.isCancelled = false;
          this.isFunctionCall = false;
+         this.replaceContent = false;
       }
       
       public Data(String messageId, String delta, boolean isComplete, boolean isEditFile, String filename, int sequence)
@@ -74,6 +77,7 @@ public class AiStreamDataEvent extends GwtEvent<AiStreamDataEvent.Handler>
          this.sequence = sequence;
          this.isCancelled = false;
          this.isFunctionCall = false;
+         this.replaceContent = false;
       }
       
       public Data(String messageId, String delta, boolean isComplete, boolean isEditFile, String filename, int sequence, boolean isCancelled)
@@ -87,6 +91,7 @@ public class AiStreamDataEvent extends GwtEvent<AiStreamDataEvent.Handler>
          this.sequence = sequence;
          this.isCancelled = isCancelled;
          this.isFunctionCall = false;
+         this.replaceContent = false;
       }
       
       // Constructor with function call flag
@@ -101,6 +106,22 @@ public class AiStreamDataEvent extends GwtEvent<AiStreamDataEvent.Handler>
          this.sequence = sequence;
          this.isCancelled = isCancelled;
          this.isFunctionCall = isFunctionCall;
+         this.replaceContent = false;
+      }
+
+      // Constructor with replaceContent flag
+      public Data(String messageId, String delta, boolean isComplete, boolean isEditFile, String filename, int sequence, boolean isCancelled, boolean isFunctionCall, boolean replaceContent)
+      {
+         this.messageId = messageId != null ? messageId : "";
+         this.delta = delta != null ? delta : "";
+         this.isComplete = isComplete;
+         this.isEditFile = isEditFile;
+         this.filename = filename;
+         this.requestId = null;
+         this.sequence = sequence;
+         this.isCancelled = isCancelled;
+         this.isFunctionCall = isFunctionCall;
+         this.replaceContent = replaceContent;
       }
 
       public String getMessageId()
@@ -152,6 +173,11 @@ public class AiStreamDataEvent extends GwtEvent<AiStreamDataEvent.Handler>
       {
          this.requestId = requestId;
       }
+
+      public boolean getReplaceContent()
+      {
+         return replaceContent;
+      }
    }
 
    public AiStreamDataEvent(Data data)
@@ -183,6 +209,12 @@ public class AiStreamDataEvent extends GwtEvent<AiStreamDataEvent.Handler>
    public AiStreamDataEvent(String messageId, String delta, boolean isComplete, boolean isEditFile, String filename, int sequence, boolean isCancelled, boolean isFunctionCall)
    {
       data_ = new Data(messageId, delta, isComplete, isEditFile, filename, sequence, isCancelled, isFunctionCall);
+   }
+
+   // Constructor with replaceContent flag
+   public AiStreamDataEvent(String messageId, String delta, boolean isComplete, boolean isEditFile, String filename, int sequence, boolean isCancelled, boolean isFunctionCall, boolean replaceContent)
+   {
+      data_ = new Data(messageId, delta, isComplete, isEditFile, filename, sequence, isCancelled, isFunctionCall, replaceContent);
    }
 
    public String getMessageId()
@@ -233,6 +265,11 @@ public class AiStreamDataEvent extends GwtEvent<AiStreamDataEvent.Handler>
    public void setRequestId(String requestId)
    {
       data_.setRequestId(requestId);
+   }
+
+   public boolean getReplaceContent()
+   {
+      return data_.getReplaceContent();
    }
 
    @Override

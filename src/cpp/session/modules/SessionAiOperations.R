@@ -400,7 +400,7 @@
 })
 
 .rs.addFunction("check_assistant_message_limit", function() {
-  max_assistant_messages <- 25
+  max_assistant_messages <- 50
   current_count <- .rs.get_conversation_var("assistant_message_count", 0)
   
   if (current_count >= max_assistant_messages) {
@@ -2154,6 +2154,11 @@
             request_id = request_id
          )
          
+         # Add response_id if provided (for reasoning models)
+         if (!is.null(response_id)) {
+            function_callEntry$response_id <- response_id
+         }
+         
          if (function_name == "edit_file") {
             function_callEntry$source_function <- "edit_file"
          }
@@ -2611,8 +2616,8 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
                ))
             }
             
-            # Update conversation display to show the edit_file widget
-            .rs.update_conversation_display()
+            # Immediately create edit_file widget with diff format instead of waiting for conversation display update
+            .rs.update_edit_file_with_diff(related_to_id, response_content)
             
             response_message <- if (!is.null(streaming_result$cancelled) && streaming_result$cancelled) {
                "Partial edit_file response preserved after cancellation"

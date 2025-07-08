@@ -54,6 +54,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       final String requestId;
       final String filename;
       final String content;
+      final boolean skipDiffHighlighting;
       
       // Constructor for stream events
       QueuedEvent(AiStreamDataEvent event)
@@ -67,10 +68,11 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          this.requestId = null;
          this.filename = null;
          this.content = null;
+         this.skipDiffHighlighting = false;
       }
       
       // Constructor for operation events
-      QueuedEvent(String operationType, String messageId, String command, String explanation, String requestId, String filename, String content)
+      QueuedEvent(String operationType, String messageId, String command, String explanation, String requestId, String filename, String content, boolean skipDiffHighlighting)
       {
          this.type = "operation";
          this.streamEvent = null;
@@ -81,6 +83,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          this.requestId = requestId;
          this.filename = filename;
          this.content = content;
+         this.skipDiffHighlighting = skipDiffHighlighting;
       }
    }
 
@@ -300,9 +303,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    /**
     * Add a sequence-ordered operation event to the processing queue
     */
-   public void addOperationEvent(int sequence, String operationType, String messageId, String command, String explanation, String requestId, String filename, String content)
+   public void addOperationEvent(int sequence, String operationType, String messageId, String command, String explanation, String requestId, String filename, String content, boolean skipDiffHighlighting)
    {
-      QueuedEvent queuedEvent = new QueuedEvent(operationType, messageId, command, explanation, requestId, filename, content);
+      QueuedEvent queuedEvent = new QueuedEvent(operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting);
       
       // Special case: clear_conversation always processes immediately regardless of sequence
       // because it signals that R is rebuilding the conversation from scratch
@@ -350,9 +353,8 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          case "create_terminal_command":
             createTerminalCommandSynchronously(event.messageId, event.command, event.explanation, event.requestId);
             break;
-         case "create_edit_file_command":
          case "edit_file_command":  // Handle both formats from R
-            createEditFileCommandSynchronously(event.messageId, event.filename, event.content, event.explanation, event.requestId);
+            createEditFileCommandSynchronously(event.messageId, event.filename, event.content, event.explanation, event.requestId, event.skipDiffHighlighting);
             break;
          case "create_user_message":
             createUserMessageSynchronously(event.messageId, event.content);
@@ -419,11 +421,11 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
                throw new RuntimeException("Edit file event missing required filename for messageId: " + messageId);
             }
             String requestId = event.getRequestId();
-            createEditFileCommandSynchronously(messageId, filename, "", "Edit file", requestId);
+            createEditFileCommandSynchronously(messageId, filename, "", "Edit file", requestId, false);
          }
          
-         // Add content to widget
-         addContentToEditFileWidget(messageId, event.getDelta(), event.isComplete(), event.isCancelled());
+         // Add content to widget (or replace if replaceContent flag is set)
+         addContentToEditFileWidget(messageId, event.getDelta(), event.isComplete(), event.isCancelled(), event.getReplaceContent());
       }
       else
       {
@@ -750,7 +752,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    /**
     * Create edit file command widget synchronously
     */
-   private void createEditFileCommandSynchronously(String messageId, String filename, String content, String explanation, String requestId)
+   private void createEditFileCommandSynchronously(String messageId, String filename, String content, String explanation, String requestId, boolean skipDiffHighlighting)
    {
       // Hide thinking message when AI response (function call) starts
       hideThinkingMessage();
@@ -777,10 +779,10 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
             }
          };
       
-      // Create the edit file widget with appropriate cancellation flag
+      // Create the edit file widget with appropriate cancellation flag and diff highlighting control
       // For cancelled edits: isEditable = false (no buttons), isCancelled = true
       org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget = 
-         new org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget(messageId, filename, actualContent, explanation, requestId, !isCancelled, handler, isCancelled);
+         new org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget(messageId, filename, actualContent, explanation, requestId, !isCancelled, handler, isCancelled, skipDiffHighlighting);
       
       editFileWidgets_.put(messageId, editFileWidget);
       
@@ -859,9 +861,17 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    }
    
    /**
-    * Add content to edit file widget
+    * Add content to edit file widget (backward compatibility)
     */
    private void addContentToEditFileWidget(String messageId, String delta, boolean isComplete, boolean isCancelled)
+   {
+      addContentToEditFileWidget(messageId, delta, isComplete, isCancelled, false);
+   }
+
+   /**
+    * Add content to edit file widget with replaceContent option
+    */
+   private void addContentToEditFileWidget(String messageId, String delta, boolean isComplete, boolean isCancelled, boolean replaceContent)
    {
       org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget = editFileWidgets_.get(messageId);
       if (editFileWidget == null)
@@ -869,17 +879,24 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          return;
       }
       
-      // Buffer the streaming content
-      String currentEditContent = editFileStreamingContent_.get(messageId);
-      if (currentEditContent == null)
-      {
-         currentEditContent = "";
-         // Update scroll manager streaming status when starting to stream edit file content
-         updateScrollManagerStreamingStatus();
-      }
+      // Handle content replacement vs appending
+      String newEditContent;
+      if (replaceContent) {
+         newEditContent = delta;
+         editFileStreamingContent_.put(messageId, newEditContent);
+      } else {
+         // Normal streaming: append to existing content
+         String currentEditContent = editFileStreamingContent_.get(messageId);
+         if (currentEditContent == null)
+         {
+            currentEditContent = "";
+            // Update scroll manager streaming status when starting to stream edit file content
+            updateScrollManagerStreamingStatus();
+         }
       
-      String newEditContent = currentEditContent + delta;
-      editFileStreamingContent_.put(messageId, newEditContent);
+         newEditContent = currentEditContent + delta;
+         editFileStreamingContent_.put(messageId, newEditContent);
+      }
       
       if (isComplete)
       {
@@ -1055,7 +1072,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          {
             // Clean up excessive whitespace from rendered HTML while preserving structure
             String cleanedHtml = renderedHtml
-               .replaceAll("\\n\\s*\\n", "\n")  // Remove blank lines but keep single line breaks
                .replaceAll("\\s{3,}", " ")      // Replace 3 or more spaces with single space (preserve intentional double spaces)
                .replaceAll(">\\s*\\n\\s*<", "><")  // Remove whitespace and newlines only between tags
                .trim();                        // Remove leading/trailing whitespace
@@ -1151,9 +1167,10 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
             // Handle regular code blocks with ```
             // Look for pattern: ```optional_language\n...content...```
             int startIndex = content.indexOf("```");
-            int endIndex = content.lastIndexOf("```");
+            // Find the next ``` after the first one (avoid matching the same block)
+            int endIndex = content.indexOf("```", startIndex + 3);
             
-            if (startIndex != endIndex && endIndex > startIndex) {
+            if (endIndex != -1 && endIndex > startIndex) {
                // Find the end of the first line (after language specifier)
                int firstLineEnd = content.indexOf('\n', startIndex);
                if (firstLineEnd != -1 && firstLineEnd < endIndex) {
@@ -1165,9 +1182,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       } catch (Exception e) {
          Debug.log("EDIT_FILE_DEBUG: Error parsing code block content: " + e.getMessage());
          return content;
-      }
-      
-      return cleanedContent.trim();
+      }   
+      // Return content without trimming to preserve empty lines
+      return cleanedContent;   
    }
    
    /**

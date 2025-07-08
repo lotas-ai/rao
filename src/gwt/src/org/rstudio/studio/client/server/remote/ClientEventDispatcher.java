@@ -348,11 +348,14 @@ public class ClientEventDispatcher
             // Extract function call flag
             boolean isFunctionCall = getBooleanFromRData(jsData, "isFunctionCall");
             
+            // Extract replaceContent flag for edit_file widgets  
+            boolean replaceContent = getBooleanFromRData(jsData, "replaceContent");
+            
             // Extract requestId for edit_file widgets
             String requestId = getStringFromRData(jsData, "requestId");
             
             // Create event with extracted data including all flags
-            AiStreamDataEvent streamEvent = new AiStreamDataEvent(messageId, delta, isComplete, isEditFile, filename, sequence, isCancelled, isFunctionCall);
+            AiStreamDataEvent streamEvent = new AiStreamDataEvent(messageId, delta, isComplete, isEditFile, filename, sequence, isCancelled, isFunctionCall, replaceContent);
             
             // Set the requestId if present
             if (requestId != null && !requestId.isEmpty()) {
@@ -392,6 +395,7 @@ public class ClientEventDispatcher
             String requestId = getStringFromRData(jsData, "request_id", "");
             String filename = getStringFromRData(jsData, "filename", "");
             String content = getStringFromRData(jsData, "content", "");
+            boolean skipDiffHighlighting = getBooleanFromRData(jsData, "skip_diff_highlighting");
             
             // Clean up filename to remove HTML diff markup
             if (filename != null && filename.contains("<span")) {
@@ -423,7 +427,7 @@ public class ClientEventDispatcher
                 "start_background_recreation".equals(operationType) ||
                 "finish_background_recreation".equals(operationType)) {
                
-               callAddOperationEvent(sequence, operationType, messageId, command, explanation, requestId, filename, content);
+               callAddOperationEvent(sequence, operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting);
             } else {
                // Unknown operation type - skip
             }
@@ -1467,9 +1471,9 @@ public class ClientEventDispatcher
       return defaultValue;
    }
      
-     private native void callAddOperationEvent(int sequence, String operationType, String messageId, String command, String explanation, String requestId, String filename, String content) /*-{
+     private native void callAddOperationEvent(int sequence, String operationType, String messageId, String command, String explanation, String requestId, String filename, String content, boolean skipDiffHighlighting) /*-{
       if ($wnd.aiAddOperationEvent) {
-         $wnd.aiAddOperationEvent(sequence, operationType, messageId, command, explanation, requestId, filename, content);
+         $wnd.aiAddOperationEvent(sequence, operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting);
       }
    }-*/;
    

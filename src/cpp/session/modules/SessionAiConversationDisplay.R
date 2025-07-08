@@ -457,6 +457,56 @@
                   ))
                }
             }
+         } else if (function_name == "edit_file") {
+            # Check if there's an assistant message with related_to equal to this edit_file function call ID
+            has_assistant_response <- FALSE
+            for (check_entry in conversation_log) {
+               if (!is.null(check_entry$role) && check_entry$role == "assistant" && 
+                     !is.null(check_entry$related_to) && check_entry$related_to == entry$id) {
+                  has_assistant_response <- TRUE
+                  break
+               }
+            }
+            
+            # If no assistant response, create edit_file widget with code_edit from function call
+            if (!has_assistant_response) {
+               # Parse function call arguments to get filename and code_edit
+               args <- .rs.safe_parse_function_arguments(entry$function_call)
+               
+               if (!is.null(args)) {
+                  filename <- "unknown"
+                  if (!is.null(args$filename)) {
+                     filename <- args$filename
+                  }
+                  
+                  code_edit <- ""
+                  if (!is.null(args$code_edit)) {
+                     code_edit <- args$code_edit
+                  }
+                  
+                  # Get filename display name
+                  filename_display <- basename(filename)
+                  
+                  # Create edit_file widget with code_edit content
+                  .rs.send_ai_operation("edit_file_command", list(
+                     message_id = as.numeric(entry$id),
+                     filename = filename_display,
+                     content = code_edit,
+                     explanation = paste("Edit", basename(filename)),
+                     request_id = entry$request_id,
+                     skip_diff_highlighting = TRUE
+                  ))
+                  items_created <- items_created + 1
+                  
+                  # Check if buttons should be hidden
+                  if (.rs.should_hide_buttons_for_restored_widget(entry$id)) {
+                     .rs.send_ai_operation("hide_widget_buttons", list(
+                        message_id = as.numeric(entry$id),
+                        content = "edit_file"
+                     ))
+                  }
+               }
+            }
          }
       }
       

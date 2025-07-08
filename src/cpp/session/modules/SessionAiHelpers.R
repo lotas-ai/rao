@@ -397,6 +397,43 @@ tryCatch({
    return(unified_lines)
 })
 
+.rs.addFunction("filter_diff_for_display", function(diff_data) {
+   # Filter diff data to show only lines from 1 before first change to 1 after last change
+   # Keep the full diff stored but return filtered version for display
+   
+   if (is.null(diff_data) || length(diff_data) == 0) {
+      return(diff_data)
+   }
+   
+   # Find first and last changed lines (added or deleted)
+   first_change_index <- NULL
+   last_change_index <- NULL
+   
+   for (i in seq_along(diff_data)) {
+      line_type <- diff_data[[i]]$type
+      if (!is.null(line_type) && (line_type == "added" || line_type == "deleted")) {
+         if (is.null(first_change_index)) {
+            first_change_index <- i
+         }
+         last_change_index <- i
+      }
+   }
+   
+   # If no changes found, return original diff
+   if (is.null(first_change_index) || is.null(last_change_index)) {
+      return(diff_data)
+   }
+   
+   # Calculate display range: 1 before first change to 1 after last change
+   start_index <- max(1, first_change_index - 1)
+   end_index <- min(length(diff_data), last_change_index + 1)
+   
+   # Extract the filtered subset
+   filtered_diff <- diff_data[start_index:end_index]
+   
+   return(filtered_diff)
+})
+
 # Conversation diff storage functions
 .rs.addFunction("get_ai_base_directory", function() {
    # Get the base AI directory path where all AI-related files are stored
@@ -1225,31 +1262,6 @@ tryCatch({
    # Get pre-computed diff data for edit_file widget highlighting
    
    tryCatch({
-      # First check if this is actually a cancel_edit function call
-      conversation_log <- .rs.read_conversation_log()
-      if (!is.null(conversation_log) && length(conversation_log) > 0) {
-         for (entry in conversation_log) {
-            if (!is.null(entry$id) && entry$id == message_id && 
-                !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
-                entry$function_call$name == "cancel_edit") {
-               # This is a cancel_edit call, return empty diff structure
-               return(list(
-                  diff = list(),
-                  is_start_edit = FALSE,
-                  is_end_edit = FALSE,
-                  is_insert_mode = FALSE,
-                  is_line_range_mode = FALSE,
-                  start_line = NULL,
-                  end_line = NULL,
-                  insert_line = NULL,
-                  added = 0L,
-                  deleted = 0L,
-                  filename_with_stats = "Edit cancelled"
-               ))
-            }
-         }
-      }
-      
       # First check if we have stored diff data
       stored_diff <- .rs.get_stored_diff_data(message_id)
       if (!is.null(stored_diff)) {
@@ -1308,9 +1320,12 @@ tryCatch({
             }
          }
          
-         # Return complete structure
+         # Filter diff for display (show only 1 line before first change to 1 line after last change)
+         filtered_diff_for_display <- .rs.filter_diff_for_display(stored_diff$diff)
+         
+         # Return complete structure with filtered diff for display
          result <- list(
-            diff = stored_diff$diff,
+            diff = filtered_diff_for_display,
             is_start_edit = if (!is.null(stored_diff$is_start_edit)) as.logical(stored_diff$is_start_edit) else FALSE,
             is_end_edit = if (!is.null(stored_diff$is_end_edit)) as.logical(stored_diff$is_end_edit) else FALSE,
             is_insert_mode = if (!is.null(stored_diff$is_insert_mode)) as.logical(stored_diff$is_insert_mode) else FALSE,
@@ -1606,9 +1621,12 @@ tryCatch({
             filename_with_stats <- paste0(filename_with_stats, ' <span class="diff-stats">', diff_text, '</span>')
          }
          
+         # Filter diff for display (show only 1 line before first change to 1 line after last change)
+         filtered_diff_for_display <- .rs.filter_diff_for_display(diff_entries)
+         
          # Return the special diff structure with flags and stats (same format as regular edits)
          result_start_end <- list(
-            diff = diff_entries,
+            diff = filtered_diff_for_display,
             is_start_edit = as.logical(is_start_edit),
             is_end_edit = as.logical(is_end_edit),
             is_insert_mode = as.logical(is_insert_mode),
@@ -1639,9 +1657,12 @@ tryCatch({
             # Return filename with diff stats in a span that can be styled
             filename_with_stats <- paste0(filename_with_stats, ' <span class="diff-stats">', diff_text, '</span>')
          }
+         # Filter diff for display (show only 1 line before first change to 1 line after last change)
+         filtered_diff_for_display <- .rs.filter_diff_for_display(diff_result$diff)
+         
          # Return both diff array and formatted filename with diff stats for streaming
          result <- list(
-            diff = diff_result$diff,
+            diff = filtered_diff_for_display,
             is_start_edit = FALSE,
             is_end_edit = FALSE,
             is_insert_mode = FALSE,
@@ -2149,5 +2170,103 @@ tryCatch({
    
    # For saved files with duplicates, return the full path to distinguish them
    return(file_path)
+})
+
+# Update edit_file widget with diff format (replaces code_edit content with assistant response diff)
+.rs.addFunction("update_edit_file_with_diff", function(edit_file_function_call_id, response_content) {
+   tryCatch({
+      # Get conversation log to find the edit_file function call
+      conversation_log <- .rs.read_conversation_log()
+      
+      # Find the edit_file function call
+      edit_file_entry <- NULL
+      for (entry in conversation_log) {
+         if (!is.null(entry$id) && entry$id == edit_file_function_call_id && 
+             !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
+             entry$function_call$name == "edit_file") {
+            edit_file_entry <- entry
+            break
+         }
+      }
+      
+      if (is.null(edit_file_entry)) {
+         cat("DEBUG: Could not find edit_file function call with ID:", edit_file_function_call_id, "\n")
+         return(FALSE)
+      }
+      
+      # Parse function call arguments
+      args <- .rs.safe_parse_function_arguments(edit_file_entry$function_call)
+      if (is.null(args)) {
+         cat("DEBUG: Could not parse edit_file function call arguments\n")
+         return(FALSE)
+      }
+      
+      filename <- args$filename %||% "unknown"
+      
+      # Parse and clean the response content to remove code block markers
+      cleaned_content <- .rs.parse_code_block_content(response_content, filename)
+      
+      # Check if this is a cancelled edit
+      is_cancelled_edit <- (!is.null(response_content) && response_content == "The model chose to cancel the edit.")
+      
+      if (is_cancelled_edit) {
+         # For cancelled edits, send completion event with cancellation message
+         .rs.enqueClientEvent("ai_stream_data", list(
+            messageId = as.numeric(edit_file_function_call_id),
+            delta = paste0("CANCELLED:", response_content),
+            isComplete = TRUE,
+            isEditFile = TRUE,
+            filename = basename(filename),
+            requestId = edit_file_entry$request_id,
+            sequence = .rs.get_next_ai_operation_sequence(),
+            replaceContent = TRUE  # Signal to replace existing content completely
+         ))
+      } else {
+         # Get diff data for proper formatting
+         diff_data <- .rs.get_diff_data_for_edit_file(edit_file_function_call_id)
+         
+         if (!is.null(diff_data) && !is.null(diff_data$diff) && length(diff_data$diff) > 0) {
+            # Create unified diff format from the diff data
+            diff_lines <- .rs.convert_to_unified_diff_format(diff_data$diff, NULL, NULL)
+            # Use lapply instead of sapply to preserve empty content and NULL values
+            content_list <- lapply(diff_lines, function(line) {
+               if (is.null(line) || is.null(line$content)) "" else line$content
+            })
+            unified_diff_content <- paste(content_list, collapse = "\n")
+            
+            # Get filename with diff stats for display and update widget title
+            filename_with_stats <- diff_data$filename_with_stats %||% basename(filename)
+            
+            # Send completion event with unified diff content to replace code_edit content
+            .rs.enqueClientEvent("ai_stream_data", list(
+               messageId = as.numeric(edit_file_function_call_id),
+               delta = unified_diff_content,
+               isComplete = TRUE,
+               isEditFile = TRUE,
+               filename = filename_with_stats,  # Updated filename with diff stats
+               requestId = edit_file_entry$request_id,
+               sequence = .rs.get_next_ai_operation_sequence(),
+               replaceContent = TRUE  # Signal to replace existing content completely
+            ))
+         } else {
+            # Fallback: send completion event with cleaned content (no diff highlighting)
+            .rs.enqueClientEvent("ai_stream_data", list(
+               messageId = as.numeric(edit_file_function_call_id),
+               delta = cleaned_content,
+               isComplete = TRUE,
+               isEditFile = TRUE,
+               filename = basename(filename),
+               requestId = edit_file_entry$request_id,
+               sequence = .rs.get_next_ai_operation_sequence(),
+               replaceContent = TRUE  # Signal to replace existing content completely
+            ))
+         }
+      }
+      
+      return(TRUE)
+   }, error = function(e) {
+      cat("ERROR in update_edit_file_with_diff:", e$message, "\n")
+      return(FALSE)
+   })
 })
 

@@ -56,6 +56,19 @@ public class AiEditFileWidget extends Composite
                           EditFileCommandHandler handler,
                           boolean isCancelled)
    {
+      this(messageId, filename, content, explanation, requestId, isEditable, handler, isCancelled, false);
+   }
+   
+   public AiEditFileWidget(String messageId, 
+                          String filename,
+                          String content, 
+                          String explanation,
+                          String requestId,
+                          boolean isEditable,
+                          EditFileCommandHandler handler,
+                          boolean isCancelled,
+                          boolean skipDiffHighlighting)
+   {
       messageId_ = messageId;
       filename_ = filename;
       explanation_ = explanation;
@@ -63,13 +76,14 @@ public class AiEditFileWidget extends Composite
       handler_ = handler;
       isEditable_ = isEditable;
       isCancelled_ = isCancelled;
+      skipDiffHighlighting_ = skipDiffHighlighting;
       diffMarkers_ = JsArrayInteger.createArray().cast();
       
       initWidget(createWidget(content, filename));
       addStyleName("aiEditFileWidget");
       
-      // Only apply diff highlighting if not cancelled
-      if (!isCancelled_) {
+      // Only apply diff highlighting if not cancelled and not skipped
+      if (!isCancelled_ && !skipDiffHighlighting_) {
          // Apply diff highlighting after widget is fully rendered and ACE editor is ready
          com.google.gwt.core.client.Scheduler.get().scheduleDeferred(() -> {
             if (editor_ != null) {
@@ -489,6 +503,7 @@ public class AiEditFileWidget extends Composite
    private final EditFileCommandHandler handler_;
    private final boolean isEditable_;
    private final boolean isCancelled_;
+   private final boolean skipDiffHighlighting_;
 
    private AceEditor editor_;
    private Button acceptButton_;
@@ -953,7 +968,7 @@ public class AiEditFileWidget extends Composite
       // Use a timer-based approach to wait for ACE editor to be fully ready
       com.google.gwt.user.client.Timer timer = new com.google.gwt.user.client.Timer() {
          private int attempts = 0;
-         private final int maxAttempts = 10;
+         private final int maxAttempts = 100;
          
          @Override
          public void run() {
@@ -962,13 +977,13 @@ public class AiEditFileWidget extends Composite
             if (editor_ != null && isAceEditorReady()) {
                applyDiffHighlighting();
             } else if (attempts < maxAttempts) {
-               schedule(50); // Try again in 50ms
+               schedule(10); // Try again in 10ms
             } else {
                Debug.log("DEBUG: ACE editor still not ready after " + maxAttempts + " attempts, giving up on diff highlighting");
             }
          }
       };
-      timer.schedule(50); // Start with 50ms delay
+      timer.schedule(10); // Start with 10ms delay
    }
    
    /**
@@ -1093,8 +1108,6 @@ public class AiEditFileWidget extends Composite
       if (filenameWithStats != null && !filenameWithStats.trim().isEmpty()) {
          // Update filename header using the same method as normal conversation loading
          updateFilenameHeader(filenameWithStats);
-      } else {
-         Debug.log("DEBUG: filenameWithStats is null or empty, not updating filename header");
       }
    }
    
