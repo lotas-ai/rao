@@ -552,9 +552,6 @@
         # Load required libraries in background process
         
         tryCatch({
-          cat("BG: Starting SSE streaming request to /ai/query\n", file = stream_file, append = TRUE)
-          cat("BG: Request provider:", request_data$provider, "model:", request_data$model, "\n", file = stream_file, append = TRUE)
-          
           # Buffer for incomplete lines from chunked streaming
           line_buffer <- ""
           
@@ -596,7 +593,6 @@
                     json_data <- substring(line, 7)
                     if (nchar(json_data) > 0 && json_data != "[DONE]") {
                       event_line <- paste0("EVENT:", json_data)
-                      cat("BG_WRITE: Writing event at", format(Sys.time(), "%H:%M:%S.%OS3"), "content:", substr(json_data, 1, 50), "\n", file = stream_file, append = TRUE)
                       cat(event_line, "\n", file = stream_file, append = TRUE)
                     }
                   }
@@ -607,7 +603,6 @@
           )
           
           status_code <- httr::status_code(response)
-          cat("BG: Completed with status:", status_code, "\n", file = stream_file, append = TRUE)
           
           # Check for HTTP error status codes and extract error message
           if (status_code >= 400) {
@@ -639,96 +634,66 @@
             
             error_message <- paste("HTTP", status_code, "error from backend server")
             
-            cat("BG: HTTP error status code:", status_code, "\n", file = stream_file, append = TRUE)
-            
             # Try to extract error message from response body
             tryCatch({
               response_text <- httr::content(response, as = "text", encoding = "UTF-8")
-              cat("BG: Response text length:", if (is.null(response_text)) 0 else nchar(response_text), "\n", file = stream_file, append = TRUE)
-              
-              # Debug response details (simplified after fix)
-              cat("BG: HTTP Status Code:", status_code, "\n", file = stream_file, append = TRUE)
               
               if (!is.null(response_text) && nchar(response_text) > 0) {
-                cat("BG: Raw response text:", substr(response_text, 1, 200), "\n", file = stream_file, append = TRUE)
-                
                 # Check if this is a streaming response (text/event-stream)
                 response_headers <- httr::headers(response)
                 content_type <- response_headers[["content-type"]]
                 is_streaming <- !is.null(content_type) && grepl("text/event-stream", content_type, ignore.case = TRUE)
                 
-                cat("BG: Content-Type:", if (is.null(content_type)) "NULL" else content_type, "\n", file = stream_file, append = TRUE)
-                cat("BG: Is streaming response:", is_streaming, "\n", file = stream_file, append = TRUE)
-                
                 # Parse error data based on response type
                 error_data <- NULL
                 if (is_streaming) {
                   # Parse SSE format
-                  cat("BG: Parsing as SSE format\n", file = stream_file, append = TRUE)
                   error_data <- .rs.parse_sse_error_response(response_text)
                 } else {
                   # Try to parse as regular JSON
-                  cat("BG: Parsing as regular JSON\n", file = stream_file, append = TRUE)
                   error_data <- tryCatch({
                     jsonlite::fromJSON(response_text, simplifyVector = FALSE)
                   }, error = function(e) {
-                    cat("BG: JSON parse error:", e$message, "\n", file = stream_file, append = TRUE)
                     return(NULL)
                   })
                 }
                 
                 if (!is.null(error_data)) {
-                  cat("BG: Parsed error data successfully\n", file = stream_file, append = TRUE)
                   # Extract structured error message - handle both direct and nested error structures
                   if (!is.null(error_data$error) && is.list(error_data$error)) {
                     # Structured error response with nested error object
                     nested_error <- error_data$error
                     if (!is.null(nested_error$user_message)) {
                       error_message <- nested_error$user_message
-                      cat("BG: Using nested error user_message:", error_message, "\n", file = stream_file, append = TRUE)
                     } else if (!is.null(nested_error$error_message)) {
                       error_message <- nested_error$error_message
-                      cat("BG: Using nested error error_message:", error_message, "\n", file = stream_file, append = TRUE)
                     } else if (!is.null(nested_error$message)) {
                       error_message <- nested_error$message
-                      cat("BG: Using nested error message:", error_message, "\n", file = stream_file, append = TRUE)
                     } else {
                       error_message <- jsonlite::toJSON(nested_error, auto_unbox = TRUE)
-                      cat("BG: Using nested error as JSON:", error_message, "\n", file = stream_file, append = TRUE)
                     }
                   } else if (!is.null(error_data$user_message)) {
                     error_message <- error_data$user_message
-                    cat("BG: Using direct user_message:", error_message, "\n", file = stream_file, append = TRUE)
                   } else if (!is.null(error_data$error_message)) {
                     error_message <- error_data$error_message
-                    cat("BG: Using direct error_message:", error_message, "\n", file = stream_file, append = TRUE)
                   } else if (!is.null(error_data$message)) {
                     error_message <- error_data$message
-                    cat("BG: Using direct message:", error_message, "\n", file = stream_file, append = TRUE)
                   } else if (!is.null(error_data$error)) {
                     # Sometimes error is a string
                     error_message <- if (is.character(error_data$error)) error_data$error else jsonlite::toJSON(error_data$error, auto_unbox = TRUE)
-                    cat("BG: Using error field:", error_message, "\n", file = stream_file, append = TRUE)
                   } else {
                     # Use the raw response as fallback
                     error_message <- response_text
-                    cat("BG: Using raw response text as fallback\n", file = stream_file, append = TRUE)
                   }
                 } else {
-                  cat("BG: Error data parsing failed\n", file = stream_file, append = TRUE)
                   # Not JSON or SSE - use raw response text if it looks meaningful
                   if (nchar(response_text) < 500 && !grepl("<html|<!DOCTYPE", response_text, ignore.case = TRUE)) {
                     error_message <- response_text
-                    cat("BG: Using raw response text (not JSON/SSE)\n", file = stream_file, append = TRUE)
-                  } else {
-                    cat("BG: Response text too long or HTML, using status-based message\n", file = stream_file, append = TRUE)
                   }
                 }
-              } else {
-                cat("BG: No response text available\n", file = stream_file, append = TRUE)
               }
             }, error = function(e) {
-              cat("BG: Error reading response body:", e$message, "\n", file = stream_file, append = TRUE)
+              # Continue with default error message
             })
             
             # Provide status-specific fallback messages if we don't have a good error message
@@ -747,8 +712,6 @@
                 error_message <- paste("HTTP", status_code, "error from backend server")
               }
             }
-            
-            cat("BG: Final error message:", error_message, "\n", file = stream_file, append = TRUE)
             
             # Send structured error event to stream
             error_event <- list(
