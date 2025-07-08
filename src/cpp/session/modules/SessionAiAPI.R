@@ -1535,9 +1535,7 @@
                 event_data$action <- last_event_data$action
                 event_data$function_call <- last_event_data$function_call
               } else if (!is.null(event_data$field) && event_data$field == "edit_file" && 
-                         !is.null(event_data$response) && event_data$isComplete) {
-                # Convert OpenAI edit_file completion to function_call structure
-                
+                         !is.null(event_data$response) && event_data$isComplete && .rs.get_active_provider() == 'openai') {
                 # Use the real call_id from the event, or generate one if missing
                 call_id <- if (!is.null(event_data$call_id)) event_data$call_id else stop("call_id is required and cannot be NULL for edit_file completion")
                 
@@ -1637,8 +1635,6 @@
               break
             } else {
               unmatched_events_count <- unmatched_events_count + 1
-              cat("DEBUG: Event does not match any conditions. event_data:", jsonlite::toJSON(event_data, auto_unbox = TRUE), "\n")
-              cat("DEBUG: event_data$isComplete:", event_data$isComplete, "\n")
             }
           }
         }

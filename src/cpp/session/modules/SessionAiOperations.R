@@ -22,6 +22,11 @@
       return(edited_code)
    }
    
+   # First, try to use the complete new_content if available
+   if (!is.null(diffs_data$diffs[[msg_id_char]]$new_content)) {
+      return(diffs_data$diffs[[msg_id_char]]$new_content)
+   }
+   
    diff_data <- diffs_data$diffs[[msg_id_char]]$diff_data
    if (is.null(diff_data) || length(diff_data) == 0) {
       # No diff data found, return the edited_code as-is
@@ -31,17 +36,30 @@
    # Split the edited_code into lines
    edited_lines <- strsplit(edited_code, "\n", fixed = TRUE)[[1]]
    
-   # Match each line in the editor with the corresponding diff entry
+   # Map editor lines to diff entries (for user edits)
+   editor_line_index <- 1
+   
+   # Reconstruct the complete file content
    final_lines <- character(0)
    for (i in seq_along(diff_data)) {
-      if (i <= length(edited_lines)) {
-         diff_entry <- diff_data[[i]]
-         line_type <- diff_entry$type
-         
-         # Only include lines that are "added" or "unchanged" (skip "deleted" lines)
-         if (!is.null(line_type) && line_type != "deleted") {
-            # Use the actual content from the editor (which may have been edited by the user)
-            final_lines <- c(final_lines, edited_lines[i])
+      diff_entry <- diff_data[[i]]
+      line_type <- diff_entry$type
+      
+      # Only include lines that are "added" or "unchanged" (skip "deleted" lines)
+      if (!is.null(line_type) && line_type != "deleted") {
+         # Check if this line was visible in the editor (and potentially modified by user)
+         if (editor_line_index <= length(edited_lines)) {
+            # Use the content from the editor (which may have been edited by the user)
+            final_lines <- c(final_lines, edited_lines[editor_line_index])
+            editor_line_index <- editor_line_index + 1
+         } else {
+            # This line wasn't visible in the editor, use the original diff content
+            final_lines <- c(final_lines, diff_entry$content)
+         }
+      } else {
+         # This is a deleted line - if it was shown in the editor, skip over it
+         if (editor_line_index <= length(edited_lines)) {
+            editor_line_index <- editor_line_index + 1
          }
       }
    }
@@ -543,7 +561,6 @@
    # The edited_code contains the full file content including deleted lines for diff display
    # Filter out deleted lines using the conversation_diffs.json data
    final_content <- .rs.filter_edited_code_using_diff_data(edited_code, edit_file_message_id)
-
    # Handle different scenarios based on whether original file was saved or unsaved
    if (original_was_unsaved) {
       # Original file was unsaved - update editor without saving to disk
