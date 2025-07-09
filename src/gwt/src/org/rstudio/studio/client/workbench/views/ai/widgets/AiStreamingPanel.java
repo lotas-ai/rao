@@ -310,12 +310,13 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    {
       QueuedEvent queuedEvent = new QueuedEvent(operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting, diffData);
       
-      // Special case: clear_conversation always processes immediately regardless of sequence
-      // because it signals that R is rebuilding the conversation from scratch
-      if ("clear_conversation".equals(operationType))
+      // Special cases: both start_background_recreation and clear_conversation 
+      // always process immediately regardless of sequence because they signal 
+      // that R is rebuilding the conversation from scratch
+      if ("start_background_recreation".equals(operationType) || "clear_conversation".equals(operationType))
       {
          processQueuedEvent(queuedEvent, sequence);
-         // After processing clear_conversation, expect the next sequence
+         // After processing, expect the next sequence
          expectedSequence_ = sequence + 1;
          
          // Process any buffered events that are now ready
@@ -368,11 +369,12 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          case "clear_conversation":
             clearAllContent();
             // Reset expected sequence when conversation is cleared and rebuilt
-            expectedSequence_ = 1;
+            // Set to 0 so that after increment it becomes 1, matching start_background_recreation
+            expectedSequence_ = 0;
             eventBuffer_.clear();
             // Update the conversation sequence tracking
             if (currentConversationId_ != -1) {
-               conversationSequences_.put(currentConversationId_, 1);
+               conversationSequences_.put(currentConversationId_, 0);
             }
             break;
          case "revert_button":
@@ -789,6 +791,12 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       
       editFileWidgets_.put(messageId, editFileWidget);
       
+      // For live streaming: hide buttons until diff is ready
+      // For historical restoration: keep buttons visible since diff is already complete
+      if ((!isCancelled && !recreationMode_) || (!isCancelled && skipDiffHighlighting)) {
+         editFileWidget.hideButtons();
+      }
+      
       createAndInjectWidgetSynchronously(messageId, editFileWidget, styles_.editFileCommand(), styles_.editFileWidgetContainer());
    }
    
@@ -826,6 +834,12 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
     */
    private void insertElementInOrder(Element parent, Element newElement, String messageId, int sequence)
    {
+      // Check if user was at bottom before insertion (only during non-recreation mode)
+      boolean wasAtBottom = false;
+      if (!recreationMode_) {
+         wasAtBottom = scrollManager_.isUserAtBottom();
+      }
+      
       // Store the sequence number on the element for ordering
       newElement.setAttribute("data-sequence", String.valueOf(sequence));
       
@@ -860,6 +874,11 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       else
       {
          parent.appendChild(newElement);
+      }
+      
+      // If user was at bottom before injection, scroll to bottom after injection
+      if (wasAtBottom && !recreationMode_) {
+         scrollManager_.smartScrollToBottom();
       }
    }
    
@@ -1023,10 +1042,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          {
             editFileWidget.hideButtons();
          }
-      }
-      else
-      {
-         Debug.log("DEBUG: Unknown widget type: " + widgetType);
       }
    }
    
@@ -1337,9 +1352,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          return;
       }
       
-      // Get background content stats
-      int backgroundChildCount = backgroundContainer_.getChildCount();
-      
       // Atomic swap: move actual DOM nodes (preserves widget connections)
       foregroundContainer.removeAllChildren();
       while (backgroundContainer_.getChildCount() > 0) {
@@ -1348,15 +1360,52 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          foregroundContainer.appendChild(child);
       }
       
+      // Use native method to find and scroll the actual scrollable parent to bottom
+      // Use requestAnimationFrame to ensure DOM is fully updated before scrolling
+      requestAnimationFrameScroll();
+      
       // Cleanup
       backgroundContainer_.removeFromParent();
       backgroundContainer_ = null;
       recreationMode_ = false;
-      
-      // After recreation completes, scroll to bottom to show the latest content
-      // This is a single scroll operation, not the gradual animation we eliminated
-      scrollManager_.forceScrollToBottom();
    }
+   
+   /**
+    * Use requestAnimationFrame to ensure DOM is updated before scrolling
+    */
+   private native void requestAnimationFrameScroll() /*-{
+      var self = this;
+      $wnd.requestAnimationFrame(function() {
+         self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiStreamingPanel::scrollToBottomNative()();
+      });
+   }-*/;
+   
+   /**
+    * Native method to find the actual scrollable parent and scroll to bottom instantly
+    */
+   private native void scrollToBottomNative() /*-{
+      var element = this.@com.google.gwt.user.client.ui.UIObject::getElement()();
+      
+      // Find the actual scrollable parent by walking up the DOM tree
+      var scrollableParent = element;
+      while (scrollableParent) {
+         var computedStyle = $wnd.getComputedStyle(scrollableParent);
+         var overflowY = computedStyle.overflowY;
+         
+         // Check if this element is scrollable
+         if ((overflowY === 'auto' || overflowY === 'scroll') && 
+             scrollableParent.scrollHeight > scrollableParent.clientHeight) {
+            // Found the scrollable parent - scroll to bottom instantly
+            scrollableParent.scrollTop = scrollableParent.scrollHeight;
+            return;
+         }
+         
+         scrollableParent = scrollableParent.parentElement;
+      }
+      
+      // Fallback: try window scroll
+      $wnd.scrollTo(0, $doc.body.scrollHeight);
+   }-*/;
    
    /**
     * Get the active conversation container (background during recreation, foreground otherwise)

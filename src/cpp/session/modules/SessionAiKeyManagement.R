@@ -251,7 +251,7 @@
     "<div class='model-label'>API Key</div>",
     
     if(!has_rao_key) paste0(
-      "    <input type='password' id='rao-key' class='key-input' placeholder='Enter your Rao API key' value=''>",
+      "    <input type='password' id='rao-key' class='key-input' placeholder='Enter your Rao API key from www.lotas.ai/account' value=''>",
       "    <button class='button save-button' onclick='saveApiKey()'>Save Rao API Key</button>"
     ) else paste0(
       "    <div class='model-row'>",

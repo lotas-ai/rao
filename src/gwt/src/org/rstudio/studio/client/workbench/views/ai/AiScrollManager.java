@@ -69,27 +69,7 @@ public class AiScrollManager
    public void smartScrollToBottom()
    {
       com.google.gwt.core.client.Scheduler.get().scheduleDeferred(() -> {
-         Element element = scrollContainer_.getElement();
-         if (element == null) return;
-         
-         int scrollTop = element.getScrollTop();
-         int scrollHeight = element.getScrollHeight();
-         int clientHeight = element.getClientHeight();
-         
-         // Check if user is already near the bottom (within 50px or at >90% of scroll distance)
-         boolean isNearBottom = false;
-         if (scrollHeight > clientHeight) {
-            int scrollableDistance = scrollHeight - clientHeight;
-            int distanceFromBottom = scrollableDistance - scrollTop;
-            
-            isNearBottom = distanceFromBottom < 50 || 
-                          (scrollTop / (double)scrollableDistance) > 0.9;
-         } else {
-            // Content fits in viewport, always scroll
-            isNearBottom = true;
-         }
-         
-         if (isNearBottom) {
+         if (isUserAtBottom()) {
             animateScrollToBottom();
          }
       });
@@ -210,5 +190,58 @@ public class AiScrollManager
       Element element = scrollContainer_.getElement();
       if (element == null) return 0;
       return element.getScrollTop();
+   }
+   
+   /**
+    * Check if user is currently at bottom using default thresholds
+    */
+   public boolean isUserAtBottom()
+   {
+      return isUserAtBottom(200, 0.8);
+   }
+   
+   /**
+    * Check if user is currently at bottom using custom thresholds
+    * @param pixelThreshold Distance from bottom in pixels
+    * @param percentageThreshold Percentage of scroll distance (0.0 to 1.0)
+    */
+   public boolean isUserAtBottom(int pixelThreshold, double percentageThreshold)
+   {
+      Element element = scrollContainer_.getElement();
+      if (element == null) return false;
+      
+      int scrollTop = element.getScrollTop();
+      int scrollHeight = element.getScrollHeight();
+      int clientHeight = element.getClientHeight();
+      
+      return isAtBottom(scrollTop, scrollHeight, clientHeight, pixelThreshold, percentageThreshold);
+   }
+   
+   /**
+    * Static utility method to check if scroll position is at bottom
+    * Can be used by other classes to avoid logic duplication
+    * @param scrollTop Current scroll position
+    * @param scrollHeight Total scrollable height
+    * @param clientHeight Visible height
+    * @param pixelThreshold Distance from bottom in pixels
+    * @param percentageThreshold Percentage of scroll distance (0.0 to 1.0)
+    */
+   public static boolean isAtBottom(int scrollTop, int scrollHeight, int clientHeight, 
+                                   int pixelThreshold, double percentageThreshold)
+   {
+      // Check if user is already near the bottom
+      boolean isNearBottom = false;
+      if (scrollHeight > clientHeight) {
+         int scrollableDistance = scrollHeight - clientHeight;
+         int distanceFromBottom = scrollableDistance - scrollTop;
+         
+         isNearBottom = distanceFromBottom < pixelThreshold || 
+                       (scrollTop / (double)scrollableDistance) > percentageThreshold;
+      } else {
+         // Content fits in viewport, always scroll
+         isNearBottom = true;
+      }
+      
+      return isNearBottom;
    }
 } 
