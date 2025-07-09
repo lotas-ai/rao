@@ -592,8 +592,16 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          return;
       }
       
-      // Check if element already exists
-      Element existingElement = getElementById(messageId);
+      // Check if element already exists (only in active container during background recreation)
+      Element existingElement = null;
+      if (recreationMode_ && backgroundContainer_ != null) {
+         // During background recreation, only check within the background container
+         existingElement = findElementInContainer(backgroundContainer_, messageId);
+      } else {
+         // Normal mode: check entire document
+         existingElement = getElementById(messageId);
+      }
+      
       if (existingElement != null)
       {
          return;
@@ -1109,6 +1117,41 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    {
       Element element = getElement().getOwnerDocument().getElementById(id);
       return element;
+   }
+   
+   /**
+    * Find element by ID within a specific container (not entire document)
+    */
+   private Element findElementInContainer(Element container, String id)
+   {
+      if (container == null || id == null) {
+         return null;
+      }
+      
+      // Check if the container itself has the ID
+      if (id.equals(container.getId())) {
+         return container;
+      }
+      
+      // Search children recursively
+      com.google.gwt.dom.client.NodeList<com.google.gwt.dom.client.Element> children = container.getChildNodes().cast();
+      for (int i = 0; i < children.getLength(); i++) {
+         com.google.gwt.dom.client.Element child = children.getItem(i);
+         if (child != null) {
+            // Check if this child has the ID
+            if (id.equals(child.getId())) {
+               return child;
+            }
+            
+            // Recursively search this child's children
+            Element found = findElementInContainer(child, id);
+            if (found != null) {
+               return found;
+            }
+         }
+      }
+      
+      return null;
    }
    
    /**
