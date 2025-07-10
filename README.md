@@ -1,6 +1,10 @@
 Rao
 =============================================================================
 
+Install the latest version of [Rao here](https://www.lotas.ai/)!
+
+=============================================================================
+
 Rao is an integrated development environment (IDE) for the 
 [R programming language](https://www.r-project.org). It is forked from RStudio
 in order to integrate an AI assistant. Some of its features include:
