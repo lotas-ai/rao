@@ -1384,8 +1384,6 @@
               if (should_send_delta && nchar(stream_event$delta) > 0 && !is_summary_request && !is_edit_file_response) {
                 # Use the unified sequence system for all events (operations and streaming)
                 stream_event$sequence <- .rs.get_next_ai_operation_sequence()
-                
-                
                 .rs.enqueClientEvent("ai_stream_data", stream_event)
               }
             } else if (!is.null(event_data$action) && event_data$action == "function_call") {
@@ -1426,36 +1424,37 @@
                 accumulated_response <- ""
               }
               
-              # Add to buffer for parallel function call sequential processing
-              function_call_data <- list(
-                function_call = event_data$function_call,
-                request_id = request_id,
-                response_id = captured_response_id
-              )
-              
-              # Initialize buffer if not already done
-              if (is.null(.rs.get_conversation_var("function_call_buffer"))) {
-                .rs.init_function_call_buffer()
-              }
-              
-              # Add to buffer
-              buffer_count <- .rs.add_to_function_call_buffer(function_call_data)
-              
-              # DEBUG: Log function call buffering
+              # Check if this is an edit_file that was converted from streaming
+              # If so, DON'T add to buffer - process it immediately via the existing return mechanism
               function_name <- if (!is.null(event_data$function_call$name)) event_data$function_call$name else "UNKNOWN"
-              call_id <- if (!is.null(event_data$function_call$call_id)) event_data$function_call$call_id else "UNKNOWN"
-              cat("DEBUG: BUFFERING function call:", function_name, "(call_id:", call_id, "), buffer count:", buffer_count, "\n")
               
-              # DON'T store function calls in last_event_data when buffered
-              # They will be processed from the buffer instead
-              # last_event_data <- event_data  # REMOVED to prevent duplicate processing
-              
-              # Instead, set last_event_data to a completion event so streaming can finish properly
-              last_event_data <- list(
-                isComplete = TRUE,
-                requestId = request_id,
-                buffered_function_calls = TRUE  # Flag to indicate this is from buffered calls
-              )
+              if (function_name == "edit_file") {
+                # Process edit_file immediately - don't add to buffer
+                # Set last_event_data to return this function call for immediate processing
+                last_event_data <- event_data
+              } else {
+                # Add to buffer for parallel function call sequential processing
+                function_call_data <- list(
+                  function_call = event_data$function_call,
+                  request_id = request_id,
+                  response_id = captured_response_id
+                )
+                
+                # Initialize buffer if not already done
+                if (is.null(.rs.get_conversation_var("function_call_buffer"))) {
+                  .rs.init_function_call_buffer()
+                }
+                
+                # Add to buffer
+                buffer_count <- .rs.add_to_function_call_buffer(function_call_data)
+                
+                # Instead, set last_event_data to a completion event so streaming can finish properly
+                last_event_data <- list(
+                  isComplete = TRUE,
+                  requestId = request_id,
+                  buffered_function_calls = TRUE  # Flag to indicate this is from buffered calls
+                )
+              }
               
               # Reset assistant_message_id so new content gets a new messageId
               assistant_message_id <- NULL
@@ -1518,13 +1517,12 @@
               }
               
               if (!is.null(event_data$field) && event_data$field == "edit_file" && 
-                         !is.null(event_data$response) && event_data$isComplete && .rs.get_active_provider() == 'openai') {
+                         !is.null(event_data$response) && event_data$isComplete) {
                 # Use the real call_id from the event, or generate one if missing
                 call_id <- if (!is.null(event_data$call_id)) event_data$call_id else stop("call_id is required and cannot be NULL for edit_file completion")
-                
-                # Create the function_call structure
-                event_data$action <- "function_call"
-                event_data$function_call <- list(
+                                
+                # Create the function_call structure WITHOUT modifying event_data
+                function_call_structure <- list(
                   name = "edit_file",
                   call_id = call_id,
                   arguments = event_data$response
@@ -1534,9 +1532,24 @@
                 if (!is.null(captured_response_id)) {
                   # Use captured response_id if event doesn't have one
                   event_data$response_id <- captured_response_id
-                } else {
-                  stop("No response_id available for edit_file completion")
                 }
+                
+                # CRITICAL FIX: Process the edit_file function call immediately instead of waiting
+                # Add this function call to the buffer for sequential processing
+                function_call_data <- list(
+                  function_call = function_call_structure,
+                  request_id = request_id,
+                  response_id = captured_response_id
+                )
+                
+                # Initialize buffer if not already done
+                if (is.null(.rs.get_conversation_var("function_call_buffer"))) {
+                  .rs.init_function_call_buffer()
+                }
+                
+                # Add to buffer
+                buffer_count <- .rs.add_to_function_call_buffer(function_call_data)
+                event_data$buffered_function_calls <- TRUE
               }
               
               last_event_data <- event_data
@@ -1733,6 +1746,11 @@
       result$end_turn <- TRUE
     }
     
+    # Include buffered_function_calls flag if present
+    if (!is.null(last_event_data$buffered_function_calls) && last_event_data$buffered_function_calls == TRUE) {
+      result$buffered_function_calls <- TRUE
+    }
+    
     # Include the assistant message ID so it can be passed to process_assistant_response
     if (!is.null(assistant_message_id)) {
       result$assistant_message_id <- assistant_message_id
@@ -1884,10 +1902,7 @@
   if (length(remaining_buffer) == 0) {
     .rs.set_conversation_var("function_call_buffer_active", FALSE)
   }
-  
-  # DEBUG: Log buffered function call processing
-  cat("DEBUG: PROCESSING buffered function call:", function_name, "(call_id:", call_id, "), remaining in buffer:", length(remaining_buffer), "\n")
-  
+    
   return(next_call)
 })
 

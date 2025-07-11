@@ -2070,10 +2070,7 @@
    function_name <- if (is.list(function_call$name)) function_call$name[[1]] else function_call$name
    call_id <- if (is.list(function_call$call_id)) function_call$call_id[[1]] else function_call$call_id
    
-   # DEBUG: Log function call processing
-   cat("DEBUG: PROCESSING function call:", function_name, "(call_id:", call_id, ")\n")
-   
-   # DEBUG: Check if this call_id already has function_call_output in conversation log
+   # Check if this call_id already has function_call_output in conversation log
    existing_output_count <- 0
    for (entry in conversation_log) {
      if (!is.null(entry$type) && entry$type == "function_call_output" && 
@@ -2081,7 +2078,6 @@
        existing_output_count <- existing_output_count + 1
      }
    }
-   cat("DEBUG: Existing function_call_output entries for call_id", call_id, ":", existing_output_count, "\n")
    
    # Always create normalized_function_call at the beginning
    function_call_id <- .rs.get_next_message_id()
@@ -2140,8 +2136,6 @@
          if (function_name == "edit_file") {
             function_call_entry$source_function <- "edit_file"
          }
-         
-
          
          conversation_log <- c(conversation_log, list(function_call_entry))
       }
@@ -2275,20 +2269,6 @@
       }
    } else if (!is.null(function_result$function_call_output)) {
       conversation_log <- .rs.read_conversation_log()
-      
-      # DEBUG: Log function_call_output being added to conversation log
-      call_id <- if (is.list(function_result$function_call_output$call_id)) function_result$function_call_output$call_id[[1]] else function_result$function_call_output$call_id
-      cat("DEBUG: ADDING function_call_output to conversation log - call_id:", call_id, ", output_id:", function_result$function_call_output$id, ", from function:", function_name, "\n")
-      
-      # DEBUG: Check if this call_id already exists in conversation log
-      existing_count <- 0
-      for (entry in conversation_log) {
-        if (!is.null(entry$type) && entry$type == "function_call_output" && 
-            !is.null(entry$call_id) && entry$call_id == call_id) {
-          existing_count <- existing_count + 1
-        }
-      }
-      cat("DEBUG: Existing function_call_output entries with call_id", call_id, ":", existing_count, "\n")
       
       updated_log <- c(conversation_log, list(function_result$function_call_output))
       
@@ -2509,9 +2489,24 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
       .rs.set_conversation_var("current_related_to_id", related_to_id)
       
       # CRITICAL: Check for buffered function calls BEFORE making API call
-      # If there are buffered function calls, process the next one instead of calling API
-      if (.rs.has_buffered_function_calls()) {
-         cat("DEBUG: Found buffered function calls, processing next one instead of API call\n")
+      # EXCEPT: Skip this check if we're processing an edit_file continuation (morph response)
+      # We can detect edit_file continuation by checking if related_to_id points to an edit_file function call
+      is_edit_file_continuation <- FALSE
+      if (!is.null(related_to_id)) {
+         conversation_log <- .rs.read_conversation_log()
+         for (entry in conversation_log) {
+            if (!is.null(entry$id) && entry$id == related_to_id && 
+                !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
+                entry$function_call$name == "edit_file") {
+               is_edit_file_continuation <- TRUE
+               break
+            }
+         }
+      }
+      
+      # If there are buffered function calls AND this is NOT an edit_file continuation,
+      # process the next buffered function call instead of calling API
+      if (.rs.has_buffered_function_calls() && !is_edit_file_continuation) {
          
          next_call <- .rs.get_next_buffered_function_call()
          if (!is.null(next_call)) {
@@ -2525,8 +2520,6 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
                next_call$request_id,
                next_call$response_id
             ))
-         } else {
-            cat("DEBUG: No buffered function calls found, continuing to API call\n")
          }
       }
       
@@ -2566,12 +2559,51 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
       # Clear the related_to_id after streaming completes, but keep assistant_message_id for process_assistant_response
       .rs.set_conversation_var("current_related_to_id", NULL)
       
+      if (is.list(streaming_result) && !is.null(streaming_result$buffered_function_calls) && streaming_result$buffered_function_calls) {
+         # Return continue_silent to trigger buffer processing at top of ai_operation
+         return(.rs.create_ai_operation_result(
+            status = "continue_silent",
+            data = list(
+               message = "Mixed content streaming completed - processing buffered function calls",
+               conversation_index = conversation_index,
+               related_to_id = related_to_id,
+               buffered_function_calls = TRUE,
+               request_id = request_id
+            )
+         ))
+      }
+      
       # Check if the result contains a function call
       if (is.list(streaming_result) && !is.null(streaming_result$action) && streaming_result$action == "function_call") {
-         return(.rs.process_single_function_call(streaming_result$function_call,
-                                               related_to_id,
-                                               request_id,
-                                               streaming_result$response_id))
+         # Add this function call to the buffer instead of processing immediately
+         # This ensures all parallel function calls (from streaming events AND streaming results) 
+         # go through the same sequential processing system
+         
+         function_call_data <- list(
+           function_call = streaming_result$function_call,
+           request_id = request_id,
+           response_id = streaming_result$response_id
+         )
+         
+         # Initialize buffer if not already done
+         if (is.null(.rs.get_conversation_var("function_call_buffer"))) {
+           .rs.init_function_call_buffer()
+         }
+         
+         # Add to buffer
+         buffer_count <- .rs.add_to_function_call_buffer(function_call_data)
+         
+         # Return a completion status to signal that function calls are buffered and ready for processing
+         return(.rs.create_ai_operation_result(
+            status = "continue_silent",
+            data = list(
+               message = "Function calls buffered for sequential processing",
+               conversation_index = conversation_index,
+               related_to_id = related_to_id,
+               buffered_function_calls = TRUE,
+               request_id = request_id
+            )
+         ))
       }
       
       # For text responses - check if this is edit_file related (needs post-streaming save)
