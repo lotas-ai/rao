@@ -2069,7 +2069,29 @@
    
    function_name <- if (is.list(function_call$name)) function_call$name[[1]] else function_call$name
    call_id <- if (is.list(function_call$call_id)) function_call$call_id[[1]] else function_call$call_id
-      
+   
+   # DEBUG: Log function call processing
+   cat("DEBUG: PROCESSING function call:", function_name, "(call_id:", call_id, ")\n")
+   
+   # DEBUG: Check if this call_id already has function_call_output in conversation log
+   existing_output_count <- 0
+   for (entry in conversation_log) {
+     if (!is.null(entry$type) && entry$type == "function_call_output" && 
+         !is.null(entry$call_id) && entry$call_id == call_id) {
+       existing_output_count <- existing_output_count + 1
+     }
+   }
+   cat("DEBUG: Existing function_call_output entries for call_id", call_id, ":", existing_output_count, "\n")
+   
+   # Always create normalized_function_call at the beginning
+   function_call_id <- .rs.get_next_message_id()
+   normalized_function_call <- list(
+      name = function_name,
+      arguments = if (is.list(function_call$arguments)) function_call$arguments[[1]] else function_call$arguments,
+      call_id = call_id,
+      msg_id = function_call_id
+   )
+   
    current_logForChecking <- Filter(function(entry) {
       if (is.null(entry$function_call)) {
          return(TRUE)
@@ -2082,34 +2104,27 @@
       return(TRUE)
    }, conversation_log)
       
-   function_callExists <- FALSE
+   function_call_exists <- FALSE
    for (entry in conversation_log) {
       if (!is.null(entry$function_call)) {
  
          entry_call_id <- if (is.list(entry$function_call$call_id)) entry$function_call$call_id[[1]] else entry$function_call$call_id
          if (entry_call_id == call_id) {
-            function_callExists <- TRUE
+            function_call_exists <- TRUE
+            # If function call exists, get the existing message ID
+            normalized_function_call$msg_id <- entry$id
             break
          }
       }
    }
 
-   if (!function_callExists) {
-      function_call_id <- .rs.get_next_message_id()
+   if (!function_call_exists) {
       # No function calls need to be excluded - end_turn is now handled as standalone event
       should_exclude <- FALSE
       
-      
-      normalized_function_call <- list(
-         name = function_name,
-         arguments = if (is.list(function_call$arguments)) function_call$arguments[[1]] else function_call$arguments,
-         call_id = call_id,
-         msg_id = function_call_id
-      )
-      
       # Only add to conversation log if not excluded
       if (!should_exclude) {
-         function_callEntry <- list(
+         function_call_entry <- list(
             id = function_call_id,
             role = "assistant",
             function_call = normalized_function_call,
@@ -2119,14 +2134,16 @@
          
          # Add response_id if provided (for reasoning models)
          if (!is.null(response_id)) {
-            function_callEntry$response_id <- response_id
+            function_call_entry$response_id <- response_id
          }
          
          if (function_name == "edit_file") {
-            function_callEntry$source_function <- "edit_file"
+            function_call_entry$source_function <- "edit_file"
          }
          
-         conversation_log <- c(conversation_log, list(function_callEntry))
+
+         
+         conversation_log <- c(conversation_log, list(function_call_entry))
       }
       
       # Create immediate "Response pending..." for interactive functions
@@ -2258,6 +2275,21 @@
       }
    } else if (!is.null(function_result$function_call_output)) {
       conversation_log <- .rs.read_conversation_log()
+      
+      # DEBUG: Log function_call_output being added to conversation log
+      call_id <- if (is.list(function_result$function_call_output$call_id)) function_result$function_call_output$call_id[[1]] else function_result$function_call_output$call_id
+      cat("DEBUG: ADDING function_call_output to conversation log - call_id:", call_id, ", output_id:", function_result$function_call_output$id, ", from function:", function_name, "\n")
+      
+      # DEBUG: Check if this call_id already exists in conversation log
+      existing_count <- 0
+      for (entry in conversation_log) {
+        if (!is.null(entry$type) && entry$type == "function_call_output" && 
+            !is.null(entry$call_id) && entry$call_id == call_id) {
+          existing_count <- existing_count + 1
+        }
+      }
+      cat("DEBUG: Existing function_call_output entries with call_id", call_id, ":", existing_count, "\n")
+      
       updated_log <- c(conversation_log, list(function_result$function_call_output))
       
       # CRITICAL FIX: Special handling for view_image - add the image message to conversation log
@@ -2339,6 +2371,9 @@
    
    # Reset assistant message count for new conversations
    .rs.reset_assistant_message_count()
+   
+   # Initialize function call buffer for parallel function calls
+   .rs.init_function_call_buffer()
    
    if (!is.null(request_id) && nchar(request_id) > 0) {
       .rs.setVar("active_api_request_id", request_id)
@@ -2472,6 +2507,28 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
       
       # Set the related_to_id in conversation variables so streaming can access it
       .rs.set_conversation_var("current_related_to_id", related_to_id)
+      
+      # CRITICAL: Check for buffered function calls BEFORE making API call
+      # If there are buffered function calls, process the next one instead of calling API
+      if (.rs.has_buffered_function_calls()) {
+         cat("DEBUG: Found buffered function calls, processing next one instead of API call\n")
+         
+         next_call <- .rs.get_next_buffered_function_call()
+         if (!is.null(next_call)) {
+            # Clear the related_to_id since we're processing a function call
+            .rs.set_conversation_var("current_related_to_id", NULL)
+            
+            # Process the buffered function call
+            return(.rs.process_single_function_call(
+               next_call$function_call,
+               related_to_id,
+               next_call$request_id,
+               next_call$response_id
+            ))
+         } else {
+            cat("DEBUG: No buffered function calls found, continuing to API call\n")
+         }
+      }
       
       # Check assistant message limit before making API call
       limit_check <- .rs.check_assistant_message_limit()

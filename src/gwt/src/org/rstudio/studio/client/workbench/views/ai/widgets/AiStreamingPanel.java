@@ -37,6 +37,8 @@ import java.util.TreeMap;
 import org.rstudio.studio.client.workbench.views.ai.AiTerminalWidget;
 import org.rstudio.studio.client.workbench.views.ai.AiPane;
 import java.util.Date;
+import java.util.List;
+import java.util.ArrayList;
 
 public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler, AiStartConversationEvent.Handler
 {
@@ -160,6 +162,11 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       currentConversationId_ = -1;
       expectedSequence_ = 1;
       eventBuffer_ = new TreeMap<>();
+      
+      // Initialize function call buffering
+      functionCallBuffer_ = new ArrayList<>();
+      processingFunctionCall_ = false;
+      currentFunctionCallMessageId_ = null;
       
       // Note: Streaming events now use the main sequence system instead of per-message tracking
       
@@ -349,15 +356,26 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
     */
    private void processOperationEventSynchronously(QueuedEvent event)
    {
+      Debug.log("FRONTEND DEBUG: processOperationEventSynchronously() - operationType: " + event.operationType + ", messageId: " + event.messageId + ", processingFunctionCall_: " + processingFunctionCall_);
+      
       switch (event.operationType)
       {
          case "create_console_command":
+            // R side has already handled sequential processing of function calls
+            // So we can display console widgets immediately when they arrive as operation events
+            Debug.log("FRONTEND DEBUG: Processing console command immediately (messageId: " + event.messageId + ") - R side buffering");
             createConsoleCommandSynchronously(event.messageId, event.command, event.explanation, event.requestId);
             break;
          case "create_terminal_command":
+            // R side has already handled sequential processing of function calls
+            // So we can display terminal widgets immediately when they arrive as operation events
+            Debug.log("FRONTEND DEBUG: Processing terminal command immediately (messageId: " + event.messageId + ") - R side buffering");
             createTerminalCommandSynchronously(event.messageId, event.command, event.explanation, event.requestId);
             break;
          case "edit_file_command":  // Handle both formats from R
+            // R side has already handled sequential processing of function calls
+            // So we can display edit_file widgets immediately when they arrive as operation events
+            Debug.log("FRONTEND DEBUG: Processing edit_file command immediately (messageId: " + event.messageId + ") - R side buffering");
             createEditFileCommandSynchronously(event.messageId, event.filename, event.content, event.explanation, event.requestId, event.skipDiffHighlighting, event.diffData);
             break;
          case "create_user_message":
@@ -711,11 +729,13 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          @Override
          public void onRun(String msgId, String cmd) {
             handleAcceptConsoleCommand(msgId, cmd);
+            onFunctionCallCompleted(msgId);
          }
          
          @Override
          public void onCancel(String msgId) {
             handleCancelConsoleCommand(msgId);
+            onFunctionCallCompleted(msgId);
          }
       };
       
@@ -747,11 +767,13 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          @Override
          public void onRunCommand(String msgId, String cmd) {
             handleAcceptTerminalCommand(msgId, cmd);
+            onFunctionCallCompleted(msgId);
          }
          
          @Override
          public void onCancelCommand(String msgId) {
             handleCancelTerminalCommand(msgId);
+            onFunctionCallCompleted(msgId);
          }
       };
       
@@ -784,11 +806,13 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
             @Override
             public void onAccept(String msgId, String editedContent) {
                handleAcceptEditFileCommand(msgId, editedContent);
+               onFunctionCallCompleted(msgId);
             }
             
             @Override
             public void onCancel(String msgId) {
                handleCancelEditFileCommand(msgId);
+               onFunctionCallCompleted(msgId);
             }
          };
       
@@ -842,7 +866,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
     */
    private void insertElementInOrder(Element parent, Element newElement, String messageId, int sequence)
    {
-      // Check if user was at bottom before insertion (only during non-recreation mode)
+      // Check if user was at bottom before injection (only during non-recreation mode)
       boolean wasAtBottom = false;
       if (!recreationMode_) {
          wasAtBottom = scrollManager_.isUserAtBottom();
@@ -1297,7 +1321,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    }
    
    /**
-    * Clear all conversation content and tracking maps
+    * Clear tracking maps and reset function call processing state
     */
    private void clearTrackingMaps()
    {
@@ -1307,11 +1331,12 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       editFileWidgets_.clear();
       editFileStreamingContent_.clear();
       
-      // Reset conversation name generation flags
-      conversationNameAttemptedForThisTurn_ = false;
+      // Reset function call processing state
+      functionCallBuffer_.clear();
+      processingFunctionCall_ = false;
+      currentFunctionCallMessageId_ = null;
       
-      // Update scroll manager streaming status after clearing
-      updateScrollManagerStreamingStatus();
+      Debug.log("FRONTEND DEBUG: clearTrackingMaps() - reset function call processing state");
    }
    
    /**
@@ -1809,6 +1834,11 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    private boolean recreationMode_;
    private Element backgroundContainer_;
    
+   // Function call buffering for parallel function calls (rao 0.2.3+)
+   private List<QueuedEvent> functionCallBuffer_;
+   private boolean processingFunctionCall_;
+   private String currentFunctionCallMessageId_;
+   
    // Streaming events now use the main sequence system
    
    // Scroll management
@@ -1816,6 +1846,74 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    
    // Track whether we've already attempted conversation name generation for the current user query
    private boolean conversationNameAttemptedForThisTurn_ = false;
+
+
+   
+   /**
+    * Add a function call operation to the buffer for sequential processing
+    */
+   private void addToFunctionCallBuffer(QueuedEvent functionCallEvent)
+   {
+      functionCallBuffer_.add(functionCallEvent);
+   }
+   
+   /**
+    * Check if there are buffered function calls waiting to be processed
+    */
+   private boolean hasPendingFunctionCalls()
+   {
+      return !functionCallBuffer_.isEmpty();
+   }
+   
+   /**
+    * Process the next function call from the buffer
+    */
+   private void processNextFunctionCall()
+   {
+      if (functionCallBuffer_.isEmpty() || processingFunctionCall_)
+      {
+         Debug.log("FRONTEND DEBUG: processNextFunctionCall() - buffer empty: " + functionCallBuffer_.isEmpty() + ", processing: " + processingFunctionCall_);
+         return;
+      }
+      
+      QueuedEvent nextFunctionCall = functionCallBuffer_.remove(0);
+      processingFunctionCall_ = true;
+      currentFunctionCallMessageId_ = nextFunctionCall.messageId;
+      
+      Debug.log("FRONTEND DEBUG: processNextFunctionCall() - processing next function call (messageId: " + nextFunctionCall.messageId + ", operationType: " + nextFunctionCall.operationType + ")");
+      
+      // Process the function call widget
+      processOperationEventSynchronously(nextFunctionCall);
+   }
+   
+   /**
+    * Called when a function call widget is completed (accepted/cancelled)
+    */
+   private void onFunctionCallCompleted(String messageId)
+   {
+      Debug.log("FRONTEND DEBUG: onFunctionCallCompleted() called for messageId: " + messageId + ", current: " + currentFunctionCallMessageId_ + ", buffer size: " + functionCallBuffer_.size());
+      
+      if (messageId.equals(currentFunctionCallMessageId_))
+      {
+         processingFunctionCall_ = false;
+         currentFunctionCallMessageId_ = null;
+         
+         // Process the next function call if any
+         if (hasPendingFunctionCalls())
+         {
+            Debug.log("FRONTEND DEBUG: onFunctionCallCompleted() - processing next function call from buffer");
+            processNextFunctionCall();
+         }
+         else
+         {
+            Debug.log("FRONTEND DEBUG: onFunctionCallCompleted() - no more function calls in buffer");
+         }
+      }
+      else
+      {
+         Debug.log("FRONTEND DEBUG: onFunctionCallCompleted() - messageId mismatch, ignoring");
+      }
+   }
 
    /**
     * Call the global JavaScript function to create revert buttons

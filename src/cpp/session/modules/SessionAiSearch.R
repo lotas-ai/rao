@@ -603,102 +603,21 @@
    arguments <- .rs.safe_parse_function_arguments(function_call)
 
    filename <- arguments$filename
-   keyword <- arguments$keyword
-   index <- arguments$index
-   start_line <- arguments$start_line
-   end_line <- arguments$end_line
-   insert_line <- arguments$insert_line
+   code_edit <- arguments$code_edit
+   instructions <- arguments$instructions
    
-   file_content <- NULL
+   # For the new edit_file format, we need to return the current file content
+   # so the morph LLM can see what it's working with
    
-   # Handle insert_line mode - return empty content since nothing should be shown for editing
-   if (!is.null(insert_line)) {
+   # Use effective file content (editor if open, otherwise disk)
+   effective_content <- .rs.get_effective_file_content(filename)
+   
+   if (is.null(effective_content)) {
+      # File doesn't exist and isn't open in editor - return empty content
       file_content <- ""
    } else {
-      # Use effective file content (editor if open, otherwise disk)
-      effective_content <- .rs.get_effective_file_content(filename)
-      
-      if (is.null(effective_content)) {
-         # File doesn't exist and isn't open in editor
-         all_lines <- character(0)
-      } else {
-         all_lines <- strsplit(effective_content, "\n")[[1]]
-      }
-      
-      # Handle line range mode
-      if (!is.null(start_line) && !is.null(end_line)) {
-         # Extract only the specified line range
-         if (start_line <= length(all_lines) && end_line <= length(all_lines) && start_line <= end_line) {
-            file_content <- paste(all_lines[start_line:end_line], collapse = "\n")
-         } else {
-            file_content <- ""  # Invalid range, return empty
-         }
-      } else if (!is.null(keyword)) {
-         if (keyword == "start") {
-            # Return from beginning of file
-            file_content <- paste(all_lines, collapse = "\n")
-         } else if (keyword == "end") {
-            # Return from end of file
-            file_content <- paste(all_lines, collapse = "\n")
-         } else if (keyword == basename(filename)) {
-            # Return entire file content without any footer processing
-            file_content <- paste(all_lines, collapse = "\n")
-         } else {
-            # Look for specific keyword/symbol in file
-            symbol_results <- .rs.find_symbol(keyword)
-            
-            if (!is.null(symbol_results) && length(symbol_results) > 0) {
-               file_symbols <- list()
-               for (symbol in symbol_results) {
-                  if (!is.null(symbol$file) && normalizePath(symbol$file, winslash = "/", mustWork = FALSE) == normalizePath(filename, winslash = "/", mustWork = FALSE)) {
-                     file_symbols <- c(file_symbols, list(symbol))
-                  }
-               }
-               
-               if (length(file_symbols) > 0) {
-                  symbol_names <- sapply(file_symbols, function(s) s$name)
-                  has_duplicate_symbols <- any(duplicated(symbol_names))
-                  
-                  selected_symbol <- NULL
-                  if (has_duplicate_symbols && !is.null(index) && is.numeric(index) && 
-                      index > 0 && index <= length(file_symbols)) {
-                     selected_symbol <- file_symbols[[index]]
-                  } else {
-                     selected_symbol <- file_symbols[[1]]
-                  }
-                  
-                  if (!is.null(selected_symbol$line_start) && !is.null(selected_symbol$line_end) && 
-                      selected_symbol$line_start > 0 && selected_symbol$line_end > 0) {
-                     if (selected_symbol$line_start <= length(all_lines)) {
-                        adjusted_end <- min(selected_symbol$line_end, length(all_lines))
-                        file_content <- paste(all_lines[selected_symbol$line_start:adjusted_end], collapse = "\n")
-                        start_line <- selected_symbol$line_start
-                        end_line <- adjusted_end
-                     }
-                  }
-               }
-            } else {
-               # Fallback: search for keyword as plain text
-               matching_lines <- which(grepl(keyword, all_lines, fixed = TRUE))
-               if (length(matching_lines) > 0) {
-                  line_number <- matching_lines[1]
-                  enclosing_block <- .rs.find_enclosing_code_block(filename, line_number)
-                  if (!is.null(enclosing_block)) {
-                     file_content <- enclosing_block$content
-                     start_line <- enclosing_block$start_line
-                     end_line <- enclosing_block$end_line
-                  } else {
-                     file_content <- all_lines[line_number]
-                     start_line <- line_number
-                     end_line <- line_number
-                  }
-               }
-            }
-         }
-      } else {
-         # No keyword provided, return entire file
-         file_content <- paste(all_lines, collapse = "\n")
-      }
+      # Return the full file content for the morph LLM
+      file_content <- effective_content
    }
 
    function_output_id <- .rs.get_next_message_id()
@@ -706,11 +625,8 @@
      id = function_output_id,
      type = "function_call_output",
      call_id = function_call$call_id,
-     output = if (is.null(file_content)) "" else file_content,
-     related_to = function_call$msg_id,
-     start_line = start_line,
-     end_line = end_line,
-     insert_line = insert_line
+     output = file_content,
+     related_to = function_call$msg_id
    )
    
    return(list(

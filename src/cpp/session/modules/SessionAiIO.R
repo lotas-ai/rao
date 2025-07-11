@@ -407,48 +407,6 @@
   return(FALSE)
 })
 
-.rs.addFunction("detect_code_replacement", function(previous_content, new_content) {
-   previous_lines <- trimws(strsplit(previous_content, "\n")[[1]])
-   new_lines <- trimws(strsplit(new_content, "\n")[[1]])
-   
-   if (length(previous_lines) == 0 || length(new_lines) == 0) {
-      return(list(is_replacement = FALSE))
-   }
-   
-   matching_lines <- 0
-   match_indexes <- integer(0)
-   
-   for (i in seq_along(new_lines)) {
-      if (nchar(new_lines[i]) == 0) {
-         next
-      }
-      
-      matches <- which(previous_lines == new_lines[i])
-      
-      if (length(matches) > 0) {
-         matching_lines <- matching_lines + 1
-         match_indexes <- c(match_indexes, matches)
-      }
-   }
-   
-   non_empty_new_lines <- sum(nchar(new_lines) > 0)
-   match_percentage <- if (non_empty_new_lines > 0) matching_lines / non_empty_new_lines else 0
-   
-   if (match_percentage > 0.5 && matching_lines >= 3) {
-      first_match <- min(match_indexes)
-      last_match <- max(match_indexes)
-      
-      return(list(
-         is_replacement = TRUE,
-         first_match_line = first_match,
-         last_match_line = last_match,
-         match_percentage = match_percentage
-      ))
-   }
-   
-   return(list(is_replacement = FALSE))
-})
-
 .rs.addFunction("record_file_modification_with_diff_with_state", function(file_path, previous_content, new_content, was_originally_unsaved) {
    if (!file.exists(file_path)) {
       return(FALSE)
@@ -475,60 +433,7 @@
    
    # Use the passed-in original state rather than trying to detect it after modification
    was_unsaved <- was_originally_unsaved
-   is_start_addition <- FALSE
-   is_end_addition <- FALSE
    diff_type <- "modify"
-   
-   conversation_log <- .rs.read_conversation_log()
-   prompt_based_addition <- FALSE
-   
-   # Look for the most recent edit_file function call with "start" or "end" keyword directly
-   for (i in length(conversation_log):1) {
-      if (!is.null(conversation_log[[i]]$function_call) && 
-          !is.null(conversation_log[[i]]$function_call$name) && 
-          conversation_log[[i]]$function_call$name == "edit_file" &&
-          !is.null(conversation_log[[i]]$function_call$arguments)) {
-         
-         args <- tryCatch({
-            if (is.character(conversation_log[[i]]$function_call$arguments)) {
-               jsonlite::fromJSON(conversation_log[[i]]$function_call$arguments, simplifyVector = FALSE)
-            } else {
-               conversation_log[[i]]$function_call$arguments
-            }
-         }, error = function(e) {
-            return(NULL)
-         })
-         
-         if (!is.null(args) && !is.null(args$keyword)) {
-            # Check if this edit_file call is for the same file
-            target_file <- if (!is.null(args$filename)) args$filename else ""
-            if (target_file != "" && basename(target_file) == basename(file_path)) {
-               
-               if (args$keyword == "start") {
-                  is_start_addition <- TRUE
-                  is_end_addition <- FALSE
-                  diff_type <- "prepend"
-                  prompt_based_addition <- TRUE
-                  break
-               } else if (args$keyword == "end") {
-                  is_end_addition <- TRUE
-                  is_start_addition <- FALSE
-                  diff_type <- "append"
-                  prompt_based_addition <- TRUE
-                  break
-               }
-            }
-         }
-      }
-   }
-   
-   if (!prompt_based_addition) {
-      replacement_info <- .rs.detect_code_replacement(previous_content, new_content)
-      
-      if (replacement_info$is_replacement) {
-         diff_type <- "replace"
-      }
-   }
    
    new_change <- list(
       id = length(changes_log$changes) + 1,
@@ -584,61 +489,7 @@
       }
    }
    
-   
-   is_start_addition <- FALSE
-   is_end_addition <- FALSE
    diff_type <- "modify"
-   
-   conversation_log <- .rs.read_conversation_log()
-   prompt_based_addition <- FALSE
-   
-   # Look for the most recent edit_file function call with "start" or "end" keyword directly
-   for (i in length(conversation_log):1) {
-      if (!is.null(conversation_log[[i]]$function_call) && 
-          !is.null(conversation_log[[i]]$function_call$name) && 
-          conversation_log[[i]]$function_call$name == "edit_file" &&
-          !is.null(conversation_log[[i]]$function_call$arguments)) {
-         
-         args <- tryCatch({
-            if (is.character(conversation_log[[i]]$function_call$arguments)) {
-               jsonlite::fromJSON(conversation_log[[i]]$function_call$arguments, simplifyVector = FALSE)
-            } else {
-               conversation_log[[i]]$function_call$arguments
-            }
-         }, error = function(e) {
-            return(NULL)
-         })
-         
-         if (!is.null(args) && !is.null(args$keyword)) {
-            # Check if this edit_file call is for the same file
-            target_file <- if (!is.null(args$filename)) args$filename else ""
-            if (target_file != "" && basename(target_file) == basename(file_path)) {
-               
-               if (args$keyword == "start") {
-                  is_start_addition <- TRUE
-                  is_end_addition <- FALSE
-                  diff_type <- "prepend"
-                  prompt_based_addition <- TRUE
-                  break
-               } else if (args$keyword == "end") {
-                  is_end_addition <- TRUE
-                  is_start_addition <- FALSE
-                  diff_type <- "append"
-                  prompt_based_addition <- TRUE
-                  break
-               }
-            }
-         }
-      }
-   }
-   
-   if (!prompt_based_addition) {
-      replacement_info <- .rs.detect_code_replacement(previous_content, new_content)
-      
-      if (replacement_info$is_replacement) {
-         diff_type <- "replace"
-      }
-   }
    
    new_change <- list(
       id = length(changes_log$changes) + 1,

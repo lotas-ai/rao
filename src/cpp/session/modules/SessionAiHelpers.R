@@ -1308,31 +1308,28 @@ tryCatch({
             
             if (!is.null(args) && !is.null(args$filename)) {
                filename_with_stats <- basename(args$filename)
-               # Format diff stats using the same logic as conversation history loading
                if (added_count > 0 || deleted_count > 0) {
-                  # Format diff stats with CSS classes for proper styling
                   addition_text <- paste0('<span class="addition">+', added_count, '</span>')
                   removal_text <- paste0('<span class="removal">-', deleted_count, '</span>')
                   diff_text <- paste(addition_text, removal_text)
-                  # Return filename with diff stats in a span that can be styled
                   filename_with_stats <- paste0(filename_with_stats, ' <span class="diff-stats">', diff_text, '</span>')
                }
             }
          }
          
-         # Filter diff for display (show only 1 line before first change to 1 line after last change)
+         # Filter diff for display
          filtered_diff_for_display <- .rs.filter_diff_for_display(stored_diff$diff)
          
-         # Return complete structure with filtered diff for display
+         # Return simplified structure
          result <- list(
             diff = filtered_diff_for_display,
-            is_start_edit = if (!is.null(stored_diff$is_start_edit)) as.logical(stored_diff$is_start_edit) else FALSE,
-            is_end_edit = if (!is.null(stored_diff$is_end_edit)) as.logical(stored_diff$is_end_edit) else FALSE,
-            is_insert_mode = if (!is.null(stored_diff$is_insert_mode)) as.logical(stored_diff$is_insert_mode) else FALSE,
-            is_line_range_mode = if (!is.null(stored_diff$is_line_range_mode)) as.logical(stored_diff$is_line_range_mode) else FALSE,
-            start_line = stored_diff$start_line,
-            end_line = stored_diff$end_line,
-            insert_line = stored_diff$insert_line,
+            is_start_edit = FALSE,
+            is_end_edit = FALSE,
+            is_insert_mode = FALSE,
+            is_line_range_mode = FALSE,
+            start_line = NULL,
+            end_line = NULL,
+            insert_line = NULL,
             added = as.integer(added_count),
             deleted = as.integer(deleted_count),
             filename_with_stats = filename_with_stats
@@ -1342,14 +1339,11 @@ tryCatch({
       }
       
       # If no stored data, compute it fresh
-      
-      # Find the assistant message and related edit_file function call
       conversation_log <- .rs.read_conversation_log()
       if (is.null(conversation_log) || length(conversation_log) == 0) {
          return(list(diff = list()))
       }
       
-      # The message_id passed in is the edit_file function call ID
       # Find the assistant message that's related to this edit_file call
       assistant_message <- NULL
       for (entry in conversation_log) {
@@ -1376,7 +1370,6 @@ tryCatch({
       }
       
       if (is.null(edit_file_entry)) {
-         cat("DEBUG: No edit_file entry found with message_id:", message_id, "\n")
          return(list(diff = list()))
       }
       
@@ -1392,112 +1385,37 @@ tryCatch({
          return(NULL)
       })
       
-      filename <- args$filename
-      
-      if (is.null(filename)) {
-         cat("DEBUG: No filename found in edit_file arguments\n")
+      if (is.null(args) || is.null(args$filename)) {
          return(list(diff = list()))
       }
+      
+      filename <- args$filename
       
       # Get the new content from the assistant message
       new_content <- assistant_message$content
       if (is.null(new_content)) {
-         cat("DEBUG: No content found in assistant message\n")
          return(list(diff = list()))
       }
       
-      # Check if this is the new apply edit workflow
-      # This is detected by checking if the assistant message has related_to pointing to an edit_file
-      # with the new parameter structure (the backend normalizes target_file to filename, but we can
-      is_apply_edit <- !is.null(args$instructions) && !is.null(args$code_edit)
+      # For new edit_file format, the new content is the assistant's response
+      cleaned_content <- new_content
       
-      # Parse the code block content to get the actual file content
-      if (is_apply_edit) {
-         cleaned_content <- new_content
-      } else {
-         cleaned_content <- .rs.parse_code_block_content(new_content, filename)
+      # Get the previous content from the function_call_output
+      function_output <- NULL
+      for (entry in conversation_log) {
+         if (!is.null(entry$type) && entry$type == "function_call_output" &&
+             !is.null(entry$call_id) && 
+             !is.null(edit_file_entry$function_call$call_id) &&
+             entry$call_id == edit_file_entry$function_call$call_id) {
+            function_output <- entry
+            break
+         }
       }
       
-      # Get the previous content (what existed before the edit)
-      # Handle different edit modes based on line parameters
-      previous_content <- ""
-      
-      # Check for line range parameters
-      start_line <- args$start_line
-      end_line <- args$end_line
-      insert_line <- args$insert_line
-      
-      # Check if this is a keyword-based edit (not "start" or "end")
-      # Also exclude cases where keyword is just the filename (common for new file creation)
-      is_keyword_edit <- !is.null(args$keyword) && args$keyword != "start" && args$keyword != "end" && 
-                        args$keyword != filename && args$keyword != basename(filename)
-      
-      # Handle different edit modes for previous content extraction
-      if (!is.null(insert_line)) {
-         previous_content <- ""
-      } else if (!is.null(start_line) && !is.null(end_line)) {
-         # First try to find the function_call_output that corresponds to this edit_file call
-         function_output <- NULL
-         for (entry in conversation_log) {
-            if (!is.null(entry$type) && entry$type == "function_call_output" &&
-                !is.null(entry$call_id) && 
-                !is.null(edit_file_entry$function_call$call_id) &&
-                entry$call_id == edit_file_entry$function_call$call_id) {
-               function_output <- entry
-               break
-            }
-         }
-         
-         # function_call_output always exists for edit_file calls, so this should never be null
-         if (is.null(function_output) || is.null(function_output$output)) {
-            stop("ERROR: function_call_output missing for edit_file call")
-         }
-         
-         previous_content <- function_output$output
-         # Use the line numbers from the function_call_output if they exist and are valid
-         if (!is.null(function_output$start_line) && !is.null(function_output$end_line)) {
-            start_line <- function_output$start_line
-            end_line <- function_output$end_line
-         }
-      } else if (is_keyword_edit || is_apply_edit) {
-         # Find the function_call_output that corresponds to this edit_file call
-         function_output <- NULL
-         for (entry in conversation_log) {
-            if (!is.null(entry$type) && entry$type == "function_call_output" &&
-                !is.null(entry$call_id) && 
-                !is.null(edit_file_entry$function_call$call_id) &&
-                entry$call_id == edit_file_entry$function_call$call_id) {
-               function_output <- entry
-               break
-            }
-         }
-         
-         if (!is.null(function_output) && !is.null(function_output$output)) {
-            previous_content <- function_output$output
-            # Use the line numbers from the function_call_output if they exist and are valid
-            if (!is.null(function_output$start_line) && !is.null(function_output$end_line)) {
-               start_line <- function_output$start_line
-               end_line <- function_output$end_line
-            }
-         } else {
-            cat("DEBUG: No function_call_output found, falling back to empty content\n")
-            previous_content <- ""
-         }
+      previous_content <- if (!is.null(function_output) && !is.null(function_output$output)) {
+         function_output$output
       } else {
-         # For non-keyword edits (start/end/filename), use the entire file content
-         if (!is.null(filename)) {
-            file_path <- if (startsWith(filename, "/") || startsWith(filename, "~") || grepl("^[A-Za-z]:", filename)) {
-               filename
-            } else {
-               file.path(getwd(), filename)
-            }
-            
-            # Use get_effective_file_content to get content from editor if open, otherwise from disk
-            previous_content <- .rs.get_effective_file_content(file_path)
-            if (is.null(previous_content)) {
-               previous_content <- ""
-            }
-         }
+         ""
       }
       
       # Split content into lines for diff calculation
@@ -1513,169 +1431,39 @@ tryCatch({
          character(0)
       }
       
-      # Check if this is a start or end edit, or handle insertion/line range modes
-      is_start_edit <- FALSE
-      is_end_edit <- FALSE
-      is_insert_mode <- !is.null(insert_line) && !is.na(insert_line)
-      is_line_range_mode <- !is.null(start_line) && !is.null(end_line) && !is.na(start_line) && !is.na(end_line) && length(start_line) > 0 && length(end_line) > 0
+      # Regular diff calculation for new edit_file format
+      diff_result <- .rs.compute_line_diff(old_lines, new_lines, is_from_edit_file = TRUE)
       
-      if (!is.null(args$keyword)) {
-         if (args$keyword == "start") {
-            is_start_edit <- TRUE
-         } else if (args$keyword == "end") {
-            is_end_edit <- TRUE
-         }
+      # Store the computed diff data for future use
+      .rs.store_diff_data(message_id, diff_result$diff, previous_content, cleaned_content)
+      
+      # Format filename with diff stats
+      filename_with_stats <- basename(filename)
+      if (diff_result$added > 0 || diff_result$deleted > 0) {
+         addition_text <- paste0('<span class="addition">+', diff_result$added, '</span>')
+         removal_text <- paste0('<span class="removal">-', diff_result$deleted, '</span>')
+         diff_text <- paste(addition_text, removal_text)
+         filename_with_stats <- paste0(filename_with_stats, ' <span class="diff-stats">', diff_text, '</span>')
       }
       
-      # Create special diff structure for start/end edits, insertion mode, and line range mode
-      if (is_start_edit || is_end_edit || is_insert_mode || is_line_range_mode) {
-         diff_entries <- list()
-         
-         # Calculate the correct line numbers for the final file
-         if (is_start_edit) {
-            # For start edits: new lines go at the beginning (lines 1, 2, 3, ...)
-            for (i in seq_along(new_lines)) {
-               diff_entries[[length(diff_entries) + 1]] <- list(
-                  type = "added",
-                  content = new_lines[i],
-                  old_line = NA,
-                  new_line = i
-               )
-            }
-         } else if (is_end_edit) {
-            # For end edits: new lines go after existing content (existing_count + 1, existing_count + 2, ...)
-            existing_line_count <- length(old_lines)
-            for (i in seq_along(new_lines)) {
-               diff_entries[[length(diff_entries) + 1]] <- list(
-                  type = "added",
-                  content = new_lines[i],
-                  old_line = NA,
-                  new_line = existing_line_count + i
-               )
-            }
-         } else if (is_insert_mode) {
-            # For insertion mode: new lines go after insert_line
-            for (i in seq_along(new_lines)) {
-               # The new lines should start at insert_line + 1, insert_line + 2, etc.
-               new_line_number <- insert_line + i
-               
-               diff_entries[[length(diff_entries) + 1]] <- list(
-                  type = "added",
-                  content = new_lines[i],
-                  old_line = NA,
-                  new_line = new_line_number
-               )
-            }
-         } else if (is_line_range_mode) {
-            # For line range mode: compute proper diff between old and new content
-            # but adjust line numbers to reflect actual file positions
-            range_diff_result <- .rs.compute_line_diff(old_lines, new_lines, is_from_edit_file = TRUE)
-            
-            # Adjust the line numbers in the diff result to reflect actual file positions
-            for (i in seq_along(range_diff_result$diff)) {
-               diff_line <- range_diff_result$diff[[i]]
-               
-               # Adjust old_line and new_line to reflect actual file positions
-               if (!is.null(diff_line$old_line) && !is.na(diff_line$old_line)) {
-                  diff_line$old_line <- start_line + diff_line$old_line - 1
-               }
-               if (!is.null(diff_line$new_line) && !is.na(diff_line$new_line)) {
-                  diff_line$new_line <- start_line + diff_line$new_line - 1
-               }
-               
-               diff_entries[[length(diff_entries) + 1]] <- diff_line
-            }
-         }
-
-         # Store the computed diff data for future use with special flags
-         flags <- list(
-            is_start_edit = is_start_edit,
-            is_end_edit = is_end_edit,
-            is_insert_mode = is_insert_mode,
-            is_line_range_mode = is_line_range_mode,
-            start_line = start_line,
-            end_line = end_line,
-            insert_line = insert_line
-         )
-         .rs.store_diff_data(message_id, diff_entries, previous_content, cleaned_content, flags)
-         
-         # Calculate diff stats  
-         if (is_line_range_mode) {
-            # For line range mode, use the diff stats from the computed diff
-            added_count <- range_diff_result$added
-            deleted_count <- range_diff_result$deleted
-         } else {
-            # For other modes, count the diff entries
-            added_count <- length(which(sapply(diff_entries, function(x) x$type == "added")))
-            deleted_count <- length(which(sapply(diff_entries, function(x) x$type == "deleted")))
-         }
-         
-         # Format filename with diff stats using the same logic as conversation history loading
-         filename_with_stats <- basename(filename)
-         if (added_count > 0 || deleted_count > 0) {
-            # Format diff stats with CSS classes for proper styling
-            addition_text <- paste0('<span class="addition">+', added_count, '</span>')
-            removal_text <- paste0('<span class="removal">-', deleted_count, '</span>')
-            diff_text <- paste(addition_text, removal_text)
-            # Return filename with diff stats in a span that can be styled
-            filename_with_stats <- paste0(filename_with_stats, ' <span class="diff-stats">', diff_text, '</span>')
-         }
-         
-         # Filter diff for display (show only 1 line before first change to 1 line after last change)
-         filtered_diff_for_display <- .rs.filter_diff_for_display(diff_entries)
-         
-         # Return the special diff structure with flags and stats (same format as regular edits)
-         result_start_end <- list(
-            diff = filtered_diff_for_display,
-            is_start_edit = as.logical(is_start_edit),
-            is_end_edit = as.logical(is_end_edit),
-            is_insert_mode = as.logical(is_insert_mode),
-            is_line_range_mode = as.logical(is_line_range_mode),
-            start_line = start_line,
-            end_line = end_line,
-            insert_line = insert_line,
-            added = as.integer(added_count),
-            deleted = as.integer(deleted_count),
-            filename_with_stats = filename_with_stats
-         )
-         return(result_start_end)
-         
-      } else {
-         # Regular diff calculation for normal edits (including keyword-based edits)
-         diff_result <- .rs.compute_line_diff(old_lines, new_lines, is_from_edit_file = TRUE)
-         
-         # Store the computed diff data for future use
-         .rs.store_diff_data(message_id, diff_result$diff, previous_content, cleaned_content)
-         
-         # Format filename with diff stats using the same logic as conversation history loading
-         filename_with_stats <- basename(filename)
-         if (diff_result$added > 0 || diff_result$deleted > 0) {
-            # Format diff stats with CSS classes for proper styling
-            addition_text <- paste0('<span class="addition">+', diff_result$added, '</span>')
-            removal_text <- paste0('<span class="removal">-', diff_result$deleted, '</span>')
-            diff_text <- paste(addition_text, removal_text)
-            # Return filename with diff stats in a span that can be styled
-            filename_with_stats <- paste0(filename_with_stats, ' <span class="diff-stats">', diff_text, '</span>')
-         }
-         # Filter diff for display (show only 1 line before first change to 1 line after last change)
-         filtered_diff_for_display <- .rs.filter_diff_for_display(diff_result$diff)
-         
-         # Return both diff array and formatted filename with diff stats for streaming
-         result <- list(
-            diff = filtered_diff_for_display,
-            is_start_edit = FALSE,
-            is_end_edit = FALSE,
-            is_insert_mode = FALSE,
-            is_line_range_mode = FALSE,
-            start_line = start_line,
-            end_line = end_line,
-            insert_line = NULL,
-            added = as.integer(diff_result$added),
-            deleted = as.integer(diff_result$deleted),
-            filename_with_stats = filename_with_stats
-         )
-         return(result)
-      }
+      # Filter diff for display
+      filtered_diff_for_display <- .rs.filter_diff_for_display(diff_result$diff)
+      
+      # Return simplified structure
+      result <- list(
+         diff = filtered_diff_for_display,
+         is_start_edit = FALSE,
+         is_end_edit = FALSE,
+         is_insert_mode = FALSE,
+         is_line_range_mode = FALSE,
+         start_line = NULL,
+         end_line = NULL,
+         insert_line = NULL,
+         added = as.integer(diff_result$added),
+         deleted = as.integer(diff_result$deleted),
+         filename_with_stats = filename_with_stats
+      )
+      return(result)
    }, error = function(e) {
       cat("DEBUG: Error in get_diff_data_for_edit_file:", e$message, "\n")
       return(list(diff = list()))
