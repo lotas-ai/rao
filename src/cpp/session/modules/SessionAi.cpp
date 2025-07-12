@@ -2731,6 +2731,36 @@ void initEnvironment()
       LOG_ERROR(error);
 }
 
+// Persistent diff operations
+Error getPersistentDiffData(const json::JsonRpcRequest& request,
+                           json::JsonRpcResponse* p_response,
+                           const std::string& file_path)
+{
+   // Call the R function to get persistent diff data
+   SEXP result_sexp;
+   r::sexp::Protect rp;
+   
+   // Call the R function and get the result
+   Error error = r::exec::RFunction(".rs.get_persistent_diff_data_for_file")
+         .addParam(file_path)
+         .call(&result_sexp, &rp);
+   if (error) {
+      LOG_ERROR(error);
+      return error;
+   }
+         
+   // Convert the R result to JSON
+   json::Value diffDataJson;
+   error = r::json::jsonValueFromObject(result_sexp, &diffDataJson);
+   if (error) {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   p_response->setResult(diffDataJson);
+   return Success();
+}
+
 Error initialize()
 {
    using boost::bind;
@@ -3064,7 +3094,15 @@ Error initialize()
                })))
       (bind(module_context::registerRpcMethod, "match_text_in_open_documents", matchTextInOpenDocuments))
       (bind(module_context::registerRpcMethod, "process_ai_operation", processAiOperation))
-      // REMOVED: save_streaming_response registration - no longer needed since backend handles saving directly
+      (bind(module_context::registerRpcMethod, "get_persistent_diff_data", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  std::string file_path;
+                  Error error = json::readParam(request.params, 0, &file_path);
+                  if (error)
+                     return error;
+                  return getPersistentDiffData(request, p_response, file_path);
+               })))
       (bind(registerUriHandler, kAiLocation, handleAiRequest));
    
    Error error = initBlock.execute();

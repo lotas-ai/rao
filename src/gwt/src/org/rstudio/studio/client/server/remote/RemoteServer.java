@@ -7762,6 +7762,7 @@ public class RemoteServer implements Server, AiServerOperations
    private static final String PROCESS_AI_OPERATION = "process_ai_operation";
 
    private static final String CHECK_IMAGE_CONTENT_DUPLICATE = "check_image_content_duplicate";
+   private static final String GET_PERSISTENT_DIFF_DATA = "get_persistent_diff_data";
 
    private static class PendingRpcRequest 
    {
@@ -8046,6 +8047,12 @@ public class RemoteServer implements Server, AiServerOperations
    public void processAiOperation(JavaScriptObject operationParams, ServerRequestCallback<JavaScriptObject> requestCallback)
    {
       sendRequest(RPC_SCOPE, PROCESS_AI_OPERATION, operationParams, requestCallback);
+   }
+
+   @Override
+   public void getPersistentDiffData(String filePath, ServerRequestCallback<JavaScriptObject> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, GET_PERSISTENT_DIFF_DATA, filePath, requestCallback);
    }
 
    @Override

@@ -436,6 +436,13 @@
 .rs.addFunction("create_new_conversation", function() {
    new_index <- .rs.create_new_conversation_runner()
    
+   # Clear all persistent diff indicators when starting a new conversation
+   tryCatch({
+      .rs.clear_all_persistent_diffs()
+   }, error = function(e) {
+      warning("Warning: Could not clear persistent diffs:", e$message, "\n")
+   })
+   
    base_ai_dir <- .rs.get_ai_base_dir()
    return(list(
       success = TRUE,

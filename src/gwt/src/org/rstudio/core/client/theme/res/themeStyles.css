@@ -7,6 +7,10 @@
 @external ace_breakpoint, ace_inactive-breakpoint, ace_pending-breakpoint, ace_executing-line;
 @external ace_chunk-queued-line, ace_chunk-executed-line, ace_chunk-resting-line, ace_chunk-error-line;
 @external visual_chunk-queued-line, visual_chunk-executed-line, visual_chunk-resting-line, visual_chunk-error-line;
+@external ace_persistent_diff_accepted, ace_persistent_diff_deleted, ace_persistent_diff_collapsed;
+@external ace_persistent_diff_expand, ace_persistent_diff_inline, ace_persistent_diff_inline_container;
+@external ace_persistent_diff_inline_line, ace_persistent_diff_deleted_line, ace_persistent_diff_deleted_lines;
+@external ace_gutter-cell-text, ace_dark;
 @external ace_sb;
 @external cueText;
 @external search;
@@ -2804,4 +2808,115 @@ body .rstudio-themes-alternate {
 
 .gwt-TextBox {
 	min-height: 16px;
+}
+
+/* Persistent diff gutter styles for ACE editor */
+
+@external ace_persistent_diff_popup, ace_persistent_diff_dropdown_arrow;
+
+/* Green bar indicator for accepted/added lines */
+.ace_gutter-cell.ace_persistent_diff_accepted {
+   border-left: 3px solid #4CAF50 !important;
+   background-color: rgba(76, 175, 80, 0.1) !important;
+}
+
+/* Red indicator for deleted lines */
+.ace_gutter-cell.ace_persistent_diff_deleted {
+   border-left: 3px solid #f44336 !important;
+   background-color: rgba(244, 67, 54, 0.1) !important;
+}
+
+/* Collapsed/folded diff indicator */
+.ace_gutter-cell.ace_persistent_diff_collapsed {
+   border-left: 3px solid #FF9800 !important;
+   background-color: rgba(255, 152, 0, 0.1) !important;
+}
+
+/* Ensure gutter styles work with different themes */
+.ace_dark .ace_gutter-cell.ace_persistent_diff_accepted {
+   background-color: rgba(76, 175, 80, 0.2) !important;
+}
+
+.ace_dark .ace_gutter-cell.ace_persistent_diff_deleted {
+   background-color: rgba(244, 67, 54, 0.2) !important;
+}
+
+.ace_dark .ace_gutter-cell.ace_persistent_diff_collapsed {
+   background-color: rgba(255, 152, 0, 0.2) !important;
+}
+
+/* Hover effects for better UX */
+.ace_gutter-cell.ace_persistent_diff_accepted:hover {
+   background-color: rgba(76, 175, 80, 0.2) !important;
+}
+
+.ace_gutter-cell.ace_persistent_diff_deleted:hover {
+   background-color: rgba(244, 67, 54, 0.2) !important;
+}
+
+.ace_gutter-cell.ace_persistent_diff_collapsed:hover {
+   background-color: rgba(255, 152, 0, 0.2) !important;
+}
+
+/* Expand/collapse icon for deleted lines */
+.ace_persistent_diff_expand {
+   position: absolute;
+   right: 2px;
+   top: 50%;
+   transform: translateY(-50%);
+   cursor: pointer;
+   font-size: 8px;
+   color: #f44336;
+   user-select: none;
+   z-index: 100;
+   margin: 0;
+   padding: 0;
+}
+
+.ace_persistent_diff_expand:hover {
+   color: #d32f2f;
+}
+
+/* Dropdown arrow styles */
+.ace_persistent_diff_dropdown_arrow {
+   position: absolute;
+   right: 2px;
+   top: 50%;
+   transform: translateY(-50%);
+   cursor: pointer;
+   font-size: 10px;
+   color: #f44336;
+   user-select: none;
+   z-index: 100;
+   margin: 0;
+   padding: 0;
+}
+
+.ace_persistent_diff_dropdown_arrow:hover {
+   color: #d32f2f;
+}
+
+/* Deleted content popup styles */
+.ace_persistent_diff_popup {
+   position: absolute;
+   background: #f8d7da;
+   border: 1px solid #f5c6cb;
+   border-radius: 3px;
+   padding: 8px;
+   max-width: 400px;
+   z-index: 1000;
+   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+   font-size: 12px;
+   line-height: 1.4;
+   white-space: pre-wrap;
+   color: #721c24;
+   cursor: text;
+   user-select: text;
+   box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.ace_dark .ace_persistent_diff_popup {
+   background: #5a1f1f;
+   border-color: #721c24;
+   color: #f8d7da;
 }

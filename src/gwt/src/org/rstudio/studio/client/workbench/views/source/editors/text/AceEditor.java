@@ -24,6 +24,7 @@ import java.util.function.Consumer;
 import org.rstudio.core.client.AceSupport;
 import org.rstudio.core.client.BrowseCap;
 import org.rstudio.core.client.CommandWithArg;
+import org.rstudio.core.client.Debug;
 import org.rstudio.core.client.ElementIds;
 import org.rstudio.core.client.ExternalJavaScriptLoader;
 import org.rstudio.core.client.ImmediatelyInvokedFunctionExpression;
@@ -356,6 +357,7 @@ public class AceEditor implements DocDisplay,
       vim_ = new Vim(this);
       bgLinkHighlighter_ = new AceEditorBackgroundLinkHighlighter(this);
       bgChunkHighlighter_ = new AceBackgroundHighlighter(this);
+      persistentDiffManager_ = null;
 
       widget_.addValueChangeHandler(evt ->
       {
@@ -2493,6 +2495,76 @@ public class AceEditor implements DocDisplay,
       _setRainbowParenthesesImpl(rainbow);
       widget_.getEditor().retokenizeDocument();
    }
+   
+   /**
+    * Initialize persistent diff indicators for the given file path
+    */
+   public void initializePersistentDiffIndicators(String filePath)
+   {
+      if (persistentDiffManager_ == null && filePath != null)
+      {
+         persistentDiffManager_ = new PersistentDiffGutterManager(this, filePath);
+      }
+      
+      if (persistentDiffManager_ != null)
+      {
+         persistentDiffManager_.initialize();
+         
+         // Expose the persistent diff manager to JavaScript for native access
+         exposePersistentDiffManagerToJs();
+      }
+   }
+   
+   /**
+    * Clear persistent diff indicators
+    */
+   public void clearPersistentDiffIndicators()
+   {
+      if (persistentDiffManager_ != null)
+      {
+         persistentDiffManager_.clearAll();
+      }
+   }
+   
+   /**
+    * Get the persistent diff manager
+    */
+   public PersistentDiffGutterManager getPersistentDiffManager()
+   {
+      return persistentDiffManager_;
+   }
+   
+   /**
+    * Expose persistent diff manager to JavaScript for native access
+    */
+   private void exposePersistentDiffManagerToJs()
+   {
+      if (persistentDiffManager_ != null)
+      {
+         exposePersistentDiffManagerNative(this, persistentDiffManager_);
+      }
+   }
+   
+   /**
+    * Native method to expose the persistent diff manager on the ACE editor object
+    */
+   private native void exposePersistentDiffManagerNative(AceEditor aceEditor, PersistentDiffGutterManager manager) /*-{
+      try {
+         var editorWidget = aceEditor.@org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor::getWidget()();
+         var nativeEditor = editorWidget.@org.rstudio.studio.client.workbench.views.source.editors.text.AceEditorWidget::getEditor()();
+         
+         if (nativeEditor) {
+            // Expose the persistent diff manager with a clearAll method
+            nativeEditor.persistentDiffManager = {
+               clearAll: function() {
+                  manager.@org.rstudio.studio.client.workbench.views.source.editors.text.PersistentDiffGutterManager::clearAll()();
+               }
+            };
+         }
+      } catch (e) {
+         console.log("DEBUG: Error exposing persistent diff manager: " + e.message);
+      }
+   }-*/;
 
    public boolean getRainbowParentheses()
    {
@@ -4828,6 +4900,7 @@ public class AceEditor implements DocDisplay,
    private final AceEditorMixins mixins_;
    private final AceEditorEditLinesHelper editLines_;
    private EditorBehavior behavior_;
+   private PersistentDiffGutterManager persistentDiffManager_;
 
    private static final ExternalJavaScriptLoader getLoader(StaticDataResource release)
    {

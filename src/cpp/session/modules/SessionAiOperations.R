@@ -535,6 +535,13 @@
          # This is a file modification - record with was_unsaved flag
          .rs.record_file_modification_with_diff_with_state(filename, original_file_content, final_content, original_was_unsaved)
       }
+      
+      # Mark the diff as accepted for persistent display
+      tryCatch({
+         .rs.mark_diff_as_accepted(edit_file_message_id, filename)
+      }, error = function(e) {
+         warning("Error marking diff as accepted:", e$message, "\n")
+      })
       }
    } else {
       # Original file was saved - update both editor and disk
@@ -555,6 +562,13 @@
             # This is a file modification - record with was_unsaved flag
             .rs.record_file_modification_with_diff_with_state(filename, original_file_content, final_content, original_was_unsaved)
          }
+         
+         # Mark the diff as accepted for persistent display
+         tryCatch({
+            .rs.mark_diff_as_accepted(edit_file_message_id, filename)
+         }, error = function(e) {
+            warning("Error marking diff as accepted:", e$message, "\n")
+         })
       }
       }
    }

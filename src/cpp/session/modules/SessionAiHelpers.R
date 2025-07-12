@@ -571,6 +571,167 @@ tryCatch({
    return(NULL)
 })
 
+# Persistent diff functions for the gutter manager
+.rs.addFunction("get_persistent_diff_data_for_file", function(file_path) {
+   # Get fresh diff data for a specific file path by comparing original vs current content
+   # This replaces the old approach of using stale line numbers from individual changes
+   
+   if (is.null(file_path) || file_path == "") {
+      return(list(diffs = list()))
+   }
+   
+   # Normalize the file path for comparison
+   normalized_file_path <- normalizePath(path.expand(file_path), mustWork = FALSE)
+   
+   # Step 1: Find the original content from the first change to this file
+   original_content <- .rs.get_original_content_for_file(normalized_file_path)
+   if (is.null(original_content)) {
+      return(list(diffs = list()))
+   }
+      
+   # Step 2: Get current content from the editor (or disk if not open)
+   current_content <- .rs.get_effective_file_content(normalized_file_path)
+   if (is.null(current_content)) {
+      return(list(diffs = list()))
+   }
+      
+   # Step 3: Compare original vs current to see if there are any changes
+   if (original_content == current_content) {
+      return(list(diffs = list()))
+   }
+   
+   # Step 4: Compute fresh diff between original and current content
+   
+   # Split content into lines
+   original_lines <- if (nchar(original_content) > 0) {
+      strsplit(original_content, "\n", fixed = TRUE)[[1]]
+   } else {
+      character(0)
+   }
+   
+   current_lines <- if (nchar(current_content) > 0) {
+      strsplit(current_content, "\n", fixed = TRUE)[[1]]
+   } else {
+      character(0)
+   }
+   
+   # Use the existing diff computation function
+   diff_result <- .rs.compute_line_diff(original_lines, current_lines, is_from_edit_file = FALSE)
+   
+   # Step 5: Convert diff results to the format expected by the Java gutter manager
+   # Create a single diff entry with the fresh diff data
+   file_diffs <- list()
+   if (length(diff_result$diff) > 0) {
+      # Create a synthetic message ID for the combined diff
+      synthetic_id <- paste0("fresh_diff_", as.integer(Sys.time()))
+      
+      file_diffs[[synthetic_id]] <- list(
+         file_path = normalized_file_path,
+         diff_data = diff_result$diff,
+         accepted = TRUE,  # Show as accepted since these are cumulative changes
+         accepted_timestamp = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+         is_fresh_diff = TRUE  # Flag to indicate this is a fresh diff, not historical
+      )
+   }
+   
+   return(list(
+      diffs = file_diffs,
+      original_content = original_content
+   ))
+})
+
+.rs.addFunction("get_original_content_for_file", function(file_path) {
+   # Get the original content of a file from the first change in file_changes.json
+   
+   # Read the file changes log
+   changes_log <- .rs.read_file_changes_log()
+   
+   if (is.null(changes_log$changes) || length(changes_log$changes) == 0) {
+      return(NULL)
+   }
+   
+   # Normalize the file path for comparison
+   normalized_file_path <- normalizePath(path.expand(file_path), mustWork = FALSE)
+   
+   # Find the first change to this file (earliest timestamp)
+   first_change <- NULL
+   earliest_timestamp <- NULL
+   
+   for (change in changes_log$changes) {
+      if (is.null(change$file_path)) next
+      
+      # Normalize the change file path for comparison
+      change_file_path <- normalizePath(path.expand(change$file_path), mustWork = FALSE)
+      
+      if (change_file_path == normalized_file_path) {
+         change_timestamp <- as.POSIXct(change$timestamp, format = "%Y-%m-%d %H:%M:%S")
+         
+         if (is.null(earliest_timestamp) || change_timestamp < earliest_timestamp) {
+            earliest_timestamp <- change_timestamp
+            first_change <- change
+         }
+      }
+   }
+   
+   if (is.null(first_change)) {
+      return(NULL)
+   }
+   
+   # Return the previous_content from the first change
+   original_content <- first_change$previous_content
+   if (is.null(original_content)) {
+      return("")
+   }
+   
+   return(original_content)
+})
+
+.rs.addFunction("clear_all_persistent_diffs", function() {
+   # Clear all persistent diff data - called when starting a new conversation
+   # This will clear the conversation_diffs.json file
+   
+   tryCatch({
+      diffs_data <- list(diffs = list())
+      .rs.write_conversation_diffs(diffs_data)
+      return(TRUE)
+   }, error = function(e) {
+      return(FALSE)
+   })
+})
+
+.rs.addFunction("mark_diff_as_accepted", function(message_id, file_path) {
+   # Mark a specific diff as accepted for persistent display
+   # This is called when a user accepts an edit_file change
+   
+   if (is.null(message_id) || is.null(file_path)) {
+      return(FALSE)
+   }
+   
+   # Get the existing diff data
+   stored_diff <- .rs.get_stored_diff_data(message_id)
+   
+   if (is.null(stored_diff)) {
+      return(FALSE)
+   }
+   
+   # Read current diffs data
+   diffs_data <- .rs.read_conversation_diffs()
+   
+   # Update the diff entry to mark it as accepted
+   msg_id_char <- as.character(message_id)
+   if (!is.null(diffs_data$diffs[[msg_id_char]])) {
+      diffs_data$diffs[[msg_id_char]]$file_path <- file_path
+      diffs_data$diffs[[msg_id_char]]$accepted <- TRUE
+      diffs_data$diffs[[msg_id_char]]$accepted_timestamp <- format(Sys.time(), "%Y-%m-%d %H:%M:%S")
+      
+      # Write back the updated diff data
+      .rs.write_conversation_diffs(diffs_data)
+      return(TRUE)
+   }
+   
+   return(FALSE)
+})
+
 .rs.addFunction("get_conversation_tokens", function(conversation_index) {
    if (is.null(conversation_index)) {
       conversation_index <- .rs.get_current_conversation_index()
@@ -615,131 +776,6 @@ tryCatch({
     is_rmd <- TRUE
   }
   
-  # Smart replacement: only attempt when new content is shorter (likely a section replacement)
-  # COMMENTED OUT: Direct replacement - use provided new content as-is
-  # if (length(current_lines) < length(previous_lines) && length(current_lines) > 2) {
-  #   # Use first and last lines as boundary markers to find matching section
-  #   first_line <- current_lines[1]
-  #   last_line <- current_lines[length(current_lines)]
-  #   
-  #   search_start_idx <- 1
-  #   if (is_rmd) {
-  #     if (is_rmd) {
-  #       search_start_idx <- 1
-  #     }
-  #   }
-  #   
-  #   # Escape regex special characters for exact line matching
-  #   escaped_first_line <- gsub("([\\(\\)\\[\\]\\{\\}\\+\\*\\?\\^\\$\\|\\.\\\\])", "\\\\\\1", first_line)
-  #   escaped_last_line <- gsub("([\\(\\)\\[\\]\\{\\}\\+\\*\\?\\^\\$\\|\\.\\\\])", "\\\\\\1", last_line)
-  #   
-  #   # Find all occurrences of the first line in the existing content
-  #   exact_first_line_matches <- grep(paste0("^", escaped_first_line, "$"), 
-  #                                previous_lines[search_start_idx:length(previous_lines)], perl = TRUE)
-  #   
-  #   if (length(exact_first_line_matches) > 0) {
-  #     exact_first_line_matches <- exact_first_line_matches + search_start_idx - 1
-  #   }
-  #   
-  #   # Track best matching section using similarity scoring
-  #   partial_match_found <- FALSE
-  #   best_match_start_idx <- NULL
-  #   best_match_end_idx <- NULL
-  #   best_match_score <- 0
-  #   
-  #   if (length(exact_first_line_matches) > 0) {
-  #     # For each potential start position, look for matching end position
-  #     for (start_idx in exact_first_line_matches) {
-  #       remaining_lines <- previous_lines[(start_idx+1):length(previous_lines)]
-  #       
-  #       exact_last_line_matches <- grep(paste0("^", escaped_last_line, "$"), 
-  #                              remaining_lines, perl = TRUE)
-  #       
-  #       if (length(exact_last_line_matches) > 0) {
-  #         for (last_match_idx in exact_last_line_matches) {
-  #           end_idx <- start_idx + last_match_idx
-  #           
-  #           section_length <- end_idx - start_idx + 1
-  #           
-  #           # Only consider sections that are large enough and not at file boundaries
-  #           if (section_length >= length(current_lines) && 
-  #               (start_idx > search_start_idx || end_idx < length(previous_lines))) {
-  #             
-  #             original_section <- previous_lines[start_idx:end_idx]
-  #             
-  #             # Calculate similarity score based on content overlap
-  #             content_similarity_score <- 0
-  #             
-  #             if (length(current_lines) >= 2 && length(original_section) >= 2) {
-  #               if (current_lines[2] == original_section[2]) {
-  #                 content_similarity_score <- content_similarity_score + 20
-  #               } else {
-  #                 max_chars <- max(nchar(current_lines[2]), nchar(original_section[2]))
-  #                 if (max_chars > 0) {
-  #                   second_line_similarity <- sum(strsplit(current_lines[2], "")[[1]] %in% 
-  #                                              strsplit(original_section[2], "")[[1]]) / max_chars
-  #                   if (!is.na(second_line_similarity)) {
-  #                     content_similarity_score <- content_similarity_score + (second_line_similarity * 15)
-  #                   }
-  #                 }
-  #               }
-  #             }
-  #             
-  #             if (length(current_lines) >= 3 && length(original_section) >= 3) {
-  #               min_lines <- min(4, min(length(current_lines), length(original_section)))
-  #               for (i in 3:min_lines) {
-  #                 max_chars <- max(nchar(current_lines[i]), nchar(original_section[i]))
-  #                 if (max_chars > 0) {
-  #                   line_similarity <- sum(strsplit(current_lines[i], "")[[1]] %in% 
-  #                                        strsplit(original_section[i], "")[[1]]) / max_chars
-  #                   if (!is.na(line_similarity)) {
-  #                     content_similarity_score <- content_similarity_score + (line_similarity * 5)
-  #                   }
-  #                 }
-  #               }
-  #             }
-  #             
-  #             section_text <- paste(original_section, collapse = " ")
-  #             new_content_text <- paste(current_lines, collapse = " ")
-  #             section_text_len <- nchar(section_text)
-  #             
-  #             context_score <- 0
-  #             if (section_text_len > 0) {
-  #               context_score <- sum(strsplit(section_text, "")[[1]] %in% 
-  #                                  strsplit(new_content_text, "")[[1]]) / section_text_len
-  #               if (is.na(context_score)) {
-  #                 context_score <- 0
-  #               }
-  #             }
-  #             
-  #             match_score <- content_similarity_score + (context_score * 30)
-  #             
-  #             # Keep track of the best matching section - ensure no NA values
-  #             if (!is.na(match_score) && !is.na(best_match_score) && match_score > best_match_score) {
-  #               best_match_score <- match_score
-  #               best_match_start_idx <- start_idx
-  #               best_match_end_idx <- end_idx
-  #             }
-  #           }
-  #         }
-  #       }
-  #     }
-  #     
-  #     # If found a good match (score > 10), replace that section
-  #     if (!is.null(best_match_start_idx) && !is.null(best_match_end_idx) && best_match_score > 10) {
-  #       new_content_array <- c(
-  #         previous_lines[1:(best_match_start_idx - 1)],
-  #         current_lines,
-  #         previous_lines[(best_match_end_idx + 1):length(previous_lines)]
-  #       )
-  #       
-  #       current_lines <- new_content_array
-  #       new_content <- paste(current_lines, collapse = "\n")
-  #       partial_match_found <- TRUE
-  #     }
-  #   }
-  # }
-    
   # Normalize newline handling between old and new content
   tryCatch({
     if (!is.character(previous_content)) {
@@ -1255,6 +1291,17 @@ tryCatch({
 
 .rs.addJsonRpcHandler("get_original_content_for_diff", function(message_id) {
    result <- .rs.get_original_content_for_diff(message_id)
+   return(result)
+})
+
+# RPC handlers for persistent diff system
+.rs.addJsonRpcHandler("get_persistent_diff_data", function(file_path) {
+   result <- .rs.get_persistent_diff_data_for_file(file_path)
+   return(result)
+})
+
+.rs.addJsonRpcHandler("clear_all_persistent_diffs", function() {
+   result <- .rs.clear_all_persistent_diffs()
    return(result)
 })
 

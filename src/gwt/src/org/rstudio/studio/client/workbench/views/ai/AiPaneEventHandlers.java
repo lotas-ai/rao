@@ -41,6 +41,11 @@ import org.rstudio.studio.client.server.ServerError;
 import org.rstudio.studio.client.server.ServerRequestCallback;
 import org.rstudio.studio.client.workbench.views.ai.model.AiServerOperations;
 import org.rstudio.core.client.widget.Operation;
+import org.rstudio.studio.client.workbench.views.source.SourceColumn;
+import org.rstudio.studio.client.workbench.views.source.SourceColumnManager;
+import org.rstudio.studio.client.workbench.views.source.editors.EditingTarget;
+import org.rstudio.studio.client.workbench.views.source.editors.text.TextEditingTarget;
+import org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor;
 
 import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.Scheduler;
@@ -729,6 +734,17 @@ public class AiPaneEventHandlers
                         org.rstudio.studio.client.workbench.views.ai.AiViewManager viewManager = 
                            pane_.getToolbars().getViewManager();
                         viewManager.loadConversationHistory(conversationIndex.intValue(), true);
+                        
+                        // Refresh persistent diff indicators after revert operation
+                        // Schedule deferred to ensure the conversation reload completes first
+                        com.google.gwt.core.client.Scheduler.get().scheduleDeferred(new com.google.gwt.core.client.Scheduler.ScheduledCommand() {
+                           @Override
+                           public void execute() {
+                              // Re-initialize persistent diff indicators for all open editors
+                              // This ensures the diff indicators match the reverted conversation state
+                              reinitializePersistentDiffIndicators();
+                           }
+                        });
                      }
                   }
                   
@@ -770,6 +786,44 @@ public class AiPaneEventHandlers
          },
          false  // Default is No
       );
+   }
+   
+   /**
+    * Re-initialize persistent diff indicators for all open editors
+    * This loads the diff indicators for the current conversation state
+    */
+   private void reinitializePersistentDiffIndicators() {
+      try {
+         // Access the SourceColumnManager directly from RStudioGinjector
+         SourceColumnManager columnManager = 
+            RStudioGinjector.INSTANCE.getSourceColumnManager();
+         
+         if (columnManager != null) {
+            // Get all columns and iterate through their editors
+            java.util.ArrayList<SourceColumn> columns = 
+               columnManager.getColumnList();
+            
+            for (SourceColumn column : columns) {
+               if (column != null && column.getEditors() != null) {
+                  for (EditingTarget target : column.getEditors()) {
+                     if (target instanceof TextEditingTarget) {
+                        TextEditingTarget textTarget = (TextEditingTarget) target;
+                        
+                        // Get the ace editor from the text editing target
+                        AceEditor aceEditor = (AceEditor) textTarget.getDocDisplay();
+                        
+                        if (aceEditor != null && aceEditor.getPersistentDiffManager() != null) {
+                           // Re-initialize the persistent diff indicators
+                           aceEditor.getPersistentDiffManager().initialize();
+                        }
+                     }
+                  }
+               }
+            }
+         }
+      } catch (Exception e) {
+         Debug.log("DEBUG: Error re-initializing persistent diff indicators: " + e.getMessage());
+      }
    }
    
    /**

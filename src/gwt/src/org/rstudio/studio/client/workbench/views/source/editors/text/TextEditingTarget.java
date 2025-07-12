@@ -1604,6 +1604,23 @@ public class TextEditingTarget implements
                   return docDisplay_.getChunkDefs();
                }
             });
+      
+      // Initialize persistent diff indicators for the file if it has a path (deferred)
+      if (document.getPath() != null && !document.getPath().isEmpty() && 
+          docDisplay_ instanceof org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor)
+      {
+         final String filePath = document.getPath();
+         Scheduler.get().scheduleDeferred(new ScheduledCommand()
+         {
+            @Override
+            public void execute()
+            {
+               org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor aceEditor = 
+                  (org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor) docDisplay_;
+               aceEditor.initializePersistentDiffIndicators(filePath);
+            }
+         });
+      }
 
       view_ = new TextEditingTargetWidget(this,
                                           docUpdateSentinel_,
@@ -3008,6 +3025,23 @@ public class TextEditingTarget implements
          notebook_.onActivate();
 
       view_.onActivate();
+      
+      // Initialize persistent diff indicators after everything is set up
+      Scheduler.get().scheduleDeferred(new ScheduledCommand()
+      {
+         @Override
+         public void execute()
+         {            
+            // Initialize persistent diff indicators for the file if it has a path
+            if (docUpdateSentinel_ != null && docUpdateSentinel_.getPath() != null && !docUpdateSentinel_.getPath().isEmpty() && 
+                docDisplay_ instanceof org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor)
+            {
+               org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor aceEditor = 
+                  (org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor) docDisplay_;
+               aceEditor.initializePersistentDiffIndicators(docUpdateSentinel_.getPath());
+            }
+         }
+      });
    }
 
    public void onDeactivate()
@@ -4312,6 +4346,23 @@ public class TextEditingTarget implements
    {
       events_.fireEvent(new VcsRevertFileEvent(
             FileSystemItem.createFile(docUpdateSentinel_.getPath())));
+      
+      // Refresh persistent diff indicators after revert operation
+      // Schedule deferred to ensure the revert operation completes first
+      Scheduler.get().scheduleDeferred(new ScheduledCommand() {
+         @Override
+         public void execute() {
+            if (docDisplay_ instanceof org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor) {
+               org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor aceEditor = 
+                  (org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor) docDisplay_;
+               
+               // Re-initialize persistent diff indicators to reflect the reverted state
+               if (docUpdateSentinel_ != null && docUpdateSentinel_.getPath() != null) {
+                  aceEditor.initializePersistentDiffIndicators(docUpdateSentinel_.getPath());
+               }
+            }
+         }
+      });
    }
 
    @Handler

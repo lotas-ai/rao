@@ -172,4 +172,6 @@ public interface AiServerOperations
    void deleteAllImages(ServerRequestCallback<java.lang.Void> requestCallback);
    
    void checkImageContentDuplicate(String imagePath, ServerRequestCallback<Boolean> requestCallback);
+   
+   void getPersistentDiffData(String filePath, ServerRequestCallback<JavaScriptObject> requestCallback);
 }

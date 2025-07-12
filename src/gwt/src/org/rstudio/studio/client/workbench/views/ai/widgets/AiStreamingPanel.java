@@ -252,6 +252,21 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       
       // For conversation switches, temporarily disable scroll animations to prevent visible scrolling
       if (!isSameConversation) {
+         
+         // Clear persistent diff indicators when switching to a different conversation
+         // This ensures that diff indicators from the previous conversation don't persist
+         // and new indicators will be loaded based on the target conversation's file_changes.json
+         clearPersistentDiffIndicators();
+         
+         // Defer re-initialization until after the R backend conversation switch completes
+         // This ensures we load diff data for the correct conversation
+         com.google.gwt.core.client.Scheduler.get().scheduleDeferred(new com.google.gwt.core.client.Scheduler.ScheduledCommand() {
+            @Override
+            public void execute() {
+               reinitializePersistentDiffIndicators();
+            }
+         });
+         
          scrollManager_.disableAnimations();
          // Re-enable animations after a short delay
          Scheduler.get().scheduleFixedDelay(new RepeatingCommand() {
@@ -1959,6 +1974,97 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          return false;
       } catch(e) {
          return false;
+      }
+   }-*/;
+   
+   /**
+    * Clear persistent diff indicators from all open editors when switching conversations
+    */
+   private void clearPersistentDiffIndicators()
+   {
+      clearAllPersistentDiffIndicatorsNative();
+   }
+   
+   /**
+    * Re-initialize persistent diff indicators for all open editors
+    * This loads the diff indicators for the current conversation
+    */
+   private void reinitializePersistentDiffIndicators()
+   {
+      try {
+         // Access the SourceColumnManager directly from RStudioGinjector
+         org.rstudio.studio.client.workbench.views.source.SourceColumnManager columnManager = 
+            org.rstudio.studio.client.RStudioGinjector.INSTANCE.getSourceColumnManager();
+         
+         if (columnManager != null) {
+            // Get all columns and iterate through their editors
+            java.util.ArrayList<org.rstudio.studio.client.workbench.views.source.SourceColumn> columns = 
+               columnManager.getColumnList();
+            
+            int reinitializedCount = 0;
+            for (org.rstudio.studio.client.workbench.views.source.SourceColumn column : columns) {
+               // Get all editors in this column
+               java.util.ArrayList<org.rstudio.studio.client.workbench.views.source.editors.EditingTarget> editors = 
+                  column.getEditors();
+               
+               for (org.rstudio.studio.client.workbench.views.source.editors.EditingTarget editor : editors) {
+                  // Check if this is a TextEditingTarget with an AceEditor
+                  if (editor instanceof org.rstudio.studio.client.workbench.views.source.editors.text.TextEditingTarget) {
+                     org.rstudio.studio.client.workbench.views.source.editors.text.TextEditingTarget textEditor = 
+                        (org.rstudio.studio.client.workbench.views.source.editors.text.TextEditingTarget) editor;
+                     
+                     // Get the document path
+                     String filePath = textEditor.getPath();
+                     
+                     if (filePath != null && !filePath.isEmpty()) {
+                        // Get the AceEditor from the TextEditingTarget
+                        org.rstudio.studio.client.workbench.views.source.editors.text.DocDisplay docDisplay = 
+                           textEditor.getDocDisplay();
+                        
+                        if (docDisplay instanceof org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor) {
+                           org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor aceEditor = 
+                              (org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor) docDisplay;
+                           
+                           // Re-initialize the persistent diff indicators for this editor
+                           // This will clear existing state and load new diff data for the current conversation
+                           aceEditor.initializePersistentDiffIndicators(filePath);
+                           reinitializedCount++;
+                        }
+                     }
+                  }
+               }
+            }  
+         }
+      } catch (Exception e) {
+         Debug.log("DEBUG: Error re-initializing persistent diff indicators: " + e.getMessage());
+      }
+   }
+   
+   /**
+    * Native method to clear all persistent diff indicators from all open text editors
+    */
+   private native void clearAllPersistentDiffIndicatorsNative() /*-{
+      try {         
+         var clearedCount = 0;
+         
+         // Access ACE editors directly by querying the DOM
+         var aceEditors = $doc.querySelectorAll('.ace_editor');
+         
+         for (var i = 0; i < aceEditors.length; i++) {
+            var aceElement = aceEditors[i];
+            
+            if (aceElement && aceElement.env && aceElement.env.editor) {
+               var aceEditor = aceElement.env.editor;
+               
+               if (aceEditor.persistentDiffManager) {
+                  aceEditor.persistentDiffManager.clearAll();
+                  clearedCount++;
+               }
+            }
+         }
+         
+      } catch (e) {
+         $wnd.console.log("DEBUG: Error clearing persistent diff indicators: " + e.message);
       }
    }-*/;
 
