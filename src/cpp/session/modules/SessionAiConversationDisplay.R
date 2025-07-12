@@ -509,6 +509,22 @@
             }
          }
       }
+      # Handle web search metadata entries (type="assistant" with web_search_call field)
+      if (!is.null(entry$type) && entry$type == "assistant" && 
+         !is.null(entry$web_search_call) && !is.null(entry$web_search_call$query)) {
+         query <- entry$web_search_call$query
+         
+         # Generate web search message
+         web_search_message <- paste0("Searched the web for '", query, "'")
+         
+         # Send web search message creation event to client
+         .rs.send_ai_operation("create_function_call_message", list(
+            message_id = as.numeric(entry$id),
+            content = web_search_message,
+            request_id = entry$request_id
+         ))
+         items_created <- items_created + 1
+      }
       
       # Handle assistant messages (but skip edit_file related ones as they become widgets)
       if (!is.null(entry$role) && entry$role == "assistant" && !is.null(entry$content)) {

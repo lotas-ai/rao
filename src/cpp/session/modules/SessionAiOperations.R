@@ -82,9 +82,9 @@
       "find_keyword_context" = {
          keyword <- if (!is.null(arguments$keyword)) arguments$keyword else "unknown"
          if (is_thinking) {
-            paste0("Searching repository for '", keyword, "'", suffix)
+            paste0('Searching repository for "', keyword, '"', suffix)
          } else {
-            paste0("Searched repository for '", keyword, "'")
+            paste0('Searched repository for "', keyword, '"')
          }
       },
       "grep_search" = {
@@ -107,9 +107,9 @@
          }
          
          if (is_thinking) {
-            paste0("Searching pattern '", display_pattern, "'", patterns_info, suffix)
+            paste0('Searching pattern "', display_pattern, '"', patterns_info, suffix)
          } else {
-            paste0("Searched pattern '", display_pattern, "'", patterns_info)
+            paste0('Searched pattern "', display_pattern, '"', patterns_info)
          }
       },
       "read_file" = {
@@ -144,9 +144,9 @@
       "search_for_file" = {
          query <- if (!is.null(arguments$query)) arguments$query else "unknown"
          if (is_thinking) {
-            paste0("Searching for files matching '", query, "'", suffix)
+            paste0('Searching for files matching "', query, '"', suffix)
          } else {
-            paste0("Searched for files matching '", query, "'")
+            paste0('Searched for files matching "', query, '"')
          }
       },
       "list_dir" = {
@@ -156,6 +156,14 @@
             paste0("Listing contents of ", display_path, suffix)
          } else {
             paste0("Listed contents of ", display_path)
+         }
+      },
+      "web_search" = {
+         query <- if (!is.null(arguments$query)) arguments$query else "unknown"
+         if (is_thinking) {
+            paste0('Searching the web for "', query, '"', suffix)
+         } else {
+            paste0('Searched the web for "', query, '"')
          }
       },
       # Default fallback

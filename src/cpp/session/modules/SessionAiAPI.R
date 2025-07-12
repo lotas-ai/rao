@@ -1624,6 +1624,82 @@
             } else if (!is.null(event_data$response_id)) {
               # Capture response_id for reasoning model chaining
               captured_response_id <- event_data$response_id
+            } else if (!is.null(event_data$web_search_call)) {
+              # Handle web search call events - create immediate display message during streaming
+              web_search_call <- event_data$web_search_call
+              if (!is.null(web_search_call$status)) {
+                status <- web_search_call$status
+                search_id <- if (!is.null(web_search_call$id)) web_search_call$id else "unknown"
+              }
+              
+              # Save web_search_call metadata to conversation log for display system to handle
+              if (!is_summary_request && !is.null(web_search_call$query)) {
+                # If we have accumulated text content, complete the current assistant message first
+                if (!is.null(assistant_message_id) && nchar(accumulated_response) > 0) {
+                  # Complete the current text message
+                  .rs.enqueClientEvent("ai_stream_data", list(
+                    messageId = assistant_message_id,
+                    delta = "",
+                    isComplete = TRUE,
+                    sequence = .rs.get_next_ai_operation_sequence()
+                  ))
+                  
+                  # Save the accumulated text to conversation log
+                  related_to_id <- .rs.get_conversation_var("current_related_to_id")
+                  if (!is.null(related_to_id)) {
+                    tryCatch({
+                      conversation_index <- .rs.get_current_conversation_index()
+                      result <- .rs.process_assistant_response(
+                        accumulated_response, 
+                        assistant_message_id,
+                        related_to_id,
+                        conversation_index, 
+                        "ai_operation",
+                        NULL,
+                        NULL
+                      )
+                    }, error = function(e) {
+                      cat("Error saving text before web search:", e$message, "\n")
+                    })
+                  }
+                  
+                  # Clear accumulated response and reset assistant message ID for new content
+                  accumulated_response <- ""
+                  assistant_message_id <- NULL
+                }
+                
+                related_to_id <- .rs.get_conversation_var("current_related_to_id")
+                if (is.null(related_to_id)) {
+                  related_to_id <- ""
+                }
+                
+                tryCatch({
+                  conversation_index <- .rs.get_current_conversation_index()
+                  web_search_message_id <- .rs.get_next_message_id()
+                  
+                  # Create web search metadata entry for conversation display system to process
+                  message_data <- list(
+                    type = "assistant",
+                    text = "",  # Empty text since this is metadata for display system
+                    web_search_call = event_data$web_search_call,
+                    timestamp = Sys.time(),
+                    id = web_search_message_id,
+                    related_to = related_to_id
+                  )
+                  
+                  # Add to conversation log
+                  conversation_log <- .rs.read_conversation_log()
+                  conversation_log <- append(conversation_log, list(message_data))
+                  .rs.write_conversation_log(conversation_log)
+                  
+                  # Trigger conversation display update to immediately show the web search message
+                  .rs.update_conversation_display()
+                  
+                }, error = function(e) {
+                  cat("Error saving web_search_call metadata to conversation log:", e$message, "\n")
+                })
+              }
+              
             } else if (!is.null(event_data$error)) {
               # Error event from backend
               last_event_data <- event_data
