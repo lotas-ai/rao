@@ -780,10 +780,17 @@ Error setModel(const json::JsonRpcRequest& request,
          .call(&success);
          
    if (error)
+   {
       LOG_ERROR(error);
+      return error;
+   }
    
-   p_response->setResult(success);
-   return error;
+   if (!success)
+   {
+      return Error("ModelSetError", 1, "Failed to set model", ERROR_LOCATION);
+   }
+   
+   return Success();
 }
 
 // Function to get a conversation name by ID
@@ -1263,14 +1270,57 @@ Error setAiWorkingDirectory(const json::JsonRpcRequest& request,
    
    if (TYPEOF(result_sexp) == VECSXP && r::sexp::length(result_sexp) >= 1)
    {
-      // Get success value
-      SEXP successSEXP = VECTOR_ELT(result_sexp, 0);
-      if (TYPEOF(successSEXP) == LGLSXP)
-         success = r::sexp::asLogical(successSEXP);
+      // Get success value from named list
+      SEXP names = r::sexp::getNames(result_sexp);
+      if (names != R_NilValue)
+      {
+         for (int i = 0; i < r::sexp::length(result_sexp); i++)
+         {
+            std::string name = r::sexp::asString(STRING_ELT(names, i));
+            
+            if (name == "success")
+            {
+               SEXP successSEXP = VECTOR_ELT(result_sexp, i);
+               
+               if (TYPEOF(successSEXP) == LGLSXP)
+               {
+                  success = r::sexp::asLogical(successSEXP);
+               }
+               break;
+            }
+         }
+      }
    }
 
-   // Just set the result, don't throw an error
-   p_response->setResult(success);
+   if (!success)
+   {
+      std::string errorMsg = "Failed to set working directory";
+      
+      if (TYPEOF(result_sexp) == VECSXP && r::sexp::length(result_sexp) >= 1)
+      {
+         SEXP names = r::sexp::getNames(result_sexp);
+         if (names != R_NilValue)
+         {
+            for (int i = 0; i < r::sexp::length(result_sexp); i++)
+            {
+               std::string name = r::sexp::asString(STRING_ELT(names, i));
+               if (name == "error")
+               {
+                  SEXP errorSEXP = VECTOR_ELT(result_sexp, i);
+                  if (TYPEOF(errorSEXP) == STRSXP && r::sexp::length(errorSEXP) > 0)
+                  {
+                     errorMsg = r::sexp::asString(errorSEXP);
+                  }
+                  break;
+               }
+            }
+         }
+      }
+      
+      return Error("WorkingDirectoryError", 1, errorMsg, ERROR_LOCATION);
+   }
+
+   // Don't set any result for Void callbacks
    return Success();
 }
 
@@ -2476,11 +2526,6 @@ Error processAiOperation(const json::JsonRpcRequest& request,
       // First parameter: operation_type
       api_call.addParam("make_api_call");
       
-      // Add named parameters for ai_operation function
-      // ai_operation(operation_type, query=NULL, conversation_index=NULL, request_id=NULL, 
-      //              function_call=NULL, api_response=NULL, related_to_id=NULL,
-      //              model=NULL, preserve_symbols=TRUE, is_continue=FALSE)
-      
       // Parameter 2: query (NULL for api_call operation)
       api_call.addParam(R_NilValue);
       
@@ -2552,7 +2597,27 @@ Error processAiOperation(const json::JsonRpcRequest& request,
          api_call.addParam(R_NilValue);
       }
       
-      // Parameter 8: preserve_symbols
+      // Parameter 8: temperature
+      if (params.find("temperature") != params.end())
+      {
+         double temperature;
+         error = json::readObject(params, "temperature", temperature);
+         if (error)
+         {
+            std::cerr << "ERROR: Failed to read temperature parameter" << std::endl;
+            std::cerr << "ERROR: Full error details: " << error.getSummary() << std::endl;
+            std::cerr << "ERROR: Raw temperature value: " << params["temperature"].writeFormatted() << std::endl;
+            std::cerr << "ERROR: temperature type: " << params["temperature"].getType() << std::endl;
+            return error;
+         }
+         api_call.addParam(temperature);
+      }
+      else
+      {
+         api_call.addParam(R_NilValue);
+      }
+      
+      // Parameter 9: preserve_symbols
       if (params.find("preserve_symbols") != params.end())
       {
          bool preserve_symbols;
@@ -2572,7 +2637,7 @@ Error processAiOperation(const json::JsonRpcRequest& request,
          api_call.addParam(true);
       }
       
-      // Parameter 9: is_continue (FALSE for api_call operation)
+      // Parameter 10: is_continue (FALSE for api_call operation)
       api_call.addParam(false);
       
       // Call R function
@@ -2758,6 +2823,187 @@ Error getPersistentDiffData(const json::JsonRpcRequest& request,
    }
    
    p_response->setResult(diffDataJson);
+   return Success();
+}
+
+// Settings operations C++ functions
+Error getUserProfile(const json::JsonRpcRequest& request,
+                    json::JsonRpcResponse* p_response)
+{
+   SEXP result_sexp;
+   r::sexp::Protect rp;
+   
+   Error error = r::exec::RFunction(".rs.get_user_profile").call(&result_sexp, &rp);
+   if (error)
+   {
+      p_response->setResult(json::Object());
+      return Success();
+   }
+   
+   // Convert R result to JSON using jsonValueFromList (R function returns a list)
+   json::Value result;
+   error = r::json::jsonValueFromList(result_sexp, &result);
+   if (error)
+   {
+      p_response->setResult(json::Object());
+   }
+   else
+   {
+      p_response->setResult(result);
+   }
+   
+   return Success();
+}
+
+Error getSubscriptionStatus(const json::JsonRpcRequest& request,
+                           json::JsonRpcResponse* p_response)
+{
+   SEXP result_sexp;
+   r::sexp::Protect rp;
+   
+   Error error = r::exec::RFunction(".rs.get_subscription_status").call(&result_sexp, &rp);
+   if (error)
+   {
+      LOG_ERROR(error);
+      p_response->setResult(json::Object());
+      return Success();
+   }
+   
+   // Convert R result to JSON using jsonValueFromList (R function returns a list)
+   json::Value result;
+   error = r::json::jsonValueFromList(result_sexp, &result);
+   if (error)
+   {
+      p_response->setResult(json::Object());
+   }
+   else
+   {
+      p_response->setResult(result);
+   }
+   
+   return Success();
+}
+
+Error getApiKeyStatus(const json::JsonRpcRequest& request,
+                     json::JsonRpcResponse* p_response)
+{
+   bool hasKey = false;
+   Error error = r::exec::RFunction(".rs.get_api_key_status").call(&hasKey);
+   if (error)
+   {
+      LOG_ERROR(error);
+      p_response->setResult(false);
+   }
+   else
+   {
+      p_response->setResult(hasKey);
+   }
+   return Success();
+}
+
+Error getAvailableModels(const json::JsonRpcRequest& request,
+                        json::JsonRpcResponse* p_response)
+{
+   std::vector<std::string> models;
+   Error error = r::exec::RFunction(".rs.get_available_models").call(&models);
+   if (error)
+   {
+      json::Array emptyArray;
+      p_response->setResult(emptyArray);
+      return error;
+   }
+   else
+   {
+      json::Array modelsArray;
+      for (size_t i = 0; i < models.size(); ++i)
+      {
+         modelsArray.push_back(models[i]);
+      }
+      p_response->setResult(modelsArray);
+   }
+   return Success();
+}
+
+Error getSelectedModel(const json::JsonRpcRequest& request,
+                     json::JsonRpcResponse* p_response)
+{
+   std::string model;
+   Error error = r::exec::RFunction(".rs.get_selected_model").call(&model);
+   if (error)
+   {
+      LOG_ERROR(error);
+      p_response->setResult("");
+   }
+   else
+   {
+      p_response->setResult(model);
+   }
+   return Success();
+}
+
+Error getCurrentWorkingDirectory(const json::JsonRpcRequest& request,
+                                json::JsonRpcResponse* p_response)
+{
+   std::string dir;
+   Error error = r::exec::RFunction("getwd").call(&dir);
+   if (error)
+   {
+      LOG_ERROR(error);
+      p_response->setResult("");
+   }
+   else
+   {
+      p_response->setResult(dir);
+   }
+   return Success();
+}
+
+Error getTemperature(const json::JsonRpcRequest& request,
+                    json::JsonRpcResponse* p_response)
+{   
+   double temperature;
+   Error error = r::exec::RFunction(".rs.get_temperature").call(&temperature);
+   if (error)
+   {
+      LOG_ERROR(error);
+      p_response->setResult(0.5); // Default value
+   }
+   else
+   {
+      p_response->setResult(temperature);
+   }
+   return Success();
+}
+
+Error setTemperature(const json::JsonRpcRequest& request,
+                    json::JsonRpcResponse* p_response,
+                    double temperature)
+{   
+   // Validate temperature range
+   if (temperature < 0.0 || temperature > 1.0)
+   {
+      return Error("TemperatureRangeError", 1, "Temperature must be between 0.0 and 1.0", ERROR_LOCATION);
+   }
+   
+   // Call the R handler for setting temperature
+   bool success = false;
+   Error error = r::exec::RFunction(".rs.set_temperature_action")
+         .addParam(temperature)
+         .call(&success);
+         
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+      
+   // For Void callbacks, don't set a result - just return Success or Error
+   if (!success)
+   {
+      // If R function returned success=FALSE, return an error
+      return Error("TemperatureSetError", 1, "Failed to set temperature", ERROR_LOCATION);
+   }
+   
    return Success();
 }
 
@@ -3103,6 +3349,50 @@ Error initialize()
                      return error;
                   return getPersistentDiffData(request, p_response, file_path);
                })))
+      (bind(module_context::registerRpcMethod, "get_user_profile", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  return getUserProfile(request, p_response);
+               })))
+      (bind(module_context::registerRpcMethod, "get_subscription_status", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  return getSubscriptionStatus(request, p_response);
+               })))
+      (bind(module_context::registerRpcMethod, "get_api_key_status", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  return getApiKeyStatus(request, p_response);
+               })))
+      (bind(module_context::registerRpcMethod, "get_available_models", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  return getAvailableModels(request, p_response);
+               })))
+      (bind(module_context::registerRpcMethod, "get_selected_model", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  return getSelectedModel(request, p_response);
+               })))
+      (bind(module_context::registerRpcMethod, "get_current_working_directory", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  return getCurrentWorkingDirectory(request, p_response);
+               })))
+      (bind(module_context::registerRpcMethod, "get_temperature", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  return getTemperature(request, p_response);
+               })))
+      (bind(module_context::registerRpcMethod, "set_temperature",
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  double temperature;
+                  Error error = json::readParam(request.params, 0, &temperature);
+                  if (error)
+                     return error;
+                  return setTemperature(request, p_response, temperature);
+               })))
       (bind(registerUriHandler, kAiLocation, handleAiRequest));
    
    Error error = initBlock.execute();
@@ -3114,7 +3404,7 @@ Error initialize()
    sourceBlock.addFunctions()
       (bind(sourceModuleRFile, "SessionAiHelpers.R"))    // first helper functions
       (bind(sourceModuleRFile, "SessionAiAPI.R"))        // then API functions 
-      (bind(sourceModuleRFile, "SessionAiKeyManagement.R")) // then key management
+      (bind(sourceModuleRFile, "SessionAiSettings.R")) // then key management
       (bind(sourceModuleRFile, "SessionAiButtons.R"))
       (bind(sourceModuleRFile, "SessionAiConversationDisplay.R"))
       (bind(sourceModuleRFile, "SessionAiIO.R"))

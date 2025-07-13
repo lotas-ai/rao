@@ -1,0 +1,353 @@
+/* AI Settings Widget CSS */
+.settingsContainer {
+    height: 100vh;
+    overflow-y: auto;
+    padding: 16px;
+    background-color: #ffffff;
+    /* Match AI streaming panel font exactly */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    font-size: 14px;
+    line-height: 1.4;
+    box-sizing: border-box;
+}
+
+.settingsHeader {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    color: #333333;
+    /* Match AI streaming panel font exactly */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
+.settingsSection {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px; /* Reduced from 8px to 4px for smaller corner radius */
+    padding: 8px 16px; /* Further reduced from 12px to 8px top/bottom */
+    margin-bottom: 8px; /* Further reduced from 12px to 8px */
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.sectionTitle {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #333333;
+    /* Match AI streaming panel font exactly */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
+.settingRow {
+    margin-bottom: 4px; /* Further reduced from 8px to 4px */
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.settingLabel {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #555555;
+    /* Match AI streaming panel font exactly */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    font-size: 14px;
+}
+
+.settingInput {
+    width: 100%;
+    padding: 6px 8px; /* Reduced from 8px 12px */
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    box-sizing: border-box;
+    outline: none;
+}
+
+.settingInput:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+/* Temperature slider styles */
+.settingInput input[type=range] {
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: #ddd;
+    outline: none;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.settingInput input[type=range]:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.settingInput input[type=range]:hover {
+    opacity: 1;
+}
+
+.settingInput input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #007acc;
+    cursor: pointer;
+}
+
+.settingInput input[type=range]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #007acc;
+    cursor: pointer;
+    border: none;
+}
+
+.settingButton {
+    padding: 6px 8px; /* Match the text input padding */
+    height: auto; /* Let height be determined by content and padding */
+    border: 1px solid #999999;
+    border-radius: 4px;
+    background-color: #e9ecef;
+    /* Match AI streaming panel font exactly */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    font-size: 14px;
+    color: #333333;
+    cursor: pointer;
+    pointer-events: auto;
+    z-index: 1000;
+    position: relative;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.settingButton:hover {
+    background-color: #dee2e6;
+    border-color: #777777;
+}
+
+.settingButton:active {
+    background-color: #ced4da;
+}
+
+.primaryButton {
+    background-color: #e9ecef;
+    color: #333333;
+    border-color: #999999;
+}
+
+.primaryButton:hover {
+    background-color: #dee2e6;
+    border-color: #777777;
+}
+
+.primaryButton:active {
+    background-color: #ced4da;
+}
+
+.secondaryButton {
+    background-color: #e9ecef;
+    color: #333333;
+    border-color: #999999;
+}
+
+.secondaryButton:hover {
+    background-color: #dee2e6;
+    border-color: #777777;
+}
+
+.secondaryButton:active {
+    background-color: #ced4da;
+}
+
+.dangerButton {
+    background-color: #e9ecef;
+    color: #333333;
+    border-color: #999999;
+}
+
+.dangerButton:hover {
+    background-color: #dee2e6;
+    border-color: #777777;
+}
+
+.dangerButton:active {
+    background-color: #ced4da;
+}
+
+/* Make primary and danger buttons shorter than browse button */
+.primaryButton,
+.dangerButton {
+    height: 24px;
+    padding: 4px 8px;
+}
+
+.statusBadge {
+    padding: 0;
+    border: none;
+    background: none;
+    font-size: 14px;
+    font-weight: normal;
+    display: inline-block;
+    color: #495057;
+    /* Match AI streaming panel font exactly */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
+.statusActive {
+    color: #495057;
+}
+
+.statusTrial {
+    color: #495057;
+}
+
+.statusPastDue {
+    color: #495057;
+}
+
+.statusCancelled {
+    color: #495057;
+}
+
+.statusExpired {
+    color: #495057;
+}
+
+.profileInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px; /* Further reduced from 8px to 4px */
+    width: 100%;
+}
+
+/* Profile title panel - using CSS Grid for precise positioning */
+.profileTitlePanel {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: baseline;
+    width: 100%;
+    margin-bottom: 4px;
+}
+
+.profileTitlePanel .sectionTitle {
+    grid-column: 1;
+    margin: 0 0 16px 0;
+}
+
+.profileName {
+    grid-column: 3;
+    font-size: 14px;
+    color: #666;
+    font-weight: normal;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    justify-self: end;
+}
+
+/* Sign out button container */
+.signOutContainer {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+    margin-top: 4px; /* Further reduced from 8px to 4px */
+}
+
+/* Subscription status - simplified since it's now a single label */
+.profileInfo .settingRow {
+    margin-bottom: 8px;
+    width: 100%;
+}
+
+
+
+/* Directory row - using CSS Grid for exact control */
+.directoryRow {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: stretch; /* Make both elements same height */
+    width: 100%;
+}
+
+.directoryRow .settingInput {
+    grid-column: 1;
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    box-sizing: border-box;
+    min-height: 0; /* Allow grid to control height */
+}
+
+.directoryRow .settingButton {
+    grid-column: 2;
+    margin: 0;
+    padding: 6px 8px;
+    box-sizing: border-box;
+    white-space: nowrap;
+    min-height: 0; /* Allow grid to control height */
+}
+
+/* Temperature slider row - same pattern as directory row but for slider + input */
+.temperatureRow {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: stretch;
+    width: 100%;
+}
+
+.temperatureRow .settingInput {
+    grid-column: 1;
+    width: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    padding: 0;
+}
+
+.temperatureRow .settingInput input[type=range] {
+    width: 100%;
+    border: none;
+    outline: none;
+    background: #ddd;
+}
+
+/* Temperature text input in grid layout */
+.temperatureRow input[type=text] {
+    grid-column: 2;
+    width: 60px;
+    min-width: 60px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    padding: 6px 8px;
+    box-sizing: border-box;
+}
+
+.errorMessage {
+    color: #dc3545;
+    /* Match AI streaming panel font exactly */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+.successMessage {
+    color: #28a745;
+    /* Match AI streaming panel font exactly */
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    font-size: 14px;
+    margin-top: 4px;
+}

@@ -367,7 +367,7 @@
   ))
 })
 
-.rs.addFunction("send_backend_query", function(request_type, conversation, provider = NULL, model = NULL, request_id, additional_data = NULL) {
+.rs.addFunction("send_backend_query", function(request_type, conversation, provider = NULL, model = NULL, temperature = NULL, request_id, additional_data = NULL) {
   .rs.check_required_packages()
   
   # CRITICAL FIX: Check cancellation FIRST before any backend communication
@@ -465,6 +465,7 @@
     conversation = sorted_conversation,
     provider = provider,
     model = model,
+    temperature = temperature,
     request_id = request_id,
     client_version = client_version,
     symbols_note = symbols_note,
@@ -700,13 +701,17 @@
   })
 })
 
-.rs.addFunction("backend_ai_api_call", function(conversation, provider = NULL, model = NULL, preserve_symbols = FALSE, request_id) {
+.rs.addFunction("backend_ai_api_call", function(conversation, provider = NULL, model = NULL, temperature = NULL, preserve_symbols = FALSE, request_id) {
      if (.rs.get_conversation_var("ai_cancelled")) {
       return(NULL)
    }
    
    if (is.null(model)) {
       model <- .rs.get_selected_model()
+   }
+   
+   if (is.null(temperature)) {
+      temperature <- .rs.get_temperature()
    }
   
   if (is.null(provider)) {
@@ -740,6 +745,7 @@
     conversation = conversation_to_send,
     provider = provider,
     model = model,
+    temperature = temperature,
     request_id = request_id,
     additional_data = additional_data
   )

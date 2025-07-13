@@ -195,41 +195,10 @@ public class AiPaneScroll
                var isApiKeyPage = false;
                try {
                   // Check current URL - be more specific to avoid false positives
-                  var currentUrl = window.location.href;
-                  if (currentUrl && 
-                      (currentUrl.indexOf("/api_key_management.html") !== -1 || 
-                       currentUrl.indexOf("ai/doc/html/api_key_management") !== -1)) {
-                     isApiKeyPage = true;
-                  }
-                  
-                  // Also check if we're in an iframe
-                  try {
-                     if (window.frameElement && window.parent) {
-                        var parentUrl = window.parent.location.href;
-                        if (parentUrl && 
-                            (parentUrl.indexOf("/api_key_management.html") !== -1 || 
-                             parentUrl.indexOf("ai/doc/html/api_key_management") !== -1)) {
-                           isApiKeyPage = true;
-                        }
-                     }
-                  } catch(e) {
-                     // Ignore cross-origin frame errors
-                  }
-                  
-                  // Ask the AiPane directly if we're on the API key management page
                   var pane = @org.rstudio.studio.client.workbench.views.ai.AiPane::getCurrentInstance()();
                   if (pane) {
-                     var url = pane.@org.rstudio.studio.client.workbench.views.ai.AiPane::getUrl()();
-                     if (url && 
-                         (url.indexOf("/api_key_management.html") !== -1 || 
-                          url.indexOf("ai/doc/html/api_key_management") !== -1)) {
+                     if (pane.@org.rstudio.studio.client.workbench.views.ai.AiPane::isInSettingsMode()()) {
                         isApiKeyPage = true;
-                        
-                        // Also check if any frame is loading API key management
-                        var isLoading = pane.@org.rstudio.studio.client.workbench.views.ai.AiPane::isLoadingApiKeyManagement()();
-                        if (isLoading) {
-                           isApiKeyPage = true;
-                        }
                      }
                   }
                } catch(e) {

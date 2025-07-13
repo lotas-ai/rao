@@ -174,7 +174,7 @@ public class AiPane extends WorkbenchPane
       // Set the current instance for JSNI callbacks
       currentInstance_ = this;
       
-      // Export JavaScript callbacks for use by the API key management page
+      // Export JavaScript callbacks for use by the Settings page
       exportJSCallbackMethods();
       
       searchProvider_ = searchProvider;
@@ -219,7 +219,7 @@ public class AiPane extends WorkbenchPane
          null,
          RES.editorStyles().getText() +
          // Remove global body font-family override; only apply to a container class
-         "\n .rstudio-ai-pane-body { font-size: 14px !important; font-family: sans-serif !important; }" +
+         "\n .rstudio-ai-pane-body { font-size: 14px !important; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important; }" +
          "\n div.message.assistant { margin: 6px 0; }" +
          "\n div.text.assistant { margin-bottom: 6px; padding-bottom: 4px; }",
          null,
@@ -239,13 +239,12 @@ public class AiPane extends WorkbenchPane
             
             WindowEx window = getIFrameEx().getContentWindow();
             if (window != null) {
-               // Check if this is the API key management page and hide search container if needed
-               String url = window.getLocationHref();
-               if (url != null && url.contains("api_key_management")) {
+               // Check if this is the Settings page and hide search container if needed
+               if (toolbars_.getViewManager() != null && toolbars_.getViewManager().isInSettingsMode()) {
                   hideSearchContainer();
                   
-                  // Set the title to "API Key Management" when on this page
-                  updateTitle("API Key Management");
+                  // Set the title to "Settings" when on this page
+                  updateTitle("Settings");
                } else {
                   restoreSearchContainer();
                   
@@ -272,7 +271,7 @@ public class AiPane extends WorkbenchPane
       backgroundFrame_ = new RStudioThemedFrame(
          constants_.aiPaneTitle(),
          null,
-         RES.editorStyles().getText() + "\n body { font-size: 14px !important; font-family: sans-serif !important; }" +
+         RES.editorStyles().getText() + "\n body { font-size: 14px !important; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important; }" +
          "\n div.message.assistant { margin: 6px 0; }" +
          "\n div.text.assistant { margin-bottom: 6px; padding-bottom: 4px; }",
          null,
@@ -296,13 +295,12 @@ public class AiPane extends WorkbenchPane
             
             WindowEx window = getBackgroundIFrameEx().getContentWindow();
             if (window != null) {
-               // Check if this is the API key management page and hide search container if needed
-               String url = window.getLocationHref();
-               if (url != null && url.contains("api_key_management")) {
+               // Check if this is the Settings page and hide search container if needed
+               if (toolbars_.getViewManager() != null && toolbars_.getViewManager().isInSettingsMode()) {
                   hideSearchContainer();
                   
-                  // Set the title to "API Key Management" when on this page
-                  updateTitle("API Key Management");
+                  // Set the title to "Settings" when on this page
+                  updateTitle("Settings");
                } else {
                   restoreSearchContainer();
                   
@@ -412,13 +410,9 @@ public class AiPane extends WorkbenchPane
          aiContext_.loadContextItems(selectedFilesPanel);
       }
       
-      // Check if we're on the API key management page and hide search bar if needed
-      WindowEx window = getContentWindow();
-      if (window != null) {
-         String url = window.getLocationHref();
-         if (url != null && url.contains("api_key_management")) {
-            hideSearchContainer();
-         }
+      // Check if we're on the Settings page and hide search bar if needed
+      if (toolbars_.getViewManager() != null && toolbars_.getViewManager().isInSettingsMode()) {
+         hideSearchContainer();
       }
    }
 
@@ -622,9 +616,9 @@ public class AiPane extends WorkbenchPane
          aiContext_.loadContextItems(selectedFilesPanel);
       }
       
-      // If this is being called from startup initialization, show the API key management page
+      // If this is being called from startup initialization, show the Settings page
       if (!navigated_) {
-         refreshApiKeyManagement();
+         refreshSettings();
       } else {
          // If called from the refresh button ("New conversation"), create a new conversation
          conversationsManager_.createNewConversation();
@@ -928,36 +922,20 @@ public class AiPane extends WorkbenchPane
    }
    
    /**
-    * Refreshes the API key management view by requesting the page content from server
+    * Refreshes the Settings view by requesting the page content from server
     * and setting the location to display it.
     */
-   public void refreshApiKeyManagement() {
+   public void refreshSettings() {
       // Immediately hide the search container - don't wait for page load
       hideSearchContainer();
       
-      // Set the title to "API Key Management"
-      updateTitle("API Key Management");
+      // Set the title to "Settings"
+      updateTitle("Settings");
       
-      server_.getApiKeyManagement(new ServerRequestCallback<org.rstudio.studio.client.workbench.views.ai.model.ApiKeyManagementResult>() {
-         @Override
-         public void onResponseReceived(org.rstudio.studio.client.workbench.views.ai.model.ApiKeyManagementResult result) {
-            if (result.getSuccess()) {
-               // Use direct frame loading instead of complex setLocation with background loading
-               // This bypasses the issues that were causing safety timeouts
-               String path = result.getPath();
-               getFrame().setUrl(path);
-            } else {
-               // Fallback to static page if dynamic generation fails
-               getFrame().setUrl("ai/doc/html/api_key_management.html");
-            }
-         }
-         
-         @Override
-         public void onError(ServerError error) {
-            // Fallback to static page if there's an error
-            getFrame().setUrl("ai/doc/html/api_key_management.html");
-         }
-      });
+      // Replace the getSettings() call with toolbars_.getViewManager().showSettings()
+      if (toolbars_.getViewManager() != null) {
+         toolbars_.getViewManager().showSettings();
+      }
    }
 
    /**
@@ -1457,7 +1435,7 @@ public class AiPane extends WorkbenchPane
    }
    
    /**
-    * Hides the search container completely for pages like API key management
+    * Hides the search container completely for pages like Settings
     */
    public void hideSearchContainer() {
       if (searchContainer != null) {
@@ -1491,9 +1469,9 @@ public class AiPane extends WorkbenchPane
     * Restores the search container to normal visibility
     */
    public void restoreSearchContainer() {
-      // First check if we're on the API key management page in either frame
-      if (isLoadingApiKeyManagement()) {
-         // Keep the search container hidden if API key management is showing
+      // First check if we're on the Settings page in either frame
+      if (isLoadingSettings()) {
+         // Keep the search container hidden if Settings is showing
          hideSearchContainer();
          return;
       }
@@ -1554,13 +1532,12 @@ public class AiPane extends WorkbenchPane
       frame_.getElement().getStyle().setDisplay(Display.NONE);
       backgroundFrame_.getElement().getStyle().setDisplay(Display.BLOCK);
       
-      // Check if background frame is showing API key management page
+      // Check if background frame is showing Settings page
       WindowEx bgWindow = getBackgroundIFrameEx().getContentWindow();
       if (bgWindow != null) {
          String url = bgWindow.getLocationHref();
          if (url != null && 
-             (url.contains("api_key_management.html") || 
-              url.contains("ai/doc/html/api_key_management"))) {
+             (toolbars_.getViewManager() != null && toolbars_.getViewManager().isInSettingsMode())) {
             // Hide search container when switching to API key page
             hideSearchContainer();
          } else {
@@ -1589,13 +1566,12 @@ public class AiPane extends WorkbenchPane
       backgroundFrame_.getElement().getStyle().setDisplay(Display.NONE);
       frame_.getElement().getStyle().setDisplay(Display.BLOCK);
       
-      // Check if main frame is showing API key management page
+      // Check if main frame is showing Settings page
       WindowEx window = getContentWindow();
       if (window != null) {
          String url = window.getLocationHref();
          if (url != null && 
-             (url.contains("api_key_management.html") || 
-              url.contains("ai/doc/html/api_key_management"))) {
+             (toolbars_.getViewManager() != null && toolbars_.getViewManager().isInSettingsMode())) {
             // Hide search container when switching to API key page
             hideSearchContainer();
          } else {
@@ -2027,42 +2003,20 @@ public class AiPane extends WorkbenchPane
    /**
     * Checks if API key management is loading in either frame
     */
-   public boolean isLoadingApiKeyManagement() {
-      boolean isLoading = false;
-      
-      // Check main frame URL
-      if (frame_ != null) {
-         IFrameElementEx frameEx = getIFrameEx();
-         if (frameEx != null) {
-            WindowEx window = frameEx.getContentWindow();
-            if (window != null) {
-               String url = window.getLocationHref();
-               if (url != null && 
-                   (url.contains("api_key_management.html") || 
-                    url.contains("ai/doc/html/api_key_management"))) {
-                  isLoading = true;
-               }
-            }
-         }
+   public boolean isLoadingSettings() {
+      // Since we now use DOM/GWT widgets instead of HTML files,
+      // just check if we're in Settings mode
+      return toolbars_.getViewManager() != null && toolbars_.getViewManager().isInSettingsMode();
+   }
+   
+   public boolean isInSettingsMode() {
+      return toolbars_.getViewManager() != null && toolbars_.getViewManager().isInSettingsMode();
+   }
+   
+   public void showSettings() {
+      if (toolbars_.getViewManager() != null) {
+         toolbars_.getViewManager().showSettings();
       }
-      
-      // Check background frame URL
-      if (backgroundFrame_ != null) {
-         IFrameElementEx bgFrameEx = getBackgroundIFrameEx();
-         if (bgFrameEx != null) {
-            WindowEx window = bgFrameEx.getContentWindow();
-            if (window != null) {
-               String url = window.getLocationHref();
-               if (url != null && 
-                   (url.contains("api_key_management.html") || 
-                    url.contains("ai/doc/html/api_key_management"))) {
-                  isLoading = true;
-               }
-            }
-         }
-      }
-      
-      return isLoading;
    }
 
    // Add a method to get the active request ID

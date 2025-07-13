@@ -61,7 +61,7 @@
    flex-direction: column !important;
    justify-content: flex-end !important;
    overflow: visible;
-   font-family: inherit;
+   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
    font-size: 14px;
    margin-top: 0px;
    position: relative;
@@ -150,7 +150,7 @@ button.topicNavigationButton td {
 }
 
 .bottomSearchWidget .searchBox {
-   font-family: inherit;
+   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
    font-size: 14px;
    padding: 4px 10px !important;
    height: auto !important;
@@ -175,13 +175,13 @@ button.topicNavigationButton td {
    box-sizing: border-box;
    height: auto !important; /* Allow height to grow */
    display: block !important;
-   font-family: inherit;
+   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
    font-size: inherit;
 }
 
 /* This handles the original input element */
 .gwt-SuggestBox input {
-   font-family: inherit;
+   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
    width: 100% !important;
    box-sizing: border-box !important;
    word-wrap: break-word !important; /* Enable text wrapping */
@@ -200,7 +200,7 @@ button.topicNavigationButton td {
 
 /* Add specific styles for textarea that replaces the input */
 .gwt-SuggestBox textarea {
-   font-family: inherit;
+   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
    width: 100% !important;
    box-sizing: border-box !important;
    word-wrap: break-word !important;
@@ -230,7 +230,7 @@ button.topicNavigationButton td {
 /* Make selectors more specific to target only the AI search input */
 .rstudio-AiSearchContainer input[type="text"], 
 .rstudio-AiSearchContainer textarea {
-   font-family: inherit;
+   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
    font-size: 14px;
 }
 

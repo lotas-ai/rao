@@ -2462,6 +2462,7 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
                                        api_response = NULL,
                                        related_to_id,
                                        model = NULL, 
+                                       temperature = NULL,
                                        preserve_symbols = TRUE,
                                        is_continue = FALSE) {
    
@@ -2575,6 +2576,7 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
       streaming_result <- .rs.backend_ai_api_call(
          conversation = api_conversation_log, 
          model = model, 
+         temperature = temperature,
          request_id = request_id
       )
       

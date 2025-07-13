@@ -334,12 +334,12 @@ public class AiPaneLifecycle {
          var styleEl = window.document.createElement('style');
          styleEl.id = 'ai-conversation-styles';
          styleEl.textContent = 
-            'body { font-family: sans-serif; margin: 12px; }' +
-            '.message { margin-bottom: 12px; padding: 8px; font-family: sans-serif; font-size: 14px; }' +
+            'body { font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', \'Roboto\', \'Oxygen\', \'Ubuntu\', \'Cantarell\', \'Fira Sans\', \'Droid Sans\', \'Helvetica Neue\', sans-serif; margin: 12px; }' +
+            '.message { margin-bottom: 12px; padding: 8px; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', \'Roboto\', \'Oxygen\', \'Ubuntu\', \'Cantarell\', \'Fira Sans\', \'Droid Sans\', \'Helvetica Neue\', sans-serif; font-size: 14px; }' +
             '.user { background-color: #e6e6e6; border-radius: 5px; display: inline-block; float: right; max-width: 100%; word-wrap: break-word; }' +
             '.assistant { background-color: transparent; text-align: left; word-wrap: break-word; max-width: 100%; }' +
             '.user-container { width: 100%; overflow: hidden; text-align: right; }' +
-            '.text { font-family: sans-serif; font-size: 14px; line-height: 1.4; white-space: pre-wrap; }' +
+            '.text { font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', \'Roboto\', \'Oxygen\', \'Ubuntu\', \'Cantarell\', \'Fira Sans\', \'Droid Sans\', \'Helvetica Neue\', sans-serif; font-size: 14px; line-height: 1.4; white-space: pre-wrap; }' +
             '.user { text-align: right; }' +
             '.assistant { text-align: left; }' +
             '.user .text { text-align: left; max-width: 100%; }' +

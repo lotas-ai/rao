@@ -45,7 +45,6 @@ import org.rstudio.studio.client.workbench.views.ai.model.AiServerOperations;
 import org.rstudio.studio.client.workbench.views.ai.model.Link;
 import org.rstudio.core.client.Debug;
 import org.rstudio.core.client.widget.Operation;
-import org.rstudio.studio.client.workbench.views.ai.model.ApiKeyManagementResult;
 import org.rstudio.studio.client.workbench.views.ai.model.CreateAiConversationResult;
 import org.rstudio.studio.client.workbench.views.ai.AiPane;
 import org.rstudio.studio.client.workbench.views.ai.AiPaneImages;
@@ -236,7 +235,7 @@ public class Ai extends BasePresenter implements ShowAiEvent.Handler
       // Use view manager to switch to API management
       AiPane pane = (AiPane)view_;
       AiViewManager viewManager = pane.getToolbars().getViewManager();
-      viewManager.showApiManagement();
+      viewManager.showSettings();
    }
    public void onAiSearch() { bringToFront(); view_.focusSearchAi(); }
 
@@ -494,7 +493,7 @@ public class Ai extends BasePresenter implements ShowAiEvent.Handler
    {
       AiPane pane = (AiPane)view_;
       AiViewManager viewManager = pane.getToolbars().getViewManager();
-      viewManager.showApiManagement();
+      viewManager.showSettings();
    }
 
    public Display getDisplay()

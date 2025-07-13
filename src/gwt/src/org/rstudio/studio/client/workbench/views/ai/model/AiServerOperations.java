@@ -76,8 +76,6 @@ public interface AiServerOperations
    
    void deleteFolder(String path, ServerRequestCallback<Void> requestCallback);
    
-   void getApiKeyManagement(ServerRequestCallback<ApiKeyManagementResult> requestCallback);
-   
    void saveApiKey(String provider, String key, ServerRequestCallback<Void> requestCallback);
    
    void deleteApiKey(String provider, ServerRequestCallback<Void> requestCallback);
@@ -174,4 +172,21 @@ public interface AiServerOperations
    void checkImageContentDuplicate(String imagePath, ServerRequestCallback<Boolean> requestCallback);
    
    void getPersistentDiffData(String filePath, ServerRequestCallback<JavaScriptObject> requestCallback);
+   
+   // Settings and User Profile Operations
+   void getUserProfile(ServerRequestCallback<AiUserProfile> requestCallback);
+   
+   void getSubscriptionStatus(ServerRequestCallback<AiSubscriptionStatus> requestCallback);
+   
+   void getApiKeyStatus(ServerRequestCallback<Boolean> requestCallback);
+   
+   void getAvailableModels(ServerRequestCallback<JsArrayString> requestCallback);
+   
+   void getSelectedModel(ServerRequestCallback<String> requestCallback);
+   
+   void getCurrentWorkingDirectory(ServerRequestCallback<String> requestCallback);
+   
+   void getTemperature(ServerRequestCallback<Double> requestCallback);
+   
+   void setTemperature(double temperature, ServerRequestCallback<java.lang.Void> requestCallback);
 }

@@ -168,6 +168,28 @@ public class AiOrchestrator
          params.put("request_id", new JSONString(requestId));
       }
       
+      // Add temperature to API calls - get current temperature from server
+      server_.getTemperature(new ServerRequestCallback<Double>() {
+         @Override
+         public void onResponseReceived(Double temperature) {
+            if (temperature != null) {
+               params.put("temperature", new JSONNumber(temperature));
+            }
+            
+            // Execute the API call with temperature included
+            executeApiCallWithParams(params);
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            // Execute the API call without temperature if retrieval fails
+            executeApiCallWithParams(params);
+         }
+      });
+   }
+   
+   private void executeApiCallWithParams(JSONObject params)
+   {
       server_.processAiOperation(params.getJavaScriptObject(), new ServerRequestCallback<JavaScriptObject>() {
          @Override
          public void onResponseReceived(JavaScriptObject response)
@@ -381,7 +403,7 @@ public class AiOrchestrator
                // CRITICAL FIX: Check if we're in streaming mode - if so, DON'T navigate
                boolean isInStreamingMode = false;
                if (aiPane_.getToolbars() != null && aiPane_.getToolbars().getViewManager() != null) {
-                  isInStreamingMode = !aiPane_.getToolbars().getViewManager().isInApiMode();
+                  isInStreamingMode = !aiPane_.getToolbars().getViewManager().isInSettingsMode();
                }
                
                if (isInStreamingMode) {
@@ -415,7 +437,7 @@ public class AiOrchestrator
          // Check if we're in streaming mode
          boolean isInStreamingMode = false;
          if (aiPane_.getToolbars() != null && aiPane_.getToolbars().getViewManager() != null) {
-            isInStreamingMode = !aiPane_.getToolbars().getViewManager().isInApiMode();
+            isInStreamingMode = !aiPane_.getToolbars().getViewManager().isInSettingsMode();
          }
          
          if (isInStreamingMode && aiPane_.getStreamingPanel() != null) {
@@ -453,7 +475,7 @@ public class AiOrchestrator
          // Check if we're in streaming mode
          boolean isInStreamingMode = false;
          if (aiPane_.getToolbars() != null && aiPane_.getToolbars().getViewManager() != null) {
-            isInStreamingMode = !aiPane_.getToolbars().getViewManager().isInApiMode();
+            isInStreamingMode = !aiPane_.getToolbars().getViewManager().isInSettingsMode();
          }
          
          if (isInStreamingMode && aiPane_.getStreamingPanel() != null) {

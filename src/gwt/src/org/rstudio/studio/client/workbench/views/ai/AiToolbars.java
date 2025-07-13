@@ -604,8 +604,8 @@ public class AiToolbars
          pane_
       );
       
-      // Start in API management mode as requested
-      viewManager_.showApiManagement();
+      // Start in Settings mode as requested
+      viewManager_.showSettings();
       
       return viewManager_.getMainWidget();
    }

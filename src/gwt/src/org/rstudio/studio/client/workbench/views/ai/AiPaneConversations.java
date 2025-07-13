@@ -26,7 +26,6 @@ import org.rstudio.studio.client.workbench.views.ai.model.AiServerOperations;
 import org.rstudio.studio.client.workbench.views.ai.model.ConversationNamesResult;
 import org.rstudio.studio.client.workbench.views.ai.model.CreateAiConversationResult;
 import org.rstudio.studio.client.workbench.views.ai.model.Link;
-import org.rstudio.studio.client.workbench.views.ai.model.ApiKeyManagementResult;
 import org.rstudio.core.client.regex.Match;
 import org.rstudio.core.client.regex.Pattern;
 import org.rstudio.core.client.Debug;
@@ -353,26 +352,9 @@ public class AiPaneConversations
                            loadConversations((AiToolbarLinkMenu)menu);
                         }
                         
-                        // Only navigate to API key management page if this was the current conversation
+                        // Only navigate to Settings page if this was the current conversation
                         if (isCurrentConversation) {
-                           // Use the proper method to navigate to API key management
-                           server_.getApiKeyManagement(new ServerRequestCallback<ApiKeyManagementResult>() {
-                              @Override
-                              public void onResponseReceived(ApiKeyManagementResult result) {
-                                 if (result.getSuccess()) {
-                                    pane_.showAi(result.getPath());
-                                 } else {
-                                    // Fallback to static page if dynamic generation fails
-                                    pane_.showAi("ai/doc/html/api_key_management.html");
-                                 }
-                              }
-                              
-                              @Override
-                              public void onError(ServerError error) {
-                                 // Fallback to static page if there's an error
-                                 pane_.showAi("ai/doc/html/api_key_management.html");
-                              }
-                           });
+                           pane_.showSettings();
                         }
                      }
                      
@@ -388,24 +370,7 @@ public class AiPaneConversations
                         
                         // Only navigate if this was the current conversation
                         if (isCurrentConversation) {
-                           // Use the proper method to navigate to API key management
-                           server_.getApiKeyManagement(new ServerRequestCallback<ApiKeyManagementResult>() {
-                              @Override
-                              public void onResponseReceived(ApiKeyManagementResult result) {
-                                 if (result.getSuccess()) {
-                                    pane_.showAi(result.getPath());
-                                 } else {
-                                    // Fallback to static page if dynamic generation fails
-                                    pane_.showAi("ai/doc/html/api_key_management.html");
-                                 }
-                              }
-                              
-                              @Override
-                              public void onError(ServerError error) {
-                                 // Fallback to static page if there's an error
-                                 pane_.showAi("ai/doc/html/api_key_management.html");
-                              }
-                           });
+                           pane_.showSettings();
                         }
                      }
                   });
@@ -442,26 +407,9 @@ public class AiPaneConversations
                            loadConversations((AiToolbarLinkMenu)menu);
                         }
                         
-                        // Only navigate to API key management page if this was the current conversation
+                        // Only navigate to Settings page if this was the current conversation
                         if (isCurrentConversation) {
-                           // Use the proper method to navigate to API key management
-                           server_.getApiKeyManagement(new ServerRequestCallback<ApiKeyManagementResult>() {
-                              @Override
-                              public void onResponseReceived(ApiKeyManagementResult result) {
-                                 if (result.getSuccess()) {
-                                    pane_.showAi(result.getPath());
-                                 } else {
-                                    // Fallback to static page if dynamic generation fails
-                                    pane_.showAi("ai/doc/html/api_key_management.html");
-                                 }
-                              }
-                              
-                              @Override
-                              public void onError(ServerError error) {
-                                 // Fallback to static page if there's an error
-                                 pane_.showAi("ai/doc/html/api_key_management.html");
-                              }
-                           });
+                           pane_.showSettings();
                         }
                      }
                      
@@ -477,24 +425,7 @@ public class AiPaneConversations
                         
                         // Only navigate if this was the current conversation
                         if (isCurrentConversation) {
-                           // Use the proper method to navigate to API key management
-                           server_.getApiKeyManagement(new ServerRequestCallback<ApiKeyManagementResult>() {
-                              @Override
-                              public void onResponseReceived(ApiKeyManagementResult result) {
-                                 if (result.getSuccess()) {
-                                    pane_.showAi(result.getPath());
-                                 } else {
-                                    // Fallback to static page if dynamic generation fails
-                                    pane_.showAi("ai/doc/html/api_key_management.html");
-                                 }
-                              }
-                              
-                              @Override
-                              public void onError(ServerError error) {
-                                 // Fallback to static page if there's an error
-                                 pane_.showAi("ai/doc/html/api_key_management.html");
-                              }
-                           });
+                           pane_.showSettings();
                         }
                      }
                   });

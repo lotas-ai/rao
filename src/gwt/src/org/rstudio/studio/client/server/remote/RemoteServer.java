@@ -237,7 +237,6 @@ import org.rstudio.studio.client.workbench.views.vcs.dialog.CommitCount;
 import org.rstudio.studio.client.workbench.views.vcs.dialog.CommitInfo;
 import org.rstudio.studio.client.workbench.views.ai.model.CreateAiConversationResult;
 import org.rstudio.studio.client.workbench.views.ai.model.Link;
-import org.rstudio.studio.client.workbench.views.ai.model.ApiKeyManagementResult;
 import org.rstudio.studio.client.workbench.views.ai.model.TextMatchResult;
 import com.google.gwt.json.client.JSONArray;
 import com.google.gwt.json.client.JSONString;
@@ -1897,12 +1896,6 @@ public class RemoteServer implements Server, AiServerOperations
    public void createNewConversation(ServerRequestCallback<CreateAiConversationResult> requestCallback)
    {
       sendRequest(RPC_SCOPE, CREATE_NEW_CONVERSATION, requestCallback);
-   }
-
-   @Override
-   public void getApiKeyManagement(ServerRequestCallback<ApiKeyManagementResult> requestCallback)
-   {
-      sendRequest(RPC_SCOPE, GET_API_KEY_MANAGEMENT, requestCallback);
    }
    
    @Override
@@ -7726,11 +7719,13 @@ public class RemoteServer implements Server, AiServerOperations
    private static final String SWITCH_CONVERSATION = "switch_conversation";
    private static final String DELETE_FOLDER = "delete_folder";
 
-   private static final String GET_API_KEY_MANAGEMENT = "get_api_key_management";
+   private static final String GET_SETTINGS = "get_settings";
    private static final String SAVE_API_KEY = "save_api_key";
    private static final String DELETE_API_KEY = "delete_api_key";
    private static final String SET_ACTIVE_PROVIDER = "set_active_provider";
    private static final String SET_MODEL = "set_model";
+   private static final String GET_TEMPERATURE = "get_temperature";
+   private static final String SET_TEMPERATURE = "set_temperature";
 
    private static final String GET_CONVERSATION_NAME = "get_conversation_name";
    private static final String SET_CONVERSATION_NAME = "set_conversation_name";
@@ -8061,6 +8056,56 @@ public class RemoteServer implements Server, AiServerOperations
       JSONArray params = new JSONArray();
       params.set(0, new JSONString(imagePath));
       sendRequest(RPC_SCOPE, CHECK_IMAGE_CONTENT_DUPLICATE, params, requestCallback);
+   }
+
+   @Override
+   public void getUserProfile(ServerRequestCallback<org.rstudio.studio.client.workbench.views.ai.model.AiUserProfile> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, "get_user_profile", requestCallback);
+   }
+   
+   @Override
+   public void getSubscriptionStatus(ServerRequestCallback<org.rstudio.studio.client.workbench.views.ai.model.AiSubscriptionStatus> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, "get_subscription_status", requestCallback);
+   }
+   
+   @Override
+   public void getApiKeyStatus(ServerRequestCallback<Boolean> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, "get_api_key_status", requestCallback);
+   }
+   
+   @Override
+   public void getAvailableModels(ServerRequestCallback<JsArrayString> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, "get_available_models", requestCallback);
+   }
+   
+   @Override
+   public void getSelectedModel(ServerRequestCallback<String> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, "get_selected_model", requestCallback);
+   }
+   
+   @Override
+   public void getCurrentWorkingDirectory(ServerRequestCallback<String> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, "get_current_working_directory", requestCallback);
+   }
+   
+   @Override
+   public void getTemperature(ServerRequestCallback<Double> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, GET_TEMPERATURE, requestCallback);
+   }
+   
+   @Override
+   public void setTemperature(double temperature, ServerRequestCallback<java.lang.Void> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONNumber(temperature));
+      sendRequest(RPC_SCOPE, SET_TEMPERATURE, params, requestCallback);
    }
 
 }

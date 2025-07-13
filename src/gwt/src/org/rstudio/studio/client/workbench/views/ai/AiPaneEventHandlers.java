@@ -240,30 +240,6 @@ public class AiPaneEventHandlers
       // Save current search container dimensions to reapply after navigation
       final int searchContainerHeight = getSearchContainerHeight();
       
-      // Check if this is an API key management page
-      boolean isApiKeyPage = (urlString != null && urlString.contains("api_key_management"));
-      
-      // For API management pages, use direct loading to avoid timing issues
-      if (isApiKeyPage) {
-         pane_.hideSearchContainer();
-         pane_.updateTitle("API Key Management");
-         
-         // Use direct frame loading - no background loading, no safety timers
-         pane_.getFrame().setUrl(targetUrl_);
-         
-         // Restore scroll position if provided
-         if (scrollPos != null) {
-            com.google.gwt.core.client.Scheduler.get().scheduleDeferred(() -> {
-               WindowEx window = pane_.getIFrameEx().getContentWindow();
-               if (window != null) {
-                  window.scrollTo(scrollPos.getX(), scrollPos.getY());
-               }
-            });
-         }
-         
-         return; // Exit early - no need for complex background loading
-      }
-      
       // Use the helper methods in AiPane for non-API pages
       pane_.restoreSearchContainer();
 
@@ -894,8 +870,8 @@ public class AiPaneEventHandlers
       server_.saveApiKey(provider, key, new ServerRequestCallback<java.lang.Void>() {
          @Override
          public void onResponseReceived(java.lang.Void response) {
-            // Successful save - refresh the API key management page to show the new state
-            pane_.refreshApiKeyManagement();
+            // Successful save - refresh the Settings page to show the new state
+            pane_.refreshSettings();
          }
          
          @Override
@@ -917,8 +893,8 @@ public class AiPaneEventHandlers
       server_.deleteApiKey(provider, new ServerRequestCallback<java.lang.Void>() {
          @Override
          public void onResponseReceived(java.lang.Void response) {
-            // Successful delete - refresh the API key management page to show the new state
-            pane_.refreshApiKeyManagement();
+            // Successful delete - refresh the Settings page to show the new state
+            pane_.refreshSettings();
          }
          
          @Override
@@ -986,31 +962,10 @@ public class AiPaneEventHandlers
     */
    public void handleSetAiWorkingDirectory(String dir)
    {
-      server_.setAiWorkingDirectory(dir, new ServerRequestCallback<java.lang.Void>() {
-         @Override
-         public void onResponseReceived(java.lang.Void response) {
-            // Success case is handled in the JavaScript
-         }
-         
-         @Override
-         public void onError(ServerError error) {
-            WindowEx window = pane_.getFrameWindow();
-            if (window != null) {
-               window.eval(
-                  "document.getElementById('directory-error').innerHTML = 'Error: " + 
-                  error.getMessage().replace("'", "\\'") + "';" +
-                  "document.getElementById('directory-error').style.display = 'block';" +
-                  "document.getElementById('directory-success').style.display = 'none';"
-               );
-            } else {
-               globalDisplay_.showErrorMessage("Error Setting Working Directory", error.getMessage());
-            }
-         }
-      });
+      // Working directory changes are now handled by the AiViewManager and AiSettingsWidget
+      // This method is deprecated and should not be called when using DOM/GWT widgets
+      globalDisplay_.showErrorMessage("Error", "Working directory changes should be handled by the Settings widget, not iframe manipulation.");
    }
-   
-   // Removed duplicate refreshApiKeyManagement() method
-   // All API key management refreshes should go through AiPane.refreshApiKeyManagement()
    
    /**
     * Handles marking a button as run
@@ -1066,44 +1021,9 @@ public class AiPaneEventHandlers
     * Handles browsing for a directory
     */
    public void handleBrowseDirectory() {
-      server_.browseDirectory(new ServerRequestCallback<JavaScriptObject>() {
-         @Override
-         public void onResponseReceived(JavaScriptObject result) {
-            boolean success = getBooleanProperty(result, "success");
-            if (success) {
-               String directory = getStringProperty(result, "directory");
-               if (directory != null && !directory.isEmpty()) {
-                  // Update the directory input field in the iframe
-                  WindowEx window = pane_.getFrameWindow();
-                  if (window != null) {
-                     window.eval(
-                        "document.getElementById('working-directory').value = '" + 
-                        directory.replace("'", "\\'") + "';" +
-                        "document.getElementById('directory-success').style.display = 'block';" +
-                        "document.getElementById('directory-error').style.display = 'none';" +
-                        "setTimeout(function() { document.getElementById('directory-success').style.display = 'none'; }, 3000);"
-                     );
-                  }
-               }
-            } else if (hasProperty(result, "error")) {
-               String errorMsg = getStringProperty(result, "error");
-               WindowEx window = pane_.getFrameWindow();
-               if (window != null) {
-                  window.eval(
-                     "document.getElementById('directory-error').innerHTML = 'Error: " + 
-                     errorMsg.replace("'", "\\'") + "';" +
-                     "document.getElementById('directory-error').style.display = 'block';" +
-                     "document.getElementById('directory-success').style.display = 'none';"
-                  );
-               }
-            }
-         }
-
-         @Override
-         public void onError(ServerError error) {
-            globalDisplay_.showErrorMessage("Error", error.getMessage());
-         }
-      });
+      // Directory browsing is now handled by the AiViewManager and AiSettingsWidget
+      // This method is deprecated and should not be called when using DOM/GWT widgets
+      globalDisplay_.showErrorMessage("Error", "Directory browsing should be handled by the Settings widget, not iframe manipulation.");
    }
    
    private native boolean getBooleanProperty(JavaScriptObject obj, String property) /*-{

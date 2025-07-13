@@ -56,6 +56,16 @@ tryCatch({
    }
 })
 
+# Initialize AI settings system when the module loads
+tryCatch({
+   if (exists(".rs.initialize_ai_settings", mode = "function")) {
+      .rs.initialize_ai_settings()
+   }
+}, error = function(e) {
+   # Settings initialization failed, but don't break the module
+   warning("AI settings initialization failed: ", e$message)
+})
+
 .rs.setVar("message_id_counter", 0)
 
 .rs.addFunction("get_next_message_id", function() {

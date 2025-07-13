@@ -12,4 +12,3 @@ test_file("~/Documents/GitHub/rstudio/src/cpp/tests/testthat/rstudio-test-sessio
 test_file("~/Documents/GitHub/rstudio/src/cpp/tests/testthat/rstudio-test-session-ai-conversation-handlers.R")
 test_file("~/Documents/GitHub/rstudio/src/cpp/tests/testthat/rstudio-test-session-ai-helpers.R")
 test_file("~/Documents/GitHub/rstudio/src/cpp/tests/testthat/rstudio-test-session-ai-io.R")
-test_file("~/Documents/GitHub/rstudio/src/cpp/tests/testthat/rstudio-test-session-ai-key-management.R") 
