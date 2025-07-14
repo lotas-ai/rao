@@ -1111,11 +1111,11 @@ public interface StudioClientCommonConstants extends com.google.gwt.i18n.client.
     String withRSConnectLabel();
 
     /**
-     * Translated "Enable publishing to Posit Connect".
+     * Translated "Enable publishing service".
      *
-     * @return translated "Enable publishing to Posit Connect"
+     * @return translated "Enable publishing service"
      */
-    @DefaultMessage("Enable publishing to Posit Connect")
+    @DefaultMessage("Enable publishing service")
     @Key("chkEnableRSConnectLabel")
     String chkEnableRSConnectLabel();
 
@@ -1128,12 +1128,12 @@ public interface StudioClientCommonConstants extends com.google.gwt.i18n.client.
     @Key("chkEnableCloudLabel")
     String chkEnableCloudLabel();
 
-    /**
-     * Translated "Information about Posit Connect".
-     *
-     * @return translated "Information about Posit Connect"
+        /**
+     * Translated "Information about publishing".
+     * 
+     * @return translated "Information about publishing"
      */
-    @DefaultMessage("Information about Posit Connect")
+    @DefaultMessage("Information about publishing")
     @Key("checkBoxWithHelpTitle")
     String checkBoxWithHelpTitle();
 
@@ -1354,12 +1354,12 @@ public interface StudioClientCommonConstants extends com.google.gwt.i18n.client.
     @Key("wizardNavigationPageCaption")
     String wizardNavigationPageCaption();
 
-    /**
-     * Translated "Posit Connect is a server product from Posit ".
-     *
-     * @return translated "Posit Connect is a server product from Posit "
+        /**
+     * Translated "Server publishing platform".
+     * 
+     * @return translated "Server publishing platform"
      */
-    @DefaultMessage("Posit Connect is a server product from Posit ")
+    @DefaultMessage("Server publishing platform")
     @Key("serviceDescription")
     String serviceDescription();
 

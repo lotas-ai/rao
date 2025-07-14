@@ -31,7 +31,7 @@
             <td valign="top" class="{style.labelCell}">
                <ui:msg key="warningText"><strong>This <span ui:field="subject_"/> is extremely large
                   (<span ui:field="size_"/>) and may<br/>
-                  cause RStudio to slow down or even hang.</strong>
+                  cause Rao to slow down or even hang.</strong>
                   <br/><br/>
                   Are you sure you want to continue?</ui:msg>
             </td>

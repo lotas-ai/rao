@@ -35,7 +35,7 @@
         </g:Label>
          <g:HTML>
             <p>
-                <ui:msg key="connectAccountText">You've successfully authorized this computer. Click "Connect Account" to add this account to RStudio.</ui:msg>
+                <ui:msg key="connectAccountText">You've successfully authorized this computer. Click "Connect Account" to add this account to Rao.</ui:msg>
             </p>
          </g:HTML>
       </g:HTMLPanel>

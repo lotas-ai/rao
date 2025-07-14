@@ -83,7 +83,7 @@ Subsections can be indicated by increasing the number of `#`:
 
 Quarto documents (`.qmd`) have a toggle-able **Source** or **Visual mode** for displaying real time view of the formatted markdown, along with a Save button, a Render on Save, Spellcheck, search, Render button, a gear for selecting whether to have inline output or output to the R console or Plot pane.
 
-On the right side of the menu bar there is a section for adding specific language code chunks, a dropdown for running various methods of the code, and a blue publish button for publishing to Posit Connect, Shinyapps.io, Quarto Pubs or RPubs.
+On the right side of the menu bar there is a section for adding specific language code chunks, a dropdown for running various methods of the code, and a blue publish button for publishing to server publishing platforms, Shinyapps.io, Quarto Pubs or RPubs.
 
 ## Console
 

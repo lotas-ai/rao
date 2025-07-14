@@ -9,7 +9,7 @@
 <g:HTMLPanel>
 <g:HTML>
 <!--
-RStudio's Vim support comes from the ACE editor. Documentation on which keys
+Rao's Vim support comes from the ACE editor. Documentation on which keys
 it supports can be found here:
 
 https://github.com/ajaxorg/ace/blob/master/lib/ace/keyboard/vim.js

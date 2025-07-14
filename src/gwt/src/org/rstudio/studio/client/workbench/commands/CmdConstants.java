@@ -1683,7 +1683,7 @@ public interface CmdConstants extends Constants {
     String authoringRPresentationsHelpDesc();
     
     // openRStudioIDECheatSheet
-    @DefaultStringValue("_RStudio IDE Cheat Sheet") // $NON-NLS-1$
+    @DefaultStringValue("_Rao IDE Cheat Sheet") // $NON-NLS-1$
     String openRStudioIDECheatSheetMenuLabel();
     @DefaultStringValue("RStudio IDE cheat sheet") // $NON-NLS-1$
     String openRStudioIDECheatSheetDesc();
@@ -2323,7 +2323,7 @@ public interface CmdConstants extends Constants {
     // saveHtmlPreviewAs
     @DefaultStringValue("Save As") // $NON-NLS-1$
     String saveHtmlPreviewAsButtonLabel();
-    @DefaultStringValue("File on RStudio Server...") // $NON-NLS-1$
+    @DefaultStringValue("File on Rao Server...") // $NON-NLS-1$
     String saveHtmlPreviewAsMenuLabel();
     @DefaultStringValue("Save the page to another location") // $NON-NLS-1$
     String saveHtmlPreviewAsDesc();
@@ -2993,7 +2993,7 @@ public interface CmdConstants extends Constants {
     String checkForUpdatesMenuLabel();
     
     // helpUsingRStudio
-    @DefaultStringValue("RStudio _Docs") // $NON-NLS-1$
+    @DefaultStringValue("Rao _Docs") // $NON-NLS-1$
     String helpUsingRStudioMenuLabel();
     
     // helpKeyboardShortcuts
@@ -3065,11 +3065,11 @@ public interface CmdConstants extends Constants {
     String refreshHelpDesc();
     
     // aiBack
-    @DefaultStringValue("Previous conversation") // $NON-NLS-1$
+    @DefaultStringValue("Previous Ai Topic") // $NON-NLS-1$
     String aiBackLabel();
     @DefaultStringValue("") // $NON-NLS-1$
     String aiBackButtonLabel();
-    @DefaultStringValue("Previous conversation") // $NON-NLS-1$
+    @DefaultStringValue("Previous topic") // $NON-NLS-1$
     String aiBackDesc();
     
     // aiAttach
@@ -3079,7 +3079,7 @@ public interface CmdConstants extends Constants {
     String aiAttachButtonLabel();
     @DefaultStringValue("Attach file") // $NON-NLS-1$
     String aiAttachDesc();
-
+    
     // aiAttachImage
     @DefaultStringValue("Attach Image") // $NON-NLS-1$
     String aiAttachImageLabel();
@@ -3089,21 +3089,21 @@ public interface CmdConstants extends Constants {
     String aiAttachImageDesc();
     
     // aiForward
-    @DefaultStringValue("Next conversation") // $NON-NLS-1$
+    @DefaultStringValue("Next Ai Topic") // $NON-NLS-1$
     String aiForwardLabel();
     @DefaultStringValue("") // $NON-NLS-1$
     String aiForwardButtonLabel();
-    @DefaultStringValue("Next conversation") // $NON-NLS-1$
+    @DefaultStringValue("Next topic") // $NON-NLS-1$
     String aiForwardDesc();
     
     // aiHome
-    @DefaultStringValue("API Key management") // $NON-NLS-1$
+    @DefaultStringValue("Show R Ai") // $NON-NLS-1$
     String aiHomeLabel();
     @DefaultStringValue("") // $NON-NLS-1$
     String aiHomeButtonLabel();
-    @DefaultStringValue("API Key management") // $NON-NLS-1$
+    @DefaultStringValue("R _Ai") // $NON-NLS-1$
     String aiHomeMenuLabel();
-    @DefaultStringValue("API Key management") // $NON-NLS-1$
+    @DefaultStringValue("Show R Ai") // $NON-NLS-1$
     String aiHomeDesc();
     
     // aiSearch
@@ -3119,7 +3119,7 @@ public interface CmdConstants extends Constants {
     String printAiDesc();
     
     // clearAiHistory
-    @DefaultStringValue("Clear conversation history") // $NON-NLS-1$
+    @DefaultStringValue("Clear Ai History") // $NON-NLS-1$
     String clearAiHistoryLabel();
     @DefaultStringValue("Clear history") // $NON-NLS-1$
     String clearAiHistoryMenuLabel();
@@ -3135,13 +3135,13 @@ public interface CmdConstants extends Constants {
     String aiPopoutDesc();
     
     // refreshAi
-    @DefaultStringValue("New conversation") // $NON-NLS-1$
+    @DefaultStringValue("Refresh Ai Topic") // $NON-NLS-1$
     String refreshAiLabel();
     @DefaultStringValue("") // $NON-NLS-1$
     String refreshAiButtonLabel();
-    @DefaultStringValue("New conversation") // $NON-NLS-1$
+    @DefaultStringValue("Refresh") // $NON-NLS-1$
     String refreshAiMenuLabel();
-    @DefaultStringValue("New conversation") // $NON-NLS-1$
+    @DefaultStringValue("Refresh topic") // $NON-NLS-1$
     String refreshAiDesc();
     
     // tutorialPopout
@@ -3339,9 +3339,9 @@ public interface CmdConstants extends Constants {
     String forceQuitSessionDesc();
     
     // showAboutDialog
-    @DefaultStringValue("About RStudio...") // $NON-NLS-1$
+    @DefaultStringValue("About Rao...") // $NON-NLS-1$
     String showAboutDialogLabel();
-    @DefaultStringValue("A_bout RStudio") // $NON-NLS-1$
+    @DefaultStringValue("A_bout Rao") // $NON-NLS-1$
     String showAboutDialogMenuLabel();
     
     // showLicenseDialog
@@ -3359,15 +3359,15 @@ public interface CmdConstants extends Constants {
     String updateCredentialsMenuLabel();
     
     // rstudioCommunityForum
-    @DefaultStringValue("RStudio Community _Forum") // $NON-NLS-1$
+    @DefaultStringValue("Rao Community _Forum") // $NON-NLS-1$
     String rstudioCommunityForumMenuLabel();
     
     // rstudioSupport
-    @DefaultStringValue("Posit _Support") // $NON-NLS-1$
+    @DefaultStringValue("Lotas Inc _Support") // $NON-NLS-1$
     String rstudioSupportMenuLabel();
     
     // rstudioLicense
-    @DefaultStringValue("RStudio _License") // $NON-NLS-1$
+    @DefaultStringValue("Rao _License") // $NON-NLS-1$
     String rstudioLicenseMenuLabel();
     
     // buildAll
@@ -3927,9 +3927,9 @@ public interface CmdConstants extends Constants {
     // sparkHelp
     @DefaultStringValue("") // $NON-NLS-1$
     String sparkHelpButtonLabel();
-    @DefaultStringValue("Using Spark with RStudio") // $NON-NLS-1$
+    @DefaultStringValue("Using Spark with Rao") // $NON-NLS-1$
     String sparkHelpMenuLabel();
-    @DefaultStringValue("Help on using Spark with RStudio") // $NON-NLS-1$
+    @DefaultStringValue("Help on using Spark with Rao") // $NON-NLS-1$
     String sparkHelpDesc();
     
     // startJob
@@ -4115,7 +4115,7 @@ public interface CmdConstants extends Constants {
     String showShortcutCommandMenuLabel();
     
     // crashDesktopApplication
-    @DefaultStringValue("Crash RStudio Desktop (DA_NGER)") // $NON-NLS-1$
+    @DefaultStringValue("Crash Rao Desktop (DA_NGER)") // $NON-NLS-1$
     String crashDesktopApplicationMenuLabel();
     
     // showCommandPalette

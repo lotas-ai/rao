@@ -232,7 +232,7 @@ window.addEventListener("load", function() {
    if (errorPanel !== null) {
      var displayProp = window.getComputedStyle(errorPanel, null).getPropertyValue("display");
      if (displayProp !== "none") {
-        document.title = "Error: RStudio Sign In Failed";
+        document.title = "Error: Rao Sign In Failed";
         // If error message displayed, give time for screen reader to catch up then
         // copy error message to aria-live region to trigger announcement
         setTimeout(function () {

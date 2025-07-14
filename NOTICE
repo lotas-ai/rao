@@ -1,4 +1,4 @@
-RStudio includes other open source software components. The following
+Rao includes other open source software components. The following
 is a list of these components (full copies of the license agreements
 used by these components are included below):
 
@@ -75,21 +75,21 @@ used by these components are included below):
 - ShowdownJS
 - Copilot Language Server
 
-Windows builds of RStudio also include a binary copy of libclang. This
+Windows builds of Rao also include a binary copy of libclang. This
 component is licensed to you under the Apache License v2.0 with LLVM
 Exceptions, the terms of which are included below. You can obtain the source
 code for libclang at:
 
 http://llvm.org/
 
-RStudio also includes a binary copy of pandoc. This component is licensed
+Rao also includes a binary copy of pandoc. This component is licensed
 to you under the GPLv2, the terms of which are included below. You can
 obtain the source code for pandoc at:
 
   https://github.com/jgm/pandoc
 
-In addition, RStudio is bundled with a binary archive of the rmarkdown
-package; and RStudio for Windows is bundled with binary copies of GNU
+In addition, Rao is bundled with a binary archive of the rmarkdown
+package; and Rao for Windows is bundled with binary copies of GNU
 DiffUtils, GNU Grep, SumatraPDF, Hadoop Winutils, and several components
 of MSYS.  These components are licensed to you under the GPLv3, the terms
 of which are included below. You can obtain source code for these 

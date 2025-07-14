@@ -1,7 +1,7 @@
 {
     "$id": "https://rstudio.com/rstudio.preferences.json",
     "$schema": "http://json-schema.org/draft-07/schema#",
-    "title": "RStudio User Preferences",
+    "title": "Rao User Preferences",
     "type": "object",
     "properties": {
         "run_rprofile_on_resume": {
@@ -60,7 +60,7 @@
             "description": "The CRAN mirror to use.",
             "default": {
                 "name": "Global (CDN)",
-                "host": "RStudio",
+                "host": "Rao",
                 "url": "https://cran.rstudio.com/",
                 "repos": "",
                 "country": "us",
@@ -134,25 +134,25 @@
             "type": "boolean",
             "default": true,
             "title": "Show line numbers in editor",
-            "description": "Show line numbers in RStudio's code editor."
+            "description": "Show line numbers in Rao's code editor."
         },
         "relative_line_numbers": {
             "type": "boolean",
             "default": false,
             "title": "Use relative line numbers in editor",
-            "description": "Show relative, rather than absolute, line numbers in RStudio's code editor."
+            "description": "Show relative, rather than absolute, line numbers in Rao's code editor."
         },
         "highlight_selected_word": {
             "type": "boolean",
             "default": true,
             "title": "Highlight selected word in editor",
-            "description": "Highlight the selected word in RStudio's code editor."
+            "description": "Highlight the selected word in Rao's code editor."
         },
         "highlight_selected_line": {
             "type": "boolean",
             "default": false,
             "title": "Highlight selected line in editor",
-            "description": "Highlight the selected line in RStudio's code editor."
+            "description": "Highlight the selected line in Rao's code editor."
         },
         "panes": {
             "type": "object",
@@ -214,7 +214,7 @@
                 "console_right_on_top": true,
                 "additional_source_columns": 0
             },
-            "description": "Layout of panes in the RStudio workbench."
+            "description": "Layout of panes in the Rao workbench."
         },
         "allow_source_columns": {
             "type": "boolean",
@@ -244,7 +244,7 @@
             "type": "boolean",
             "default": true,
             "title": "Show margin in editor",
-            "description": "Whether to show the margin guide in the RStudio code editor."
+            "description": "Whether to show the margin guide in the Rao code editor."
         },
         "blinking_cursor": {
             "type": "boolean",
@@ -262,7 +262,7 @@
             "type": "boolean",
             "default": false,
             "title": "Show invisible characters in editor",
-            "description": "Whether to show invisible characters, such as spaces and tabs, in the RStudio code editor."
+            "description": "Whether to show invisible characters, such as spaces and tabs, in the Rao code editor."
         },
         "indent_guides": {
             "type": "string",
@@ -270,7 +270,7 @@
             "enumReadable": ["None", "Gray lines", "Rainbow lines", "Rainbow fills"],
             "default": "none",
             "title": "Indentation guides",
-            "description": "Style for indentation guides in the RStudio code editor."
+            "description": "Style for indentation guides in the Rao code editor."
         },
         "continue_comments_on_newline": {
             "type": "boolean",
@@ -290,7 +290,7 @@
             "enumReadable": ["Default", "Vim", "Emacs", "Sublime Text"],
             "default": "default",
             "title": "Keybinding set for editor",
-            "description": "The keybindings to use in the RStudio code editor."
+            "description": "The keybindings to use in the Rao code editor."
         },
         "insert_matching": {
             "type": "boolean",
@@ -340,7 +340,7 @@
             "type": "boolean",
             "default": true,
             "title": "Enable code snippets",
-            "description": "Whether to enable code snippets in the RStudio code editor."
+            "description": "Whether to enable code snippets in the Rao code editor."
         },
         "code_completion": {
             "type": "string",
@@ -348,7 +348,7 @@
             "enumReadable": ["Automatically", "Never", "When triggered ($, ::)", "Manually (Tab, Ctrl + Space)"],
             "default": "always",
             "title": "Use code completion for R",
-            "description": "When to use auto-completion for R code in the RStudio code editor."
+            "description": "When to use auto-completion for R code in the Rao code editor."
         },
         "code_completion_other": {
             "type": "string",
@@ -356,7 +356,7 @@
             "enumReadable": ["Automatically", "When triggered", "Manually (Ctrl+Space)"],
             "default": "always",
             "title": "Use code completion for other languages",
-            "description": "When to use auto-completion for other languages (such as JavaScript and SQL) in the RStudio code editor."
+            "description": "When to use auto-completion for other languages (such as JavaScript and SQL) in the Rao code editor."
         },
         "console_code_completion": {
             "type": "boolean",
@@ -380,7 +380,7 @@
             "type": "boolean",
             "default": false,
             "title": "Include all function arguments in completion list",
-            "description": "When set, RStudio will include all function arguments in the completion list, even if those arguments have already appeared to be used in the current function invocation."
+            "description": "When set, Rao will include all function arguments in the completion list, even if those arguments have already appeared to be used in the current function invocation."
         },
         "show_function_signature_tooltips": {
             "type": "boolean",
@@ -500,7 +500,7 @@
             "type": "boolean",
             "default": true,
             "title": "Re-indent code when pasting",
-            "description": "Whether to automatically re-indent code when it's pasted into RStudio."
+            "description": "Whether to automatically re-indent code when it's pasted into Rao."
         },
         "vertically_align_arguments_indent": {
             "type": "boolean",
@@ -630,7 +630,7 @@
             "type": "boolean",
             "default": true,
             "title": "Save and reload R workspace on build",
-            "description": "Whether RStudio should save and reload the R workspace when building the project."
+            "description": "Whether Rao should save and reload the R workspace when building the project."
         },
         "font_size_points": {
             "type": "number",
@@ -654,19 +654,19 @@
             "type": "string",
             "default": "Textmate (default)",
             "title": "Theme",
-            "description": "The name of the color theme to apply to the text editor in RStudio."
+            "description": "The name of the color theme to apply to the text editor in Rao."
         },
         "server_editor_font_enabled": {
             "type": "boolean",
             "default": false,
-            "title": "Enable editor fonts on RStudio Server",
-            "description": "Whether to use a custom editor font in RStudio Server."
+            "title": "Enable editor fonts on Rao Server",
+            "description": "Whether to use a custom editor font in Rao Server."
         },
         "server_editor_font": {
             "type": "string",
             "default": "",
             "title": "Editor font",
-            "description": "The name of the fixed-width editor font to use with RStudio Server."
+            "description": "The name of the fixed-width editor font to use with Rao Server."
         },
         "default_encoding": {
             "type": "string",
@@ -678,7 +678,7 @@
             "type": "boolean",
             "default": true,
             "title": "Show top toolbar",
-            "description": "Whether to show the toolbar at the top of the RStudio workbench."
+            "description": "Whether to show the toolbar at the top of the Rao workbench."
         },
         "default_project_location": {
             "type": "string",
@@ -720,11 +720,11 @@
             "type": "boolean",
             "default": true,
             "title": "Enable data import",
-            "description": "Whether to use RStudio's data import feature."
+            "description": "Whether to use Rao's data import feature."
         },
         "pdf_previewer": {
             "type": "string",
-            "enum": ["none", "default", "rstudio", "desktop-synctex", "system"],
+            "enum": ["none", "default", "rao", "desktop-synctex", "system"],
             "default": "default",
             "title": "PDF previewer",
             "description": "The program to use to preview PDF files after generation."
@@ -787,7 +787,7 @@
             "type": "boolean",
             "default": true,
             "title": "Enable the Packages pane",
-            "description": "Whether to enable RStudio's Packages pane."
+            "description": "Whether to enable Rao's Packages pane."
         },
         "cpp_template": {
             "type": "string",
@@ -799,7 +799,7 @@
             "type": "boolean",
             "default": true,
             "title": "Restore last opened documents on startup",
-            "description": "Whether to restore the last opened source documents when RStudio starts up."
+            "description": "Whether to restore the last opened source documents when Rao starts up."
         },
         "handle_errors_in_user_code_only": {
             "type": "boolean",
@@ -817,7 +817,7 @@
             "type": "boolean",
             "default": true,
             "title": "Check for new version at startup",
-            "description": "Whether to check for new versions of RStudio when RStudio starts."
+            "description": "Whether to check for new versions of Rao when Rao starts."
         },
         "show_internal_functions": {
             "type": "boolean",
@@ -879,7 +879,7 @@
         "enable_cloud_publish_ui": {
             "type": "boolean",
             "default": true,
-            "description": "Whether to show UI for publishing content to Posit Cloud."
+            "description": "Whether to show UI for publishing content to cloud service."
         },
         "publish_check_certificates": {
             "type": "boolean",
@@ -1080,13 +1080,13 @@
         "show_launcher_jobs_tab": {
             "type": "boolean",
             "default": true,
-            "description": "Whether to show the Workbench Jobs tab in RStudio Pro and RStudio Workbench."
+            "description": "Whether to show the Remote Jobs tab."
         },
         "launcher_jobs_sort": {
             "type": "string",
             "enum": ["recorded", "state"],
             "default": "recorded",
-            "description": "How to sort jobs in the Workbench Jobs tab in RStudio Pro and RStudio Workbench."
+            "description": "How to sort jobs in the Remote Jobs tab."
         },
         "busy_detection": {
             "type": "string",
@@ -1131,7 +1131,7 @@
             "default": "default",
             "enum": ["default", "alternate"],
             "title": "Global theme",
-            "description": "The theme to use for the main RStudio user interface."
+            "description": "The theme to use for the main Rao user interface."
         },
         "git_diff_ignore_whitespace": {
             "type": "boolean",
@@ -1185,19 +1185,19 @@
             "type": "string",
             "enum": ["always", "never", "sessions"],
             "default": "sessions",
-            "title": "Show user home page in RStudio Workbench",
-            "description": "When to show the server home page in RStudio Workbench."
+            "title": "Show user home page",
+            "description": "When to show the server home page."
         },
         "reuse_sessions_for_project_links": {
             "type": "boolean",
             "default": false,
-            "description": "Whether to reuse sessions when opening projects in RStudio Workbench."
+            "description": "Whether to reuse sessions when opening projects."
         },
         "vcs_enabled": {
             "type": "boolean",
             "default": true,
             "title": "Enable version control if available",
-            "description": "Whether to enable RStudio's version control system interface."
+            "description": "Whether to enable Rao's version control system interface."
         },
         "vcs_autorefresh": {
             "type": "boolean",
@@ -1250,7 +1250,7 @@
             "type": "boolean",
             "default": true,
             "title": "Use alternate library path when building package",
-            "description": "When set, RStudio will build your package in a '_build' sub-directory of your current library paths."
+            "description": "When set, Rao will build your package in a '_build' sub-directory of your current library paths."
         },
         "use_secure_download": {
             "type": "boolean",
@@ -1279,8 +1279,8 @@
         "restore_last_project": {
             "type": "boolean",
             "default": true,
-            "title": "Restore last project when starting RStudio",
-            "description": "Whether to restore the last project when starting RStudio."
+            "title": "Restore last project when starting Rao",
+            "description": "Whether to restore the last project when starting Rao."
         },
         "project_safe_startup_seconds": {
             "type": "integer",
@@ -1309,8 +1309,8 @@
         "restore_project_r_version": {
             "type": "boolean",
             "default": true,
-            "title": "Restore project R version in RStudio Pro and RStudio Workbench",
-            "description": "Whether to restore the last version of R used by the project in RStudio Pro and RStudio Workbench."
+            "title": "Restore project R version",
+            "description": "Whether to restore the last version of R used by the project."
         },
         "clang_verbose": {
             "type": "integer",
@@ -1321,8 +1321,8 @@
         "submit_crash_reports": {
             "type": "boolean",
             "default": true,
-            "title": "Submit crash reports to Posit",
-            "description": "Whether to automatically submit crash reports to Posit."
+            "title": "Submit crash reports to Lotas Inc",
+            "description": "Whether to automatically submit crash reports to Lotas Inc."
         },
         "default_r_version": {
             "type": "object",
@@ -1424,7 +1424,7 @@
         "full_project_path_in_window_title": {
             "type": "boolean",
             "default": false,
-            "title": "Show full path to project in RStudio Desktop windows",
+            "title": "Show full path to project in Rao Desktop windows",
             "description": "Whether to show the full path to project in desktop window title."
         },
         "visual_markdown_editing_is_default": {
@@ -1562,7 +1562,7 @@
         "browser_fixed_width_fonts": {
             "type": "array",
             "description": "List of fixed-width fonts to check for browser support.",
-            "title": "Fixed-width font list for RStudio Server",
+            "title": "Fixed-width font list for Rao Server",
             "items": {
                 "type": "string"
             },
@@ -1640,7 +1640,7 @@
             "default": 10
         },
         "terminal_python_integration": {
-            "description": "Enable Python terminal hooks. When enabled, the RStudio-configured version of Python will be placed on the PATH.",
+            "description": "Enable Python terminal hooks. When enabled, the Rao-configured version of Python will be placed on the PATH.",
             "title": "Enable terminal Python integration",
             "type": "boolean",
             "default": true
@@ -1652,13 +1652,13 @@
             "default": false
         },
         "python_project_environment_automatic_activate": {
-            "description": "When enabled, if the active project contains a Python virtual environment, then RStudio will automatically activate this environment on startup.",
+            "description": "When enabled, if the active project contains a Python virtual environment, then Rao will automatically activate this environment on startup.",
             "title": "Automatically activate project Python environments",
             "type": "boolean",
             "default": true
         },
         "check_null_external_pointers": {
-            "description": "When enabled, RStudio will detect R objects containing null external pointers when building the Environment pane, and avoid introspecting their contents further.",
+            "description": "When enabled, Rao will detect R objects containing null external pointers when building the Environment pane, and avoid introspecting their contents further.",
             "title": "Check values in the Environment pane for null external pointers",
             "type": "boolean",
             "default": false
@@ -1677,7 +1677,7 @@
             "description": "Hide desktop menu bar until Alt key is pressed."
         },
         "native_file_dialogs": {
-            "description": "Whether RStudio Desktop will use the operating system's native File and Message dialog boxes.",
+            "description": "Whether Rao Desktop will use the operating system's native File and Message dialog boxes.",
             "title": "Use native file and message dialog boxes",
             "type": "boolean",
             "default": true
@@ -1711,7 +1711,7 @@
             "type": "boolean",
             "default": false,
             "title": "Enable GitHub Copilot",
-            "description": "When enabled, RStudio will use GitHub Copilot to provide code suggestions."
+            "description": "When enabled, Rao will use GitHub Copilot to provide code suggestions."
         },
         "copilot_completions_trigger": {
             "type": "string",
@@ -1733,25 +1733,25 @@
             "enumReadable": ["Copilot Suggestion", "Code Completion"],
             "default": "suggestion",
             "title": "Pressing Tab key will prefer inserting:",
-            "description": "Control the behavior of the Tab key when both Copilot code suggestions and RStudio code completions are visible."
+            "description": "Control the behavior of the Tab key when both Copilot code suggestions and Rao code completions are visible."
         },
         "copilot_indexing_enabled": {
             "type": "boolean",
             "default": false,
             "title": "Index project files with GitHub Copilot",
-            "description": "When enabled, RStudio will index project files with GitHub Copilot."
+            "description": "When enabled, Rao will index project files with GitHub Copilot."
         },
         "copilot_show_messages": {
             "type": "boolean",
             "default": true,
             "title": "Display account and billing messages from GitHub Copilot",
-            "description": "When enabled, RStudio will show account and billing messages from GitHub Copilot in a message box."
+            "description": "When enabled, Rao will show account and billing messages from GitHub Copilot in a message box."
         },
         "copilot_project_workspace": {
             "type": "boolean",
             "default": true,
-            "title": "Use RStudio project folder as a Copilot workspace",
-            "description": "When enabled, RStudio will tell Copilot to use the current RStudio project's folder as a workspace."
+            "title": "Use Rao project folder as a Copilot workspace",
+            "description": "When enabled, Rao will tell Copilot to use the current Rao project's folder as a workspace."
         },
         "project_name": {
             "description": "User-provided name for the currently opened R project.",
@@ -1795,7 +1795,7 @@
             "type": "string",
             "default": "",
             "title": "Default project user data directory",
-            "description": "The folder in which RStudio should store project .Rproj.user data."
+            "description": "The folder in which Rao should store project .Rproj.user data."
         },
         "console_highlight_conditions": {
             "type": "string",

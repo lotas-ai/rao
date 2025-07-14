@@ -1094,11 +1094,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String showPublishDiagnosticsDescription();
 
    /**
-    * Whether to show UI for publishing content to Posit Cloud.
+    * Whether to show UI for publishing content to cloud service.
     */
    @DefaultStringValue("")
    String enableCloudPublishUiTitle();
-   @DefaultStringValue("Whether to show UI for publishing content to Posit Cloud.")
+   @DefaultStringValue("Whether to show UI for publishing content to cloud service.")
    String enableCloudPublishUiDescription();
 
    /**
@@ -1460,19 +1460,19 @@ public interface UserPrefsAccessorConstants extends Constants {
    String rootDocumentDescription();
 
    /**
-    * When to show the server home page in RStudio Workbench.
+    * When to show the server home page in Rao Server.
     */
-   @DefaultStringValue("Show user home page in RStudio Workbench")
+   @DefaultStringValue("Show user home page in Rao Server")
    String showUserHomePageTitle();
-   @DefaultStringValue("When to show the server home page in RStudio Workbench.")
+   @DefaultStringValue("When to show the server home page in Rao Server.")
    String showUserHomePageDescription();
 
    /**
-    * Whether to reuse sessions when opening projects in RStudio Workbench.
+    * Whether to reuse sessions when opening projects in Rao Server.
     */
    @DefaultStringValue("")
    String reuseSessionsForProjectLinksTitle();
-   @DefaultStringValue("Whether to reuse sessions when opening projects in RStudio Workbench.")
+   @DefaultStringValue("Whether to reuse sessions when opening projects in Rao Server.")
    String reuseSessionsForProjectLinksDescription();
 
    /**
@@ -1634,9 +1634,9 @@ public interface UserPrefsAccessorConstants extends Constants {
    /**
     * Whether to restore the last version of R used by the project in RStudio Pro and RStudio Workbench.
     */
-   @DefaultStringValue("Restore project R version in RStudio Pro and RStudio Workbench")
+   @DefaultStringValue("Restore project R version in Rao Pro and Rao Server")
    String restoreProjectRVersionTitle();
-   @DefaultStringValue("Whether to restore the last version of R used by the project in RStudio Pro and RStudio Workbench.")
+   @DefaultStringValue("Whether to restore the last version of R used by the project in Rao Pro and Rao Server.")
    String restoreProjectRVersionDescription();
 
    /**
@@ -1648,11 +1648,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String clangVerboseDescription();
 
    /**
-    * Whether to automatically submit crash reports to Posit.
+    * Whether to automatically submit crash reports to Lotas Inc.
     */
-   @DefaultStringValue("Submit crash reports to Posit")
+   @DefaultStringValue("Submit crash reports to Lotas Inc.")
    String submitCrashReportsTitle();
-   @DefaultStringValue("Whether to automatically submit crash reports to Posit.")
+   @DefaultStringValue("Whether to automatically submit crash reports to Lotas Inc.")
    String submitCrashReportsDescription();
 
    /**

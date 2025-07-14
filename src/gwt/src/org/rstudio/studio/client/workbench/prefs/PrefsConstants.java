@@ -1482,12 +1482,12 @@ public interface PrefsConstants extends com.google.gwt.i18n.client.Messages {
     @Key("otherNotifyMeLabel")
     String otherNotifyMeLabel();
 
-    /**
-     * Translated "Send automated crash reports to Posit".
-     *
-     * @return translated "Send automated crash reports to Posit"
-     */
-    @DefaultMessage("Send automated crash reports to Posit")
+       /**
+    * Translated "Send automated crash reports to Lotas Inc".
+    * 
+    * @return translated "Send automated crash reports to Lotas Inc"
+    */
+   @DefaultMessage("Send automated crash reports to Lotas Inc")
     @Key("otherSendReportsLabel")
     String otherSendReportsLabel();
 
@@ -2471,30 +2471,30 @@ public interface PrefsConstants extends com.google.gwt.i18n.client.Messages {
     @Key("withRSConnectLabel")
     String withRSConnectLabel();
 
-    /**
-     * Translated "Enable publishing to Posit Connect".
-     *
-     * @return translated "Enable publishing to Posit Connect"
-     */
-    @DefaultMessage("Enable publishing to Posit Connect")
+       /**
+    * Translated "Enable publishing to publishing service".
+    * 
+    * @return translated "Enable publishing to publishing service"
+    */
+   @DefaultMessage("Enable publishing to publishing service")
     @Key("chkEnableRSConnectLabel")
     String chkEnableRSConnectLabel();
 
-    /**
-     * Translated "Enable publishing to Posit Cloud".
-     *
-     * @return translated "Enable publishing to Posit Cloud"
-     */
-    @DefaultMessage("Enable publishing to Posit Cloud")
+       /**
+    * Translated "Enable publishing to cloud service".
+    * 
+    * @return translated "Enable publishing to cloud service"
+    */
+   @DefaultMessage("Enable publishing to cloud service")
     @Key("chkEnableCloudLabel")
     String chkEnableCloudLabel();
 
-    /**
-     * Translated "Information about Posit Connect".
-     *
-     * @return translated "Information about Posit Connect"
-     */
-    @DefaultMessage("Information about Posit Connect")
+       /**
+    * Translated "Information about publishing service".
+    * 
+    * @return translated "Information about publishing service"
+    */
+   @DefaultMessage("Information about publishing service")
     @Key("checkBoxWithHelpTitle")
     String checkBoxWithHelpTitle();
 

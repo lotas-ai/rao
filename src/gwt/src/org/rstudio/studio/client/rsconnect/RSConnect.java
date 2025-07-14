@@ -436,7 +436,7 @@ public class RSConnect implements SessionInitEvent.Handler,
             }
             else
             {
-               // Posit Connect is disabled, go straight to RPubs
+               // Publishing service is disabled, go straight to RPubs
                publishAsRPubs(event);
             }
          }

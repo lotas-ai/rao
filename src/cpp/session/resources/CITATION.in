@@ -1,19 +1,19 @@
 bibentry("Manual",
-         title = "RStudio: Integrated Development Environment for R",
-         author = person("Posit team"),
-         organization = "Posit Software, PBC",
-         address      = "Boston, MA",
+         title = "Rao: Integrated Development Environment for R",
+         author = person("Lotas team"),
+         organization = "Lotas Inc.",
+         address      = "San Francisco, CA",
          year         = "${CPACK_COPYRIGHT_YEAR}",
-         url          = "http://www.posit.co/",
+         url          = "http://www.lotas.ai/",
          
          textVersion = 
-         paste("Posit team (${CPACK_COPYRIGHT_YEAR}). ", 
-               "RStudio: Integrated Development Environment for R. ",
-               "Posit Software, PBC, Boston, MA. ",
-               "URL http://www.posit.co/.",
+         paste("Lotas team (${CPACK_COPYRIGHT_YEAR}). ", 
+               "Rao: Integrated Development Environment for R. ",
+               "Lotas Inc., San Francisco, CA. ",
+               "URL http://www.lotas.ai/.",
                sep=""),
          
-         mheader = "To cite RStudio in publications use:",
+         mheader = "To cite Rao in publications use:",
 	 
 	     mfooter = ""
 	)

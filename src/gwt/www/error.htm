@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>RStudio Server</title>
+  <title>Rao Server</title>
   <style id="page-style">
     #banner {
       margin-bottom: 0;
@@ -21,19 +21,6 @@
 <body>
   <header role="banner">
     <div id="banner">
-      <picture>
-        <source
-          id="logo-reverse"
-          srcset="images/Posit-ProductLogo_rst-server-reverse.svg"
-          media="(prefers-color-scheme: dark)"
-        />
-        <img
-          id="logo-full-color"
-          src="images/Posit-ProductLogo_rst-server-full-color.svg"
-          height="27"
-          alt="RStudio Logo"
-        />
-      </picture>
       <div style="flex: 1"></div>
       <form method="post" id="signOutForm" action="auth-sign-out">
         <input type="hidden" name="rs-csrf-token" id="rs-csrf-token" />
@@ -47,7 +34,7 @@
   <div id="view" class="container">
 
     <p>
-      RStudio encountered an error and the request could not be processed:
+      Rao encountered an error and the request could not be processed:
     </p>
 
     <ul>
@@ -88,14 +75,6 @@
     cssLink.type = "text/css";
     cssLink.rel = "stylesheet";
     style.insertAdjacentElement("beforebegin", cssLink);
-
-    var iconLink = document.createElement("link");
-    iconLink.href = getBaseUri() + "images/Posit-Product_rst-server-favicon.svg";
-    iconLink.rel = "shortcut icon";
-    style.insertAdjacentElement("beforebegin", iconLink);
-
-    document.getElementById("logo-reverse").srcset = getBaseUri() + "/images/Posit-ProductLogo_rst-server-reverse.svg";
-    document.getElementById("logo-full-color").src = getBaseUri() + "/images/Posit-ProductLogo_rst-server-full-color.svg";
 
     document.getElementById("signOutForm").action = getBaseUri() + "/auth-sign-out";
     document.getElementById("signOut").src = getBaseUri() + "/images/signOut.png";

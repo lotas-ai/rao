@@ -4,7 +4,7 @@
       "namespace": "rstudio::session",
       "includeGuard": "SESSION_SESSION_OPTIONS_GEN_HPP",
       "configFile": "rsession.conf",
-      "docDescription": "The following is a list of available options that can be specified in the `rsession.conf` configuration file, which controls behavior of the `rsession` process, allowing you to tune various RStudio Pro Session parameters.",
+      "docDescription": "The following is a list of available options that can be specified in the `rsession.conf` configuration file, which controls behavior of the `rsession` process, allowing you to tune various Rao Pro Session parameters.",
       "outputSourceFile": "session/include/session/SessionOptions.gen.hpp",
       "outputDocFile": "/dev/null",
       "additionalIncludes": [
@@ -36,7 +36,7 @@
             "type": "bool",
             "defaultValue": false,
             "implicitValue": true,
-            "description": "Run RStudio as an automation agent."
+            "description": "Run Rao as an automation agent."
          },
          {
             "name": "automation-report-file",
@@ -110,7 +110,7 @@
             "name": "docs-url",
             "type": "string",
             "memberName": "docsURL_",
-            "description": "If specified, overrides the URL to navigate to when a user clicks on the RStudio help link."
+            "description": "If specified, overrides the URL to navigate to when a user clicks on the Rao help link."
          }
       ],
       "www": [
@@ -120,7 +120,7 @@
             "defaultValue": "www",
             "memberName": "wwwLocalPath_",
             "isHidden": true,
-            "description": "The relative path from the RStudio installation directory, or absolute path where web assets are stored."
+            "description": "The relative path from the Rao installation directory, or absolute path where web assets are stored."
          },
          {
             "name": "www-symbol-maps-path",
@@ -128,7 +128,7 @@
             "type": "core::FilePath",
             "defaultValue": "www-symbolmaps",
             "isHidden": true,
-            "description": "The relative path from the RStudio installation directory, or absolute path, where symbol maps are stored."
+            "description": "The relative path from the Rao installation directory, or absolute path, where symbol maps are stored."
          },
          {
             "name": {"constant": "kWwwPortSessionOption", "value": "www-port"},
@@ -294,7 +294,7 @@
             "name": "default-rsconnect-server",
             "type": "string",
             "memberName": "defaultRSConnectServer_",
-            "description": "Specifies the default Posit Connect server URL."
+            "description": "Specifies the default publishing server URL."
          },
          {
             "name": {"constant": "kTerminalPortOption", "value": "terminal-port"},
@@ -346,7 +346,7 @@
             "isHidden": true,
             "type": "string",
             "defaultValue": {"code": "kRequestDefaultRootPath", "description": "Assume the root path '/' if not defined."},
-            "description": "The path prefix added by a proxy to the incoming RStudio URL. This setting is used so RStudio Server knows what path it is being served from. If running RStudio Server behind a path-modifying proxy, this should be changed to match the base RStudio Server URL."
+            "description": "The path prefix added by a proxy to the incoming Rao URL. This setting is used so Rao Server knows what path it is being served from. If running Rao Server behind a path-modifying proxy, this should be changed to match the base Rao Server URL."
          },
          {
             "name": {"constant": "kUseSecureCookiesSessionOption", "value": "session-use-secure-cookies"},
@@ -441,7 +441,7 @@
             "type": "string",
             "memberName": "sessionProjectUserDataDir_",
             "defaultValue": "",
-            "description": "The folder in which RStudio should store user-specific project (.Rproj.user) data."
+            "description": "The folder in which Rao should store user-specific project (.Rproj.user) data."
          },
          {
             "name": "session-allow-project-user-data-dir-override",
@@ -650,7 +650,7 @@
             "type": "int",
             "memberName": "rCompatibleGraphicsEngineVersion_",
             "defaultValue": 16,
-            "description": "Specifies the maximum graphics engine version that this version of RStudio is compatible with."
+            "description": "Specifies the maximum graphics engine version that this version of Rao is compatible with."
          },
          {
             "name": "r-resources-path",

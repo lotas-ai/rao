@@ -267,7 +267,7 @@
 	<key>CFBundleExecutable</key>
 	<string>Rao</string>
 	<key>CFBundleGetInfoString</key>
-	<string>RStudio ${CPACK_PACKAGE_VERSION}, © 2009-${CPACK_COPYRIGHT_YEAR} Posit Software, PBC</string>
+	<string>Rao ${CPACK_PACKAGE_VERSION}, © 2009-${CPACK_COPYRIGHT_YEAR} Lotas Inc.</string>
 	<key>CFBundleIconFile</key>
 	<string>Rao.icns</string>
 	<key>CFBundleIdentifier</key>
@@ -293,7 +293,7 @@
 	<key>LSRequiresCarbon</key>
 	<true/>
 	<key>NSHumanReadableCopyright</key>
-	<string>RStudio ${CPACK_PACKAGE_VERSION}, © 2009-${CPACK_COPYRIGHT_YEAR} Posit Software, PBC</string>
+	<string>Rao ${CPACK_PACKAGE_VERSION}, © 2009-${CPACK_COPYRIGHT_YEAR} Lotas Inc.</string>
   <key>NSHighResolutionCapable</key>
   <true/>
   <key>NSSupportsAutomaticGraphicsSwitching</key>

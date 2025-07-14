@@ -2,7 +2,7 @@ project:
   type: posit-docs
 
 website:
-  title: "RStudio User Guide"
+  title: "Rao User Guide"
   twitter-card: true
   open-graph: true
   page-navigation: true
@@ -16,7 +16,7 @@ website:
   repo-actions: [edit, source]
   
   navbar:
-    title: "RStudio User Guide<br>{{< var buildType >}} {{< var version >}}"
+    title: "Rao User Guide<br>{{< var buildType >}} {{< var version >}}"
     collapse: false
     pinned: true
     search: true

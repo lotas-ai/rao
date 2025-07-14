@@ -706,7 +706,7 @@ environment(.rs.Env[[".rs.addFunction"]]) <- .rs.Env
 {
    unsupported <- function(...) 
    {  
-      msg <- "function not supported in RStudio"
+      msg <- "function not supported in Rao"
       if (nzchar(alternative))
         msg <- paste(msg, "(try", alternative, "instead)")
       msg <- paste(msg, "\n", sep = "")

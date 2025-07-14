@@ -1857,7 +1857,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Whether to show UI for publishing content to Posit Cloud.
+    * Whether to show UI for publishing content to cloud service.
     */
    public PrefValue<Boolean> enableCloudPublishUi()
    {
@@ -2789,7 +2789,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Whether to automatically submit crash reports to Posit.
+    * Whether to automatically submit crash reports to Lotas Inc.
     */
    public PrefValue<Boolean> submitCrashReports()
    {

@@ -188,11 +188,11 @@ public interface RsconnectConstants extends com.google.gwt.i18n.client.Messages{
     String unsupportedDocumentFormat();
 
     /**
-     * Translated "RStudio is deploying {0}. Check the Deploy console tab in the main window for status updates. ".
+     * Translated "Rao is deploying {0}. Check the Deploy console tab in the main window for status updates. ".
      *
-     * @return translated "RStudio is deploying {0}. Check the Deploy console tab in the main window for status updates. "
+     * @return translated "Rao is deploying {0}. Check the Deploy console tab in the main window for status updates. "
      */
-    @DefaultMessage("RStudio is deploying {0}. Check the Deploy console tab in the main window for status updates. ")
+    @DefaultMessage("Rao is deploying {0}. Check the Deploy console tab in the main window for status updates. ")
     @Key("rstudioDeployingApp")
     String rstudioDeployingApp(String appName);
 
@@ -467,11 +467,11 @@ public interface RsconnectConstants extends com.google.gwt.i18n.client.Messages{
     String lintFailed();
 
     /**
-     * Translated "Publishing to Posit Connect is disabled in the Publishing options.".
+     * Translated "Publishing to Publishing Service is disabled in the Publishing options.".
      *
-     * @return translated "Publishing to Posit Connect is disabled in the Publishing options."
+     * @return translated "Publishing to Publishing Service is disabled in the Publishing options."
      */
-    @DefaultMessage("Publishing to Posit Connect is disabled in the Publishing options.")
+    @DefaultMessage("Publishing to Publishing Service is disabled in the Publishing options.")
     @Key("apiNotPublishableMessage")
     String apiNotPublishableMessage();
 
@@ -593,11 +593,11 @@ public interface RsconnectConstants extends com.google.gwt.i18n.client.Messages{
     String settingUpAccount();
 
     /**
-     * Translated "RStudio failed to determine whether the account was valid. Try again; if the error persists, contact your server administrator.\n\n{0}\n{1}".
+     * Translated "Rao failed to determine whether the account was valid. Try again; if the error persists, contact your server administrator.\n\n{0}\n{1}".
      *
-     * @return translated "RStudio failed to determine whether the account was valid. Try again; if the error persists, contact your server administrator.\n\n{0}\n{1}"
+     * @return translated "Rao failed to determine whether the account was valid. Try again; if the error persists, contact your server administrator.\n\n{0}\n{1}"
      */
-    @DefaultMessage("RStudio failed to determine whether the account was valid. Try again; if the error persists, contact your server administrator.\n\n{0}\n{1}")
+    @DefaultMessage("Rao failed to determine whether the account was valid. Try again; if the error persists, contact your server administrator.\n\n{0}\n{1}")
     @Key("accountValidationFailedMessage")
     String accountValidationFailedMessage(String serverInfo, String errorMessage);
 
@@ -683,29 +683,29 @@ public interface RsconnectConstants extends com.google.gwt.i18n.client.Messages{
     String newRSConnectCloudPageCaption();
 
     /**
-     * Translated "A cloud service run by RStudio. Publish Shiny applications and interactive documents to the Internet.".
+     * Translated "A cloud service. Publish Shiny applications and interactive documents to the Internet.".
      *
-     * @return translated "A cloud service run by RStudio. Publish Shiny applications and interactive documents to the Internet."
+     * @return translated "A cloud service. Publish Shiny applications and interactive documents to the Internet."
      */
-    @DefaultMessage("A cloud service run by RStudio. Publish Shiny applications and interactive documents to the Internet.")
+    @DefaultMessage("A cloud service. Publish Shiny applications and interactive documents to the Internet.")
     @Key("newRSConnectCloudPageSubTitle")
     String newRSConnectCloudPageSubTitle();
 
     /**
-     * Translated "Posit Connect Account".
+     * Translated "Publishing Account".
      *
-     * @return translated "Posit Connect Account"
+     * @return translated "Publishing Account"
      */
-    @DefaultMessage("Posit Connect Account")
+    @DefaultMessage("Publishing Account")
     @Key("rstudioConnectAccount")
     String rstudioConnectAccount();
 
     /**
-     * Translated "RPubs is a free service from RStudio for sharing documents on the web.".
+     * Translated "RPubs is a free service for sharing documents on the web.".
      *
-     * @return translated "RPubs is a free service from RStudio for sharing documents on the web."
+     * @return translated "RPubs is a free service for sharing documents on the web."
      */
-    @DefaultMessage("RPubs is a free service from RStudio for sharing documents on the web.")
+    @DefaultMessage("RPubs is a free service for sharing documents on the web.")
     @Key("rPubsSubtitle")
     String rPubsSubtitle();
 
@@ -714,16 +714,16 @@ public interface RsconnectConstants extends com.google.gwt.i18n.client.Messages{
      *
      * @return translated "Posit Cloud (deprecated)"
      */
-    @DefaultMessage("Posit Cloud (deprecated)")
+    @DefaultMessage("Cloud (deprecated)")
     @Key("cloudTitle")
     String cloudTitle();
 
-   /**
-     * Translated "Publishing to Posit Cloud is deprecated as of October 2024. Visit https://pos.it/pc-publishing for more information.".
+    /**
+     * Translated "Publishing to cloud services is deprecated as of October 2024. Visit https://pos.it/pc-publishing for more information.".
      *
-     * @return translated "Publishing to Posit Cloud is deprecated as of October 2024. Visit https://pos.it/pc-publishing for more information."
+     * @return translated "Publishing to cloud services is deprecated as of October 2024. Visit https://pos.it/pc-publishing for more information."
      */
-    @DefaultMessage("Publishing to Posit Cloud is deprecated as of October 2024. Visit https://pos.it/pc-publishing for more information.")
+    @DefaultMessage("Publishing to Cloud is deprecated as of October 2024. Visit https://pos.it/pc-publishing for more information.")
     @Key("cloudSubtitle")
     String cloudSubtitle();
 
@@ -791,11 +791,11 @@ public interface RsconnectConstants extends com.google.gwt.i18n.client.Messages{
     String publishMultiplePageCaption();
 
     /**
-     * Translated "Choose this option to publish the content as it appears in RStudio.".
+     * Translated "Choose this option to publish the content as it appears in Rao.".
      *
-     * @return translated "Choose this option to publish the content as it appears in RStudio."
+     * @return translated "Choose this option to publish the content as it appears in Rao."
      */
-    @DefaultMessage("Choose this option to publish the content as it appears in RStudio.")
+    @DefaultMessage("Choose this option to publish the content as it appears in Rao.")
     @Key("publishReportSourcePageStaticSubtitle")
     String publishReportSourcePageStaticSubtitle();
 
@@ -881,20 +881,20 @@ public interface RsconnectConstants extends com.google.gwt.i18n.client.Messages{
     String documentLowercase();
 
     /**
-     * Translated "Publish to Posit Connect".
+     * Translated "Publish to Publishing Service".
      *
-     * @return translated "Publish to Posit Connect"
+     * @return translated "Publish to Publishing Service"
      */
-    @DefaultMessage("Publish to Posit Connect")
+    @DefaultMessage("Publish to Publishing Service")
     @Key("publishToRstudioConnect")
     String publishToRstudioConnect();
 
     /**
-     * Translated "Publish to Posit Cloud".
+     * Translated "Publish to Cloud".
      *
-     * @return translated "Publish to Posit Cloud"
+     * @return translated "Publish to Cloud"
      */
-    @DefaultMessage("Publish to Posit Cloud")
+    @DefaultMessage("Publish to Cloud")
     @Key("publishToPositCloud")
     String publishToPositCloud();
 
@@ -908,11 +908,11 @@ public interface RsconnectConstants extends com.google.gwt.i18n.client.Messages{
     String publishToRpubs();
 
     /**
-     * Translated "Your account was authenticated successfully, but could not be connected to RStudio. Make sure your installation of the ''rsconnect'' package is correct for the server you''re connecting to.\n\n{0}\n{1}".
+     * Translated "Your account was authenticated successfully, but could not be connected to Rao. Make sure your installation of the ''rsconnect'' package is correct for the server you''re connecting to.\n\n{0}\n{1}".
      *
-     * @return translated "Your account was authenticated successfully, but could not be connected to RStudio. Make sure your installation of the ''rsconnect'' package is correct for the server you''re connecting to.\n\n{0}\n{1}"
+     * @return translated "Your account was authenticated successfully, but could not be connected to Rao. Make sure your installation of the ''rsconnect'' package is correct for the server you''re connecting to.\n\n{0}\n{1}"
      */
-    @DefaultMessage("Your account was authenticated successfully, but could not be connected to RStudio. Make sure your installation of the ''rsconnect'' package is correct for the server you''re connecting to.\\n\\n{0}\\n{1}")
+    @DefaultMessage("Your account was authenticated successfully, but could not be connected to Rao. Make sure your installation of the ''rsconnect'' package is correct for the server you''re connecting to.\\n\\n{0}\\n{1}")
     @Key("accountConnectFailedMessage")
     String accountConnectFailedMessage(String serverInfo, String errorMessage);
 
@@ -962,11 +962,11 @@ public interface RsconnectConstants extends com.google.gwt.i18n.client.Messages{
     String errorAccountMessageSetInfo();
 
     /**
-     * Translated "RStudio could not retrieve server information.".
+     * Translated "Rao could not retrieve server information.".
      *
-     * @return translated "RStudio could not retrieve server information."
+     * @return translated "Rao could not retrieve server information."
      */
-    @DefaultMessage("RStudio could not retrieve server information.")
+    @DefaultMessage("Rao could not retrieve server information.")
     @Key("rStudioCouldNotRetrieveServerInfo")
     String rStudioCouldNotRetrieveServerInfo();
 
@@ -980,11 +980,11 @@ public interface RsconnectConstants extends com.google.gwt.i18n.client.Messages{
     String cantFindServers();
 
     /**
-     * Translated "RStudio could not retrieve server information for the selected account.".
+     * Translated "Rao could not retrieve server information for the selected account.".
      *
-     * @return translated "RStudio could not retrieve server information for the selected account."
+     * @return translated "Rao could not retrieve server information for the selected account."
      */
-    @DefaultMessage("RStudio could not retrieve server information for the selected account.")
+    @DefaultMessage("Rao could not retrieve server information for the selected account.")
     @Key("rStudioCouldNotRetrieveForAccount")
     String rStudioCouldNotRetrieveForAccount();
 
@@ -1016,20 +1016,20 @@ public interface RsconnectConstants extends com.google.gwt.i18n.client.Messages{
     String noAccountsConnected();
 
     /**
-     * Translated "Posit Connect is a server product from Posit for secure sharing of applications, reports, plots, and APIs.".
+     * Translated "Publishing service for secure sharing of applications, reports, plots, and APIs.".
      *
-     * @return translated "Posit Connect is a server product from Posit for secure sharing of applications, reports, plots, and APIs."
+     * @return translated "Publishing service for secure sharing of applications, reports, plots, and APIs."
      */
-    @DefaultMessage("Posit Connect is a server product from Posit for secure sharing of applications, reports, plots, and APIs.")
+    @DefaultMessage("Publishing service for secure sharing of applications, reports, plots, and APIs.")
     @Key("rStudioConnectServiceDescription")
     String rStudioConnectServiceDescription();
 
     /**
-     * Translated "Posit Connect".
+     * Translated "Publishing Service".
      *
-     * @return translated "Posit Connect"
+     * @return translated "Publishing Service"
      */
-    @DefaultMessage("Posit Connect")
+    @DefaultMessage("Publishing Service")
     @Key("rStudioConnect")
     String rStudioConnect();
 
@@ -1484,20 +1484,20 @@ public interface RsconnectConstants extends com.google.gwt.i18n.client.Messages{
     String publishWizardLabel();
 
     /**
-     * Translated "Connect Posit Cloud account".
+     * Translated "Connect Cloud account".
      *
-     * @return translated "Connect Posit Cloud account"
+     * @return translated "Connect Cloud account"
      */
-    @DefaultMessage("Connect Posit Cloud account")
+    @DefaultMessage("Connect Cloud account")
     @Key("newPositCloudPageCaption")
     String newPositCloudPageCaption();
 
     /**
-     * Translated "Publishing to Posit Cloud is deprecated as of October 2024. Visit https://pos.it/pc-publishing for more information.".
+     * Translated "Cloud publishing is deprecated as of October 2024. Visit https://pos.it/pc-publishing for more information.".
      *
-     * @return translated "Publishing to Posit Cloud is deprecated as of October 2024. Visit https://pos.it/pc-publishing for more information."
+     * @return translated "Cloud publishing is deprecated as of October 2024. Visit https://pos.it/pc-publishing for more information."
      */
-    @DefaultMessage("Publishing to Posit Cloud is deprecated as of October 2024. Visit https://pos.it/pc-publishing for more information.")
+    @DefaultMessage("Cloud publishing is deprecated as of October 2024. Visit https://pos.it/pc-publishing for more information.")
     @Key("newPositCloudPageSubTitle")
     String newPositCloudPageSubTitle();
     

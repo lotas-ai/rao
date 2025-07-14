@@ -2,7 +2,7 @@ project:
   type: posit-docs
 
 website:
-  title: "RStudio & Posit Workbench Release Notes"
+  title: "Rao Release Notes"
   page-navigation: true
   site-url: https://docs.posit.co/ide/news/
   search:
@@ -12,7 +12,7 @@ website:
   navbar:
     pinned: true
     logo: images/posit-icon-fullcolor.svg
-    title: "RStudio & Posit Workbench Release Notes"
+    title: "Rao Release Notes"
     collapse: false
     right:
       - text: "Versions"

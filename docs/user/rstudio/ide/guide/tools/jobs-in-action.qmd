@@ -215,7 +215,7 @@ predict(endpoint, new_car)
 
 ## Extract, transform, load (ETL)
 
-Background and Workbench Jobs are ideal for long running processes, like interactively loading data from an external database or API. Non-interactive, scheduled ETL scripts should be handled by Posit Connect.
+Background and Workbench Jobs are ideal for long running processes, like interactively loading data from an external database or API. Non-interactive, scheduled ETL scripts should be handled by server publishing platforms.
 
 ## Simulations
 

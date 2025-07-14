@@ -160,11 +160,11 @@ public interface UserStateAccessorConstants extends Constants {
    String showPublishUiDescription();
 
    /**
-    * Whether to show UI for publishing content to Posit Connect.
+    * Whether to show UI for publishing content to Publishing Service.
     */
    @DefaultStringValue("")
    String enableRsconnectPublishUiTitle();
-   @DefaultStringValue("Whether to show UI for publishing content to Posit Connect.")
+   @DefaultStringValue("Whether to show UI for publishing content to Publishing Service.")
    String enableRsconnectPublishUiDescription();
 
    /**

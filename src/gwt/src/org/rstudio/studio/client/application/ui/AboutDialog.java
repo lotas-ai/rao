@@ -44,7 +44,7 @@ public class AboutDialog extends ModalDialogBase
 
       ThemedButton copyVersionButton = new ThemedButton(constants_.copyVersionButtonTitle(), (ClickEvent) ->
       {
-         Clipboard.setText("RStudio " + info.version + " " +
+         Clipboard.setText("Rao " + info.version + " " +
             "\"" + info.release_name + "\" " + info.build_type +
             " (" + info.commit + ", " + info.date + ") " +
             constants_.forText() + info.os + "\n" +

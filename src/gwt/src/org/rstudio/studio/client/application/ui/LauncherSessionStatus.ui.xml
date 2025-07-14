@@ -36,8 +36,8 @@
               name="text" key="waitingSessionToStart"/></g:Label>
       <g:HTML>
          <ui:msg key="waitingText">You may continue waiting here or monitor from</ui:msg>
-         <a title="Return to RStudio Workbench Home"
-            href="../../home"><ui:msg key="serverHomeText">RStudio Server Home</ui:msg><ui:attribute name="title" key="returnToWorkbenchHome"/></a>.
+            <a title="Return to Server Home"
+      href="../../home"><ui:msg key="serverHomeText">Server Home</ui:msg><ui:attribute name="title" key="returnToServerHome"/></a>.
       </g:HTML>
       <g:Label styleName="{style.status}" ui:field="status_" visible="false"></g:Label>
    </g:HTMLPanel>

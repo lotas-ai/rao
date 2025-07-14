@@ -2306,7 +2306,7 @@ See `/src/gwt/tools/i18n-helpers/README.md`.
         context="help"/>
 
     <cmd id="openRStudioIDECheatSheet"
-         menuLabel="_RStudio IDE Cheat Sheet"
+         menuLabel="_Rao IDE Cheat Sheet"
          desc="RStudio IDE cheat sheet"
          context="help"/>
 
@@ -2819,7 +2819,7 @@ See `/src/gwt/tools/i18n-helpers/README.md`.
         rebindable="false"/>
 
    <cmd id="saveHtmlPreviewAs"
-        menuLabel="File on RStudio Server..."
+        menuLabel="File on Rao Server..."
         buttonLabel="Save As"
         desc="Save the page to another location"
         rebindable="false"/>
@@ -3383,7 +3383,7 @@ See `/src/gwt/tools/i18n-helpers/README.md`.
         visible="false"/>
 
    <cmd id="helpUsingRStudio"
-        menuLabel="RStudio _Docs"
+        menuLabel="Rao _Docs"
         context="help"
         windowMode="main"/>
 
@@ -3697,8 +3697,8 @@ See `/src/gwt/tools/i18n-helpers/README.md`.
         windowMode="main"/>
 
    <cmd id="showAboutDialog"
-        label="About RStudio..."
-        menuLabel="A_bout RStudio"
+        label="About Rao..."
+        menuLabel="A_bout Rao"
         rebindable="false"
         windowMode="main"/>
 
@@ -3719,17 +3719,17 @@ See `/src/gwt/tools/i18n-helpers/README.md`.
         rebindable="false"/>
 
    <cmd id="rstudioCommunityForum"
-        menuLabel="RStudio Community _Forum"
+        menuLabel="Rao Community _Forum"
         rebindable="false"
         windowMode="main"/>
 
    <cmd id="rstudioSupport"
-        menuLabel="Posit _Support"
+        menuLabel="Lotas Inc _Support"
         rebindable="false"
         windowMode="main"/>
 
     <cmd id="rstudioLicense"
-        menuLabel="RStudio _License"
+        menuLabel="Rao _License"
         visible="false"
         windowMode="main"
         rebindable="false"/>
@@ -4181,9 +4181,9 @@ See `/src/gwt/tools/i18n-helpers/README.md`.
          windowMode="main"/>
 
     <cmd id="sparkHelp"
-         menuLabel="Using Spark with RStudio"
+         menuLabel="Using Spark with Rao"
          buttonLabel=""
-         desc="Help on using Spark with RStudio"
+         desc="Help on using Spark with Rao"
          windowMode="main"/>
 
     <cmd id="startJob"
@@ -4366,7 +4366,7 @@ See `/src/gwt/tools/i18n-helpers/README.md`.
         rebindable="false"/>
 
    <cmd id="crashDesktopApplication"
-        menuLabel="Crash RStudio Desktop (DA_NGER)"
+        menuLabel="Crash Rao Desktop (DA_NGER)"
         rebindable="false"/>
 
    <cmd id="showCommandPalette"

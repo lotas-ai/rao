@@ -81,20 +81,20 @@ public interface StudioClientApplicationConstants extends com.google.gwt.i18n.cl
     String cannotConnectRCaption();
 
     /**
-     * Translated "Could not connect to the R session on RStudio Server.".
+     * Translated "Could not connect to the R session on Rao Server.".
      *
-     * @return translated "Could not connect to the R session on RStudio Server."
+     * @return translated "Could not connect to the R session on Rao Server."
      */
-    @DefaultMessage("Could not connect to the R session on RStudio Server.\n\n{0} ({1})")
+    @DefaultMessage("Could not connect to the R session on Rao Server.\n\n{0} ({1})")
     @Key("cannotConnectRMessage")
     String cannotConnectRMessage(String userMessage, int errorCode);
 
     /**
-     * Translated "RStudio Initialization Error".
+     * Translated "Rao Initialization Error".
      *
-     * @return translated "RStudio Initialization Error"
+     * @return translated "Rao Initialization Error"
      */
-    @DefaultMessage("RStudio Initialization Error")
+    @DefaultMessage("Rao Initialization Error")
     @Key("rStudioInitializationErrorCaption")
     String rStudioInitializationErrorCaption();
 
@@ -288,11 +288,11 @@ public interface StudioClientApplicationConstants extends com.google.gwt.i18n.cl
     String applicationQuitMessage(String message);
 
     /**
-     * Translated "Quit RStudio".
+     * Translated "Quit Rao".
      *
-     * @return translated "Quit RStudio"
+     * @return translated "Quit Rao"
      */
-    @DefaultMessage("Quit RStudio")
+    @DefaultMessage("Quit Rao")
     @Key("quitRStudio")
     String quitRStudio();
 
@@ -369,11 +369,11 @@ public interface StudioClientApplicationConstants extends com.google.gwt.i18n.cl
     String quitRSessionCaption();
 
     /**
-     * Translated "Restarting RStudio".
+     * Translated "Restarting Rao".
      *
-     * @return translated "Restarting RStudio"
+     * @return translated "Restarting Rao"
      */
-    @DefaultMessage("Restarting RStudio")
+    @DefaultMessage("Restarting Rao")
     @Key("restartRStudio")
     String restartRStudio();
 
@@ -585,29 +585,29 @@ public interface StudioClientApplicationConstants extends com.google.gwt.i18n.cl
     String closeRemoteSessionMessage();
 
     /**
-     * Translated "Unable to obtain a license. Please restart RStudio to try again.".
+     * Translated "Unable to obtain a license. Please restart Rao to try again.".
      *
-     * @return translated "Unable to obtain a license. Please restart RStudio to try again."
+     * @return translated "Unable to obtain a license. Please restart Rao to try again."
      */
-    @DefaultMessage("Unable to obtain a license. Please restart RStudio to try again.")
+    @DefaultMessage("Unable to obtain a license. Please restart Rao to try again.")
     @Key("licenseLostMessage")
     String licenseLostMessage();
 
     /**
-     * Translated "Unable to find an active license. Please select a license file or restart RStudio to try again.".
+     * Translated "Unable to find an active license. Please select a license file or restart Rao to try again.".
      *
-     * @return translated "Unable to find an active license. Please select a license file or restart RStudio to try again."
+     * @return translated "Unable to find an active license. Please select a license file or restart Rao to try again."
      */
-    @DefaultMessage("Unable to find an active license. Please select a license file or restart RStudio to try again.")
+    @DefaultMessage("Unable to find an active license. Please select a license file or restart Rao to try again.")
     @Key("unableToFindActiveLicenseMessage")
     String unableToFindActiveLicenseMessage();
 
     /**
-     * Translated "Active RStudio License Not Found".
+     * Translated "Active Rao License Not Found".
      *
-     * @return translated "Active RStudio License Not Found"
+     * @return translated "Active Rao License Not Found"
      */
-    @DefaultMessage("Active RStudio License Not Found")
+    @DefaultMessage("Active Rao License Not Found")
     @Key("activeRStudioLicenseNotFound")
     String activeRStudioLicenseNotFound();
 
@@ -810,11 +810,11 @@ public interface StudioClientApplicationConstants extends com.google.gwt.i18n.cl
     String buildOfText();
 
     /**
-     * Translated "is provided by Posit Software, PBC for testing purposes only and is not an officially supported release.".
+     * Translated "is provided by Lotas Inc. for testing purposes only and is not an officially supported release.".
      *
-     * @return translated "is provided by Posit Software, PBC for testing purposes only and is not an officially supported release."
+     * @return translated "is provided by Lotas Inc. for testing purposes only and is not an officially supported release."
      */
-    @DefaultMessage("is provided by Posit Software, PBC for testing purposes only and is not an officially supported release.")
+    @DefaultMessage("is provided by Lotas Inc. for testing purposes only and is not an officially supported release.")
     @Key("supportNoticeText")
     String supportNoticeText();
 
@@ -891,11 +891,11 @@ public interface StudioClientApplicationConstants extends com.google.gwt.i18n.cl
     String applicationUpdatedCaption();
 
     /**
-     * Translated "An updated version of RStudio is available. Your browser will now be refreshed with the new version. All current work and data will be preserved during the update.".
+     * Translated "An updated version of Rao is available. Your browser will now be refreshed with the new version. All current work and data will be preserved during the update.".
      *
-     * @return translated "An updated version of RStudio is available. Your browser will now be refreshed with the new version. All current work and data will be preserved during the update."
+     * @return translated "An updated version of Rao is available. Your browser will now be refreshed with the new version. All current work and data will be preserved during the update."
      */
-    @DefaultMessage("An updated version of RStudio is available. Your browser will now be refreshed with the new version. All current work and data will be preserved during the update.")
+    @DefaultMessage("An updated version of Rao is available. Your browser will now be refreshed with the new version. All current work and data will be preserved during the update.")
     @Key("applicationUpdatedMessage")
     String applicationUpdatedMessage();
 
@@ -1161,20 +1161,20 @@ public interface StudioClientApplicationConstants extends com.google.gwt.i18n.cl
     String sessionTerminatedMessage();
 
     /**
-     * Translated "This browser was disconnected from the R session because another browser connected (only one browser at a time may be connected to an RStudio session). You may reconnect using the button below.".
+     * Translated "This browser was disconnected from the R session because another browser connected (only one browser at a time may be connected to a Rao session). You may reconnect using the button below.".
      *
-     * @return translated "This browser was disconnected from the R session because another browser connected (only one browser at a time may be connected to an RStudio session). You may reconnect using the button below."
+     * @return translated "This browser was disconnected from the R session because another browser connected (only one browser at a time may be connected to a Rao session). You may reconnect using the button below."
      */
-    @DefaultMessage("This browser was disconnected from the R session because another browser connected (only one browser at a time may be connected to an RStudio session). You may reconnect using the button below.")
+    @DefaultMessage("This browser was disconnected from the R session because another browser connected (only one browser at a time may be connected to a Rao session). You may reconnect using the button below.")
     @Key("browserDisconnectedMessage")
     String browserDisconnectedMessage();
 
     /**
-     * Translated "RStudio is temporarily offline due to system maintenance. We apologize for the inconvenience, please try again in a few minutes.".
+     * Translated "Rao is temporarily offline due to system maintenance. We apologize for the inconvenience, please try again in a few minutes.".
      *
-     * @return translated "RStudio is temporarily offline due to system maintenance. We apologize for the inconvenience, please try again in a few minutes."
+     * @return translated "Rao is temporarily offline due to system maintenance. We apologize for the inconvenience, please try again in a few minutes."
      */
-    @DefaultMessage("RStudio is temporarily offline due to system maintenance. We apologize for the inconvenience, please try again in a few minutes.")
+    @DefaultMessage("Rao is temporarily offline due to system maintenance. We apologize for the inconvenience, please try again in a few minutes.")
     @Key("rStudioOfflineMessage")
     String rStudioOfflineMessage();
 
@@ -1224,11 +1224,11 @@ public interface StudioClientApplicationConstants extends com.google.gwt.i18n.cl
     String reconnectButtonText();
 
     /**
-     * Translated "RStudio Temporarily Offline".
+     * Translated "Rao Temporarily Offline".
      *
-     * @return translated "RStudio Temporarily Offline"
+     * @return translated "Rao Temporarily Offline"
      */
-    @DefaultMessage("RStudio Temporarily Offline")
+    @DefaultMessage("Rao Temporarily Offline")
     @Key("temporarilyOfflineCaption")
     String temporarilyOfflineCaption();
 
@@ -1296,11 +1296,11 @@ public interface StudioClientApplicationConstants extends com.google.gwt.i18n.cl
     String quitDownloadButtonLabel();
 
     /**
-     * Translated "Update RStudio".
+     * Translated "Update Rao".
      *
-     * @return translated "Update RStudio"
+     * @return translated "Update Rao"
      */
-    @DefaultMessage("Update RStudio")
+    @DefaultMessage("Update Rao")
     @Key("updateRStudioCaption")
     String updateRStudioCaption();
 
@@ -1341,20 +1341,20 @@ public interface StudioClientApplicationConstants extends com.google.gwt.i18n.cl
     String noUpdateAvailableCaption();
 
     /**
-     * Translated "You're using the newest version of RStudio.".
+     * Translated "You're using the newest version of Rao.".
      *
-     * @return translated "You're using the newest version of RStudio."
+     * @return translated "You're using the newest version of Rao."
      */
-    @DefaultMessage("You''re using the newest version of RStudio.")
+    @DefaultMessage("You''re using the newest version of Rao.")
     @Key("usingNewestVersionMessage")
     String usingNewestVersionMessage();
 
     /**
-     * Translated "Posit Workbench".
+     * Translated "Server Home".
      *
-     * @return translated "Posit Workbench"
+     * @return translated "Server Home"
      */
-    @DefaultMessage("Posit Workbench")
+    @DefaultMessage("Server Home")
     @Key("rStudioServerHomeTitle")
     String rStudioServerHomeTitle();
 
@@ -1370,7 +1370,7 @@ public interface StudioClientApplicationConstants extends com.google.gwt.i18n.cl
     /**
      * Translated "computer's clipboard. As a result you must".
      *
-     * @return translated "computer's clipboard. As a result you must"
+     * @return translated "computer''s clipboard. As a result you must"
      */
     @DefaultMessage("computer''s clipboard. As a result you must")
     @Key("computerClipBoardLabel")
@@ -1467,11 +1467,11 @@ public interface StudioClientApplicationConstants extends com.google.gwt.i18n.cl
     String requestLogVisualization();
 
     /**
-     * Translated "Please visit https://posit.co/download/rstudio-desktop/ to check if a new version is available.".
+     * Translated "Please visit https://lotas.ai/download/ to check if a new version is available.".
      *
-     * @return translated "Please visit https://posit.co/download/rstudio-desktop/ to check if a new version is available."
+     * @return translated "Please visit https://lotas.ai/download/ to check if a new version is available."
      */
-    @DefaultMessage("Please visit https://posit.co/download/rstudio-desktop/ to check if a new version is available.")
+    @DefaultMessage("Please visit https://lotas.ai/download/ to check if a new version is available.")
     @Key("visitWebsiteForNewVersion")
     String visitWebsiteForNewVersionText();
 
@@ -1494,11 +1494,11 @@ public interface StudioClientApplicationConstants extends com.google.gwt.i18n.cl
     String reallyCrashCaption();
 
     /**
-     * Translated "This will cause RStudio to immediately crash. You may lose work. Trigger crash?".
+     * Translated "This will cause Rao to immediately crash. You may lose work. Trigger crash?".
      *
-     * @return translated "This will cause RStudio to immediately crash. You may lose work. Trigger crash?"
+     * @return translated "This will cause Rao to immediately crash. You may lose work. Trigger crash?"
      */
-    @DefaultMessage("This will cause RStudio to immediately crash. You may lose work. Trigger crash?")
+    @DefaultMessage("This will cause Rao to immediately crash. You may lose work. Trigger crash?")
     @Key("reallyCrashMessage")
     String reallyCrashMessage();
 
@@ -1548,27 +1548,27 @@ public interface StudioClientApplicationConstants extends com.google.gwt.i18n.cl
     String overMemoryLimit();
 
     /*
-     * Translated "Posit Workbench Login Required".
+     * Translated "Rao Server Login Required".
      *
-     * @return translated "Posit Workbench Login Required"
+     * @return translated "Rao Server Login Required"
      */
-    @DefaultMessage("Posit Workbench Login Required")
+    @DefaultMessage("Rao Server Login Required")
     @Key("workbenchLoginRequired")
     String workbenchLoginRequired();
 
     /**
-     * Translated "RStudio Server Login Required".
+     * Translated "Rao Server Login Required".
      *
-     * @return translated "RStudio Server Login Required"
+     * @return translated "Rao Server Login Required"
      */
-    @DefaultMessage("RStudio Server Login Required")
+    @DefaultMessage("Rao Server Login Required")
     @Key("serverLoginRequired")
     String serverLoginRequired();
 
     /**
      * Translated "Login expired or signed out from another window.\nSelect 'Login' for a new login tab. Return here to resume session.".
      *
-     * @return translated "Login expired or signed out from another window.\nSelect 'Login' for a new login tab. Return here to resume session."
+     * @return translated "Login expired or signed out from another window.\nSelect ''Login'' for a new login tab. Return here to resume session."
      */
     @DefaultMessage("Login expired or signed out from another window.\nSelect ''Login'' for a new login tab. Return here to resume session.")
     @Key("workbenchLoginRequiredMessage")

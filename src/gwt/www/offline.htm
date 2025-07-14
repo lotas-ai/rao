@@ -16,7 +16,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>RStudio Offline</title>
+  <title>Rao Offline</title>
   <link rel="stylesheet" href="rstudio.css" type="text/css" />
 
   <style id="page-style">
@@ -54,19 +54,7 @@
 <body>
   <header role="banner">
     <div id="banner">
-      <picture>
-        <source
-          id="logo-reverse"
-          srcset="images/Posit-ProductLogo_rst-server-reverse.svg"
-          media="(prefers-color-scheme: dark)"
-        />
-        <img
-          id="logo-full-color"
-          src="images/Posit-ProductLogo_rst-server-full-color.svg"
-          height="27"
-          alt="RStudio Logo"
-        />
-      </picture>
+
     </div>
   </header>
 
@@ -75,9 +63,9 @@
       <img alt id="image" src="images/offline.png" />
     </div>
     <div>
-      <h2 id="caption">RStudio Temporarily Offline</h2>
+      <h2 id="caption">Rao Temporarily Offline</h2>
       <div id="detail">
-        RStudio is temporarily offline due to system maintenance. We
+        Rao is temporarily offline due to system maintenance. We
         apologize for the inconvenience, please try again in a few minutes.
       </div>
     </div>
@@ -96,14 +84,6 @@
     }
 
     var style = document.getElementById("page-style");
-
-    var iconLink = document.createElement("link");
-    iconLink.href = getBaseUri() + "/images/Posit-Product_rst-server-favicon.svg";
-    iconLink.rel = "shortcut icon";
-    style.insertAdjacentElement("beforebegin", iconLink);
-
-    document.getElementById("logo-reverse").srcset = getBaseUri() + "images/Posit-ProductLogo_rst-server-reverse.svg";
-    document.getElementById("logo-full-color").src = getBaseUri() + "images/Posit-ProductLogo_rst-server-full-color.svg";
 
     document.getElementById("image").src = getBaseUri() + "/images/offline.png";
   </script>

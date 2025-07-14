@@ -147,11 +147,11 @@
                            styleName="{style.logo}"
                            width="48"
                            height="48"
-                           altText="RStudio Logo">
-                     <ui:attribute name="altText" key="rStudioLogo"/>
+                           altText="Rao Logo">
+                     <ui:attribute name="altText" key="raoLogo"/>
                   </g:Image>
                   <g:HTMLPanel styleName="{style.innerProductInfo}">
-                     <g:Label ui:field="productName" text="RStudio" styleName="{style.productName}"></g:Label>
+                     <g:Label ui:field="productName" text="Rao" styleName="{style.productName}"></g:Label>
                      <g:HTMLPanel styleName="{style.productVersion}">
                         <g:InlineLabel styleName="{style.majorVersion}" ui:field="versionMajorLabel"></g:InlineLabel>
                         <g:InlineLabel styleName="{style.buildNumber}" ui:field="versionBuildLabel"></g:InlineLabel>
@@ -159,7 +159,7 @@
                      <g:HTMLPanel styleName="{style.productCopyright}">
                          <g:InlineLabel text="&#xA9;"></g:InlineLabel>
                          <g:InlineLabel ui:field="copyrightYearLabel"></g:InlineLabel>
-                         <g:InlineLabel text="Posit Software, PBC"></g:InlineLabel>
+                         <g:InlineLabel text="Lotas Inc."></g:InlineLabel>
                      </g:HTMLPanel>
                   </g:HTMLPanel>
                </g:HTMLPanel>
@@ -173,19 +173,9 @@
             <g:HTMLPanel styleName="{style.supportNotice}">
                <g:InlineLabel ui:field="supportNotice"></g:InlineLabel>
             </g:HTMLPanel>
-            <g:HTMLPanel styleName="{style.trademarkNotice}">
-               <g:InlineLabel
-                  text="RStudio, Quarto, and Shiny are registered trademarks of Posit Software, PBC, all rights reserved. See">
-               </g:InlineLabel>
-               <g:Anchor
-                  href="https://www.posit.co/about/trademark/"
-                  text="https://www.posit.co/about/trademark/"
-                  target="_blank"></g:Anchor>
-               <g:InlineLabel text="for permitted uses and guidelines."></g:InlineLabel>
-            </g:HTMLPanel>
             <g:HTMLPanel ui:field="gplNotice">
                <g:InlineLabel
-                       text="Unless you have received this program directly from Posit Software pursuant to the terms of a commercial license agreement with Posit Software, then this program is licensed to you under the terms of version 3 of the GNU"></g:InlineLabel>
+                       text="This program is licensed to you under the terms of version 3 of the GNU"></g:InlineLabel>
                <g:Anchor ui:field="gplLink" href="http://www.gnu.org/licenses/agpl-3.0.txt"
                   text="Affero General Public License."
                   target="_blank"></g:Anchor>
@@ -199,7 +189,7 @@
                     ui:field="showNoticelink_"/>
          </g:HTMLPanel>
          <g:HTMLPanel ui:field="licenseLabel" visible="false">
-            <rw:FormLabel text="RStudio Pro License Status" styleName="{style.licenseLabel}"
+            <rw:FormLabel text="Rao Pro License Status" styleName="{style.licenseLabel}"
                           for="{ElementIds.getAboutLicenseInfo}"/>
          </g:HTMLPanel>
          <rw:FormTextArea ui:field="licenseBox" styleName="{style.licenseBox}"

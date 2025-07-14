@@ -47,11 +47,11 @@ public interface RMarkdownConstants extends Messages {
     String renderCompletedCaption();
 
     /**
-     * Translate "RStudio has finished rendering {0} to {1}.".
+     * Translate "Rao has finished rendering {0} to {1}.".
      *
      * @return the translated value
      */
-    @DefaultMessage("RStudio has finished rendering {0} to {1}.")
+    @DefaultMessage("Rao has finished rendering {0} to {1}.")
     @Key("renderCompletedMsg")
     String renderCompletedMsg(String targetFile, String outputFile);
 

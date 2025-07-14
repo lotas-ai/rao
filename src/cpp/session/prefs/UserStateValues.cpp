@@ -245,7 +245,7 @@ core::Error UserStateValues::setShowPublishUi(bool val)
 }
 
 /**
- * Whether to show UI for publishing content to Posit Connect.
+ * Whether to show UI for publishing content to server publishing platforms.
  */
 bool UserStateValues::enableRsconnectPublishUi()
 {

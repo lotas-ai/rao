@@ -476,7 +476,7 @@ public class UserStateAccessor extends Prefs
    }
 
    /**
-    * Whether to show UI for publishing content to Posit Connect.
+    * Whether to show UI for publishing content to publishing service.
     */
    public PrefValue<Boolean> enableRsconnectPublishUi()
    {
