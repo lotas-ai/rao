@@ -894,6 +894,14 @@
   edit_file_message_id <- NULL
   edit_file_code_edit_streamed <- ""  # Track what code_edit content we've already streamed
   
+  # Variables for console/terminal command delta accumulation (following edit_file pattern)
+  # Use lists to track multiple parallel console/terminal commands by call_id
+  console_terminal_delta_accumulators <- list()  # call_id -> accumulator string
+  console_terminal_widget_states <- list()  # "widget_created_call_id" -> boolean
+  console_terminal_command_states <- list()  # "command_started_call_id" -> boolean
+  console_terminal_message_ids <- list()  # call_id -> message_id
+  console_terminal_command_streamed_states <- list()  # "command_streamed_call_id" -> streamed content
+  
   # Timeout configuration - simple 30-second inactivity timeout only
   activity_timeout_seconds <- 30
   
@@ -981,6 +989,28 @@
         if (!is.null(edit_file_function_call_id)) {
           cancel_message_id <- as.numeric(edit_file_function_call_id)
         }
+      }
+      
+      # Handle cancellation for console/terminal commands that are currently streaming
+      # Check if we have any active console/terminal commands and send cancellation events to their widgets
+      if (length(console_terminal_message_ids) > 0) {
+        for (call_id in names(console_terminal_message_ids)) {
+          widget_message_id <- console_terminal_message_ids[[call_id]]
+          if (!is.null(widget_message_id)) {
+            # Send cancellation event to this specific widget
+            .rs.enqueClientEvent("ai_stream_data", list(
+              messageId = widget_message_id,
+              delta = "",
+              isComplete = TRUE,
+              cancelled = TRUE,
+              sequence = .rs.get_next_ai_operation_sequence()
+            ))
+          }
+        }
+      }
+      
+      # Only process accumulated response if we have content
+      if (nchar(accumulated_response) > 0) {
         
         # Add sequence number for cancellation completion event
         # Use unified sequence system
@@ -1012,6 +1042,21 @@
       .rs.set_conversation_var("current_edit_file_function_call_id", NULL)
       .rs.set_conversation_var("current_edit_file_filename", NULL)
       .rs.set_conversation_var("current_edit_file_request_id", NULL)
+      
+      # Clean up console/terminal streaming context variables
+      console_terminal_delta_accumulators <- list()
+      console_terminal_widget_states <- list()
+      console_terminal_command_states <- list()
+      console_terminal_message_ids <- list()
+      console_terminal_command_streamed_states <- list()
+      
+      # Clean up widget streaming context
+      .rs.set_conversation_var("widget_delta_accumulator", NULL)
+      .rs.set_conversation_var("widget_message_id", NULL)
+      .rs.set_conversation_var("widget_created", NULL)
+      .rs.set_conversation_var("widget_command_started", NULL)
+      .rs.set_conversation_var("widget_command_streamed", NULL)
+      .rs.set_conversation_var("widget_type", NULL)
       
       return(list(cancelled = TRUE, accumulated_response = accumulated_response, assistant_message_id = assistant_message_id))
     }
@@ -1186,6 +1231,162 @@
                 
                 next  # Don't process edit_file deltas further
               }
+              
+              # For console/terminal command deltas, accumulate and stream to widgets (following edit_file pattern exactly)
+              if (!is.null(event_data$field) && (event_data$field == "run_console_cmd" || event_data$field == "run_terminal_cmd")) {
+                is_console_cmd <- event_data$field == "run_console_cmd"
+                call_id <- event_data$call_id
+                
+                # Generate unique message ID for each function call (not shared across calls)
+                current_widget_message_id <- console_terminal_message_ids[[call_id]]
+                if (is.null(current_widget_message_id)) {
+                  current_widget_message_id <- .rs.get_next_message_id()
+                  console_terminal_message_ids[[call_id]] <- current_widget_message_id
+                }
+                
+                # Accumulate the delta for this specific call_id
+                if (is.null(console_terminal_delta_accumulators[[call_id]])) {
+                  console_terminal_delta_accumulators[[call_id]] <- ""
+                }
+                console_terminal_delta_accumulators[[call_id]] <- paste0(console_terminal_delta_accumulators[[call_id]], event_data$delta)
+                                
+                # Create widget immediately when streaming starts (per-call_id widget creation)
+                widget_created_key <- paste0("widget_created_", call_id)
+                if (is.null(console_terminal_widget_states[[widget_created_key]]) || !console_terminal_widget_states[[widget_created_key]]) {
+
+                  # Create appropriate widget with placeholder values
+                  if (is_console_cmd) {
+                    .rs.send_ai_operation("create_console_command", list(
+                      message_id = as.numeric(current_widget_message_id),
+                      command = "",
+                      explanation = "Execute command",
+                      request_id = request_id
+                    ))
+                  } else {
+                    .rs.send_ai_operation("create_terminal_command", list(
+                      message_id = as.numeric(current_widget_message_id),
+                      command = "",
+                      explanation = "Execute command",
+                      request_id = request_id
+                    ))
+                  }
+                  
+                  console_terminal_widget_states[[widget_created_key]] <- TRUE
+                }
+                
+                # Detect start of command content for this specific call_id
+                command_started_key <- paste0("command_started_", call_id)
+                current_command_started <- console_terminal_command_states[[command_started_key]]
+                if (is.null(current_command_started)) {
+                  current_command_started <- FALSE
+                }
+                
+                widget_created_key <- paste0("widget_created_", call_id)
+                widget_created <- console_terminal_widget_states[[widget_created_key]]
+                if (is.null(widget_created)) {
+                  widget_created <- FALSE
+                }
+                
+                if (widget_created && !current_command_started) {
+                  current_accumulator <- console_terminal_delta_accumulators[[call_id]]
+                  if (!is.null(current_accumulator) && grepl('"command"\\s*:\\s*"', current_accumulator, perl = TRUE)) {
+                    console_terminal_command_states[[command_started_key]] <- TRUE
+                    current_command_started <- TRUE
+                  }
+                }
+                
+                # Extract and stream partial command content (following edit_file pattern exactly)
+                if (widget_created && current_command_started) {
+                  current_accumulator <- console_terminal_delta_accumulators[[call_id]]
+                  # Use simple string extraction for command content
+                  command_start <- regexpr('"command"\\s*:\\s*"', current_accumulator, perl = TRUE)
+                  if (command_start > 0) {
+                    # Find the start of the actual content (after the opening quote)
+                    content_start_pos <- command_start + attr(command_start, "match.length")
+                    
+                    # Extract everything from the content start to the end of the accumulator
+                    raw_content <- substr(current_accumulator, content_start_pos, nchar(current_accumulator))
+                    
+                    # First unescape the raw content completely (same as edit_file)
+                    processed_content <- raw_content
+                    # First handle double backslashes (\\\\) -> (\)
+                    processed_content <- gsub('\\\\\\\\', '\\\\', processed_content)
+                    # Then handle escaped newlines (\\n) -> (actual newline)
+                    processed_content <- gsub('\\\\n', '\n', processed_content)
+                    # Handle escaped tabs (\\t) -> (actual tab)
+                    processed_content <- gsub('\\\\t', '\t', processed_content)
+                    # Handle escaped quotes (\\") -> (")
+                    processed_content <- gsub('\\\\"', '"', processed_content)
+                    
+                    # Now apply buffering AFTER unescaping to avoid splitting escape sequences
+                    # Check if we've reached the end of the command field by looking for ", "explanation"
+                    explanation_pattern <- '\\s*"\\s*,\\s*"explanation"'
+                    explanation_match <- regexpr(explanation_pattern, processed_content, perl = TRUE)
+                    
+                    buffer_size <- 20  # Hold back 20 characters to be safe (same as edit_file)
+                    content_to_stream <- processed_content
+                    
+                    if (explanation_match > 0) {
+                      # We found the end of command field - truncate content before any trailing whitespace and quote
+                      content_to_stream <- substr(processed_content, 1, explanation_match - 1)
+                    } else if (nchar(processed_content) > buffer_size) {
+                      # No end marker found yet - stream all but the last buffer_size characters
+                      content_to_stream <- substr(processed_content, 1, nchar(processed_content) - buffer_size)
+                    } else {
+                      # Content is shorter than buffer size - don't stream anything yet
+                      content_to_stream <- ""
+                    }
+                    
+                    # Only process if we have content to stream
+                    if (nchar(content_to_stream) > 0) {
+                      # Apply the same trimming logic as the handlers for proper command execution
+                      trimmed_content <- content_to_stream
+                      if (is_console_cmd) {
+                        # Apply console command trimming (same as handle_run_console_cmd)
+                        trimmed_content <- gsub("^```[rR]?[mM]?[dD]?\\s*\\n?", "", trimmed_content, perl = TRUE)
+                        trimmed_content <- gsub("\\n?```\\s*$", "", trimmed_content, perl = TRUE)
+                        trimmed_content <- gsub("```\\n", "", trimmed_content, perl = TRUE)
+                        trimmed_content <- trimws(trimmed_content)
+                      } else {
+                        # Apply terminal command trimming (same as handle_run_terminal_cmd)
+                        trimmed_content <- gsub("^```(?:shell|bash|sh)?\\s*\\n?", "", trimmed_content, perl = TRUE)
+                        trimmed_content <- gsub("\\n?```\\s*$", "", trimmed_content, perl = TRUE)
+                        trimmed_content <- gsub("```\\n", "", trimmed_content, perl = TRUE)
+                        trimmed_content <- trimws(trimmed_content)
+                      }
+                      
+                      # Stream any new content using call_id-specific tracking
+                      current_streamed_key <- paste0("command_streamed_", call_id)
+                      current_streamed <- console_terminal_command_streamed_states[[current_streamed_key]]
+                      if (is.null(current_streamed)) {
+                        current_streamed <- ""
+                      }
+                      
+                      if (nchar(trimmed_content) > nchar(current_streamed)) {
+                        new_content <- substr(trimmed_content, nchar(current_streamed) + 1, nchar(trimmed_content))
+                        
+                        if (nchar(new_content) > 0) {
+                          # Send streaming delta to Java
+                          partial_seq <- .rs.get_next_ai_operation_sequence()
+                          .rs.enqueClientEvent("ai_stream_data", list(
+                            messageId = current_widget_message_id,
+                            delta = new_content,
+                            isComplete = FALSE,
+                            isConsoleCmd = is_console_cmd,
+                            isTerminalCmd = !is_console_cmd,
+                            requestId = request_id,
+                            sequence = partial_seq
+                          ))
+                          
+                          console_terminal_command_streamed_states[[current_streamed_key]] <- trimmed_content
+                        }
+                      }
+                    }
+                  }
+                }
+                
+                next  # Don't process console/terminal deltas further
+              }
                             
               accumulated_response <- paste0(accumulated_response, event_data$delta)
               
@@ -1227,7 +1428,7 @@
                   stop("related_to_id is required but was NULL when processing first chunk")
                 }
                 
-                # Check if the related_to_id corresponds to an edit_file function call
+                # Check if the related_to_id corresponds to an edit_file, console, or terminal function call
                 function_call_type <- .rs.get_function_call_type_for_message(related_to_id)
                 if (!is.null(function_call_type) && function_call_type == "edit_file") {
                   # For edit_file, DON'T stream assistant message content
@@ -1235,6 +1436,12 @@
                   # Store the edit_file function call ID for widget identification
                   .rs.set_conversation_var("current_edit_file_function_call_id", related_to_id)
                   is_edit_file_response <- TRUE
+
+                } else if (!is.null(function_call_type) && (function_call_type == "run_console_cmd" || function_call_type == "run_terminal_cmd")) {
+                  # For console/terminal commands, DON'T stream assistant message content
+                  # The widgets are already created during streaming, so skip assistant message
+                  is_edit_file_response <- TRUE  # Reuse the same flag to skip streaming
+
                   
                   # Still get filename for potential later use
                   conversation_log <- .rs.read_conversation_log()
@@ -1428,8 +1635,8 @@
               # If so, DON'T add to buffer - process it immediately via the existing return mechanism
               function_name <- if (!is.null(event_data$function_call$name)) event_data$function_call$name else "UNKNOWN"
               
-              if (function_name == "edit_file") {
-                # Process edit_file immediately - don't add to buffer
+              if (function_name == "edit_file" || function_name == "run_console_cmd" || function_name == "run_terminal_cmd") {
+                # Process edit_file and console/terminal commands immediately - don't add to buffer
                 # Set last_event_data to return this function call for immediate processing
                 last_event_data <- event_data
               } else {
@@ -1470,6 +1677,21 @@
                 filter_state_key <- paste0("edit_file_filter_state_", edit_file_function_call_id)
                 .rs.set_conversation_var(filter_state_key, NULL)
               }
+              
+              # Clean up console/terminal streaming context variables
+              console_terminal_delta_accumulators <- list()
+              console_terminal_widget_states <- list()
+              console_terminal_command_states <- list()
+              console_terminal_message_ids <- list()
+              console_terminal_command_streamed_states <- list()
+              
+              # Clean up widget streaming context
+              .rs.set_conversation_var("widget_delta_accumulator", NULL)
+              .rs.set_conversation_var("widget_message_id", NULL)
+              .rs.set_conversation_var("widget_created", NULL)
+              .rs.set_conversation_var("widget_command_started", NULL)
+              .rs.set_conversation_var("widget_command_streamed", NULL)
+              .rs.set_conversation_var("widget_type", NULL)
               
               # Check if this is a console/terminal command that should NOT send streaming data
               # These commands create their own widgets and don't need assistant message divs
@@ -1550,6 +1772,80 @@
                 # Add to buffer
                 buffer_count <- .rs.add_to_function_call_buffer(function_call_data)
                 event_data$buffered_function_calls <- TRUE
+              }
+              
+              # Handle console/terminal command completion events - follow same pattern as edit_file
+              if (!is.null(event_data$field) && (event_data$field == "run_console_cmd" || event_data$field == "run_terminal_cmd") && 
+                         !is.null(event_data$response) && event_data$isComplete) {
+                # Use the real call_id from the event, or generate one if missing
+                call_id <- if (!is.null(event_data$call_id)) event_data$call_id else stop("call_id is required and cannot be NULL for console/terminal completion")
+                                
+                # Create the function_call structure WITHOUT modifying event_data
+                function_call_structure <- list(
+                  name = event_data$field,  # "run_console_cmd" or "run_terminal_cmd"
+                  call_id = call_id,
+                  arguments = event_data$response
+                )
+                
+                # Preserve response_id for reasoning model chaining
+                if (!is.null(captured_response_id)) {
+                  # Use captured response_id if event doesn't have one
+                  event_data$response_id <- captured_response_id
+                }
+                
+                # Add this function call to the buffer for sequential processing (normal flow, not immediate like edit_file)
+                function_call_data <- list(
+                  function_call = function_call_structure,
+                  request_id = request_id,
+                  response_id = captured_response_id
+                )
+                
+                # Initialize buffer if not already done
+                if (is.null(.rs.get_conversation_var("function_call_buffer"))) {
+                  .rs.init_function_call_buffer()
+                }
+                
+                # Add to buffer
+                buffer_count <- .rs.add_to_function_call_buffer(function_call_data)
+                event_data$buffered_function_calls <- TRUE
+                
+                # CRITICAL: Also add the function call entry to conversation log immediately
+                # This is needed for accept_console_command and accept_terminal_command to work
+                conversation_log <- .rs.read_conversation_log()
+                
+                # Get the related_to_id from conversation variables (the original user message ID)
+                related_to_id <- .rs.get_conversation_var("current_related_to_id")
+                if (is.null(related_to_id)) {
+                  stop("related_to_id is required but was NULL when processing console/terminal function call")
+                }
+                
+                # Create function call entry (same structure as process_single_function_call)
+                # Use the same unique message ID that was created for the widget
+                function_call_message_id <- console_terminal_message_ids[[call_id]]
+                function_call_entry <- list(
+                  id = function_call_message_id,
+                  role = "assistant",
+                  function_call = function_call_structure,
+                  related_to = related_to_id,  # This is the original user message ID
+                  request_id = request_id
+                )
+                
+                # Add function call entry to conversation log
+                conversation_log <- c(conversation_log, list(function_call_entry))
+                
+                # Also add pending function call output (same as process_single_function_call)
+                pending_output_id <- .rs.get_next_message_id()
+                pending_output <- list(
+                  id = pending_output_id,
+                  type = "function_call_output",
+                  call_id = call_id,
+                  output = "Response pending...",
+                  related_to = function_call_message_id,
+                  procedural = TRUE  # Mark as procedural so it doesn't show in UI
+                )
+                conversation_log <- c(conversation_log, list(pending_output))
+                
+                .rs.write_conversation_log(conversation_log)
               }
               
               last_event_data <- event_data
@@ -1773,6 +2069,21 @@
   .rs.set_conversation_var("current_edit_file_function_call_id", NULL)
   .rs.set_conversation_var("current_edit_file_filename", NULL)
   .rs.set_conversation_var("current_edit_file_request_id", NULL)
+  
+  # Clean up console/terminal streaming context variables
+  console_terminal_delta_accumulators <- list()
+  console_terminal_widget_states <- list()
+  console_terminal_command_states <- list()
+  console_terminal_message_ids <- list()
+  console_terminal_command_streamed_states <- list()
+  
+  # Clean up widget streaming context
+  .rs.set_conversation_var("widget_delta_accumulator", NULL)
+  .rs.set_conversation_var("widget_message_id", NULL)
+  .rs.set_conversation_var("widget_created", NULL)
+  .rs.set_conversation_var("widget_command_started", NULL)
+  .rs.set_conversation_var("widget_command_streamed", NULL)
+  .rs.set_conversation_var("widget_type", NULL)
     
   # Clean up stream file
   if (file.exists(stream_file)) {
@@ -1950,7 +2261,6 @@
 .rs.addFunction("get_next_buffered_function_call", function() {
   buffer <- .rs.get_conversation_var("function_call_buffer")
   if (is.null(buffer) || length(buffer) == 0) {
-  
     return(NULL)
   }
   

@@ -31,6 +31,8 @@ public class AiStreamDataEvent extends GwtEvent<AiStreamDataEvent.Handler>
       private String delta;
       private boolean isComplete;
       private boolean isEditFile;
+      private boolean isConsoleCmd;
+      private boolean isTerminalCmd;
       private String filename;
       private String requestId;
       private int sequence;
@@ -38,84 +40,15 @@ public class AiStreamDataEvent extends GwtEvent<AiStreamDataEvent.Handler>
       private boolean isFunctionCall;
       private boolean replaceContent;
       
-      public Data(String messageId, String delta, boolean isComplete)
-      {
-         this.messageId = messageId != null ? messageId : "";
-         this.delta = delta != null ? delta : "";
-         this.isComplete = isComplete;
-         this.isEditFile = false;
-         this.filename = null;
-         this.requestId = null;
-         this.sequence = 0;
-         this.isCancelled = false;
-         this.isFunctionCall = false;
-         this.replaceContent = false;
-      }
-      
-      public Data(String messageId, String delta, boolean isComplete, boolean isEditFile, String filename)
+      // Constructor with console and terminal command flags - the only Data constructor needed
+      public Data(String messageId, String delta, boolean isComplete, boolean isEditFile, boolean isConsoleCmd, boolean isTerminalCmd, String filename, int sequence, boolean isCancelled, boolean isFunctionCall, boolean replaceContent)
       {
          this.messageId = messageId != null ? messageId : "";
          this.delta = delta != null ? delta : "";
          this.isComplete = isComplete;
          this.isEditFile = isEditFile;
-         this.filename = filename;
-         this.requestId = null;
-         this.sequence = 0;
-         this.isCancelled = false;
-         this.isFunctionCall = false;
-         this.replaceContent = false;
-      }
-      
-      public Data(String messageId, String delta, boolean isComplete, boolean isEditFile, String filename, int sequence)
-      {
-         this.messageId = messageId != null ? messageId : "";
-         this.delta = delta != null ? delta : "";
-         this.isComplete = isComplete;
-         this.isEditFile = isEditFile;
-         this.filename = filename;
-         this.requestId = null;
-         this.sequence = sequence;
-         this.isCancelled = false;
-         this.isFunctionCall = false;
-         this.replaceContent = false;
-      }
-      
-      public Data(String messageId, String delta, boolean isComplete, boolean isEditFile, String filename, int sequence, boolean isCancelled)
-      {
-         this.messageId = messageId != null ? messageId : "";
-         this.delta = delta != null ? delta : "";
-         this.isComplete = isComplete;
-         this.isEditFile = isEditFile;
-         this.filename = filename;
-         this.requestId = null;
-         this.sequence = sequence;
-         this.isCancelled = isCancelled;
-         this.isFunctionCall = false;
-         this.replaceContent = false;
-      }
-      
-      // Constructor with function call flag
-      public Data(String messageId, String delta, boolean isComplete, boolean isEditFile, String filename, int sequence, boolean isCancelled, boolean isFunctionCall)
-      {
-         this.messageId = messageId != null ? messageId : "";
-         this.delta = delta != null ? delta : "";
-         this.isComplete = isComplete;
-         this.isEditFile = isEditFile;
-         this.filename = filename;
-         this.requestId = null;
-         this.sequence = sequence;
-         this.isCancelled = isCancelled;
-         this.isFunctionCall = isFunctionCall;
-         this.replaceContent = false;
-      }
-
-      // Constructor with replaceContent flag
-      public Data(String messageId, String delta, boolean isComplete, boolean isEditFile, String filename, int sequence, boolean isCancelled, boolean isFunctionCall, boolean replaceContent)
-      {
-         this.messageId = messageId != null ? messageId : "";
-         this.delta = delta != null ? delta : "";
-         this.isComplete = isComplete;
-         this.isEditFile = isEditFile;
+         this.isConsoleCmd = isConsoleCmd;
+         this.isTerminalCmd = isTerminalCmd;
          this.filename = filename;
          this.requestId = null;
          this.sequence = sequence;
@@ -142,6 +75,16 @@ public class AiStreamDataEvent extends GwtEvent<AiStreamDataEvent.Handler>
       public boolean isEditFile()
       {
          return isEditFile;
+      }
+      
+      public boolean isConsoleCmd()
+      {
+         return isConsoleCmd;
+      }
+      
+      public boolean isTerminalCmd()
+      {
+         return isTerminalCmd;
       }
       
       public String getFilename()
@@ -180,41 +123,16 @@ public class AiStreamDataEvent extends GwtEvent<AiStreamDataEvent.Handler>
       }
    }
 
+   // Constructor that takes a Data object directly - used by AiPane
    public AiStreamDataEvent(Data data)
    {
       data_ = data;
    }
    
-   public AiStreamDataEvent(String messageId, String delta, boolean isComplete)
+   // Constructor with console and terminal command flags - used by ClientEventDispatcher
+   public AiStreamDataEvent(String messageId, String delta, boolean isComplete, boolean isEditFile, boolean isConsoleCmd, boolean isTerminalCmd, String filename, int sequence, boolean isCancelled, boolean isFunctionCall, boolean replaceContent)
    {
-      data_ = new Data(messageId, delta, isComplete);
-   }
-   
-   public AiStreamDataEvent(String messageId, String delta, boolean isComplete, boolean isEditFile, String filename)
-   {
-      data_ = new Data(messageId, delta, isComplete, isEditFile, filename);
-   }
-   
-   public AiStreamDataEvent(String messageId, String delta, boolean isComplete, boolean isEditFile, String filename, int sequence)
-   {
-      data_ = new Data(messageId, delta, isComplete, isEditFile, filename, sequence);
-   }
-   
-   public AiStreamDataEvent(String messageId, String delta, boolean isComplete, boolean isEditFile, String filename, int sequence, boolean isCancelled)
-   {
-      data_ = new Data(messageId, delta, isComplete, isEditFile, filename, sequence, isCancelled);
-   }
-
-   // Constructor with function call flag
-   public AiStreamDataEvent(String messageId, String delta, boolean isComplete, boolean isEditFile, String filename, int sequence, boolean isCancelled, boolean isFunctionCall)
-   {
-      data_ = new Data(messageId, delta, isComplete, isEditFile, filename, sequence, isCancelled, isFunctionCall);
-   }
-
-   // Constructor with replaceContent flag
-   public AiStreamDataEvent(String messageId, String delta, boolean isComplete, boolean isEditFile, String filename, int sequence, boolean isCancelled, boolean isFunctionCall, boolean replaceContent)
-   {
-      data_ = new Data(messageId, delta, isComplete, isEditFile, filename, sequence, isCancelled, isFunctionCall, replaceContent);
+      data_ = new Data(messageId, delta, isComplete, isEditFile, isConsoleCmd, isTerminalCmd, filename, sequence, isCancelled, isFunctionCall, replaceContent);
    }
 
    public String getMessageId()
@@ -235,6 +153,16 @@ public class AiStreamDataEvent extends GwtEvent<AiStreamDataEvent.Handler>
    public boolean isEditFile()
    {
       return data_.isEditFile();
+   }
+   
+   public boolean isConsoleCmd()
+   {
+      return data_.isConsoleCmd();
+   }
+   
+   public boolean isTerminalCmd()
+   {
+      return data_.isTerminalCmd();
    }
    
    public String getFilename()

@@ -454,6 +454,32 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          // Add content to widget (or replace if replaceContent flag is set)
          addContentToEditFileWidget(messageId, event.getDelta(), event.isComplete(), event.isCancelled(), event.getReplaceContent(), (com.google.gwt.core.client.JavaScriptObject) null);
       }
+      else if (event.isConsoleCmd())
+      {
+         
+         // Create console widget immediately if needed
+         if (!consoleWidgets_.containsKey(messageId))
+         {
+            String requestId = event.getRequestId();
+            createConsoleCommandSynchronously(messageId, "", "Console command", requestId);
+         }
+         
+         // Add content to console widget
+         addContentToConsoleWidget(messageId, event.getDelta(), event.isComplete(), event.isCancelled());
+      }
+      else if (event.isTerminalCmd())
+      {
+         
+         // Create terminal widget immediately if needed
+         if (!terminalWidgets_.containsKey(messageId))
+         {
+            String requestId = event.getRequestId();
+            createTerminalCommandSynchronously(messageId, "", "Terminal command", requestId);
+         }
+         
+         // Add content to terminal widget
+         addContentToTerminalWidget(messageId, event.getDelta(), event.isComplete(), event.isCancelled());
+      }
       else
       {
          // Check if this should be a console or terminal widget instead
@@ -722,12 +748,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       // Hide thinking message when AI response (function call) starts
       hideThinkingMessage();
       
-      // Hide cancel button when console command is displayed
-      AiPane aiPane = AiPane.getCurrentInstance();
-      if (aiPane != null) {
-         aiPane.hideCancelButton();
-      }
-      
       // Create console command handler using the correct interface
       AiConsoleWidget.ConsoleCommandHandler handler = new AiConsoleWidget.ConsoleCommandHandler() {
          @Override
@@ -759,12 +779,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    {
       // Hide thinking message when AI response (function call) starts
       hideThinkingMessage();
-      
-      // Hide cancel button when terminal command is displayed
-      AiPane aiPane = AiPane.getCurrentInstance();
-      if (aiPane != null) {
-         aiPane.hideCancelButton();
-      }
       
       // Create terminal command handler
       AiTerminalWidget.TerminalCommandHandler handler = new AiTerminalWidget.TerminalCommandHandler() {
@@ -986,6 +1000,64 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       }
    }
    
+   /**
+    * Add streaming content to console widget
+    */
+   private void addContentToConsoleWidget(String messageId, String delta, boolean isComplete, boolean isCancelled)
+   {
+      AiConsoleWidget consoleWidget = consoleWidgets_.get(messageId);
+      if (consoleWidget == null)
+      {
+         return;
+      }
+      
+      // Append delta to the current command
+      String currentCommand = consoleWidget.getCommand();
+      String newCommand = currentCommand + delta;
+      consoleWidget.setCommand(newCommand);
+      
+      if (isComplete)
+      {
+         // Update scroll manager streaming status
+         updateScrollManagerStreamingStatus();
+         
+         // Hide cancel button when console streaming completes
+         AiPane aiPane = AiPane.getCurrentInstance();
+         if (aiPane != null) {
+            aiPane.hideCancelButton();
+         }
+      }
+   }
+
+   /**
+    * Add streaming content to terminal widget
+    */
+   private void addContentToTerminalWidget(String messageId, String delta, boolean isComplete, boolean isCancelled)
+   {
+      AiTerminalWidget terminalWidget = terminalWidgets_.get(messageId);
+      if (terminalWidget == null)
+      {
+         return;
+      }
+      
+      // Append delta to the current command
+      String currentCommand = terminalWidget.getCommand();
+      String newCommand = currentCommand + delta;
+      terminalWidget.setCommand(newCommand);
+      
+      if (isComplete)
+      {
+         // Update scroll manager streaming status
+         updateScrollManagerStreamingStatus();
+         
+         // Hide cancel button when terminal streaming completes
+         AiPane aiPane = AiPane.getCurrentInstance();
+         if (aiPane != null) {
+            aiPane.hideCancelButton();
+         }
+      }
+   }
+
    // Handler methods for widget interactions
    private void handleAcceptConsoleCommand(String messageId, String command)
    {

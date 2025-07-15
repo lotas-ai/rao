@@ -1818,30 +1818,44 @@
    # Keep procedural flag - users see output in terminal widget, not conversation
    fresh_log[[pending_entry_index]]$procedural <- TRUE
    
-   # Check if there are messages after this function call in the conversation
-   # If so, don't trigger API continuation - just update the output
-   # Exclude the function_call_output for this specific call_id
-   function_call_message_id <- as.numeric(message_id)
-   has_newer_messages <- any(sapply(fresh_log, function(entry) {
-      if (is.null(entry$id) || entry$id <= function_call_message_id) {
-         return(FALSE)
-      }
+   # CRITICAL FIX: Add the same parallel function call handling logic as finalize_console_command
+   # Check if there are still buffered function calls to process
+   has_buffered_calls <- .rs.has_buffered_function_calls()   
+   if (has_buffered_calls) {
+      has_newer_messages <- FALSE
+   } else {
+      # Only check for newer messages if we've finished processing the parallel batch
+      function_call_message_id <- as.numeric(message_id)
       
-      # Exclude the function_call_output for this specific terminal command
-      if (!is.null(entry$type) && entry$type == "function_call_output" && 
-          !is.null(entry$call_id) && entry$call_id == call_id) {
-         return(FALSE)
-      }
+      has_newer_messages <- any(sapply(fresh_log, function(entry) {
+         if (is.null(entry$id) || entry$id <= function_call_message_id) {
+            return(FALSE)
+         }
+         
+         # Exclude the function_call_output for this specific terminal command
+         if (!is.null(entry$type) && entry$type == "function_call_output" && 
+             !is.null(entry$call_id) && entry$call_id == call_id) {
+            return(FALSE)
+         }
 
-      # Exclude images related to this function call (role = "user", related_to = function_call_message_id)
-      if (!is.null(entry$role) && entry$role == "user" && 
-          !is.null(entry$related_to) && entry$related_to == function_call_message_id) {
-         return(FALSE)
-      }
+         # Exclude images related to this function call (role = "user", related_to = function_call_message_id)
+         if (!is.null(entry$role) && entry$role == "user" && 
+             !is.null(entry$related_to) && entry$related_to == function_call_message_id) {
+            return(FALSE)
+         }
+         
+         # CRITICAL FIX: Exclude other console/terminal function calls from the same parallel batch
+         # These are not "newer messages" - they are part of the same AI response being processed
+         if (!is.null(entry$function_call) && !is.null(entry$function_call$name) &&
+             entry$function_call$name %in% c("run_console_cmd", "run_terminal_cmd", "delete_file") &&
+             !is.null(entry$related_to) && entry$related_to == related_to_id) {
+            return(FALSE)
+         }
+         
+         return(TRUE)
+      }))
+   }
       
-      return(TRUE)
-   }))
-   
    .rs.write_conversation_log(fresh_log)
    
 
@@ -1920,12 +1934,13 @@
    if (!is.null(assistant_message$function_call) && 
        !is.null(assistant_message$function_call$name) &&
        (assistant_message$function_call$name == "run_console_cmd" || 
+        assistant_message$function_call$name == "run_terminal_cmd" ||
         assistant_message$function_call$name == "delete_file" ||
         assistant_message$function_call$name == "run_file")) {
       function_call <- assistant_message
       call_id <- assistant_message$function_call$call_id
    } else {
-      stop("No run_console_cmd, delete_file, or run_file found for message ID: ", message_id)
+      stop("No run_console_cmd, run_terminal_cmd, delete_file, or run_file found for message ID: ", message_id)
    }
    
    # For continuation, we need the original user message ID, not the function call ID
@@ -1936,7 +1951,7 @@
    }
 
    if (is.null(function_call)) {
-      stop("No run_console_cmd, delete_file, or run_file found for message ID: ", message_id)
+      stop("No run_console_cmd, run_terminal_cmd, delete_file, or run_file found for message ID: ", message_id)
       return(FALSE)
    }
       
@@ -2006,29 +2021,39 @@
    # Keep procedural flag - users see output in console widget, not conversation
    conversation_log[[pending_entry_index]]$procedural <- TRUE
    
-   # Check if there are messages after this function call in the conversation
-   # If so, don't trigger API continuation - just update the output
-   # Exclude the function_call_output for this specific call_id
-   function_call_message_id <- as.numeric(message_id)
-   has_newer_messages <- any(sapply(conversation_log, function(entry) {
-      if (is.null(entry$id) || entry$id <= function_call_message_id) {
-         return(FALSE)
-      }
+      # SIMPLIFIED LOGIC: If we're in the middle of processing a parallel batch, always continue
+   # Check if there are still buffered function calls to process
+   has_buffered_calls <- .rs.has_buffered_function_calls()
+   
+   if (has_buffered_calls) {
+      has_newer_messages <- FALSE
+   } else {
+      # Only check for newer messages if we've finished processing the parallel batch
+      function_call_message_id <- as.numeric(message_id)
       
-      # Exclude the function_call_output for this specific console command
-      if (!is.null(entry$type) && entry$type == "function_call_output" && 
-          !is.null(entry$call_id) && entry$call_id == call_id) {
-         return(FALSE)
-      }
+      newer_messages_found <- c()
+      has_newer_messages <- any(sapply(conversation_log, function(entry) {
+         if (is.null(entry$id) || entry$id <= function_call_message_id) {
+            return(FALSE)
+         }
+         
+         # Exclude the function_call_output for this specific console command
+         if (!is.null(entry$type) && entry$type == "function_call_output" && 
+             !is.null(entry$call_id) && entry$call_id == call_id) {
+            return(FALSE)
+         }
 
-      # Exclude images related to this function call (role = "user", related_to = function_call_message_id)
-      if (!is.null(entry$role) && entry$role == "user" && 
-          !is.null(entry$related_to) && entry$related_to == function_call_message_id) {
-         return(FALSE)
-      }
+         # Exclude images related to this function call (role = "user", related_to = function_call_message_id)
+         if (!is.null(entry$role) && entry$role == "user" && 
+             !is.null(entry$related_to) && entry$related_to == function_call_message_id) {
+            return(FALSE)
+         }
+         
+         newer_messages_found <<- c(newer_messages_found, entry$id)
+         return(TRUE)
+      }))
       
-      return(TRUE)
-   }))
+   }
    
    .rs.write_conversation_log(conversation_log)
 
@@ -2078,6 +2103,9 @@
 })
 
 .rs.addFunction("process_single_function_call", function(function_call, related_to_id, request_id, response_id = NULL) {
+   function_name <- if (is.list(function_call$name)) function_call$name[[1]] else function_call$name
+   call_id <- if (is.list(function_call$call_id)) function_call$call_id[[1]] else function_call$call_id
+   
    if (.rs.get_conversation_var("ai_cancelled")) {
       return(.rs.create_ai_operation_result(
          status = "done",
@@ -2088,9 +2116,6 @@
    conversation_index <- .rs.get_current_conversation_index()
 
    conversation_log <- .rs.read_conversation_log()
-   
-   function_name <- if (is.list(function_call$name)) function_call$name[[1]] else function_call$name
-   call_id <- if (is.list(function_call$call_id)) function_call$call_id[[1]] else function_call$call_id
    
    # Check if this call_id already has function_call_output in conversation log
    existing_output_count <- 0
@@ -2123,13 +2148,17 @@
    }, conversation_log)
       
    function_call_exists <- FALSE
-   for (entry in conversation_log) {
+   existing_entry_index <- NULL
+   for (i in seq_along(conversation_log)) {
+      entry <- conversation_log[[i]]
       if (!is.null(entry$function_call)) {
  
          entry_call_id <- if (is.list(entry$function_call$call_id)) entry$function_call$call_id[[1]] else entry$function_call$call_id
          if (entry_call_id == call_id) {
             function_call_exists <- TRUE
-            # If function call exists, get the existing message ID
+            existing_entry_index <- i
+            # CRITICAL FIX: Use the existing message ID from the streamed function call
+            # The widgets are already created with this ID, so we must use it
             normalized_function_call$msg_id <- entry$id
             break
          }
@@ -2257,13 +2286,47 @@
    }
    
    # Handle breakout_of_function_calls for run_console_cmd/run_terminal_cmd/delete_file  
-   if (function_name == "run_console_cmd" || function_name == "run_terminal_cmd" || function_name == "delete_file" || function_name == "run_file") {
+   if (function_name == "run_console_cmd" || function_name == "run_terminal_cmd") {
       # Find the function call entry using shared function
       conversation_log <- .rs.read_conversation_log()
       function_call_entry <- .rs.find_function_call_by_call_id(conversation_log, call_id)
       
       if (!is.null(function_call_entry)) {
-         # Create widget operation using shared function
+         # Process the command through handlers (needed for command processing)
+         if (function_name == "run_console_cmd") {
+            function_result <- .rs.handle_run_console_cmd(normalized_function_call, conversation_log, related_to_id, request_id)
+         } else if (function_name == "run_terminal_cmd") {
+            function_result <- .rs.handle_run_terminal_cmd(normalized_function_call, conversation_log, related_to_id, request_id)
+         }
+         
+         # Add function call output to conversation log (needed for command execution)
+         if (!is.null(function_result$function_call_output)) {
+            conversation_log <- .rs.read_conversation_log()
+            updated_log <- c(conversation_log, list(function_result$function_call_output))
+            .rs.write_conversation_log(updated_log)
+         }
+         
+         # DON'T create widget here since it was already created during streaming
+         # Just return pending status with the function call message ID
+         is_console <- (function_name %in% c("run_console_cmd", "delete_file"))
+         command_type <- if (is_console) "Console" else "Terminal"
+         
+         operation_result <- .rs.create_ai_operation_result(
+            status = "pending",
+            data = list(
+               command_type = tolower(command_type),
+               message_id = function_call_entry$id,
+               conversation_index = conversation_index
+            )
+         )      
+         return(operation_result)
+      }
+   } else if (function_name == "run_file" || function_name == "delete_file") {
+      # Find the function call entry using shared function
+      conversation_log <- .rs.read_conversation_log()
+      function_call_entry <- .rs.find_function_call_by_call_id(conversation_log, call_id)
+      
+      if (!is.null(function_call_entry)) {
          widget_op <- .rs.create_function_call_widget_operation(function_call_entry, function_result)
          
          if (!is.null(widget_op)) {
@@ -2537,12 +2600,14 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
             .rs.set_conversation_var("current_related_to_id", NULL)
             
             # Process the buffered function call
-            return(.rs.process_single_function_call(
+            result <- .rs.process_single_function_call(
                next_call$function_call,
                related_to_id,
                next_call$request_id,
                next_call$response_id
-            ))
+            )
+            
+            return(result)
          }
       }
       

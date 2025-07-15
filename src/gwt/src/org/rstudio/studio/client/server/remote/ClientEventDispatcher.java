@@ -348,6 +348,10 @@ public class ClientEventDispatcher
             // Extract function call flag
             boolean isFunctionCall = getBooleanFromRData(jsData, "isFunctionCall");
             
+            // Extract console/terminal command flags
+            boolean isConsoleCmd = getBooleanFromRData(jsData, "isConsoleCmd");
+            boolean isTerminalCmd = getBooleanFromRData(jsData, "isTerminalCmd");
+            
             // Extract replaceContent flag for edit_file widgets  
             boolean replaceContent = getBooleanFromRData(jsData, "replaceContent");
             
@@ -355,7 +359,7 @@ public class ClientEventDispatcher
             String requestId = getStringFromRData(jsData, "requestId");
             
             // Create event with extracted data including all flags
-            AiStreamDataEvent streamEvent = new AiStreamDataEvent(messageId, delta, isComplete, isEditFile, filename, sequence, isCancelled, isFunctionCall, replaceContent);
+            AiStreamDataEvent streamEvent = new AiStreamDataEvent(messageId, delta, isComplete, isEditFile, isConsoleCmd, isTerminalCmd, filename, sequence, isCancelled, isFunctionCall, replaceContent);
             
             // Set the requestId if present
             if (requestId != null && !requestId.isEmpty()) {
