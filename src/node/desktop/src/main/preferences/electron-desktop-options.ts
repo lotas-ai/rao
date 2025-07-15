@@ -21,7 +21,7 @@ import { basename, dirname, join } from 'path';
 import { properties } from '../../../../../cpp/session/resources/schema/user-state-schema.json';
 import { normalizeSeparatorsNative } from '../../ui/utils';
 import { logger } from '../../core/logger';
-import { RStudioUserState } from '../../types/user-state-schema';
+import { RaoUserState } from '../../types/user-state-schema';
 
 import { generateSchema, legacyPreferenceManager } from './../preferences/preferences';
 import DesktopOptions from './desktop-options';
@@ -51,7 +51,7 @@ const kPreferR64 = 'platform.windows.preferR64';
 
 const kCheckForRosetta = 'platform.macos.checkForRosetta';
 
-const userStateSchema = generateSchema<RStudioUserState>(properties);
+const userStateSchema = generateSchema<RaoUserState>(properties);
 
 export let defaultFonts = ['monospace'];
 
@@ -88,13 +88,13 @@ export function clearOptionsSingleton(): void {
  * for creating/getting a DesktopOptionsImpl instance
  */
 export class DesktopOptionsImpl implements DesktopOptions {
-  private config = new Store<RStudioUserState>({ schema: userStateSchema });
+  private config = new Store<RaoUserState>({ schema: userStateSchema });
   private legacyOptions = legacyPreferenceManager;
 
   // unit testing constructor to expose directory and DesktopOptions mock
   constructor(directory = '', legacyOptions?: DesktopOptions) {
     if (directory.length != 0) {
-      this.config = new Store<RStudioUserState>({ cwd: directory, schema: userStateSchema });
+      this.config = new Store<RaoUserState>({ cwd: directory, schema: userStateSchema });
     }
     if (legacyOptions) {
       this.legacyOptions = legacyOptions;
