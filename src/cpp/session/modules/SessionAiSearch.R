@@ -1097,6 +1097,37 @@
       }
    }
    
+   # Apply consistent output limiting to file content like console/terminal commands
+   if (exists("file_content") && !is.null(file_content)) {
+      # Split file_content into header and content parts
+      file_lines <- strsplit(file_content, "\n", fixed = TRUE)[[1]]
+      
+      # Find where the header ends (look for the empty line after header)
+      header_end <- 1
+      for (i in seq_along(file_lines)) {
+         if (file_lines[i] == "" && i > 1) {
+            header_end <- i
+            break
+         }
+      }
+      
+      # If we found a header, preserve it and limit the content part
+      if (header_end < length(file_lines)) {
+         header_part <- file_lines[1:header_end]
+         content_part <- file_lines[(header_end + 1):length(file_lines)]
+         
+         # Apply the same limiting as console/terminal commands
+         limited_content <- .rs.limit_output_text(content_part)
+         
+         # Recombine header and limited content
+         file_content <- paste(c(header_part, limited_content), collapse = "\n")
+      } else {
+         # No clear header found, limit the entire content
+         limited_lines <- .rs.limit_output_text(file_lines)
+         file_content <- paste(limited_lines, collapse = "\n")
+      }
+   }
+   
    function_output_id <- .rs.get_next_message_id()
    function_call_output <- list(
       id = function_output_id,
@@ -1183,6 +1214,14 @@
    }
    
    function_output_id <- .rs.get_next_message_id()
+   
+   # Apply consistent output limiting like console/terminal commands
+   if (!is.null(dirListing) && nchar(dirListing) > 0) {
+      result_lines <- strsplit(dirListing, "\n", fixed = TRUE)[[1]]
+      limited_lines <- .rs.limit_output_text(result_lines)
+      dirListing <- paste(limited_lines, collapse = "\n")
+   }
+   
    function_call_output <- list(
      id = function_output_id,
      type = "function_call_output",
@@ -1293,6 +1332,14 @@
    }
    
    function_output_id <- .rs.get_next_message_id()
+   
+   # Apply consistent output limiting like console/terminal commands
+   if (!is.null(search_results) && nchar(search_results) > 0) {
+      result_lines <- strsplit(search_results, "\n", fixed = TRUE)[[1]]
+      limited_lines <- .rs.limit_output_text(result_lines)
+      search_results <- paste(limited_lines, collapse = "\n")
+   }
+   
    function_call_output <- list(
      id = function_output_id,
      type = "function_call_output",

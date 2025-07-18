@@ -938,10 +938,10 @@ tryCatch({
     total_length <- sum(nchar(output_text))
     
     # Check if we need to truncate based on total length
-    if (total_length > 4000) {
+    if (total_length > 10000) {
         # First, limit the number of lines if necessary
-        if (length(output_text) > 20) {
-            output_text <- output_text[1:20]
+        if (length(output_text) > 50) {
+            output_text <- output_text[1:50]
             output_text <- c(output_text, "... (output truncated)")
         }
     }

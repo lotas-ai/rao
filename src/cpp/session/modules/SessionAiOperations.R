@@ -1790,7 +1790,14 @@
    } else if (exists(".rs.terminal_output", envir = .GlobalEnv)) {
       output <- get(".rs.terminal_output", envir = .GlobalEnv)
       if (length(output) > 0 && nchar(output) > 0) {
-         command_output <- output
+         # Split terminal output into lines and apply limits
+         if (is.character(output) && length(output) == 1) {
+            terminal_lines <- strsplit(output, "\n", fixed = TRUE)[[1]]
+         } else {
+            terminal_lines <- as.character(output)
+         }
+         limited_output <- .rs.limit_output_text(terminal_lines)
+         command_output <- paste(limited_output, collapse = "\n")
       } else {
          command_output <- "Terminal command executed successfully"
       }
@@ -1978,8 +1985,10 @@
       command_output <- get(".rs.console_cancellation_message", envir = .GlobalEnv)
       rm(".rs.console_cancellation_message", envir = .GlobalEnv)
    } else if (!is.null(console_output) && nchar(console_output) > 0) {
-      # Use Java-tracked console output - treat it as the command output
-      command_output <- console_output
+      # Use Java-tracked console output - split into lines and apply limits
+      console_lines <- strsplit(console_output, "\n", fixed = TRUE)[[1]]
+      limited_output <- .rs.limit_output_text(console_lines)
+      command_output <- paste(limited_output, collapse = "\n")
    } else {
       # No console output provided - check if this is a delete_file operation and provide specific feedback
       if (!is.null(assistant_message$function_call) && 
