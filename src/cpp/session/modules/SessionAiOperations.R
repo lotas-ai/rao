@@ -2564,11 +2564,14 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
       current_query_count <- .rs.count_original_queries(conversation_log)
       
       # If we have 3+ queries and there's background summarization in progress,
-      # we need to wait for it since we might need the summary for N-2
+      # we need to wait for it ONLY if it's creating the summary we actually need (N-2)
       if (current_query_count >= 3) {
          state <- .rs.load_background_summarization_state()
+         needed_summary_query <- current_query_count - 2
          if (!is.null(state)) {
-            .rs.wait_for_persistent_background_summarization()
+            if (state$target_query == needed_summary_query) {
+               .rs.wait_for_persistent_background_summarization()
+            }
          }
       }
       
