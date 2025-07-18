@@ -83,15 +83,57 @@ public class AiPaneResponses
 
    private void trackNewConsoleOutput(String currentContent) {
       if (currentContent != null && initialConsoleContent_ != null) {
-         // Find new content that wasn't in the initial output
-         if (currentContent.length() > initialConsoleContent_.length()) {
-            String newContent = currentContent.substring(initialConsoleContent_.length());
-            if (!newContent.isEmpty()) {
-               String filteredContent = filterConsoleOutput(newContent);
-               consoleOutput_.append(filteredContent);
-               initialConsoleContent_ = currentContent; // Update baseline for next check
+         String newContent = "";
+         
+         int oldLen = initialConsoleContent_.length();
+         int newLen = currentContent.length();
+         
+         // Find where the old console's end matches in the new console
+         int bestMatchEndIndex = -1;  // End index in new console where match was found
+         int bestMatchLength = 0;     // Length of the matching suffix
+                  
+         // Try each possible ending position in the new console (from end to beginning)
+         for (int newEndPos = newLen; newEndPos >= 1; newEndPos--) {
+            // Check if old console's suffix exactly matches new console from start to newEndPos
+            int matchLength = 0;
+            int maxMatchLength = Math.min(oldLen, newEndPos);
+            
+            // Match backwards from the end positions
+            for (int i = 1; i <= maxMatchLength; i++) {
+               char oldChar = initialConsoleContent_.charAt(oldLen - i);
+               char newChar = currentContent.charAt(newEndPos - i);
+               
+               if (oldChar == newChar) {
+                  matchLength = i;
+               } else {
+                  // Characters don't match, stop extending this match
+                  break;
+               }
+            }
+            
+            // Only accept this match if it covers the ENTIRE new console prefix up to newEndPos
+            if (matchLength == newEndPos && matchLength > bestMatchLength) {
+               bestMatchLength = matchLength;
+               bestMatchEndIndex = newEndPos;
             }
          }
+                  
+         // Extract new content: everything after the best match in the new console
+         if (bestMatchEndIndex > 0 && bestMatchEndIndex < newLen) {
+            newContent = currentContent.substring(bestMatchEndIndex);
+         } else if (bestMatchLength == 0) {
+            // No match found at all - this is unusual, but capture everything as new
+            newContent = currentContent;
+         }
+         
+         if (!newContent.isEmpty()) {
+            String filteredContent = filterConsoleOutput(newContent);
+            
+            consoleOutput_.append(filteredContent);
+         }
+         
+         // Always update baseline for next check
+         initialConsoleContent_ = currentContent;
       }
    }
    
