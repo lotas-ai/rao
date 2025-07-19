@@ -39,6 +39,8 @@ public class AiSettingsWidget extends Composite
       void onWorkingDirectoryChange(String directory);
       void onBrowseDirectory();
       void onTemperatureChange(double temperature);
+      void onSecurityModeChange(String mode);
+      void onWebSearchEnabledChange(boolean enabled);
    }
    
    public interface Styles extends CssResource
@@ -101,15 +103,22 @@ public class AiSettingsWidget extends Composite
    private Label profileErrorLabel_;
    private Label directorySuccessLabel_;
    private Label directoryErrorLabel_;
+   private HTML securityModeToggle_;
+   private HTML webSearchToggle_;
+   private Label securityModeText_;
+   private Label webSearchText_;
    private HTML profileSection_;
    private HTML modelSection_;
    private HTML workingDirectorySection_;
+   private HTML securitySection_;
    
    // State
    private boolean hasApiKey_ = false;
    private String currentModel_ = null;
    private String currentDirectory_ = null;
-   private double currentTemperature_ = 0.7; // Default temperature
+   private double currentTemperature_ = 0.5; // Default temperature
+   private String currentSecurityMode_ = "secure"; // Default security mode
+   private boolean currentWebSearchEnabled_ = false; // Default web search
    private AiUserProfile userProfile_ = null;
    private AiSubscriptionStatus subscriptionStatus_ = null;
    private boolean subscriptionDetailsAdded_ = false;
@@ -158,6 +167,11 @@ public class AiSettingsWidget extends Composite
       workingDirectorySection_ = new HTML();
       workingDirectorySection_.addStyleName(styles_.settingsSection());
       mainPanel.add(workingDirectorySection_);
+      
+      // Security Section
+      securitySection_ = new HTML();
+      securitySection_.addStyleName(styles_.settingsSection());
+      mainPanel.add(securitySection_);
       
       // CRITICAL FIX: Wrap in ScrollPanel to enable scrolling like other working widgets
       ScrollPanel scrollPanel = new ScrollPanel(mainPanel);
@@ -440,6 +454,100 @@ public class AiSettingsWidget extends Composite
       workingDirectorySection_.getElement().appendChild(section.getElement());
    }
    
+   private void buildSecuritySection()
+   {
+      VerticalPanel section = new VerticalPanel();
+      section.setWidth("100%");
+      
+      // Section title
+      Label title = new Label("Security");
+      title.addStyleName(styles_.sectionTitle());
+      section.add(title);
+      
+      // Security mode setting
+      HorizontalPanel securityModePanel = new HorizontalPanel();
+      securityModePanel.setWidth("100%");
+      securityModePanel.addStyleName(styles_.settingRow());
+      
+      VerticalPanel securityModeContainer = new VerticalPanel();
+      securityModeContainer.setWidth("100%");
+      
+      HTML securityModeLabel = new HTML("<b>Secure mode</b>");
+      securityModeLabel.addStyleName(styles_.settingLabel());
+      securityModeContainer.add(securityModeLabel);
+      
+      // Create horizontal panel with text on left and toggle on right
+      HorizontalPanel securityTogglePanel = new HorizontalPanel();
+      securityTogglePanel.setWidth("100%");
+      securityTogglePanel.setVerticalAlignment(HorizontalPanel.ALIGN_TOP);
+      
+      securityModeText_ = new Label("On secure mode, no analytics are collected and zero data is retained by the model providers. This must be used for any sensitive data. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: Secure");
+      securityModeText_.addStyleName(styles_.settingLabel());
+      securityModeText_.getElement().getStyle().setProperty("fontWeight", "normal");
+      securityModeText_.getElement().getStyle().setProperty("fontSize", "13px");
+      securityModeText_.getElement().getStyle().setProperty("color", "#666666");
+      securityModeText_.getElement().getStyle().setProperty("marginRight", "15px");
+      securityModeText_.setWidth("100%");
+      securityTogglePanel.add(securityModeText_);
+      securityTogglePanel.setCellWidth(securityModeText_, "100%");
+      
+      securityModeToggle_ = new HTML();
+      securityModeToggle_.getElement().setInnerHTML(
+         "<div style='position: relative; width: 32px; height: 16px; background: #4CAF50; border-radius: 8px; cursor: pointer; transition: background 0.3s;' data-value=''>" +
+         "<div style='position: absolute; top: 1px; right: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.2);'></div>" +
+         "</div>"
+      );
+      addNativeSecurityModeChangeHandler(securityModeToggle_.getElement());
+      securityTogglePanel.add(securityModeToggle_);
+      
+      securityModeContainer.add(securityTogglePanel);
+      securityModePanel.add(securityModeContainer);
+      section.add(securityModePanel);
+      
+      // Web search setting
+      HorizontalPanel webSearchPanel = new HorizontalPanel();
+      webSearchPanel.setWidth("100%");
+      webSearchPanel.addStyleName(styles_.settingRow());
+      
+      VerticalPanel webSearchContainer = new VerticalPanel();
+      webSearchContainer.setWidth("100%");
+      
+      HTML webSearchLabel = new HTML("<b>Web search</b>");
+      webSearchLabel.addStyleName(styles_.settingLabel());
+      webSearchContainer.add(webSearchLabel);
+      
+      // Create horizontal panel with text on left and toggle on right
+      HorizontalPanel webSearchTogglePanel = new HorizontalPanel();
+      webSearchTogglePanel.setWidth("100%");
+      webSearchTogglePanel.setVerticalAlignment(HorizontalPanel.ALIGN_TOP);
+      
+      webSearchText_ = new Label("When web search is on, the model may choose to search the web. Such searches could involve information from the conversation history and should be disabled for sensitive data. Web search is currently: off");
+      webSearchText_.addStyleName(styles_.settingLabel());
+      webSearchText_.getElement().getStyle().setProperty("fontWeight", "normal");
+      webSearchText_.getElement().getStyle().setProperty("fontSize", "13px");
+      webSearchText_.getElement().getStyle().setProperty("color", "#666666");
+      webSearchText_.getElement().getStyle().setProperty("marginRight", "15px");
+      webSearchText_.setWidth("100%");
+      webSearchTogglePanel.add(webSearchText_);
+      webSearchTogglePanel.setCellWidth(webSearchText_, "100%");
+      
+      webSearchToggle_ = new HTML();
+      webSearchToggle_.getElement().setInnerHTML(
+         "<div style='position: relative; width: 32px; height: 16px; background: #ccc; border-radius: 8px; cursor: pointer; transition: background 0.3s;' data-value='false'>" +
+         "<div style='position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.2);'></div>" +
+         "</div>"
+      );
+      addNativeWebSearchChangeHandler(webSearchToggle_.getElement());
+      webSearchTogglePanel.add(webSearchToggle_);
+      
+      webSearchContainer.add(webSearchTogglePanel);
+      webSearchPanel.add(webSearchContainer);
+      section.add(webSearchPanel);
+      
+      securitySection_.getElement().setInnerHTML("");
+      securitySection_.getElement().appendChild(section.getElement());
+   }
+   
    private void loadUserProfile() {
       server_.getUserProfile(new ServerRequestCallback<AiUserProfile>() {
          @Override
@@ -527,6 +635,44 @@ public class AiSettingsWidget extends Composite
             updateTemperatureDisplay();
          }
       });
+      
+      // Load current security mode
+      server_.getSecurityMode(new ServerRequestCallback<String>() {
+         @Override
+         public void onResponseReceived(String mode) {
+            currentSecurityMode_ = mode != null ? mode : "secure";
+            updateSecurityModeDisplay();
+            
+            // Initialize PostHog with current security mode
+            updatePostHogForSecurityMode(currentSecurityMode_);
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Error loading security mode: " + error.getMessage());
+            currentSecurityMode_ = "secure"; // Default value
+            updateSecurityModeDisplay();
+            
+            // Initialize PostHog with secure mode as default
+            updatePostHogForSecurityMode("secure");
+         }
+      });
+      
+      // Load current web search enabled
+      server_.getWebSearchEnabled(new ServerRequestCallback<Boolean>() {
+         @Override
+         public void onResponseReceived(Boolean enabled) {
+            currentWebSearchEnabled_ = enabled != null ? enabled : false;
+            updateWebSearchDisplay();
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Error loading web search enabled: " + error.getMessage());
+            currentWebSearchEnabled_ = false; // Default value
+            updateWebSearchDisplay();
+         }
+      });
    }
    
    private void loadAvailableModels() {
@@ -572,6 +718,7 @@ public class AiSettingsWidget extends Composite
       buildProfileSection();
       buildModelSection();
       buildWorkingDirectorySection();
+      buildSecuritySection();
       
       // Ensure directory input is populated after UI is built
       updateWorkingDirectorySection();
@@ -1007,6 +1154,96 @@ public class AiSettingsWidget extends Composite
       }, true);
       }-*/;
    
+   // Add native DOM event handler for security mode toggle
+   private native void addNativeSecurityModeChangeHandler(com.google.gwt.dom.client.Element element) /*-{
+      var self = this;
+      
+      element.addEventListener('click', function(event) {
+         var toggleDiv = element.querySelector('div[data-value]');
+         if (toggleDiv) {
+            var currentValue = toggleDiv.getAttribute('data-value');
+            var newValue = currentValue === 'secure' ? 'improve' : 'secure';
+            toggleDiv.setAttribute('data-value', newValue);
+            
+            // Update visual state
+            var slider = toggleDiv.querySelector('div');
+            var isSecure = newValue === 'secure';
+            toggleDiv.style.background = isSecure ? '#4CAF50' : '#ccc';
+            
+            // Use right positioning for secure (green), left for improve (grey)
+            if (isSecure) {
+               slider.style.left = '';
+               slider.style.right = '1px';
+            } else {
+               slider.style.right = '';
+               slider.style.left = '1px';
+            }
+            
+            self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleSecurityModeChange()();
+         }
+         event.preventDefault();
+         event.stopPropagation();
+      }, true);
+   }-*/;
+   
+   // Add native DOM event handler for web search toggle
+   private native void addNativeWebSearchChangeHandler(com.google.gwt.dom.client.Element element) /*-{
+      var self = this;
+      
+      element.addEventListener('click', function(event) {
+         var toggleDiv = element.querySelector('div[data-value]');
+         if (toggleDiv) {
+            var currentValue = toggleDiv.getAttribute('data-value');
+            var newValue = currentValue === 'false' ? 'true' : 'false';
+            toggleDiv.setAttribute('data-value', newValue);
+            
+            // Update visual state
+            var slider = toggleDiv.querySelector('div');
+            var isEnabled = newValue === 'true';
+            toggleDiv.style.background = isEnabled ? '#4CAF50' : '#ccc';
+            slider.style.left = isEnabled ? '17px' : '1px';
+            
+            self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleWebSearchChange()();
+         }
+         event.preventDefault();
+         event.stopPropagation();
+      }, true);
+   }-*/;
+   
+   // Native method to get toggle value
+   private native String getToggleValue(com.google.gwt.dom.client.Element element) /*-{
+      var toggleDiv = element.querySelector('div[data-value]');
+      return toggleDiv ? toggleDiv.getAttribute('data-value') : null;
+   }-*/;
+   
+   // Native method to update toggle display
+   private native void updateToggleDisplay(com.google.gwt.dom.client.Element element, String value, String offValue) /*-{
+      var toggleDiv = element.querySelector('div[data-value]');
+      if (toggleDiv) {
+         toggleDiv.setAttribute('data-value', value);
+         var slider = toggleDiv.querySelector('div');
+         
+         if (offValue === 'secure') {
+            // Security mode toggle - secure is green/right, improve is grey/left
+            var isSecure = value === 'secure';
+            toggleDiv.style.background = isSecure ? '#4CAF50' : '#ccc';
+            
+            if (isSecure) {
+               slider.style.left = '';
+               slider.style.right = '1px';
+            } else {
+               slider.style.right = '';
+               slider.style.left = '1px';
+            }
+         } else {
+            // Web search toggle  
+            var isEnabled = value === 'true';
+            toggleDiv.style.background = isEnabled ? '#4CAF50' : '#ccc';
+            slider.style.left = isEnabled ? '17px' : '1px';
+         }
+      }
+   }-*/;
+   
    // Native method to get slider value
    private native double getSliderValue() /*-{
       if (this.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::temperatureSlider_) {
@@ -1133,4 +1370,90 @@ public class AiSettingsWidget extends Composite
          }
       }
    }
+   
+   private void handleSecurityModeChange() {
+      if (securityModeToggle_ != null) {
+         String mode = getToggleValue(securityModeToggle_.getElement());
+         if (mode != null) {
+            currentSecurityMode_ = mode;
+            
+            // Update the text label
+            if (securityModeText_ != null) {
+               boolean isSecure = "secure".equals(mode);
+               String modeText = isSecure ? "Secure" : "Improve Rao for everyone";
+               securityModeText_.setText("On secure mode, no analytics are collected and zero data is retained by the model providers. This must be used for any sensitive data. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: " + modeText);
+            }
+            
+            handler_.onSecurityModeChange(mode);
+         }
+      }
+   }
+   
+   private void handleWebSearchChange() {
+      if (webSearchToggle_ != null) {
+         String value = getToggleValue(webSearchToggle_.getElement());
+         if (value != null) {
+            boolean enabled = "true".equals(value);
+            currentWebSearchEnabled_ = enabled;
+            
+            // Update the text label
+            if (webSearchText_ != null) {
+               String statusText = enabled ? "on" : "off";
+               webSearchText_.setText("When web search is on, the model may choose to search the web. Such searches could involve information from the conversation history and should be disabled for sensitive data. Web search is currently: " + statusText);
+            }
+            
+            handler_.onWebSearchEnabledChange(enabled);
+         }
+      }
+   }
+   
+   private void updateSecurityModeDisplay() {
+      if (securityModeToggle_ != null) {
+         updateToggleDisplay(securityModeToggle_.getElement(), currentSecurityMode_, "secure");
+      }
+      if (securityModeText_ != null) {
+         boolean isSecure = "secure".equals(currentSecurityMode_);
+         String modeText = isSecure ? "Secure" : "Improve Rao for everyone";
+         securityModeText_.setText("On secure mode, no analytics are collected and zero data is retained by the model providers. This must be used for any sensitive data. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: " + modeText);
+      }
+   }
+   
+   private void updateWebSearchDisplay() {
+      if (webSearchToggle_ != null) {
+         updateToggleDisplay(webSearchToggle_.getElement(), currentWebSearchEnabled_ ? "true" : "false", "false");
+      }
+      if (webSearchText_ != null) {
+         String statusText = currentWebSearchEnabled_ ? "on" : "off";
+         webSearchText_.setText("When web search is on, the model may choose to search the web. Such searches could involve information from the conversation history and should be disabled for sensitive data. Web search is currently: " + statusText);
+      }
+   }
+   
+   public void onSecurityModeChanged(String mode) {
+      currentSecurityMode_ = mode;
+      updateSecurityModeDisplay();
+   }
+   
+   public void onWebSearchEnabledChanged(boolean enabled) {
+      currentWebSearchEnabled_ = enabled;
+      updateWebSearchDisplay();
+   }
+   
+   /**
+    * Update PostHog tracking based on security mode
+    * @param mode The security mode ("secure" or "make_rao_better")
+    */
+   private void updatePostHogForSecurityMode(String mode) {
+      updatePostHogForSecurityModeImpl(mode);
+   }
+   
+   /**
+    * Native method to update PostHog tracking based on security mode
+    */
+   private native void updatePostHogForSecurityModeImpl(String mode) /*-{
+      if ($wnd.PostHogHelper && $wnd.PostHogHelper.updateTrackingForSecurityMode) {
+         $wnd.PostHogHelper.updateTrackingForSecurityMode(mode);
+      } else {
+         console.warn("PostHog helper not available for security mode update");
+      }
+   }-*/;
 }

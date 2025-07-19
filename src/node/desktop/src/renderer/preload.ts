@@ -43,14 +43,42 @@ contextBridge.exposeInMainWorld('desktopLogger', getDesktopLoggerBridge());
 posthog.init('phc_b9DTWB8h678cfkt3DPgD6jYN57IIu0AzAD0tn20cSyo', {
   api_host: 'https://us.i.posthog.com',
   person_profiles: 'always', // or 'always' to create profiles for anonymous users as well
-  capture_pageview: true,
+  capture_pageview: false, // Disable automatic pageview capture, we'll do it conditionally
+  opt_out_capturing_by_default: true, // Start with tracking disabled, enable based on security mode
   // Recommended for Electron apps to help distinguish between environments
   loaded: (posthog) => {
     posthog.register({
       app_platform: 'electron'
     });
+    
+    // Get security mode from R session and configure PostHog accordingly
+    initializePostHogFromRSettings(posthog);
   }
 });
+
+/**
+ * Initialize PostHog based on security mode from R settings
+ */
+async function initializePostHogFromRSettings(posthog: any): Promise<void> {
+  try {
+    // Get security mode from R session via desktop bridge
+    const desktopBridge = getDesktopBridge();
+    
+    desktopBridge.getSecurityMode((securityMode: string) => {
+      if (securityMode === 'secure') {
+        posthog.opt_out_capturing();
+      } else {
+        posthog.opt_in_capturing();
+        posthog.capture('$pageview'); // Capture pageview if tracking enabled
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error initializing PostHog from R settings:', error);
+    // Default to secure mode on any error
+    posthog.opt_out_capturing();
+  }
+}
 
 // Expose PostHog functions to the renderer process
 contextBridge.exposeInMainWorld('analytics', {

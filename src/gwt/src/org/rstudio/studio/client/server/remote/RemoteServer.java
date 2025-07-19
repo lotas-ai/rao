@@ -8107,6 +8107,33 @@ public class RemoteServer implements Server, AiServerOperations
       params.set(0, new JSONNumber(temperature));
       sendRequest(RPC_SCOPE, SET_TEMPERATURE, params, requestCallback);
    }
-
+   
+   @Override
+   public void getSecurityMode(ServerRequestCallback<String> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, "get_security_mode", requestCallback);
+   }
+   
+   @Override
+   public void setSecurityMode(String mode, ServerRequestCallback<java.lang.Void> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(mode));
+      sendRequest(RPC_SCOPE, "set_security_mode", params, requestCallback);
+   }
+   
+   @Override
+   public void getWebSearchEnabled(ServerRequestCallback<Boolean> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, "get_web_search_enabled", requestCallback);
+   }
+   
+   @Override
+   public void setWebSearchEnabled(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, JSONBoolean.getInstance(enabled));
+      sendRequest(RPC_SCOPE, "set_web_search_enabled", params, requestCallback);
+   }
 }
 

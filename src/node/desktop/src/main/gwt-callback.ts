@@ -1000,6 +1000,35 @@ export class GwtCallback extends EventEmitter {
         detectRosetta();
       }
     });
+
+    ipcMain.handle('desktop_get_security_mode', async () => {
+      // Get the security mode from the R session via HTTP request
+      try {
+        const port = appState().port;
+        const url = `http://127.0.0.1:${port}/rpc/get_security_mode`;
+        
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Shared-Secret': process.env.RS_SHARED_SECRET ?? '',
+          },
+          body: JSON.stringify({})
+        });
+        
+        if (response.ok) {
+          const result = await response.text();
+          // Remove quotes from JSON string response
+          return result.replace(/"/g, '');
+        } else {
+          logger().logError(`Failed to get security mode: ${response.status} ${response.statusText}`);
+          return 'secure'; // Default to secure mode on error
+        }
+      } catch (error) {
+        logger().logError(`Error getting security mode: ${error}`);
+        return 'secure'; // Default to secure mode on error
+      }
+    });
   }
 
   addMacOSVersionError(): void {

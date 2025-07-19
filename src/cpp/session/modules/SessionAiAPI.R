@@ -540,6 +540,21 @@
     # Use SSE approach with httr streaming to /ai/query endpoint
     config <- .rs.get_backend_config()
     
+    # Get security mode and web search settings in the main process before background execution
+    security_mode <- tryCatch({
+      result <- .rs.get_security_mode()
+      result
+    }, error = function(e) {
+      "secure"
+    })
+    
+    web_search_enabled <- tryCatch({
+      result <- .rs.get_web_search_enabled()
+      result
+    }, error = function(e) {
+      FALSE
+    })
+    
     # Create a background process that uses httr streaming with SSE parsing
     temp_dir <- .rs.get_temp_dir()
     # Use different stream file prefix for background requests (like summarization)
@@ -548,7 +563,7 @@
     writeLines("READY", stream_file)
     
     bg_process <- callr::r_bg(
-      func = function(request_data, stream_file, config_url, request_id) {
+      func = function(request_data, stream_file, config_url, request_id, security_mode, web_search_enabled) {
         # Load required libraries in background process
         
         tryCatch({
@@ -562,7 +577,9 @@
             encode = "json",
             httr::add_headers(
               "Content-Type" = "application/json",
-              "Accept" = "text/event-stream"
+              "Accept" = "text/event-stream",
+              "X-Rao-Security-Mode" = security_mode,
+              "X-Rao-Web-Search-Enabled" = as.character(web_search_enabled)
             ),
             httr::timeout(3600),  # 1-hour timeout for streaming requests (essentially long enough that the cancellation will have to be form a large gap in streaming deltas)
             httr::write_stream(function(x) {
@@ -768,7 +785,9 @@
         request_data = final_request_data,
         stream_file = stream_file,
         config_url = config$url,
-        request_id = request_id
+        request_id = request_id,
+        security_mode = security_mode,
+        web_search_enabled = web_search_enabled
       ),
       supervise = TRUE
     )

@@ -747,6 +747,13 @@ export function getDesktopBridge() {
       ipcRenderer.send('desktop_console_log', output);
     },
 
+    getSecurityMode: (callback: VoidCallback<string>) => {
+      ipcRenderer
+        .invoke('desktop_get_security_mode')
+        .then((mode) => callback(mode))
+        .catch((error) => reportIpcError('getSecurityMode', error));
+    },
+
     getPathForFile: (file: any) => {
       return webUtils.getPathForFile(file);
     },

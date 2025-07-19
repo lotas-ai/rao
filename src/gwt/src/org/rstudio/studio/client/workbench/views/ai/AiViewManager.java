@@ -182,6 +182,43 @@ public class AiViewManager
                }
             });
          }
+         
+         @Override
+         public void onSecurityModeChange(String mode) {
+            server_.setSecurityMode(mode, new ServerRequestCallback<java.lang.Void>() {
+               @Override
+               public void onResponseReceived(java.lang.Void response) {
+                  settingsWidget_.onSecurityModeChanged(mode);
+                  
+                  // Update PostHog tracking based on security mode
+                  updatePostHogForSecurityMode(mode);
+               }
+               
+               @Override
+               public void onError(ServerError error) {
+                  Debug.log("setSecurityMode failed: " + error.getMessage());
+                  RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
+                     "Error", "Failed to set security mode: " + error.getMessage());
+               }
+            });
+         }
+         
+         @Override
+         public void onWebSearchEnabledChange(boolean enabled) {
+            server_.setWebSearchEnabled(enabled, new ServerRequestCallback<java.lang.Void>() {
+               @Override
+               public void onResponseReceived(java.lang.Void response) {
+                  settingsWidget_.onWebSearchEnabledChanged(enabled);
+               }
+               
+               @Override
+               public void onError(ServerError error) {
+                  Debug.log("setWebSearchEnabled failed: " + error.getMessage());
+                  RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
+                     "Error", "Failed to set web search enabled: " + error.getMessage());
+               }
+            });
+         }
       };
       
       settingsWidget_ = new AiSettingsWidget(
@@ -423,6 +460,25 @@ public class AiViewManager
    {
       return centerContainer_;
    }
+   
+   /**
+    * Update PostHog tracking based on security mode
+    * @param mode The security mode ("secure" or "make_rao_better")
+    */
+   private void updatePostHogForSecurityMode(String mode) {
+      updatePostHogForSecurityModeImpl(mode);
+   }
+   
+   /**
+    * Native method to update PostHog tracking based on security mode
+    */
+   private native void updatePostHogForSecurityModeImpl(String mode) /*-{
+      if ($wnd.PostHogHelper && $wnd.PostHogHelper.updateTrackingForSecurityMode) {
+         $wnd.PostHogHelper.updateTrackingForSecurityMode(mode);
+      } else {
+         console.warn("PostHog helper not available for security mode update");
+      }
+   }-*/;
    
 
 } 

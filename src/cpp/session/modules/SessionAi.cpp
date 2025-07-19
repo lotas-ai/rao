@@ -3007,6 +3007,94 @@ Error setTemperature(const json::JsonRpcRequest& request,
    return Success();
 }
 
+Error getSecurityMode(const json::JsonRpcRequest& request,
+                     json::JsonRpcResponse* p_response)
+{   
+   std::string mode;
+   Error error = r::exec::RFunction(".rs.get_security_mode").call(&mode);
+   if (error)
+   {
+      LOG_ERROR(error);
+      p_response->setResult("secure"); // Default value
+   }
+   else
+   {
+      p_response->setResult(mode);
+   }
+   return Success();
+}
+
+Error setSecurityMode(const json::JsonRpcRequest& request,
+                     json::JsonRpcResponse* p_response,
+                     const std::string& mode)
+{   
+   // Validate security mode
+   if (mode != "secure" && mode != "improve")
+   {
+      return Error("SecurityModeError", 1, "Security mode must be 'secure' or 'improve'", ERROR_LOCATION);
+   }
+   
+   // Call the R handler for setting security mode
+   bool success = false;
+   Error error = r::exec::RFunction(".rs.set_security_mode_action")
+         .addParam(mode)
+         .call(&success);
+         
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+      
+   if (!success)
+   {
+      return Error("SecurityModeSetError", 1, "Failed to set security mode", ERROR_LOCATION);
+   }
+   
+   return Success();
+}
+
+Error getWebSearchEnabled(const json::JsonRpcRequest& request,
+                         json::JsonRpcResponse* p_response)
+{   
+   bool enabled;
+   Error error = r::exec::RFunction(".rs.get_web_search_enabled").call(&enabled);
+   if (error)
+   {
+      LOG_ERROR(error);
+      p_response->setResult(false); // Default value
+   }
+   else
+   {
+      p_response->setResult(enabled);
+   }
+   return Success();
+}
+
+Error setWebSearchEnabled(const json::JsonRpcRequest& request,
+                         json::JsonRpcResponse* p_response,
+                         bool enabled)
+{   
+   // Call the R handler for setting web search enabled
+   bool success = false;
+   Error error = r::exec::RFunction(".rs.set_web_search_enabled_action")
+         .addParam(enabled)
+         .call(&success);
+         
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+      
+   if (!success)
+   {
+      return Error("WebSearchSetError", 1, "Failed to set web search enabled", ERROR_LOCATION);
+   }
+   
+   return Success();
+}
+
 Error initialize()
 {
    using boost::bind;
@@ -3392,6 +3480,34 @@ Error initialize()
                   if (error)
                      return error;
                   return setTemperature(request, p_response, temperature);
+               })))
+      (bind(module_context::registerRpcMethod, "get_security_mode", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  return getSecurityMode(request, p_response);
+               })))
+      (bind(module_context::registerRpcMethod, "set_security_mode",
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  std::string mode;
+                  Error error = json::readParam(request.params, 0, &mode);
+                  if (error)
+                     return error;
+                  return setSecurityMode(request, p_response, mode);
+               })))
+      (bind(module_context::registerRpcMethod, "get_web_search_enabled", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  return getWebSearchEnabled(request, p_response);
+               })))
+      (bind(module_context::registerRpcMethod, "set_web_search_enabled",
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  bool enabled;
+                  Error error = json::readParam(request.params, 0, &enabled);
+                  if (error)
+                     return error;
+                  return setWebSearchEnabled(request, p_response, enabled);
                })))
       (bind(registerUriHandler, kAiLocation, handleAiRequest));
    

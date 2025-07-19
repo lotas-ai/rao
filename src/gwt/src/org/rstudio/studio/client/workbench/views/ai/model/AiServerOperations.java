@@ -189,4 +189,12 @@ public interface AiServerOperations
    void getTemperature(ServerRequestCallback<Double> requestCallback);
    
    void setTemperature(double temperature, ServerRequestCallback<java.lang.Void> requestCallback);
+   
+   void getSecurityMode(ServerRequestCallback<String> requestCallback);
+   
+   void setSecurityMode(String mode, ServerRequestCallback<java.lang.Void> requestCallback);
+   
+   void getWebSearchEnabled(ServerRequestCallback<Boolean> requestCallback);
+   
+   void setWebSearchEnabled(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback);
 }

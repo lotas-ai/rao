@@ -284,7 +284,9 @@
     return(list(
       selected_model = "claude-sonnet-4-20250514",
       working_directory = NULL,
-      temperature = 0.5
+      temperature = 0.5,
+      security_mode = "secure",
+      web_search_enabled = FALSE
     ))
   }
   
@@ -303,6 +305,12 @@
     if (is.null(settings$temperature)) {
       settings$temperature <- 0.5
     }
+    if (is.null(settings$security_mode)) {
+      settings$security_mode <- "secure"
+    }
+    if (is.null(settings$web_search_enabled)) {
+      settings$web_search_enabled <- FALSE
+    }
     
     return(settings)
   }, error = function(e) {
@@ -310,7 +318,9 @@
     return(list(
       selected_model = "claude-sonnet-4-20250514",
       working_directory = NULL,
-      temperature = 0.5
+      temperature = 0.5,
+      security_mode = "secure",
+      web_search_enabled = FALSE
     ))
   })
 })
@@ -444,4 +454,53 @@
 
 .rs.addJsonRpcHandler("get_selected_model", function() {
   return(.rs.get_selected_model())
+})
+
+# Security settings management functions
+.rs.addFunction("get_security_mode", function() {
+  security_mode <- .rs.get_ai_setting("security_mode", "secure")
+  return(security_mode)
+})
+
+.rs.addFunction("set_security_mode_action", function(mode) {  
+  if (is.null(mode) || !is.character(mode) || !mode %in% c("secure", "improve")) {
+    return(FALSE)
+  }
+  
+  # Save security mode to persistent settings
+  result <- .rs.update_ai_setting("security_mode", mode)  
+  return(result)
+})
+
+.rs.addFunction("get_web_search_enabled", function() {
+  web_search_enabled <- .rs.get_ai_setting("web_search_enabled", FALSE)
+  return(as.logical(web_search_enabled))
+})
+
+.rs.addFunction("set_web_search_enabled_action", function(enabled) {  
+  if (is.null(enabled)) {
+    return(FALSE)
+  }
+  
+  # Convert to logical and save to persistent settings
+  enabled <- as.logical(enabled)
+  result <- .rs.update_ai_setting("web_search_enabled", enabled)  
+  return(result)
+})
+
+# JSON RPC handlers for security settings
+.rs.addJsonRpcHandler("get_security_mode", function() {
+  return(.rs.get_security_mode())
+})
+
+.rs.addJsonRpcHandler("set_security_mode", function(mode) {
+  return(.rs.set_security_mode_action(mode))
+})
+
+.rs.addJsonRpcHandler("get_web_search_enabled", function() {
+  return(.rs.get_web_search_enabled())
+})
+
+.rs.addJsonRpcHandler("set_web_search_enabled", function(enabled) {
+  return(.rs.set_web_search_enabled_action(enabled))
 })
