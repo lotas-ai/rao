@@ -481,7 +481,7 @@ public class AiSettingsWidget extends Composite
       securityTogglePanel.setWidth("100%");
       securityTogglePanel.setVerticalAlignment(HorizontalPanel.ALIGN_TOP);
       
-      securityModeText_ = new Label("On secure mode, no analytics are collected and zero data is retained by the model providers. This must be used for any sensitive data. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: Secure");
+      securityModeText_ = new Label("On secure mode, no analytics are collected and zero data is retained by the model providers. Secure mode only uses search-replace for editing files rather than the third-party Morph LLM fast apply used for edit-file. This must be used for any sensitive data. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: Secure");
       securityModeText_.addStyleName(styles_.settingLabel());
       securityModeText_.getElement().getStyle().setProperty("fontWeight", "normal");
       securityModeText_.getElement().getStyle().setProperty("fontSize", "13px");
