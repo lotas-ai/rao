@@ -94,7 +94,7 @@ import org.rstudio.core.client.widget.Operation;
 import org.rstudio.studio.client.workbench.views.terminal.TerminalSessionSocket;
 import org.rstudio.studio.client.workbench.views.ai.widgets.AiStreamingPanel;
 import org.rstudio.studio.client.workbench.views.ai.widgets.AiConsoleWidget;
-import org.rstudio.studio.client.workbench.views.ai.AiTerminalWidget;
+import org.rstudio.studio.client.workbench.views.ai.widgets.AiTerminalWidget;
 import org.rstudio.studio.client.workbench.views.ai.events.AiStreamDataEvent;
 import org.rstudio.studio.client.workbench.views.ai.AiToolbars;
 import org.rstudio.core.client.js.JsObject;
@@ -239,6 +239,9 @@ public class AiPane extends WorkbenchPane
             
             WindowEx window = getIFrameEx().getContentWindow();
             if (window != null) {
+               // CRITICAL: Attach the scroll handler to detect user scroll actions
+               scrollHandler_.publicSetWindowScrollHandler(window);
+               
                // Check if this is the Settings page and hide search container if needed
                if (toolbars_.getViewManager() != null && toolbars_.getViewManager().isInSettingsMode()) {
                   hideSearchContainer();
@@ -295,6 +298,9 @@ public class AiPane extends WorkbenchPane
             
             WindowEx window = getBackgroundIFrameEx().getContentWindow();
             if (window != null) {
+               // CRITICAL: Attach the scroll handler to detect user scroll actions in background frame too
+               scrollHandler_.publicSetWindowScrollHandler(window);
+               
                // Check if this is the Settings page and hide search container if needed
                if (toolbars_.getViewManager() != null && toolbars_.getViewManager().isInSettingsMode()) {
                   hideSearchContainer();
@@ -2356,6 +2362,161 @@ public class AiPane extends WorkbenchPane
       return aiOrchestrator_;
    }
    
+   public void handleAcceptSearchReplaceCommand(String messageId, String editedContent) {      
+      // IMMEDIATELY mark button as run to make it disappear - no advancement, just gone forever
+      server_.markButtonAsRun(messageId, "accept", new ServerRequestCallback<Boolean>() {
+         @Override
+         public void onResponseReceived(Boolean result) {
+            // Hide the buttons in the widget
+            hideButtonsInWidget(messageId, "search_replace");
+            
+            // Now proceed with the actual search replace acceptance
+            // Get the request ID from the search replace widget
+            String requestId = null;
+            AiStreamingPanel streamingPanel = getStreamingPanel();
+            if (streamingPanel != null) {
+               org.rstudio.studio.client.workbench.views.ai.widgets.AiSearchReplaceWidget searchReplaceWidget = 
+                  streamingPanel.getSearchReplaceWidget(messageId);
+               if (searchReplaceWidget != null) {
+                  requestId = searchReplaceWidget.getRequestId();
+               }
+            }
+            
+            // requestId must always be present - if it's missing, this indicates a bug
+            if (requestId == null || requestId.isEmpty()) {
+               String errorMessage = "CRITICAL ERROR: Search replace command acceptance failed - missing request_id for messageId: " + messageId;
+               globalDisplay_.showErrorMessage("Search Replace Command Error", errorMessage);
+               return;
+            }
+            
+            // Make requestId final for use in the callback
+            final String finalRequestId = requestId;
+            
+            // Call accept_search_replace_command on the server
+            server_.acceptSearchReplaceCommand(editedContent, messageId, finalRequestId, new ServerRequestCallback<JavaScriptObject>() {
+               @Override
+               public void onResponseReceived(JavaScriptObject result) {
+                  // Check if the result contains a status that needs processing (same as edit_file)
+                  if (result != null) {
+                     JSONObject resultObj = new JSONObject(result);
+                     if (resultObj.containsKey("status")) {
+                        String status = responses_.getString(resultObj, "status", "");
+                        if ("continue_silent".equals(status)) {
+                           // R wants us to continue the conversation
+                           Integer relatedToId = null;
+                           Integer conversationIndex = null;
+                           
+                           if (resultObj.containsKey("data")) {
+                              JSONObject dataObj = resultObj.get("data").isObject();
+                              if (dataObj != null) {
+                                 if (dataObj.containsKey("related_to_id")) {
+                                    relatedToId = responses_.getInteger(dataObj, "related_to_id", null);
+                                 }
+                                 if (dataObj.containsKey("conversation_index")) {
+                                    conversationIndex = responses_.getInteger(dataObj, "conversation_index", null);
+                                 }
+                              }
+                           }
+                           
+                           // Validate required parameters
+                           if (conversationIndex == null) {
+                              globalDisplay_.showErrorMessage("Error", "Search replace command response missing conversation_index");
+                              return;
+                           }
+                           
+                           if (relatedToId == null) {
+                              globalDisplay_.showErrorMessage("Error", "Search replace command response missing related_to_id");
+                              return;
+                           }
+                           
+                           // Use orchestrator to continue the conversation
+                           if (aiOrchestrator_ != null) {
+                              aiOrchestrator_.continueConversation(relatedToId, conversationIndex, finalRequestId);
+                           }
+                           return;
+                        }
+                        else if ("done".equals(status)) {
+                           // Processing is complete - no further action needed
+                           return;
+                        }
+                     }
+                  }
+               }
+               
+               @Override
+               public void onError(ServerError error) {
+                  String fullErrorMessage = "Failed to accept search replace command for messageId: " + messageId + 
+                     " - " + error.getMessage();
+                  Debug.log("DEBUG handleAcceptSearchReplaceCommand: Server call failed - " + fullErrorMessage);
+                  globalDisplay_.showErrorMessage("Search Replace Command Error", fullErrorMessage);
+               }
+            });
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("DEBUG handleAcceptSearchReplaceCommand: Failed to mark button as run - " + error.getMessage());
+            globalDisplay_.showErrorMessage("Error", "Failed to mark button as run: " + error.getMessage());
+         }
+      });
+   }
+   
+   public void handleCancelSearchReplaceCommand(String messageId) {
+      // IMMEDIATELY mark button as run to make it disappear - no advancement, just gone forever
+      server_.markButtonAsRun(messageId, "cancel", new ServerRequestCallback<Boolean>() {
+         @Override
+         public void onResponseReceived(Boolean result) {
+            // Hide the buttons in the widget
+            hideButtonsInWidget(messageId, "search_replace");
+            
+            // Now proceed with the actual search replace cancellation
+            // Get the request ID from the search replace widget
+            String requestId = null;
+            AiStreamingPanel streamingPanel = getStreamingPanel();
+            if (streamingPanel != null) {
+               org.rstudio.studio.client.workbench.views.ai.widgets.AiSearchReplaceWidget searchReplaceWidget = 
+                  streamingPanel.getSearchReplaceWidget(messageId);
+               if (searchReplaceWidget != null) {
+                  requestId = searchReplaceWidget.getRequestId();
+               }
+            }
+            
+            // requestId must always be present - if it's missing, this indicates a bug
+            if (requestId == null || requestId.isEmpty()) {
+               String errorMessage = "CRITICAL ERROR: Search replace command cancellation failed - missing request_id for messageId: " + messageId;
+               Debug.log(errorMessage);
+               globalDisplay_.showErrorMessage("Search Replace Command Error", errorMessage);
+               return;
+            }
+            
+            // Make requestId final for use in the callback
+            final String finalRequestId = requestId;
+            
+            // Call cancel_search_replace_command on the server
+            server_.cancelSearchReplaceCommand(messageId, finalRequestId, new ServerRequestCallback<JavaScriptObject>() {
+               @Override
+               public void onResponseReceived(JavaScriptObject result) {
+                  // Handle success - the AI orchestrator will continue automatically
+               }
+               
+               @Override
+               public void onError(ServerError error) {
+                  String fullErrorMessage = "Failed to cancel search replace command for messageId: " + messageId + 
+                     " - " + error.getMessage();
+                  Debug.log("DEBUG handleCancelSearchReplaceCommand: Server call failed - " + fullErrorMessage);
+                  globalDisplay_.showErrorMessage("Search Replace Command Error", fullErrorMessage);
+               }
+            });
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("DEBUG handleCancelSearchReplaceCommand: Failed to mark button as run - " + error.getMessage());
+            globalDisplay_.showErrorMessage("Error", "Failed to mark button as run: " + error.getMessage());
+         }
+      });
+   }
+   
    public void handleAcceptEditFileCommand(String messageId, String editedContent) {
       // IMMEDIATELY mark button as run to make it disappear - no advancement, just gone forever
       server_.markButtonAsRun(messageId, "accept", new ServerRequestCallback<Boolean>() {
@@ -2587,6 +2748,12 @@ public class AiPane extends WorkbenchPane
          if (editFileWidget != null) {
             editFileWidget.hideButtons();
          }
+      } else if ("search_replace".equals(widgetType)) {
+         org.rstudio.studio.client.workbench.views.ai.widgets.AiSearchReplaceWidget searchReplaceWidget = 
+            streamingPanel.getSearchReplaceWidget(messageId);
+         if (searchReplaceWidget != null) {
+            searchReplaceWidget.hideButtons();
+         }
       }
    }
    
@@ -2810,6 +2977,11 @@ public class AiPane extends WorkbenchPane
          // CRITICAL FIX: Mark that cancellation has been requested
          markCancellationRequested();
       }
+   }
+
+   // Public getter for scroll handler (needed by AiPaneEventHandlers)
+   public AiPaneScroll getScrollHandler() {
+      return scrollHandler_;
    }
 
 }

@@ -913,6 +913,17 @@
   edit_file_message_id <- NULL
   edit_file_code_edit_streamed <- ""  # Track what code_edit content we've already streamed
   
+  # Variables for search_replace delta accumulation
+  search_replace_delta_accumulator <- ""
+  search_replace_filename_printed <- FALSE
+  search_replace_old_string_started <- FALSE
+  search_replace_new_string_started <- FALSE
+  search_replace_message_id <- NULL
+  search_replace_old_string_streamed <- ""  # Track what old_string content we've already streamed
+  search_replace_new_string_streamed <- ""  # Track what new_string content we've already streamed
+  search_replace_old_comment_streamed <- FALSE  # Track if "Old content" comment has been streamed
+  search_replace_new_comment_streamed <- FALSE  # Track if "New content" comment has been streamed
+  
   # Variables for console/terminal command delta accumulation (following edit_file pattern)
   # Use lists to track multiple parallel console/terminal commands by call_id
   console_terminal_delta_accumulators <- list()  # call_id -> accumulator string
@@ -1077,6 +1088,17 @@
       .rs.set_conversation_var("widget_command_streamed", NULL)
       .rs.set_conversation_var("widget_type", NULL)
       
+      # Clean up search_replace streaming context
+      search_replace_delta_accumulator <- ""
+      search_replace_filename_printed <- FALSE
+      search_replace_old_string_started <- FALSE
+      search_replace_new_string_started <- FALSE
+      search_replace_message_id <- NULL
+      search_replace_old_string_streamed <- ""
+      search_replace_new_string_streamed <- ""
+      search_replace_old_comment_streamed <- FALSE
+      search_replace_new_comment_streamed <- FALSE
+      
       return(list(cancelled = TRUE, accumulated_response = accumulated_response, assistant_message_id = assistant_message_id))
     }
     
@@ -1127,6 +1149,8 @@
               cat("DEBUG: Skipping malformed JSON event, continuing stream processing\n")
               next
             }
+            
+            
             
             # Capture streaming request ID from response_id events for cancellation
             if (!is.null(event_data$response_id) && is.null(streaming_request_id)) {
@@ -1180,78 +1204,161 @@
                   }
                 }
                 
-                # Extract and stream partial code_edit content
+                # Extract and stream partial code_edit content using helper function
                 if (edit_file_filename_printed && edit_file_code_edit_started) {
-                  # Use simple string extraction instead of complex regex
-                  code_edit_start <- regexpr('"code_edit"\\s*:\\s*"', edit_file_delta_accumulator, perl = TRUE)
-                  if (code_edit_start > 0) {
-                    # Find the start of the actual content (after the opening quote)
-                    content_start_pos <- code_edit_start + attr(code_edit_start, "match.length")
-                    
-                    # Extract everything from the content start to the end of the accumulator
-                    raw_content <- substr(edit_file_delta_accumulator, content_start_pos, nchar(edit_file_delta_accumulator))
-                    
-                    # First unescape the raw content completely
-                    # Unescape basic JSON escapes for display - order is important!
-                    processed_content <- raw_content
-                    # First handle double backslashes (\\\\) -> (\)
-                    processed_content <- gsub('\\\\\\\\', '\\\\', processed_content)
-                    # Then handle escaped newlines (\\n) -> (actual newline)
-                    processed_content <- gsub('\\\\n', '\n', processed_content)
-                    # Handle escaped tabs (\\t) -> (actual tab)
-                    processed_content <- gsub('\\\\t', '\t', processed_content)
-                    # Handle escaped quotes (\\") -> (")
-                    processed_content <- gsub('\\\\"', '"', processed_content)
-                    
-                    # Now apply buffering AFTER unescaping to avoid splitting escape sequences
-                     # Check if we've reached the end of the code_edit field by looking for ", "instructions"
-                    instructions_pattern <- '\\s*"\\s*,\\s*"instructions"'
-                    instructions_match <- regexpr(instructions_pattern, processed_content, perl = TRUE)
-                      
-                    buffer_size <- 20  # Hold back 20 characters to be safe
-                    content_to_stream <- processed_content
-                    
-                    if (instructions_match > 0) {
-                      # We found the end of code_edit field - truncate content before any trailing whitespace and quote
-                      content_to_stream <- substr(processed_content, 1, instructions_match - 1)
-                    } else if (nchar(processed_content) > buffer_size) {
-                      # No end marker found yet - stream all but the last buffer_size characters
-                      content_to_stream <- substr(processed_content, 1, nchar(processed_content) - buffer_size)
-                    } else {
-                      # Content is shorter than buffer size - don't stream anything yet
-                      content_to_stream <- ""
-                    }
-                    
-                    # Only process if we have content to stream
-                    if (nchar(content_to_stream) > 0) {
-                      # Stream any new content
-                      if (nchar(content_to_stream) > nchar(edit_file_code_edit_streamed)) {
-                        new_content <- substr(content_to_stream, nchar(edit_file_code_edit_streamed) + 1, nchar(content_to_stream))
-                        
-                        if (nchar(new_content) > 0) {
-                          # Send streaming delta to Java
-                          partial_seq <- .rs.get_next_ai_operation_sequence()
-                          .rs.enqueClientEvent("ai_stream_data", list(
-                            messageId = edit_file_message_id,
-                            delta = new_content,
-                            isComplete = FALSE,
-                            isEditFile = TRUE,
-                            filename = filename,
-                            requestId = request_id,
-                            sequence = partial_seq
-                          ))
-                          
-                          edit_file_code_edit_streamed <- content_to_stream
-                        }
-                      }
-                    }
+                  stream_result <- .rs.stream_json_field_content(
+                    edit_file_delta_accumulator,
+                    "code_edit",
+                    '\\s*"\\s*,\\s*"instructions"',
+                    edit_file_message_id,
+                    edit_file_code_edit_streamed,
+                    list(
+                      isEditFile = TRUE,
+                      filename = filename,
+                      requestId = request_id
+                    )
+                  )
+                  
+                  if (!is.null(stream_result) && !is.null(stream_result$has_new_content) && stream_result$has_new_content) {
+                    edit_file_code_edit_streamed <- stream_result$new_streamed_content
                   }
                 }
                 
                 next  # Don't process edit_file deltas further
               }
               
-              # For console/terminal command deltas, accumulate and stream to widgets (following edit_file pattern exactly)
+              # For search_replace deltas, accumulate and stream to widget (following edit_file pattern)
+              if (!is.null(event_data$field) && event_data$field == "search_replace") {
+                # Generate message ID once when search_replace streaming starts
+                if (is.null(search_replace_message_id)) {
+                  search_replace_message_id <- .rs.get_next_message_id()
+                }
+                
+                # Accumulate the delta
+                search_replace_delta_accumulator <- paste0(search_replace_delta_accumulator, event_data$delta)
+                                
+                # Extract filename if available and widget not yet created
+                if (!search_replace_filename_printed) {
+                  if (grepl('"file_path"\\s*:\\s*"[^"]*"', search_replace_delta_accumulator, perl = TRUE)) {
+                    filename_match <- regmatches(search_replace_delta_accumulator, 
+                                                regexpr('"file_path"\\s*:\\s*"([^"]*)"', search_replace_delta_accumulator, perl = TRUE))
+                    if (length(filename_match) > 0) {
+                      # Extract just the filename value
+                      filename <- gsub('"file_path"\\s*:\\s*"([^"]*)"', '\\1', filename_match, perl = TRUE)
+                      
+                      # CRITICAL: ONLY send streaming event to Java (like edit_file does)
+                      # Do NOT create operation command during streaming - that creates duplicates
+                      .rs.enqueClientEvent("ai_stream_data", list(
+                        messageId = search_replace_message_id,
+                        delta = "",
+                        isComplete = FALSE,
+                        isSearchReplace = TRUE,
+                        filename = filename,
+                        requestId = request_id,
+                        sequence = .rs.get_next_ai_operation_sequence()
+                      ))
+                      
+                      search_replace_filename_printed <- TRUE
+                    }
+                  }
+                }
+                
+                # Detect start of old_string
+                if (search_replace_filename_printed && !search_replace_old_string_started) {
+                  if (grepl('"old_string"\\s*:\\s*"', search_replace_delta_accumulator, perl = TRUE)) {
+                    search_replace_old_string_started <- TRUE
+                  }
+                }
+                
+                # Extract and stream partial old_string content using helper function
+                if (search_replace_filename_printed && search_replace_old_string_started && !search_replace_new_string_started) {
+                  # Stream "Old content" comment before actual content (only once)
+                  if (!search_replace_old_comment_streamed) {
+                    comment_syntax <- .rs.get_comment_syntax(filename)
+                    old_comment <- paste0(comment_syntax, "Old content\n")
+                    
+                    .rs.enqueClientEvent("ai_stream_data", list(
+                      messageId = search_replace_message_id,
+                      delta = old_comment,
+                      isComplete = FALSE,
+                      isSearchReplace = TRUE,
+                      field = "old_string",
+                      filename = filename,
+                      requestId = request_id,
+                      sequence = .rs.get_next_ai_operation_sequence()
+                    ))
+                    
+                    search_replace_old_comment_streamed <- TRUE
+                  }
+                  
+                  stream_result <- .rs.stream_json_field_content(
+                    search_replace_delta_accumulator,
+                    "old_string",
+                    '\\s*"\\s*,\\s*"new_string"',
+                    search_replace_message_id,
+                    search_replace_old_string_streamed,
+                    list(
+                      isSearchReplace = TRUE,
+                      field = "old_string",
+                      filename = filename,
+                      requestId = request_id
+                    )
+                  )
+                  
+                  if (!is.null(stream_result)) {
+                    if (!is.null(stream_result$has_new_content) && stream_result$has_new_content) {
+                      search_replace_old_string_streamed <- stream_result$new_streamed_content
+                    }
+                    if (!is.null(stream_result$end_reached) && stream_result$end_reached) {
+                      search_replace_new_string_started <- TRUE
+                    }
+                  }
+                }
+                
+                # Extract and stream partial new_string content using helper function
+                if (search_replace_filename_printed && search_replace_new_string_started) {
+                  # Stream "New content" comment before actual content (only once)
+                  if (!search_replace_new_comment_streamed) {
+                    comment_syntax <- .rs.get_comment_syntax(filename)
+                    new_comment <- paste0("\n\n", comment_syntax, "New content\n")
+                    
+                    .rs.enqueClientEvent("ai_stream_data", list(
+                      messageId = search_replace_message_id,
+                      delta = new_comment,
+                      isComplete = FALSE,
+                      isSearchReplace = TRUE,
+                      field = "new_string",
+                      filename = filename,
+                      requestId = request_id,
+                      sequence = .rs.get_next_ai_operation_sequence()
+                    ))
+                    
+                    search_replace_new_comment_streamed <- TRUE
+                  }
+                  
+                  stream_result <- .rs.stream_json_field_content(
+                    search_replace_delta_accumulator,
+                    "new_string",
+                    '\\s*"\\s*[,}]',
+                    search_replace_message_id,
+                    search_replace_new_string_streamed,
+                    list(
+                      isSearchReplace = TRUE,
+                      field = "new_string",
+                      filename = filename,
+                      requestId = request_id
+                    )
+                  )
+                  
+                  if (!is.null(stream_result) && !is.null(stream_result$has_new_content) && stream_result$has_new_content) {
+                    search_replace_new_string_streamed <- stream_result$new_streamed_content
+                  }
+                }
+                
+                next  # Don't process search_replace deltas further
+              }
+              
+              # For console/terminal command deltas, accumulate and stream to widgets (following edit_file pattern)
               if (!is.null(event_data$field) && (event_data$field == "run_console_cmd" || event_data$field == "run_terminal_cmd")) {
                 is_console_cmd <- event_data$field == "run_console_cmd"
                 call_id <- event_data$call_id
@@ -1452,43 +1559,13 @@
                 if (!is.null(function_call_type) && function_call_type == "edit_file") {
                   # For edit_file, DON'T stream assistant message content
                   # Instead, we'll prepare and display the diff widget directly
-                  # Store the edit_file function call ID for widget identification
+                  # Store the function call ID for widget identification
                   .rs.set_conversation_var("current_edit_file_function_call_id", related_to_id)
                   is_edit_file_response <- TRUE
-
-                } else if (!is.null(function_call_type) && (function_call_type == "run_console_cmd" || function_call_type == "run_terminal_cmd")) {
-                  # For console/terminal commands, DON'T stream assistant message content
+                } else if (!is.null(function_call_type) && (function_call_type == "run_console_cmd" || function_call_type == "run_terminal_cmd" || function_call_type == "search_replace")) {
+                  # For console/terminal/search_replace commands, DON'T stream assistant message content
                   # The widgets are already created during streaming, so skip assistant message
                   is_edit_file_response <- TRUE  # Reuse the same flag to skip streaming
-
-                  
-                  # Still get filename for potential later use
-                  conversation_log <- .rs.read_conversation_log()
-                  for (entry in conversation_log) {
-                    if (!is.null(entry$id) && entry$id == related_to_id &&
-                        !is.null(entry$function_call) && 
-                        !is.null(entry$function_call$name) &&
-                        entry$function_call$name == "edit_file" &&
-                        !is.null(entry$function_call$arguments)) {
-                      tryCatch({
-                        args <- jsonlite::fromJSON(entry$function_call$arguments)
-                        if (!is.null(args$filename)) {
-                          # Store filename for potential later use
-                          .rs.set_conversation_var("current_edit_file_filename", args$filename)
-                        }
-                      }, error = function(e) {
-                        cat("DEBUG: Error parsing edit_file arguments:", e$message, "\n")
-                      })
-                      
-                      # Also get the request_id from the function call entry
-                      if (!is.null(entry$request_id)) {
-                        # Store requestId for potential later use
-                        .rs.set_conversation_var("current_edit_file_request_id", entry$request_id)
-                      }
-                      
-                      break
-                    }
-                  }
                 } else {
                   # For non-edit_file responses, continue with normal streaming logic
                   stream_event$messageId <- assistant_message_id
@@ -1654,7 +1731,7 @@
               # If so, DON'T add to buffer - process it immediately via the existing return mechanism
               function_name <- if (!is.null(event_data$function_call$name)) event_data$function_call$name else "UNKNOWN"
               
-              if (function_name == "edit_file" || function_name == "run_console_cmd" || function_name == "run_terminal_cmd") {
+              if (function_name == "edit_file" || function_name == "search_replace" || function_name == "run_console_cmd" || function_name == "run_terminal_cmd") {
                 # Process edit_file and console/terminal commands immediately - don't add to buffer
                 # Set last_event_data to return this function call for immediate processing
                 last_event_data <- event_data
@@ -1712,6 +1789,17 @@
               .rs.set_conversation_var("widget_command_streamed", NULL)
               .rs.set_conversation_var("widget_type", NULL)
               
+              # Clean up search_replace streaming context
+              search_replace_delta_accumulator <- ""
+              search_replace_filename_printed <- FALSE
+              search_replace_old_string_started <- FALSE
+              search_replace_new_string_started <- FALSE
+              search_replace_message_id <- NULL
+              search_replace_old_string_streamed <- ""
+              search_replace_new_string_streamed <- ""
+              search_replace_old_comment_streamed <- FALSE
+              search_replace_new_comment_streamed <- FALSE
+              
               # Check if this is a console/terminal command that should NOT send streaming data
               # These commands create their own widgets and don't need assistant message divs
               should_skip_streaming <- FALSE
@@ -1757,14 +1845,14 @@
                 event_data$response <- last_event_data$response
               }
               
-              if (!is.null(event_data$field) && event_data$field == "edit_file" && 
+              if (!is.null(event_data$field) && (event_data$field == "edit_file" || event_data$field == "search_replace") && 
                          !is.null(event_data$response) && event_data$isComplete) {
                 # Use the real call_id from the event, or generate one if missing
-                call_id <- if (!is.null(event_data$call_id)) event_data$call_id else stop("call_id is required and cannot be NULL for edit_file completion")
-                                
+                call_id <- if (!is.null(event_data$call_id)) event_data$call_id else stop("call_id is required and cannot be NULL for edit_file/search_replace completion")
+                
                 # Create the function_call structure WITHOUT modifying event_data
                 function_call_structure <- list(
-                  name = "edit_file",
+                  name = event_data$field,
                   call_id = call_id,
                   arguments = event_data$response
                 )
@@ -1866,6 +1954,7 @@
                 
                 .rs.write_conversation_log(conversation_log)
               }
+              
               
               last_event_data <- event_data
               
@@ -2088,6 +2177,17 @@
   .rs.set_conversation_var("current_edit_file_function_call_id", NULL)
   .rs.set_conversation_var("current_edit_file_filename", NULL)
   .rs.set_conversation_var("current_edit_file_request_id", NULL)
+  
+  # Clean up search_replace streaming context
+  search_replace_delta_accumulator <- ""
+  search_replace_filename_printed <- FALSE
+  search_replace_old_string_started <- FALSE
+  search_replace_new_string_started <- FALSE
+  search_replace_message_id <- NULL
+  search_replace_old_string_streamed <- ""
+  search_replace_new_string_streamed <- ""
+  search_replace_old_comment_streamed <- FALSE
+  search_replace_new_comment_streamed <- FALSE
   
   # Clean up console/terminal streaming context variables
   console_terminal_delta_accumulators <- list()
@@ -2320,4 +2420,125 @@
   .rs.set_conversation_var("function_call_buffer", list())
   .rs.set_conversation_var("function_call_buffer_active", FALSE)
   .rs.set_conversation_var("processing_buffered_function_call", FALSE)
+})
+
+# Helper function for streaming JSON field content with proper escaping and buffering
+.rs.addFunction("stream_json_field_content", function(
+  delta_accumulator, 
+  field_name, 
+  end_marker_pattern, 
+  message_id, 
+  current_streamed, 
+  event_properties = list()
+) {
+  # Use simple string extraction for field content
+  field_start_pattern <- paste0('"', field_name, '"\\s*:\\s*"')
+  field_start <- regexpr(field_start_pattern, delta_accumulator, perl = TRUE)
+  
+  if (field_start > 0) {
+    # Find the start of the actual content (after the opening quote)
+    content_start_pos <- field_start + attr(field_start, "match.length")
+    
+    # Extract everything from the content start to the end of the accumulator
+    raw_content <- substr(delta_accumulator, content_start_pos, nchar(delta_accumulator))
+    
+    # First unescape the raw content completely
+    processed_content <- raw_content
+    # First handle double backslashes (\\\\) -> (\)
+    processed_content <- gsub('\\\\\\\\', '\\\\', processed_content)
+    # Then handle escaped newlines (\\n) -> (actual newline)
+    processed_content <- gsub('\\\\n', '\n', processed_content)
+    # Handle escaped tabs (\\t) -> (actual tab)
+    processed_content <- gsub('\\\\t', '\t', processed_content)
+    # Handle escaped quotes (\\") -> (")
+    processed_content <- gsub('\\\\"', '"', processed_content)
+    
+    # Check if we've reached the end of the field by looking for end marker
+    end_match <- regexpr(end_marker_pattern, processed_content, perl = TRUE)
+      
+    buffer_size <- 20  # Hold back 20 characters to be safe
+    content_to_stream <- processed_content
+    
+    result <- list(end_reached = FALSE)
+    
+    if (end_match > 0) {
+      # We found the end of field - truncate content before any trailing whitespace and quote
+      content_to_stream <- substr(processed_content, 1, end_match - 1)
+      result$end_reached <- TRUE
+    } else if (nchar(processed_content) > buffer_size) {
+      # No end marker found yet - stream all but the last buffer_size characters
+      content_to_stream <- substr(processed_content, 1, nchar(processed_content) - buffer_size)
+    } else {
+      # Content is shorter than buffer size - don't stream anything yet
+      content_to_stream <- ""
+    }
+    
+    # Only process if we have content to stream
+    if (nchar(content_to_stream) > 0) {
+      # Stream any new content
+      if (nchar(content_to_stream) > nchar(current_streamed)) {
+        new_content <- substr(content_to_stream, nchar(current_streamed) + 1, nchar(content_to_stream))
+        
+        if (nchar(new_content) > 0) {
+          # Send streaming delta to Java
+          partial_seq <- .rs.get_next_ai_operation_sequence()
+          
+          # Build event with common properties and merge with custom properties
+          stream_event <- list(
+            messageId = message_id,
+            delta = new_content,
+            isComplete = FALSE,
+            sequence = partial_seq
+          )
+          
+          # Merge custom properties
+          for (prop_name in names(event_properties)) {
+            stream_event[[prop_name]] <- event_properties[[prop_name]]
+          }
+          
+          .rs.enqueClientEvent("ai_stream_data", stream_event)
+          
+          result$new_streamed_content <- content_to_stream
+          result$has_new_content <- TRUE
+        }
+      }
+    }
+    
+    return(result)
+  }
+  
+  return(NULL)
+})
+
+# Helper function to get comment syntax based on file extension
+.rs.addFunction("get_comment_syntax", function(filename) {
+  if (is.null(filename) || nchar(filename) == 0) {
+    return("# ")  # Default to hash comments
+  }
+  
+  # Extract file extension
+  ext <- tolower(tools::file_ext(filename))
+  
+  # Map extensions to comment syntax
+  if (ext %in% c("r", "py", "sh", "bash", "yaml", "yml", "rb", "pl", "ps1")) {
+    return("# ")
+  } else if (ext %in% c("js", "ts", "java", "c", "cpp", "cc", "cxx", "h", "hpp", "cs", "php", "scala", "kt", "go", "rs", "swift")) {
+    return("// ")
+  } else if (ext %in% c("sql", "lua")) {
+    return("-- ")
+  } else if (ext %in% c("html", "xml", "svg")) {
+    return("<!-- ")
+  } else if (ext %in% c("css")) {
+    return("/* ")
+  } else if (ext %in% c("tex", "sty")) {
+    return("% ")
+  } else if (ext %in% c("m", "matlab")) {
+    return("% ")
+  } else if (ext %in% c("vb", "bas")) {
+    return("' ")
+  } else if (ext %in% c("f", "f90", "f95", "f03", "f08")) {
+    return("! ")
+  } else {
+    return("# ")  # Default fallback
+  }
 })

@@ -690,9 +690,8 @@ public class AiPaneScroll
                var totalHeight = window.document.body.scrollHeight;
                var windowHeight = window.innerHeight;
                
-               // Only scroll if user is already near the bottom (within 200px or at >80% of scroll distance)
-               if ((totalHeight - scrollPosition - windowHeight) < 200 || 
-                   (totalHeight > windowHeight && scrollPosition / (totalHeight - windowHeight) > 0.8)) {
+               // Only scroll if user is already near the bottom (within 50px)
+               if ((totalHeight - scrollPosition - windowHeight) < 50) {
                   // Scroll to bottom immediately without animation
                   window.scrollTo(0, window.document.body.scrollHeight);
                }

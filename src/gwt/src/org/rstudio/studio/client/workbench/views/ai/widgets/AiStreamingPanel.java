@@ -34,7 +34,7 @@ import org.rstudio.studio.client.workbench.views.ai.AiScrollManager;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
-import org.rstudio.studio.client.workbench.views.ai.AiTerminalWidget;
+import org.rstudio.studio.client.workbench.views.ai.widgets.AiTerminalWidget;
 import org.rstudio.studio.client.workbench.views.ai.AiPane;
 import java.util.Date;
 import java.util.List;
@@ -94,18 +94,8 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
 
    public interface Styles extends CssResource
    {
-      String aiStreamingPanel();
-      String message();
-      String userMessage();
-      String assistantMessage();
-      String messageContent();
-      String streamingContent();
-      String contentDelta();
-      String typingIndicator();
-      
       // Console widget styles
       String aiConsoleWidget();
-      String aiConsoleExplanation();
       String aiConsoleEditorContainer();
       String aiConsolePrompt();
       String aiConsoleEditor();
@@ -116,9 +106,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       String consoleWidgetContainer();
       
       // Terminal widget styles
-      String aiTerminalWidget();
-      String aiTerminalExplanation();
-      String aiTerminalPanel();
+      String aiTerminalHeader();
+      String aiTerminalEditorContainer();
+      String aiTerminalWrapper();
       String aiTerminalPrompt();
       String aiTerminalEditor();
       String aiTerminalButtons();
@@ -128,14 +118,17 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       String terminalWidgetContainer();
       
       // Edit file widget styles
-      String aiEditFilePanel();
-      String aiEditFileExplanation();
+      String aiEditFileHeader();
       String aiEditFileEditor();
       String aiEditFileButtons();
       String aiEditFileAcceptButton();
       String aiEditFileCancelButton();
       String editFileCommand();
       String editFileWidgetContainer();
+      
+      // Search replace widget styles
+      String searchReplaceCommand();
+      String searchReplaceWidgetContainer();
    }
 
    public interface Resources extends ClientBundle
@@ -155,7 +148,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       consoleWidgets_ = new HashMap<>();
       terminalWidgets_ = new HashMap<>();
       editFileWidgets_ = new HashMap<>();
+      searchReplaceWidgets_ = new HashMap<>();
       editFileStreamingContent_ = new HashMap<>();
+      searchReplaceStreamingContent_ = new HashMap<>();
       
       // Initialize per-conversation sequence tracking
       conversationSequences_ = new HashMap<>();
@@ -229,6 +224,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
     */
    public void switchToConversation(int conversationId)
    {
+      // Reset user scroll tracking when switching conversations - user wants to see the new conversation
+      scrollManager_.resetUserScrollTracking();
+      
       // Determine if this is the same conversation by checking both our internal state
       // and the current URL (which persists across refreshes)
       boolean isSameConversation = isSameConversationId(conversationId);
@@ -382,6 +380,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          case "edit_file_command":  // Handle both formats from R
             createEditFileCommandSynchronously(event.messageId, event.filename, event.content, event.explanation, event.requestId, event.skipDiffHighlighting, event.diffData);
             break;
+         case "search_replace_command":  // Handle search_replace commands from R
+            createSearchReplaceCommandSynchronously(event.messageId, event.filename, event.content, event.explanation, event.requestId, event.skipDiffHighlighting, event.diffData);
+            break;
          case "create_user_message":
             createUserMessageSynchronously(event.messageId, event.content);
             break;
@@ -454,6 +455,22 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          // Add content to widget (or replace if replaceContent flag is set)
          addContentToEditFileWidget(messageId, event.getDelta(), event.isComplete(), event.isCancelled(), event.getReplaceContent(), (com.google.gwt.core.client.JavaScriptObject) null);
       }
+      else if (event.isSearchReplace())
+      {
+         // Create search replace widget immediately if needed - same pattern as edit_file
+         if (!searchReplaceWidgets_.containsKey(messageId))
+         {
+            String filename = event.getFilename();
+            if (filename == null || filename.isEmpty()) {
+               throw new RuntimeException("Search replace event missing required filename for messageId: " + messageId);
+            }
+            String requestId = event.getRequestId();
+            createSearchReplaceCommandSynchronously(messageId, filename, "", "Search and replace", requestId, false, (com.google.gwt.core.client.JavaScriptObject) null);
+         }
+         
+         // Add content to widget (or replace if replaceContent flag is set)
+         addContentToSearchReplaceWidget(messageId, event.getDelta(), event.isComplete(), event.isCancelled(), event.getReplaceContent(), (com.google.gwt.core.client.JavaScriptObject) null);
+      }
       else if (event.isConsoleCmd())
       {
          
@@ -518,12 +535,15 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    }
    
    /**
-    * Create user message synchronously (public for historical message loading)
+    * Create user message synchronously
     */
    public void createUserMessageSynchronously(String messageId, String content)
    {
       // Reset conversation name generation flag for new user query
       conversationNameAttemptedForThisTurn_ = false;
+      
+      // Reset user scroll tracking for new user message - user wants to see new conversation
+      scrollManager_.resetUserScrollTracking();
       
       Element conversationElement = getActiveConversationContainer();
       if (conversationElement == null)
@@ -850,6 +870,63 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       createAndInjectWidgetSynchronously(messageId, editFileWidget, styles_.editFileCommand(), styles_.editFileWidgetContainer());
    }
    
+   private void createSearchReplaceCommandSynchronously(String messageId, String filename, String content, String explanation, String requestId, boolean skipDiffHighlighting, com.google.gwt.core.client.JavaScriptObject diffData)
+   {
+      // Hide thinking message when AI response (function call) starts
+      hideThinkingMessage();
+      
+      // Check if this is a cancelled search_replace by looking for special prefix
+      boolean isCancelled = false;
+      String actualContent = content;
+      if (content != null && content.startsWith("CANCELLED:")) {
+         isCancelled = true;
+         actualContent = content.substring("CANCELLED:".length()); // Remove the prefix
+      }
+      
+      // Create search replace command handler
+      org.rstudio.studio.client.workbench.views.ai.widgets.AiSearchReplaceWidget.SearchReplaceCommandHandler handler = 
+         new org.rstudio.studio.client.workbench.views.ai.widgets.AiSearchReplaceWidget.SearchReplaceCommandHandler() {
+            @Override
+            public void onAccept(String msgId, String editedContent) {
+               handleAcceptSearchReplaceCommand(msgId, editedContent);
+               onFunctionCallCompleted(msgId);
+            }
+            
+            @Override
+            public void onCancel(String msgId) {
+               handleCancelSearchReplaceCommand(msgId);
+               onFunctionCallCompleted(msgId);
+            }
+         };
+      
+      // Create the search replace widget with appropriate cancellation flag and diff highlighting control
+      // For cancelled operations: isEditable = false (no buttons), isCancelled = true
+      // For normal operations: isEditable = true (show buttons), isCancelled = false, skipDiffHighlighting controls diff display
+      org.rstudio.studio.client.workbench.views.ai.widgets.AiSearchReplaceWidget searchReplaceWidget = 
+         new org.rstudio.studio.client.workbench.views.ai.widgets.AiSearchReplaceWidget(
+            messageId,     // Missing messageId parameter!
+            filename, 
+            actualContent, 
+            explanation, 
+            requestId, 
+            !isCancelled,  // isEditable = !isCancelled
+            handler,
+            isCancelled,   // isCancelled flag
+            skipDiffHighlighting,  // skipDiffHighlighting flag
+            diffData       // Pre-computed diff data from R
+         );
+      
+      // Store the widget for later content updates
+      searchReplaceWidgets_.put(messageId, searchReplaceWidget);
+      
+      // Hide buttons only if the operation was cancelled
+      if (isCancelled) {
+         searchReplaceWidget.hideButtons();
+      }
+      
+      createAndInjectWidgetSynchronously(messageId, searchReplaceWidget, styles_.searchReplaceCommand(), styles_.searchReplaceWidgetContainer());
+   }
+   
    /**
     * Create and inject widget synchronously (no scheduleDeferred)
     */
@@ -1001,6 +1078,74 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    }
    
    /**
+    * Add content to search replace widget (overloaded version without diff data)
+    */
+   private void addContentToSearchReplaceWidget(String messageId, String delta, boolean isComplete, boolean isCancelled)
+   {
+      addContentToSearchReplaceWidget(messageId, delta, isComplete, isCancelled, false, (com.google.gwt.core.client.JavaScriptObject) null);
+   }
+
+   /**
+    * Add content to search replace widget with replaceContent option
+    */
+   private void addContentToSearchReplaceWidget(String messageId, String delta, boolean isComplete, boolean isCancelled, boolean replaceContent, com.google.gwt.core.client.JavaScriptObject diffData)
+   {
+      org.rstudio.studio.client.workbench.views.ai.widgets.AiSearchReplaceWidget searchReplaceWidget = searchReplaceWidgets_.get(messageId);
+      if (searchReplaceWidget == null)
+      {
+         return;
+      }
+      
+      // Handle content replacement vs appending
+      String newSearchReplaceContent;
+      if (replaceContent) {
+         newSearchReplaceContent = delta;
+         searchReplaceStreamingContent_.put(messageId, newSearchReplaceContent);
+      } else {
+         // Normal streaming: append to existing content
+         String currentSearchReplaceContent = searchReplaceStreamingContent_.get(messageId);
+         if (currentSearchReplaceContent == null)
+         {
+            currentSearchReplaceContent = "";
+            // Update scroll manager streaming status when starting to stream search replace content
+            updateScrollManagerStreamingStatus();
+         }
+      
+         newSearchReplaceContent = currentSearchReplaceContent + delta;
+         searchReplaceStreamingContent_.put(messageId, newSearchReplaceContent);
+      }
+      
+      if (isComplete)
+      {
+         // Parse and clean content on completion
+         String filename = searchReplaceWidget.getFilename();
+         String cleanedContent = parseCodeBlockContent(newSearchReplaceContent, filename);
+         
+         searchReplaceWidget.setContent(cleanedContent);
+         
+         // Keep tracking content for cancelled responses to preserve them
+         if (!isCancelled) {
+            // Only clean up tracking for normal completion, not cancellation
+            searchReplaceStreamingContent_.remove(messageId);
+         }
+         
+         // Update scroll manager streaming status
+         updateScrollManagerStreamingStatus();
+         
+         // Hide cancel button when search_replace streaming completes
+         AiPane aiPane = AiPane.getCurrentInstance();
+         if (aiPane != null) {
+            aiPane.hideCancelButton();
+         }
+      }
+      else
+      {
+         // Set raw content for streaming effect
+         searchReplaceWidget.setContent(newSearchReplaceContent);
+      }
+   }
+   
+   /**
     * Add streaming content to console widget
     */
    private void addContentToConsoleWidget(String messageId, String delta, boolean isComplete, boolean isCancelled)
@@ -1123,6 +1268,32 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    }
    
    /**
+    * Handle accept search replace command
+    */
+   private void handleAcceptSearchReplaceCommand(String messageId, String content)
+   {
+      org.rstudio.studio.client.workbench.views.ai.AiPane aiPane = 
+         org.rstudio.studio.client.workbench.views.ai.AiPane.getCurrentInstance();
+      if (aiPane != null)
+      {
+         aiPane.handleAcceptSearchReplaceCommand(messageId, content);
+      }
+   }
+   
+   /**
+    * Handle cancel search replace command
+    */
+   private void handleCancelSearchReplaceCommand(String messageId)
+   {
+      org.rstudio.studio.client.workbench.views.ai.AiPane aiPane = 
+         org.rstudio.studio.client.workbench.views.ai.AiPane.getCurrentInstance();
+      if (aiPane != null)
+      {
+         aiPane.handleCancelSearchReplaceCommand(messageId);
+      }
+   }
+   
+   /**
     * Hide buttons for a specific widget when restoring from conversation history
     */
    private void hideWidgetButtonsSynchronously(String messageId, String widgetType)
@@ -1151,6 +1322,14 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
             editFileWidget.hideButtons();
          }
       }
+      else if ("search_replace".equals(widgetType))
+      {
+         AiSearchReplaceWidget searchReplaceWidget = searchReplaceWidgets_.get(messageId);
+         if (searchReplaceWidget != null)
+         {
+            searchReplaceWidget.hideButtons();
+         }
+      }
    }
    
    /**
@@ -1175,6 +1354,11 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    public org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget getEditFileWidget(String messageId)
    {
       return editFileWidgets_.get(messageId);
+   }
+   
+   public org.rstudio.studio.client.workbench.views.ai.widgets.AiSearchReplaceWidget getSearchReplaceWidget(String messageId)
+   {
+      return searchReplaceWidgets_.get(messageId);
    }
    
    /**
@@ -1405,7 +1589,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       consoleWidgets_.clear();
       terminalWidgets_.clear();
       editFileWidgets_.clear();
+      searchReplaceWidgets_.clear();
       editFileStreamingContent_.clear();
+      searchReplaceStreamingContent_.clear();
       
       // Reset function call processing state
       functionCallBuffer_.clear();
@@ -1893,7 +2079,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    private final Map<String, AiConsoleWidget> consoleWidgets_;
    private final Map<String, AiTerminalWidget> terminalWidgets_;
    private final Map<String, org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget> editFileWidgets_;
+   private final Map<String, org.rstudio.studio.client.workbench.views.ai.widgets.AiSearchReplaceWidget> searchReplaceWidgets_;
    private final Map<String, String> editFileStreamingContent_;
+   private final Map<String, String> searchReplaceStreamingContent_;
 
    // Per-conversation sequence tracking
    private final Map<Integer, Integer> conversationSequences_;

@@ -43,6 +43,33 @@
    .rs.set_conversation_var("ai_cancelled", FALSE)
 })
 
+# Helper function to create regex pattern that ignores trailing whitespace on lines
+.rs.addFunction("create_flexible_whitespace_pattern", function(text) {
+   if (is.null(text) || text == "") {
+      return("")
+   }
+   
+   # Escape special regex characters first
+   escaped_text <- gsub("([.\\^$*+?{}\\[\\]|()\\\\])", "\\\\\\1", text, perl = TRUE)
+   
+   # Split into lines
+   lines <- strsplit(escaped_text, "\n", fixed = TRUE)[[1]]
+   
+   # For each line, make trailing whitespace optional
+   flexible_lines <- character(length(lines))
+   for (i in seq_along(lines)) {
+      line <- lines[i]
+      # Remove any existing trailing whitespace and add optional whitespace pattern
+      line_trimmed <- sub("[ \t]*$", "", line)
+      flexible_lines[i] <- paste0(line_trimmed, "[ \t]*")
+   }
+   
+   # Join lines back with newline pattern
+   flexible_pattern <- paste(flexible_lines, collapse = "\n")
+   
+   return(flexible_pattern)
+})
+
 .rs.addFunction("process_assistant_response", function(assistant_response, msg_id, related_to_id, conversation_index, source_function_name = NULL, message_metadata = NULL, existing_conversation_log = NULL) {
    if (.rs.get_conversation_var("ai_cancelled")) {
       return(FALSE)
@@ -633,6 +660,417 @@
       function_call_output = function_call_output,
       function_output_id = function_output_id
    ))
+})
+
+.rs.addFunction("handle_search_replace", function(function_call, current_log, related_to_id, request_id) {
+   arguments <- .rs.safe_parse_function_arguments(function_call)
+
+   file_path <- arguments$file_path
+   old_string <- arguments$old_string
+   new_string <- arguments$new_string
+   
+   # Remove line numbers from old_string and new_string before validation
+   # This prevents mismatches when AI includes line numbers for context
+   if (!is.null(old_string)) {
+      old_string <- .rs.remove_line_numbers(old_string)
+   }
+   if (!is.null(new_string)) {
+      new_string <- .rs.remove_line_numbers(new_string)
+   }
+   
+   # Validate required arguments
+   if (is.null(file_path) || is.null(old_string) || is.null(new_string)) {
+      error_message <- "Error: Missing required arguments (file_path, old_string, or new_string)"
+      
+      function_output_id <- .rs.get_next_message_id()
+      function_call_output <- list(
+        id = function_output_id,
+        type = "function_call_output",
+        call_id = function_call$call_id,
+        output = error_message,
+        related_to = function_call$msg_id,
+        success = FALSE
+      )
+      
+      # Update conversation display immediately when search_replace fails
+      .rs.update_conversation_display()
+      
+      return(list(
+         function_call_output = function_call_output,
+         function_output_id = function_output_id,
+         breakout_of_function_calls = TRUE,
+         status = "continue_silent"
+      ))
+   }
+   
+   # Handle special case: empty old_string means create/append to file
+   if (old_string == "") {
+      # For empty old_string, we create new file or append to existing file
+      effective_content <- .rs.get_effective_file_content(file_path)
+      is_new_file <- is.null(effective_content)
+      
+      if (is_new_file) {
+         effective_content <- ""
+         explanation_text <- paste("Create new file", basename(file_path))
+      } else {
+         explanation_text <- paste("Append to", basename(file_path))
+      }
+      
+      # For create/append mode, the new content is just the new_string (for new file) or existing + new_string (for append)
+      if (is_new_file) {
+         new_content <- new_string
+         final_file_content <- new_string
+      } else {
+         # Append with newline if file doesn't end with newline
+         if (nchar(effective_content) > 0 && !grepl("\n$", effective_content)) {
+            final_file_content <- paste0(effective_content, "\n", new_string)
+         } else {
+            final_file_content <- paste0(effective_content, new_string)
+         }
+         # For diff display, only show the new content being added
+         new_content <- new_string
+      }
+      
+      # Get diff data for create/append operation
+      diff_data <- tryCatch({
+         # For create/append operations, old_content should always be empty so everything shows as "added"
+         old_lines <- character(0)
+         new_lines <- strsplit(new_content, "\n", fixed = TRUE)[[1]]
+         
+         diff_result <- .rs.compute_line_diff(old_lines, new_lines, is_from_edit_file = TRUE)
+         
+         # For append operations only (not new file creation), adjust line numbers to start from current file length + 1
+         if (!is_new_file) {
+            existing_line_count <- length(strsplit(effective_content, "\n", fixed = TRUE)[[1]])
+            
+            # Adjust new_line numbers in the diff data
+            for (i in seq_along(diff_result$diff)) {
+               if (!is.null(diff_result$diff[[i]]$new_line) && !is.na(diff_result$diff[[i]]$new_line)) {
+                  diff_result$diff[[i]]$new_line <- diff_result$diff[[i]]$new_line + existing_line_count
+               }
+            }
+         }
+         
+         diff_result
+      }, error = function(e) {
+         list(diff = list(), added = 0, deleted = 0)
+      })
+      
+      # Generate filename with diff stats for create/append
+      filename_with_stats <- basename(file_path)
+      if (diff_data$added > 0 || diff_data$deleted > 0) {
+         addition_text <- paste0('<span class="addition">+', diff_data$added, '</span>')
+         removal_text <- paste0('<span class="removal">-', diff_data$deleted, '</span>')
+         diff_text <- paste(addition_text, removal_text)
+         filename_with_stats <- paste0(filename_with_stats, ' <span class="diff-stats">', diff_text, '</span>')
+      }
+      
+      # Add filename_with_stats to diff_data for Java processing
+      diff_data$filename_with_stats <- filename_with_stats
+      
+      # For create/append, show the content that will be added (filtered to show only additions)
+      filtered_diff <- .rs.filter_diff_for_display(diff_data$diff)
+      
+      # Reconstruct content from filtered diff for widget display
+      filtered_content <- ""
+      for (diff_item in filtered_diff) {
+         if (!is.null(diff_item$type) && diff_item$type != "deleted") {
+            if (!is.null(diff_item$content)) {
+               filtered_content <- paste0(filtered_content, diff_item$content, "\n")
+            }
+         }
+      }
+      # Remove trailing newline
+      filtered_content <- sub("\n$", "", filtered_content)
+      
+      # Create filtered diff_data for widget display
+      filtered_diff_data <- diff_data
+      filtered_diff_data$diff <- filtered_diff
+      
+      # Create and send search_replace widget for create/append operation
+      widget_data <- list(
+         message_id = as.numeric(function_call$msg_id),
+         filename = filename_with_stats,
+         content = filtered_content,
+         explanation = explanation_text,
+         request_id = request_id,
+         skip_diff_highlighting = FALSE,
+         diff_data = filtered_diff_data
+      )
+      
+      .rs.send_ai_operation("search_replace_command", widget_data)
+      
+      # Create function_call_output showing create/append operation ready
+      function_output_id <- .rs.get_next_message_id()
+      function_call_output <- list(
+        id = function_output_id,
+        type = "function_call_output",
+        call_id = function_call$call_id,
+        output = if (is_new_file) paste0("Ready to create new file: ", basename(file_path)) else paste0("Ready to append to: ", basename(file_path)),
+        related_to = function_call$msg_id,
+        success = TRUE
+      )
+      
+      # Create assistant message "Response pending..." 
+      conversation_log <- .rs.read_conversation_log()
+      
+      # Add function_call_output to conversation log FIRST
+      conversation_log <- c(conversation_log, list(function_call_output))
+      
+      # Create procedural user message for search_replace pending
+      pending_message_id <- .rs.get_next_message_id()
+      pending_message <- list(
+         id = pending_message_id,
+         role = "user",
+         content = "Response pending...",
+         related_to = function_call$msg_id,
+         procedural = TRUE
+      )
+      conversation_log <- c(conversation_log, list(pending_message))
+      .rs.write_conversation_log(conversation_log)
+      
+      # CRITICAL: Trigger conversation display update AFTER all log entries are written
+      .rs.update_conversation_display()
+      
+      # Return widget creation data for create/append mode
+      result <- list(
+         function_call_output = function_call_output,
+         function_output_id = function_output_id,
+         file_path = file_path,
+         old_string = old_string,
+         new_string = new_string,
+         current_content = new_content,
+         original_content = effective_content,
+         related_to_id = related_to_id,
+         is_create_append_mode = TRUE,
+         breakout_of_function_calls = TRUE
+      )
+      
+      return(result)
+   }
+   
+   # Normal search_replace mode: get effective file content (editor if open, otherwise disk)
+   effective_content <- .rs.get_effective_file_content(file_path)
+   
+   if (is.null(effective_content)) {
+      # File doesn't exist - return error message and continue
+      error_message <- paste0("File not found: ", file_path, ". Please check the file path or read the current file structure.")
+      
+      function_output_id <- .rs.get_next_message_id()
+      function_call_output <- list(
+        id = function_output_id,
+        type = "function_call_output",
+        call_id = function_call$call_id,
+        output = error_message,
+        related_to = function_call$msg_id,
+        success = FALSE
+      )
+      
+      # Update conversation display immediately when search_replace fails
+      .rs.update_conversation_display()
+      
+      return(list(
+         function_call_output = function_call_output,
+         function_output_id = function_output_id,
+         breakout_of_function_calls = TRUE,
+         status = "continue_silent"  # Let AI try again with correct file path
+      ))
+   }
+
+   # CRITICAL: Do match counting validation immediately (like console command validation)
+   # Count occurrences of old_string in the file, allowing flexible trailing whitespace
+   flexible_pattern <- .rs.create_flexible_whitespace_pattern(old_string)
+   old_string_matches <- gregexpr(flexible_pattern, effective_content, perl = TRUE)[[1]]
+   match_count <- length(old_string_matches[old_string_matches != -1])
+   
+   # Handle different match scenarios - return errors that trigger continue
+   if (match_count == 0) {
+      error_message <- paste0("The old_string does not exist in the file. Read the content and try again with the exact text.")
+      
+      function_output_id <- .rs.get_next_message_id()
+      function_call_output <- list(
+        id = function_output_id,
+        type = "function_call_output",
+        call_id = function_call$call_id,
+        output = error_message,
+        related_to = function_call$msg_id,
+        success = FALSE
+      )
+      
+      # Update conversation display immediately when search_replace fails
+      .rs.update_conversation_display()
+      
+      return(list(
+         function_call_output = function_call_output,
+         function_output_id = function_output_id,
+         breakout_of_function_calls = TRUE,
+         status = "continue_silent"
+      ))
+   }
+   
+   if (match_count > 1) {
+      # Multiple matches found - provide unique context for each match like the old version
+      file_lines <- strsplit(effective_content, "\n")[[1]]
+      
+      # Find line numbers for each match
+      match_line_nums <- c()
+      for (i in 1:match_count) {
+         match_pos <- old_string_matches[i]
+         char_count <- 0
+         line_num <- 1
+         for (line in file_lines) {
+            char_count <- char_count + nchar(line) + 1  # +1 for newline
+            if (char_count >= match_pos) {
+               break
+            }
+            line_num <- line_num + 1
+         }
+         match_line_nums[i] <- line_num
+      }
+      
+      # Generate unique context for each match
+      match_details <- .rs.generate_unique_contexts(file_lines, match_line_nums)
+      
+      error_message <- paste0("The old_string was found ", match_count, " times in the file ", file_path, ". ",
+                             "Please provide a more specific old_string that matches exactly one location. ",
+                             "Here are all the matches with context:\n\n", paste(match_details, collapse = "\n\n"))
+      
+      function_output_id <- .rs.get_next_message_id()
+      function_call_output <- list(
+        id = function_output_id,
+        type = "function_call_output",
+        call_id = function_call$call_id,
+        output = error_message,
+        related_to = function_call$msg_id,
+        success = FALSE
+      )
+      
+      # Update conversation display immediately when search_replace fails
+      .rs.update_conversation_display()
+      
+      return(list(
+         function_call_output = function_call_output,
+         function_output_id = function_output_id,
+         breakout_of_function_calls = TRUE,
+         status = "continue_silent"  # Let AI try again with more specific old_string
+      ))
+   }
+
+   # SUCCESS CASE: Exactly one match found
+   # Follow the same pattern as run_console_cmd:
+   # 1. Create and send the widget with diff data
+   # 2. Return breakout status to wait for user acceptance
+   
+   # Simulate the replacement to get new content for widget display
+   # Use the same flexible whitespace pattern as validation
+   new_content <- gsub(flexible_pattern, new_string, effective_content, perl = TRUE)
+   
+   # Get diff data for the proposed replacement
+   diff_data <- tryCatch({
+      old_lines <- strsplit(effective_content, "\n", fixed = TRUE)[[1]]
+      new_lines <- strsplit(new_content, "\n", fixed = TRUE)[[1]]
+      
+      diff_result <- .rs.compute_line_diff(old_lines, new_lines, is_from_edit_file = TRUE)
+      
+      # Store diff data for search_replace
+      .rs.store_diff_data(function_call$msg_id, diff_result$diff, effective_content, new_content)
+      
+      diff_result
+   }, error = function(e) {
+      list(diff = list(), added = 0, deleted = 0)
+   })
+   
+   # Generate filename with diff stats
+   filename_with_stats <- basename(file_path)
+   if (diff_data$added > 0 || diff_data$deleted > 0) {
+      addition_text <- paste0('<span class="addition">+', diff_data$added, '</span>')
+      removal_text <- paste0('<span class="removal">-', diff_data$deleted, '</span>')
+      diff_text <- paste(addition_text, removal_text)
+      filename_with_stats <- paste0(filename_with_stats, ' <span class="diff-stats">', diff_text, '</span>')
+   }
+   
+   # Add filename_with_stats to diff_data for Java processing
+   diff_data$filename_with_stats <- filename_with_stats
+   
+   # CRITICAL FIX: Filter diff for display (like edit_file) - show only changed lines plus context
+   filtered_diff <- .rs.filter_diff_for_display(diff_data$diff)
+   
+   # Reconstruct content from filtered diff for widget display
+   filtered_content <- ""
+   for (diff_item in filtered_diff) {
+      if (!is.null(diff_item$type) && diff_item$type != "deleted") {
+         if (!is.null(diff_item$content)) {
+            filtered_content <- paste0(filtered_content, diff_item$content, "\n")
+         }
+      }
+   }
+   # Remove trailing newline
+   filtered_content <- sub("\n$", "", filtered_content)
+   
+   # Create filtered diff_data for widget display
+   filtered_diff_data <- diff_data
+   filtered_diff_data$diff <- filtered_diff
+   
+   # Create and send search_replace widget immediately (like console commands)
+   widget_data <- list(
+      message_id = as.numeric(function_call$msg_id),
+      filename = filename_with_stats,  # Use filename WITH diff stats
+      content = filtered_content,  # Show ONLY the filtered content (changed lines + context)
+      explanation = paste("Search and replace in", basename(file_path)),
+      request_id = request_id,
+      skip_diff_highlighting = FALSE,
+      diff_data = filtered_diff_data  # Use filtered diff data for widget
+   )
+   
+   .rs.send_ai_operation("search_replace_command", widget_data)
+   
+   # Create function_call_output showing validation succeeded
+   function_output_id <- .rs.get_next_message_id()
+   function_call_output <- list(
+     id = function_output_id,
+     type = "function_call_output",
+     call_id = function_call$call_id,
+     output = paste0("The unique string to replace was successfully found. The user may now accept or reject the replacement."),
+     related_to = function_call$msg_id,
+     success = TRUE
+   )
+   
+   # Create assistant message "Response pending..." (like edit_file does) 
+   # Read current conversation log
+   conversation_log <- .rs.read_conversation_log()
+   
+   # Add function_call_output to conversation log FIRST
+   conversation_log <- c(conversation_log, list(function_call_output))
+   
+   # Create procedural user message for search_replace pending
+   pending_message_id <- .rs.get_next_message_id()
+   pending_message <- list(
+      id = pending_message_id,
+      role = "user",
+      content = "Response pending...",
+      related_to = function_call$msg_id,  # Point to the search_replace function call ID
+      procedural = TRUE  # Mark as procedural so it doesn't show in UI
+   )
+   conversation_log <- c(conversation_log, list(pending_message))
+   .rs.write_conversation_log(conversation_log)
+   
+   # CRITICAL: Trigger conversation display update AFTER all log entries are written
+   .rs.update_conversation_display()
+   
+   # Return widget creation data (like console commands)
+   result <- list(
+      function_call_output = function_call_output,
+      function_output_id = function_output_id,
+      file_path = file_path,
+      old_string = old_string,
+      new_string = new_string,
+      current_content = new_content,
+      original_content = effective_content,
+      related_to_id = related_to_id,
+      breakout_of_function_calls = TRUE  # This creates the widget and waits for user
+   )
+   
+   return(result)
 })
 
 .rs.addFunction("handle_grep_search", function(function_call, current_log, related_to_id, request_id) {
@@ -1288,11 +1726,17 @@
       path_depth <- length(strsplit(filepath, "/")[[1]])
       score <- score - path_depth
       
+      # Penalty for long filenames to prevent random character accumulation
+      # Longer files need proportionally better matches
+      length_penalty <- nchar(lower_path) / max(1, nchar(lower_query))
+      score <- score - length_penalty
+      
       return(score)
    })
-   
-   valid_matches <- relative_files[scores > 0]
-   valid_scores <- scores[scores > 0]
+
+   min_allowed_score <- 10
+   valid_matches <- relative_files[scores > min_allowed_score]
+   valid_scores <- scores[scores > min_allowed_score]
    
    if (length(valid_matches) == 0) {
       search_results <- paste0("No files found matching: ", query)

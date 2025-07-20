@@ -1771,6 +1771,23 @@ public class RemoteServer implements Server, AiServerOperations
       sendRequest(RPC_SCOPE, ACCEPT_EDIT_FILE_COMMAND, params, requestCallback);
    }
 
+   public void acceptSearchReplaceCommand(String editedCode, String messageId, String requestId, ServerRequestCallback<JavaScriptObject> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(editedCode));
+      params.set(1, new JSONString(messageId));
+      params.set(2, new JSONString(requestId != null ? requestId : ""));
+      sendRequest(RPC_SCOPE, ACCEPT_SEARCH_REPLACE_COMMAND, params, requestCallback);
+   }
+
+   public void cancelSearchReplaceCommand(String messageId, String requestId, ServerRequestCallback<JavaScriptObject> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(messageId));
+      params.set(1, new JSONString(requestId != null ? requestId : ""));
+      sendRequest(RPC_SCOPE, CANCEL_SEARCH_REPLACE_COMMAND, params, requestCallback);
+   }
+
    public void runScriptInConsole(String script, int messageId, ServerRequestCallback<java.lang.Void> requestCallback)
    {
       JSONArray params = new JSONArray();
@@ -7277,6 +7294,8 @@ public class RemoteServer implements Server, AiServerOperations
    private static final String GET_CUSTOM_PARAMETER_AI = "get_custom_parameter_ai";
    private static final String SHOW_CUSTOM_AI_TOPIC = "show_custom_ai_topic";
    private static final String ACCEPT_EDIT_FILE_COMMAND = "accept_edit_file_command";
+   private static final String ACCEPT_SEARCH_REPLACE_COMMAND = "accept_search_replace_command";
+   private static final String CANCEL_SEARCH_REPLACE_COMMAND = "cancel_search_replace_command";
    private static final String ACCEPT_RUN_LATEST_AI_CODE = "accept_run_latest_ai_code";
    public static final String ADD_CONSOLE_OUTPUT_TO_CONVERSATION = "add_console_output_to_conversation";
    public static final String ADD_TERMINAL_OUTPUT_TO_CONVERSATION = "add_terminal_output_to_conversation";

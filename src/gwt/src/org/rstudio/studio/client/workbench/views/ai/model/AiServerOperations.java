@@ -52,6 +52,10 @@ public interface AiServerOperations
 
    void acceptEditFileCommand(String editedCode, String messageId, String requestId, ServerRequestCallback<JavaScriptObject> requestCallback);
       
+   void acceptSearchReplaceCommand(String editedCode, String messageId, String requestId, ServerRequestCallback<JavaScriptObject> requestCallback);
+   
+   void cancelSearchReplaceCommand(String messageId, String requestId, ServerRequestCallback<JavaScriptObject> requestCallback);
+      
    void clearAiConversation(ServerRequestCallback<Void> requestCallback);
    
    void createNewConversation(ServerRequestCallback<CreateAiConversationResult> requestCallback);

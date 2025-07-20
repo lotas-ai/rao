@@ -166,6 +166,14 @@
             paste0('Searched the web for "', query, '"')
          }
       },
+      "search_replace" = {
+         file_path <- if (!is.null(arguments$file_path)) basename(arguments$file_path) else "unknown"
+         if (is_thinking) {
+            paste0("Editing ", file_path, suffix)
+         } else {
+            paste0("Failed to edit ", file_path)
+         }
+      },
       # Default fallback
       if (is_thinking) {
          paste0("Calling function: ", function_name, suffix)
@@ -680,6 +688,405 @@
       )
       return(result)
    }
+})
+
+.rs.addFunction("accept_search_replace_command", function(edited_code, message_id, request_id) {
+   
+   conversation_index <- .rs.get_current_conversation_index()
+   
+   modification_made <- FALSE
+   file_written <- FALSE
+   
+   latest_message_id <- as.numeric(message_id)
+   
+   conversation_log <- .rs.read_conversation_log()
+   
+   .rs.update_conversation_display()
+   
+   # The message_id passed in should be the search_replace function call ID directly
+   search_replace_message_id <- latest_message_id
+   
+   # Verify this is actually a search_replace function call and extract arguments
+   search_replace_entry <- NULL
+   for (entry in conversation_log) {
+      if (!is.null(entry$id) && entry$id == search_replace_message_id && 
+         !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
+         entry$function_call$name == "search_replace") {
+      search_replace_entry <- entry
+      break
+      }
+   }
+   
+   if (is.null(search_replace_entry)) {
+      return(FALSE)
+   }
+
+   # Extract arguments from search_replace function call
+   search_replace_args <- tryCatch({
+      if (is.character(search_replace_entry$function_call$arguments)) {
+      jsonlite::fromJSON(search_replace_entry$function_call$arguments, simplifyVector = FALSE)
+      } else {
+      search_replace_entry$function_call$arguments
+      }
+   }, error = function(e) {
+      return(NULL)
+   })
+
+   if (is.null(search_replace_args) || is.null(search_replace_args$file_path) || 
+       is.null(search_replace_args$old_string) || is.null(search_replace_args$new_string)) {
+      return(FALSE)
+   }
+
+   file_path <- search_replace_args$file_path
+   old_string <- search_replace_args$old_string
+   new_string <- search_replace_args$new_string
+   
+   # Trim line numbers from old_string and new_string (like edit_file does)
+   old_string <- .rs.remove_line_numbers(old_string)
+   new_string <- .rs.remove_line_numbers(new_string)
+
+   if (is.null(file_path) || file_path == "" || is.na(file_path)) {
+      return(FALSE)
+   }
+   
+   # Handle special case: empty old_string means create/append to file
+   is_create_mode <- FALSE
+   is_append_mode <- FALSE
+   if (old_string == "") {
+      # Get current file content (may be NULL if file doesn't exist)
+      current_content <- .rs.get_effective_file_content(file_path)
+      is_new_file <- is.null(current_content)
+      
+      if (is_new_file) {
+         # Create new file with new_string content
+         new_content <- new_string
+         current_content <- ""  # Set to empty for diff recording
+         is_create_mode <- TRUE
+      } else {
+         # Append to existing file
+         if (nchar(current_content) > 0 && !grepl("\n$", current_content)) {
+            new_content <- paste0(current_content, "\n", new_string)
+         } else {
+            new_content <- paste0(current_content, new_string)
+         }
+         is_append_mode <- TRUE
+      }
+   } else {
+      # Normal search_replace mode
+      # Get current file content
+      current_content <- .rs.get_effective_file_content(file_path)
+      
+      if (is.null(current_content)) {
+         # File doesn't exist - record function call output and return done
+         function_output_id <- .rs.get_next_message_id()
+         function_call_output <- list(
+            id = function_output_id,
+            type = "function_call_output",
+            call_id = search_replace_entry$function_call$call_id,
+            output = paste0("File not found: ", file_path, ". Please check the file path or read the current file structure."),
+            related_to = search_replace_message_id,
+            procedural = TRUE
+         )
+         
+         conversation_log <- c(conversation_log, list(function_call_output))
+         .rs.write_conversation_log(conversation_log)
+         
+         return(.rs.create_ai_operation_result(
+            status = "done",
+            data = list(
+               message = "File not found",
+               request_id = request_id
+            )
+         ))
+      }
+      
+      # Since validation happened upfront in handle_search_replace, we can assume exactly one match exists
+      # Just perform the replacement directly (user has already approved it via the widget)
+      # Use the same flexible whitespace matching as validation
+      flexible_pattern <- .rs.create_flexible_whitespace_pattern(old_string)
+      new_content <- gsub(flexible_pattern, new_string, current_content, perl = TRUE)
+   }
+   
+   # Apply the edit using the same system as edit_file
+   success <- .rs.apply_file_edit(file_path, new_content)
+   
+   if (success) {
+      file_written <- TRUE
+      modification_made <- TRUE
+      
+      # Record the file change: creation vs modification
+      if (is_create_mode) {
+         # For new file creation, use record_file_creation
+         .rs.record_file_creation(file_path)
+      } else {
+         # For modification or append, use record_file_modification_with_diff_with_state
+         .rs.record_file_modification_with_diff_with_state(file_path, current_content, new_content, FALSE)
+      }
+      
+      # Mark the diff as accepted for persistent display
+      tryCatch({
+         .rs.mark_diff_as_accepted(search_replace_message_id, file_path)
+      }, error = function(e) {
+         warning("Error marking diff as accepted:", e$message, "\n")
+      })
+      
+      # Update the existing "Response pending..." assistant message (like edit_file)
+      conversation_log <- .rs.read_conversation_log()
+      
+      # Find the unique "Response pending..." procedural user message related to this search_replace
+      pending_message_entry <- NULL
+      for (entry in conversation_log) {
+         if (!is.null(entry$role) && entry$role == "user" && 
+             !is.null(entry$related_to) && entry$related_to == search_replace_message_id &&
+             !is.null(entry$content) && entry$content == "Response pending..." &&
+             !is.null(entry$procedural) && entry$procedural == TRUE) {
+            pending_message_entry <- entry
+            break
+         }
+      }
+      
+      if (!is.null(pending_message_entry)) {
+         # Update the pending message to show completion (different message for create/append vs replace)
+         completion_message <- if (is_create_mode) {
+            paste0("File created successfully: ", basename(file_path))
+         } else if (is_append_mode) {
+            paste0("Content appended successfully to: ", basename(file_path))
+         } else {
+            "Search and replace completed successfully."
+         }
+         
+         for (i in seq_along(conversation_log)) {
+            if (!is.null(conversation_log[[i]]$id) && conversation_log[[i]]$id == pending_message_entry$id) {
+               conversation_log[[i]]$content <- completion_message
+               conversation_log[[i]]$procedural <- TRUE  # Keep as procedural
+               break
+            }
+         }
+         .rs.write_conversation_log(conversation_log)
+      }
+         } else {
+         # Update the existing "Response pending..." assistant message with error
+         conversation_log <- .rs.read_conversation_log()
+         
+         # Find the unique "Response pending..." procedural user message related to this search_replace
+         pending_message_entry <- NULL
+         for (entry in conversation_log) {
+            if (!is.null(entry$role) && entry$role == "user" && 
+                !is.null(entry$related_to) && entry$related_to == search_replace_message_id &&
+                !is.null(entry$content) && entry$content == "Response pending..." &&
+                !is.null(entry$procedural) && entry$procedural == TRUE) {
+               pending_message_entry <- entry
+               break
+            }
+         }
+         
+         if (!is.null(pending_message_entry)) {
+            # Update the pending message to show error (different message for create/append vs replace)
+            error_message <- if (is_create_mode) {
+               paste0("Error: Failed to create file: ", basename(file_path))
+            } else if (is_append_mode) {
+               paste0("Error: Failed to append to file: ", basename(file_path))
+            } else {
+               "Error: Failed to write file"
+            }
+            
+            for (i in seq_along(conversation_log)) {
+               if (!is.null(conversation_log[[i]]$id) && conversation_log[[i]]$id == pending_message_entry$id) {
+                  conversation_log[[i]]$content <- error_message
+                  conversation_log[[i]]$procedural <- TRUE  # Keep as procedural
+                  break
+               }
+            }
+            .rs.write_conversation_log(conversation_log)
+         }
+      }
+
+   # Update document and build index (same as edit_file)
+   if (modification_made && file_written) {
+      .rs.api.documentOpen(file_path)
+      .rs.save_script_to_history(file_path)
+      .rs.build_symbol_index()
+   }
+   
+   # Look for existing "Response pending..." procedural user message and replace it
+   conversation_log <- .rs.read_conversation_log()
+   
+   # Find the unique "Response pending..." procedural user message related to this search_replace
+   pending_message_entry <- NULL
+   for (entry in conversation_log) {
+      if (!is.null(entry$role) && entry$role == "user" && 
+          !is.null(entry$related_to) && entry$related_to == search_replace_message_id &&
+          !is.null(entry$content) && entry$content == "Response pending..." &&
+          !is.null(entry$procedural) && entry$procedural == TRUE) {
+         pending_message_entry <- entry
+         break
+      }
+   }
+   
+   if (!is.null(pending_message_entry)) {
+      replacement_content <- if (modification_made) {
+         "Search and replace completed successfully."
+      } else {
+         "Search and replace cancelled."
+      }
+      
+      # Update the pending message to show completion
+      for (i in seq_along(conversation_log)) {
+         if (!is.null(conversation_log[[i]]$id) && conversation_log[[i]]$id == pending_message_entry$id) {
+            conversation_log[[i]]$content <- replacement_content
+            conversation_log[[i]]$procedural <- TRUE  # Keep as procedural
+            break
+         }
+      }
+      
+      .rs.write_conversation_log(conversation_log)
+   }
+   
+   # Mark buttons as run to hide them (like other accept functions)
+   .rs.mark_button_as_run(message_id, "accept")
+   
+   # Return different status based on whether conversation has moved on
+   # For continuation, we need to return the original user message ID, not the function call ID
+   original_user_message_id <- search_replace_entry$related_to
+   
+   # Check if there are newer messages that would indicate conversation has moved on
+   has_newer_messages <- FALSE
+   for (entry in conversation_log) {
+      if (!is.null(entry$id) && entry$id > search_replace_message_id) {
+         if (!is.null(entry$role) && entry$role == "user" &&
+             (is.null(entry$procedural) || !entry$procedural)) {
+            has_newer_messages <- TRUE
+            break
+         }
+      }
+   }
+   
+   if (has_newer_messages) {
+      result <- .rs.create_ai_operation_result(
+         status = "done",
+         data = list(
+            message = "Search replace command accepted - conversation has moved on, not continuing API",
+            related_to_id = as.integer(original_user_message_id),
+            conversation_index = .rs.get_current_conversation_index(),
+            request_id = request_id
+         )
+      )
+      return(result)
+   } else {
+      # Check for cancellation before returning continue_silent
+      if (.rs.get_conversation_var("ai_cancelled")) {
+         result <- .rs.create_ai_operation_result(
+            status = "done",
+            data = list(
+               message = "Search replace command accepted but AI was cancelled",
+               related_to_id = as.integer(original_user_message_id),
+               conversation_index = .rs.get_current_conversation_index(),
+               request_id = request_id
+            )
+         )
+         return(result)
+      }
+      
+      result <- .rs.create_ai_operation_result(
+         status = "continue_silent",
+         data = list(
+            message = "Search replace command accepted - returning control to orchestrator",
+            related_to_id = as.integer(original_user_message_id),
+            conversation_index = .rs.get_current_conversation_index(),
+            request_id = request_id
+         )
+      )
+      return(result)
+   }
+})
+
+.rs.addFunction("cancel_search_replace_command", function(message_id, request_id) {
+   # Mark the search replace as cancelled and continue orchestration
+   
+   # Update conversation display
+   .rs.update_conversation_display()
+   
+   conversation_log <- .rs.read_conversation_log()
+   search_replace_message_id <- as.numeric(message_id)
+   
+   # Find the search_replace function call entry to get the original user message
+   search_replace_entry <- NULL
+   for (entry in conversation_log) {
+      if (!is.null(entry$id) && entry$id == search_replace_message_id && 
+         !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
+         entry$function_call$name == "search_replace") {
+      search_replace_entry <- entry
+      break
+      }
+   }
+   
+   if (is.null(search_replace_entry)) {
+      return(FALSE)
+   }
+   
+   # Update the existing "Response pending..." function call output (like console commands)
+   call_id <- search_replace_entry$function_call$call_id
+   
+   # Find the existing pending function call output
+   fresh_log <- .rs.read_conversation_log()
+   pending_entries <- which(sapply(fresh_log, function(entry) {
+      !is.null(entry$type) && entry$type == "function_call_output" && 
+      !is.null(entry$call_id) && entry$call_id == call_id &&
+      !is.null(entry$output) && entry$output == "Response pending..."
+   }))
+   
+   if (length(pending_entries) == 1) {
+      # Update the existing pending message
+      pending_entry_index <- pending_entries[1]
+      fresh_log[[pending_entry_index]]$output <- "Search and replace operation cancelled by user."
+      fresh_log[[pending_entry_index]]$procedural <- TRUE
+      .rs.write_conversation_log(fresh_log)
+   }
+   
+   # Look for existing "Response pending..." procedural user message and replace it
+   conversation_log <- .rs.read_conversation_log()
+   
+   # Find the unique "Response pending..." procedural user message related to this search_replace
+   pending_message_entry <- NULL
+   for (entry in conversation_log) {
+      if (!is.null(entry$role) && entry$role == "user" && 
+          !is.null(entry$related_to) && entry$related_to == search_replace_message_id &&
+          !is.null(entry$content) && entry$content == "Response pending..." &&
+          !is.null(entry$procedural) && entry$procedural == TRUE) {
+         pending_message_entry <- entry
+         break
+      }
+   }
+   
+   if (!is.null(pending_message_entry)) {
+      # Update the pending message to show cancellation
+      for (i in seq_along(conversation_log)) {
+         if (!is.null(conversation_log[[i]]$id) && conversation_log[[i]]$id == pending_message_entry$id) {
+            conversation_log[[i]]$content <- "Search and replace cancelled."
+            conversation_log[[i]]$procedural <- TRUE  # Keep as procedural
+            break
+         }
+      }
+      
+      .rs.write_conversation_log(conversation_log)
+   }
+   
+   # Mark buttons as run to hide them (like other cancel functions)  
+   .rs.mark_button_as_run(message_id, "cancel")
+   
+   # Return continue status to let AI handle the cancellation
+   original_user_message_id <- search_replace_entry$related_to
+   
+   result <- .rs.create_ai_operation_result(
+      status = "continue_silent",
+      data = list(
+         message = "Search replace operation cancelled - returning control to orchestrator",
+         related_to_id = as.integer(original_user_message_id),
+         conversation_index = .rs.get_current_conversation_index(),
+         request_id = request_id
+      )
+   )
+   return(result)
 })
 
 .rs.addJsonRpcHandler("revert_ai_message", function(message_id) {
@@ -2231,6 +2638,8 @@
       function_result <- .rs.handle_run_terminal_cmd(normalized_function_call, conversation_log, related_to_id, request_id)
    } else if (function_name == "edit_file") {
       function_result <- .rs.handle_edit_file(normalized_function_call, conversation_log, related_to_id, request_id)
+   } else if (function_name == "search_replace") {
+      function_result <- .rs.handle_search_replace(normalized_function_call, conversation_log, related_to_id, request_id)
    } else if (function_name == "find_keyword_context") {
       function_result <- .rs.handle_find_keyword_context(normalized_function_call, conversation_log, related_to_id, request_id)
    } else if (function_name == "grep_search") {
@@ -2265,8 +2674,12 @@
       )
    }
    
-   # Create function call message for functions that don't have dedicated widgets
-   if (function_name %in% c("find_keyword_context", "grep_search", "read_file", "view_image", "search_for_file", "list_dir")) {
+   # Create function call message for functions that don't have dedicated widgets  
+   # For search_replace, only create message when validation fails (continue_silent status)
+   should_create_message <- function_name %in% c("find_keyword_context", "grep_search", "read_file", "view_image", "search_for_file", "list_dir") ||
+                           (function_name == "search_replace" && !is.null(function_result$status) && function_result$status == "continue_silent")
+   
+   if (should_create_message) {
       # Find the function call message ID from conversation log
       conversation_log <- .rs.read_conversation_log()
       function_callMsgId <- NULL
@@ -2294,7 +2707,7 @@
       }
    }
    
-   # Handle breakout_of_function_calls for run_console_cmd/run_terminal_cmd/delete_file  
+   # Handle breakout_of_function_calls for run_console_cmd/run_terminal_cmd/delete_file/search_replace  
    if (function_name == "run_console_cmd" || function_name == "run_terminal_cmd") {
       # Find the function call entry using shared function
       conversation_log <- .rs.read_conversation_log()
@@ -2329,6 +2742,42 @@
             )
          )      
          return(operation_result)
+      }
+   } else if (function_name == "search_replace") {
+      # Check for continue_silent status from search_replace validation
+      if (!is.null(function_result$status) && function_result$status == "continue_silent") {
+         # Add function call output to conversation log if it exists
+         if (!is.null(function_result$function_call_output)) {
+            conversation_log <- .rs.read_conversation_log()
+            updated_log <- c(conversation_log, list(function_result$function_call_output))
+            .rs.write_conversation_log(updated_log)
+         }
+         
+         # Return continue_silent to let AI retry
+         return(.rs.create_ai_operation_result(
+            status = "continue_silent",
+            data = list(
+               message = "Search replace validation failed - AI will retry",
+               related_to_id = related_to_id,
+               conversation_index = conversation_index,
+               request_id = request_id
+            )
+         ))
+      }
+
+      # Find the function call entry 
+      conversation_log <- .rs.read_conversation_log()
+      function_call_entry <- .rs.find_function_call_by_call_id(conversation_log, call_id)
+      
+      if (!is.null(function_call_entry)) {
+         return(.rs.create_ai_operation_result(
+            status = "pending",
+            data = list(
+               command_type = "search_replace",
+               message_id = function_call_entry$id,
+               conversation_index = conversation_index
+            )
+         ))
       }
    } else if (function_name == "run_file" || function_name == "delete_file") {
       # Find the function call entry using shared function
@@ -2715,27 +3164,29 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
          
          # Only process if we have content to work with
          if (!is.null(response_content)) {
-         # Check if this response is edit_file related and needs to be saved here
-         # edit_file responses are intentionally NOT saved during streaming to prevent duplicates
+         # Check if this response is edit_file or search_replace related and needs to be saved here
+         # edit_file and search_replace responses are intentionally NOT saved during streaming to prevent duplicates
          conversation_log <- .rs.read_conversation_log()
-         is_edit_file_related <- FALSE
+         is_file_editing_related <- FALSE
+         related_function_name <- NULL
          
          # related_to_id should always be present at this point
          if (is.null(related_to_id)) {
-            stop("related_to_id is required but was NULL when checking for edit_file relation")
+            stop("related_to_id is required but was NULL when checking for file editing relation")
          }
          
          for (entry in conversation_log) {
             if (!is.null(entry$id) && entry$id == related_to_id && 
                 !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
                 entry$function_call$name == "edit_file") {
-               is_edit_file_related <- TRUE
+               is_file_editing_related <- TRUE
+               related_function_name <- entry$function_call$name
                break
             }
          }
          
-         if (is_edit_file_related) {
-            # edit_file responses need to be saved here since they skip streaming saves
+         if (is_file_editing_related) {
+            # edit_file and search_replace responses need to be saved here since they skip streaming saves
             assistant_msg_id <- if (!is.null(streaming_result$assistant_message_id)) {
               streaming_result$assistant_message_id
             } else {
@@ -2769,7 +3220,7 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
                ))
             }
             
-            # Immediately trigger conversation recreation to show edit_file with diff format
+            # Immediately trigger conversation recreation to show file editing widgets with diff format
             # Instead of sending individual stream events, use the background recreation system
             # to rebuild the entire conversation with the proper diff formatting
             .rs.update_conversation_display()
@@ -3009,4 +3460,59 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
       cat("DEBUG: Error in clean_summaries_after_revert:", e$message, "\n")
       return(FALSE)
    })
+})
+
+.rs.addFunction("generate_unique_contexts", function(file_lines, match_line_nums) {
+   # Generate the minimum context needed to make each match unique
+   
+   if (length(match_line_nums) <= 1) {
+      return(list())
+   }
+   
+   contexts <- list()
+   max_context <- 10  # Maximum context lines to prevent huge outputs
+   
+   for (context_size in 1:max_context) {
+      # Try current context size
+      current_contexts <- list()
+      unique_contexts <- TRUE
+      
+      for (i in seq_along(match_line_nums)) {
+         line_num <- match_line_nums[i]
+         
+         # Get context window
+         start_line <- max(1, line_num - context_size)
+         end_line <- min(length(file_lines), line_num + context_size)
+         context_lines <- file_lines[start_line:end_line]
+         
+         # Create context string
+         context_str <- paste(context_lines, collapse = "\n")
+         current_contexts[[i]] <- list(
+            context = context_str,
+            display = paste0("Match ", i, " (around line ", line_num, "):\n```\n", context_str, "\n```")
+         )
+      }
+      
+      # Check if all contexts are unique
+      context_strings <- sapply(current_contexts, function(x) x$context)
+      if (length(unique(context_strings)) == length(context_strings)) {
+         # All contexts are unique, return them
+         return(sapply(current_contexts, function(x) x$display))
+      }
+   }
+   
+   # If we couldn't make them unique even with max context, just return what we have
+   # This shouldn't happen often, but provides a fallback
+   final_contexts <- list()
+   for (i in seq_along(match_line_nums)) {
+      line_num <- match_line_nums[i]
+      start_line <- max(1, line_num - max_context)
+      end_line <- min(length(file_lines), line_num + max_context)
+      context_lines <- file_lines[start_line:end_line]
+      
+      final_contexts[[i]] <- paste0("Match ", i, " (around line ", line_num, "):\n```\n", 
+                                    paste(context_lines, collapse = "\n"), "\n```")
+   }
+   
+   return(final_contexts)
 })

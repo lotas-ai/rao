@@ -327,8 +327,9 @@ public class ClientEventDispatcher
                isComplete = getBooleanFromRData(jsData, "is_complete");
             }
             
-            // Extract edit_file specific properties
+            // Extract edit_file and search_replace specific properties
             boolean isEditFile = getBooleanFromRData(jsData, "isEditFile");
+            boolean isSearchReplace = getBooleanFromRData(jsData, "isSearchReplace");
             String filename = getStringFromRData(jsData, "filename");
             
             // Extract sequence number - REQUIRED for streaming event ordering
@@ -359,7 +360,7 @@ public class ClientEventDispatcher
             String requestId = getStringFromRData(jsData, "requestId");
             
             // Create event with extracted data including all flags
-            AiStreamDataEvent streamEvent = new AiStreamDataEvent(messageId, delta, isComplete, isEditFile, isConsoleCmd, isTerminalCmd, filename, sequence, isCancelled, isFunctionCall, replaceContent);
+            AiStreamDataEvent streamEvent = new AiStreamDataEvent(messageId, delta, isComplete, isEditFile, isSearchReplace, isConsoleCmd, isTerminalCmd, filename, sequence, isCancelled, isFunctionCall, replaceContent);
             
             // Set the requestId if present
             if (requestId != null && !requestId.isEmpty()) {
@@ -426,6 +427,7 @@ public class ClientEventDispatcher
                 "create_console_command".equals(operationType) ||
                 "create_terminal_command".equals(operationType) ||
                 "edit_file_command".equals(operationType) ||
+                "search_replace_command".equals(operationType) ||
                 "revert_button".equals(operationType) ||
                 "hide_widget_buttons".equals(operationType) ||
                 "create_function_call_message".equals(operationType) ||
@@ -434,7 +436,7 @@ public class ClientEventDispatcher
                
                callAddOperationEvent(sequence, operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting, diffData);
             } else {
-               // Unknown operation type - skip
+               Debug.log("DEBUG ClientEventDispatcher: Unknown operation type, skipping: " + operationType);
             }
          }
          else if (type == ClientEvent.ConsoleOutput)

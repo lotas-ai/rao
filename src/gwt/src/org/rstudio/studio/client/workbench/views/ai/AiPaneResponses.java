@@ -24,6 +24,7 @@ import org.rstudio.studio.client.server.ServerRequestCallback;
 import org.rstudio.studio.client.workbench.views.ai.model.AiServerOperations;
 import org.rstudio.studio.client.workbench.views.ai.widgets.AiStreamingPanel;
 import org.rstudio.studio.client.workbench.views.ai.widgets.AiConsoleWidget;
+import org.rstudio.studio.client.workbench.views.ai.widgets.AiTerminalWidget;
 import org.rstudio.core.client.Debug;
 
 import com.google.gwt.core.client.JavaScriptObject;

@@ -28,7 +28,7 @@ import org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor;
 import org.rstudio.studio.client.common.filetypes.FileTypeRegistry;
 import org.rstudio.core.client.Debug;
 
-public class AiConsoleWidget extends Composite
+public class AiConsoleWidget extends AiWidgetBase
 {
    public interface ConsoleCommandHandler
    {
@@ -43,9 +43,8 @@ public class AiConsoleWidget extends Composite
                           boolean isEditable,
                           ConsoleCommandHandler handler)
    {
-      messageId_ = messageId;
+      super(messageId, requestId);
       explanation_ = explanation;
-      requestId_ = requestId;
       handler_ = handler;
       isEditable_ = isEditable;
       
@@ -99,10 +98,9 @@ public class AiConsoleWidget extends Composite
       Label promptLabel = new Label(">");
       promptLabel.addStyleName("aiConsolePrompt");
       promptLabel.getElement().getStyle().setProperty("fontFamily", "monospace");
-      promptLabel.getElement().getStyle().setFontWeight(com.google.gwt.dom.client.Style.FontWeight.BOLD);
+      promptLabel.getElement().getStyle().setPaddingLeft(3, Unit.PX);
       promptLabel.getElement().getStyle().setColor("#000");
       promptLabel.getElement().getStyle().setMarginRight(8, Unit.PX);
-      promptLabel.getElement().getStyle().setPaddingTop(2, Unit.PX);
       // Apply same font sizing as the ACE editor
       FontSizer.applyNormalFontSize(promptLabel);
       editorContainer.add(promptLabel);
@@ -150,14 +148,12 @@ public class AiConsoleWidget extends Composite
       HorizontalPanel buttonWrapper = new HorizontalPanel();
       buttonWrapper.setSpacing(0);
       buttonWrapper.getElement().getStyle().setProperty("position", "absolute");
-      buttonWrapper.getElement().getStyle().setProperty("top", "-9px"); // Move up 8px to touch console border
+      buttonWrapper.getElement().getStyle().setProperty("top", "-9px"); // Move up 9px to touch console border
       buttonWrapper.getElement().getStyle().setProperty("right", "8px"); // 8px from right edge
       
-      // Create native HTML button instead of GWT Button
-      runButton_ = createNativeButton("Run", "aiConsoleRunButton");
-      
-      // Create native HTML button instead of GWT Button
-      cancelButton_ = createNativeButton("Cancel", "aiConsoleCancelButton");
+      // Create buttons using base class method
+      runButton_ = createStandardButton("Run", "aiConsoleRunButton", "run");
+      cancelButton_ = createStandardButton("Cancel", "aiConsoleCancelButton", "cancel");
       
       buttonWrapper.add(runButton_);
       buttonWrapper.add(cancelButton_);
@@ -196,71 +192,22 @@ public class AiConsoleWidget extends Composite
       return editor;
    }
    
-   // Create native HTML button with native DOM events
-   private Button createNativeButton(String text, String styleClass)
-   {
-      Button button = new Button(text);
-      button.addStyleName(styleClass);
-      
-      // Apply styling based on button type
-      if ("aiConsoleRunButton".equals(styleClass))
-      {
-         // Light green styling for run button
-         button.getElement().getStyle().setBackgroundColor("#e6ffe6");
-         button.getElement().getStyle().setColor("#006400");
-         button.getElement().getStyle().setBorderColor("#006400");
-      }
-      else if ("aiConsoleCancelButton".equals(styleClass))
-      {
-         // Light red styling for cancel button  
-         button.getElement().getStyle().setBackgroundColor("#ffe6e6");
-         button.getElement().getStyle().setColor("#8b0000");
-         button.getElement().getStyle().setBorderColor("#8b0000");
-      }
-      
-      // Common styling
-      button.getElement().getStyle().setBorderWidth(1, Unit.PX);
-      button.getElement().getStyle().setBorderStyle(com.google.gwt.dom.client.Style.BorderStyle.SOLID);
-      button.getElement().getStyle().setPadding(2, Unit.PX);
-      button.getElement().getStyle().setPaddingLeft(6, Unit.PX);
-      button.getElement().getStyle().setPaddingRight(6, Unit.PX);
-      button.getElement().getStyle().setProperty("borderRadius", "3px");
-      button.getElement().getStyle().setProperty("cursor", "pointer");
-      button.getElement().getStyle().setProperty("pointerEvents", "auto");
-      button.getElement().getStyle().setFontSize(11, Unit.PX);
-      button.getElement().getStyle().setMarginLeft(0, Unit.PX);
-      button.getElement().getStyle().setMarginRight(0, Unit.PX);
-      
-      // Add native DOM click event listener
-      addNativeClickHandler(button.getElement(), text);
-      
-      return button;
+   
+   // Implement abstract methods from AiWidgetBase
+   
+   @Override
+   protected Button[] getStandardButtons() {
+      return new Button[] { runButton_, cancelButton_ };
    }
    
-   // Add native DOM event handler using JSNI
-   private native void addNativeClickHandler(com.google.gwt.dom.client.Element element, String buttonText) /*-{
-      var self = this;
-      var messageId = this.@org.rstudio.studio.client.workbench.views.ai.widgets.AiConsoleWidget::messageId_;
-      
-      element.addEventListener('click', function(event) {
-         if (buttonText === 'Run') {
-            self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiConsoleWidget::onRunClicked()();
-         } else if (buttonText === 'Cancel') {
-            self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiConsoleWidget::onCancelClicked()();
-         }
-         
-         event.preventDefault();
-         event.stopPropagation();
-      }, true); // Use capture phase
-   }-*/;
-   
-   private void onRunClicked()
+   @Override
+   protected void onRunClicked()
    {
       if (handler_ != null)
       {
          // Get the command from the editor
          String command = editor_.getCode();
-         handler_.onRun(messageId_, command);
+         handler_.onRun(getMessageId(), command);
          
          // Disable buttons during execution
          setButtonsEnabled(false);
@@ -271,11 +218,12 @@ public class AiConsoleWidget extends Composite
       }
    }
    
-   private void onCancelClicked()
+   @Override
+   protected void onCancelClicked()
    {
       if (handler_ != null)
       {
-         handler_.onCancel(messageId_);
+         handler_.onCancel(getMessageId());
          
          // Disable buttons during execution to prevent double-clicks
          setButtonsEnabled(false);
@@ -283,28 +231,6 @@ public class AiConsoleWidget extends Composite
       else
       {
          Debug.log("DEBUG: Handler is null! This is the problem.");
-      }
-   }
-   
-   public void setButtonsEnabled(boolean enabled)
-   {
-      runButton_.setEnabled(enabled);
-      cancelButton_.setEnabled(enabled);
-   }
-   
-   /**
-    * Permanently hides the buttons (called when buttons are clicked)
-    */
-   public void hideButtons() {
-      if (runButton_ != null) {
-         // Remove focus before hiding to avoid aria-hidden accessibility issues
-         runButton_.getElement().blur();
-         runButton_.setVisible(false);
-      }
-      if (cancelButton_ != null) {
-         // Remove focus before hiding to avoid aria-hidden accessibility issues
-         cancelButton_.getElement().blur();
-         cancelButton_.setVisible(false);
       }
    }
    
@@ -318,15 +244,6 @@ public class AiConsoleWidget extends Composite
       editor_.setCode(command, false);
    }
    
-   public String getMessageId()
-   {
-      return messageId_;
-   }
-   
-   public String getRequestId()
-   {
-      return requestId_;
-   }
    
    /**
     * Determine the appropriate header text based on the command type
@@ -343,9 +260,7 @@ public class AiConsoleWidget extends Composite
       }
    }
    
-   private final String messageId_;
    private final String explanation_;
-   private final String requestId_;
    private final ConsoleCommandHandler handler_;
    private final boolean isEditable_;
    private AceEditor editor_;

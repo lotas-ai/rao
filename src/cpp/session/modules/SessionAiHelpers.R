@@ -1315,22 +1315,24 @@ tryCatch({
    return(result)
 })
 
-.rs.addFunction("get_diff_data_for_edit_file", function(message_id) {
-   # Get pre-computed diff data for edit_file widget highlighting
+.rs.addFunction("get_diff_data_for_file_editing", function(message_id) {
+   # Get pre-computed diff data for file editing widgets (edit_file or search_replace)
    
    tryCatch({
       # First check if we have stored diff data
       stored_diff <- .rs.get_stored_diff_data(message_id)
       if (!is.null(stored_diff)) {
          
-         # Get the edit_file entry to extract filename for stats
-         edit_file_entry <- NULL
+         # Find the function call entry (edit_file OR search_replace)
+         function_call_entry <- NULL
+         function_call_name <- NULL
          conversation_log <- .rs.read_conversation_log()
          for (entry in conversation_log) {
             if (!is.null(entry$id) && entry$id == message_id && 
                 !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
-                entry$function_call$name == "edit_file") {
-               edit_file_entry <- entry
+                (entry$function_call$name == "edit_file" || entry$function_call$name == "search_replace")) {
+               function_call_entry <- entry
+               function_call_name <- entry$function_call$name
                break
             }
          }
@@ -1352,24 +1354,33 @@ tryCatch({
          
          # Format filename with diff stats
          filename_with_stats <- "unknown"
-         if (!is.null(edit_file_entry)) {
+         if (!is.null(function_call_entry)) {
             args <- tryCatch({
-               if (is.character(edit_file_entry$function_call$arguments)) {
-                  jsonlite::fromJSON(edit_file_entry$function_call$arguments, simplifyVector = FALSE)
+               if (is.character(function_call_entry$function_call$arguments)) {
+                  jsonlite::fromJSON(function_call_entry$function_call$arguments, simplifyVector = FALSE)
                } else {
-                  edit_file_entry$function_call$arguments
+                  function_call_entry$function_call$arguments
                }
             }, error = function(e) {
                return(NULL)
             })
             
-            if (!is.null(args) && !is.null(args$filename)) {
-               filename_with_stats <- basename(args$filename)
-               if (added_count > 0 || deleted_count > 0) {
-                  addition_text <- paste0('<span class="addition">+', added_count, '</span>')
-                  removal_text <- paste0('<span class="removal">-', deleted_count, '</span>')
-                  diff_text <- paste(addition_text, removal_text)
-                  filename_with_stats <- paste0(filename_with_stats, ' <span class="diff-stats">', diff_text, '</span>')
+            if (!is.null(args)) {
+               # Extract filename based on function type
+               filename <- if (function_call_name == "search_replace") {
+                  args$file_path
+               } else {
+                  args$filename
+               }
+               
+               if (!is.null(filename)) {
+                  filename_with_stats <- basename(filename)
+                  if (added_count > 0 || deleted_count > 0) {
+                     addition_text <- paste0('<span class="addition">+', added_count, '</span>')
+                     removal_text <- paste0('<span class="removal">-', deleted_count, '</span>')
+                     diff_text <- paste(addition_text, removal_text)
+                     filename_with_stats <- paste0(filename_with_stats, ' <span class="diff-stats">', diff_text, '</span>')
+                  }
                }
             }
          }
@@ -1401,7 +1412,7 @@ tryCatch({
          return(list(diff = list()))
       }
       
-      # Find the assistant message that's related to this edit_file call
+      # Find the assistant message that's related to this function call
       assistant_message <- NULL
       for (entry in conversation_log) {
          if (!is.null(entry$related_to) && entry$related_to == message_id && 
@@ -1415,38 +1426,49 @@ tryCatch({
          return(list(diff = list()))
       }
       
-      # Find the edit_file function call
-      edit_file_entry <- NULL
+      # Find the function call (edit_file OR search_replace)
+      function_call_entry <- NULL
+      function_call_name <- NULL
       for (entry in conversation_log) {
          if (!is.null(entry$id) && entry$id == message_id && 
              !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
-             entry$function_call$name == "edit_file") {
-            edit_file_entry <- entry
+             (entry$function_call$name == "edit_file" || entry$function_call$name == "search_replace")) {
+            function_call_entry <- entry
+            function_call_name <- entry$function_call$name
             break
          }
       }
       
-      if (is.null(edit_file_entry)) {
+      if (is.null(function_call_entry)) {
          return(list(diff = list()))
       }
       
-      # Extract arguments from edit_file call
+      # Extract arguments from function call
       args <- tryCatch({
-         if (is.character(edit_file_entry$function_call$arguments)) {
-            jsonlite::fromJSON(edit_file_entry$function_call$arguments, simplifyVector = FALSE)
+         if (is.character(function_call_entry$function_call$arguments)) {
+            jsonlite::fromJSON(function_call_entry$function_call$arguments, simplifyVector = FALSE)
          } else {
-            edit_file_entry$function_call$arguments
+            function_call_entry$function_call$arguments
          }
       }, error = function(e) {
-         cat("DEBUG get_diff_data_for_edit_file: Error parsing arguments:", e$message, "\n")
+         cat("DEBUG get_diff_data_for_file_editing: Error parsing arguments:", e$message, "\n")
          return(NULL)
       })
       
-      if (is.null(args) || is.null(args$filename)) {
+      if (is.null(args)) {
          return(list(diff = list()))
       }
       
-      filename <- args$filename
+      # Extract filename based on function type
+      filename <- if (function_call_name == "search_replace") {
+         args$file_path
+      } else {
+         args$filename
+      }
+      
+      if (is.null(filename)) {
+         return(list(diff = list()))
+      }
       
       # Get the new content from the assistant message
       new_content <- assistant_message$content
@@ -1454,7 +1476,7 @@ tryCatch({
          return(list(diff = list()))
       }
       
-      # For new edit_file format, the new content is the assistant's response
+      # For both edit_file and search_replace, the new content is the assistant's response
       cleaned_content <- new_content
       
       # Get the previous content from the function_call_output
@@ -1462,8 +1484,8 @@ tryCatch({
       for (entry in conversation_log) {
          if (!is.null(entry$type) && entry$type == "function_call_output" &&
              !is.null(entry$call_id) && 
-             !is.null(edit_file_entry$function_call$call_id) &&
-             entry$call_id == edit_file_entry$function_call$call_id) {
+             !is.null(function_call_entry$function_call$call_id) &&
+             entry$call_id == function_call_entry$function_call$call_id) {
             function_output <- entry
             break
          }
@@ -1488,11 +1510,10 @@ tryCatch({
          character(0)
       }
       
-      # Regular diff calculation for new edit_file format
+      # Use unified diff calculation for both function types
       diff_result <- .rs.compute_line_diff(old_lines, new_lines, is_from_edit_file = TRUE)
       
-      # Store the computed diff data for future use
-      .rs.store_diff_data(message_id, diff_result$diff, previous_content, cleaned_content)
+      # Note: Do NOT store recomputed diff data - it would overwrite the original correct data
       
       # Format filename with diff stats
       filename_with_stats <- basename(filename)
@@ -1522,13 +1543,13 @@ tryCatch({
       )
       return(result)
    }, error = function(e) {
-      cat("DEBUG: Error in get_diff_data_for_edit_file:", e$message, "\n")
+      cat("DEBUG: Error in get_diff_data_for_file_editing:", e$message, "\n")
       return(list(diff = list()))
    })
 })
 
-.rs.addJsonRpcHandler("get_diff_data_for_edit_file", function(message_id) {
-   result <- .rs.get_diff_data_for_edit_file(message_id)
+.rs.addJsonRpcHandler("get_diff_data_for_file_editing", function(message_id) {
+   result <- .rs.get_diff_data_for_file_editing(message_id)
    return(result)
 })
 
@@ -1694,6 +1715,53 @@ tryCatch({
    }, error = function(e) {
       return(NULL)
    })
+})
+
+.rs.addFunction("remove_line_numbers", function(content) {
+   # Remove line numbers from code content - equivalent to Java removeLineNumbers() method
+   # Removes all types of line number patterns added by addLineNumbers method
+   
+   if (is.null(content) || !is.character(content) || length(content) == 0) {
+      return(content)
+   }
+   
+   if (trimws(content) == "") {
+      return(content)
+   }
+   
+   # Split into lines and remove line number patterns
+   lines <- strsplit(content, "\n", fixed = TRUE)[[1]]
+   
+   cleaned_lines <- character(length(lines))
+   for (i in seq_along(lines)) {
+      line <- lines[i]
+      
+      # Remove all possible line number patterns at the end of lines
+      # Pattern: [space] [comment_prefix] [space] [digits] [optional_space] at end of line
+      
+      # Handle // comments (Java, JavaScript, C/C++, etc.)
+      line <- gsub("\\s*//\\s*\\d+\\s*$", "", line, perl = TRUE)
+      
+      # Handle # comments (Python, R, Ruby, Bash, etc.)
+      line <- gsub("\\s*#\\s*\\d+\\s*$", "", line, perl = TRUE)
+      
+      # Handle <!-- comments (HTML, XML, SVG)
+      line <- gsub("\\s*<!--\\s*\\d+\\s*$", "", line, perl = TRUE)
+      
+      # Handle % comments (LaTeX)
+      line <- gsub("\\s*%\\s*\\d+\\s*$", "", line, perl = TRUE)
+      
+      # Handle -- comments (SQL, Haskell, Lua)
+      line <- gsub("\\s*--\\s*\\d+\\s*$", "", line, perl = TRUE)
+      
+      # Handle /* */ comments (CSS, some C-style languages)
+      line <- gsub("\\s*/\\*\\s*\\d+\\s*\\*/\\s*$", "", line, perl = TRUE)
+      
+      cleaned_lines[i] <- line
+   }
+   
+   # Join lines back together
+   return(paste(cleaned_lines, collapse = "\n"))
 })
 
 .rs.addFunction("apply_file_edit", function(file_path, new_content, edit_metadata = NULL) {

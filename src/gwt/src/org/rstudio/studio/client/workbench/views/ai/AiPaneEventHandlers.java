@@ -307,6 +307,11 @@ public class AiPaneEventHandlers
                // Update the history and URL state in the main window
                updateBrowserHistory(mainWindow, bgWindow.getLocationHref());
                
+               // CRITICAL: Re-attach scroll handler after content transfer (transfer replaces document and removes handlers)
+               if (mainWindow != null) {
+                  pane_.getScrollHandler().publicSetWindowScrollHandler(mainWindow);
+               }
+               
                // Note: Scroll handling is now done by AiStreamingPanel
                
                // Show the main frame now that everything is ready
@@ -331,6 +336,11 @@ public class AiPaneEventHandlers
                
                // Update the history and URL state in the main window
                updateBrowserHistory(mainWindow, bgWindow.getLocationHref());
+               
+               // CRITICAL: Re-attach scroll handler after content transfer (transfer replaces document and removes handlers)
+               if (mainWindow != null) {
+                  pane_.getScrollHandler().publicSetWindowScrollHandler(mainWindow);
+               }
                
                // Note: Scroll handling is now done by AiStreamingPanel
                

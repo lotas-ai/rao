@@ -142,15 +142,15 @@
       }
    }
    
-   # Check if it's an assistant message with related_to pointing to edit_file
+   # Check if it's an assistant message with related_to pointing to edit_file or search_replace
    if (!is.null(message$role) && message$role == "assistant" && !is.null(message$related_to)) {
-      # Find the related edit_file function call
+      # Find the related edit_file or search_replace function call
       for (entry in conversation_log) {
          if (!is.null(entry$id) && entry$id == message$related_to && 
              !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
-             entry$function_call$name == "edit_file") {
+             (entry$function_call$name == "edit_file" || entry$function_call$name == "search_replace")) {
             
-            # Extract filename from the edit_file call
+            # Extract filename from the function call
             args <- tryCatch({
                if (is.character(entry$function_call$arguments)) {
                   jsonlite::fromJSON(entry$function_call$arguments, simplifyVector = FALSE)
@@ -161,22 +161,32 @@
                return(NULL)
             })
             
-            if (!is.null(args) && !is.null(args$filename)) {
-               filename <- basename(args$filename)
-               
-               # Calculate diff statistics
-               diff_stats <- .rs.get_edit_file_diff_stats(message_id, conversation_log)
-               
-               if (!is.null(diff_stats) && (diff_stats$added > 0 || diff_stats$deleted > 0)) {
-                  # Format diff stats with CSS classes for proper styling
-                  addition_text <- paste0('<span class="addition">+', diff_stats$added, '</span>')
-                  removal_text <- paste0('<span class="removal">-', diff_stats$deleted, '</span>')
-                  diff_text <- paste(addition_text, removal_text)
-                  # Return filename with diff stats in a span that can be styled
-                  return(paste0(filename, ' <span class="diff-stats">', diff_text, '</span>'))
+            if (!is.null(args)) {
+               # Get filename from appropriate field based on function type
+               filename <- if (entry$function_call$name == "search_replace" && !is.null(args$file_path)) {
+                  basename(args$file_path)
+               } else if (entry$function_call$name == "edit_file" && !is.null(args$filename)) {
+                  basename(args$filename)
+               } else {
+                  NULL
                }
                
-               return(filename)
+               if (!is.null(filename)) {
+               
+                  # Calculate diff statistics
+                  diff_stats <- .rs.get_edit_file_diff_stats(message_id, conversation_log)
+                  
+                  if (!is.null(diff_stats) && (diff_stats$added > 0 || diff_stats$deleted > 0)) {
+                     # Format diff stats with CSS classes for proper styling
+                     addition_text <- paste0('<span class="addition">+', diff_stats$added, '</span>')
+                     removal_text <- paste0('<span class="removal">-', diff_stats$deleted, '</span>')
+                     diff_text <- paste(addition_text, removal_text)
+                     # Return filename with diff stats in a span that can be styled
+                     return(paste0(filename, ' <span class="diff-stats">', diff_text, '</span>'))
+                  }
+                  
+                  return(filename)
+               }
             }
          }
       }
@@ -487,7 +497,7 @@
                   # Get filename display name
                   filename_display <- basename(filename)
                   
-                  # Create edit_file widget with code_edit content
+                  # Create widget with function content
                   .rs.send_ai_operation("edit_file_command", list(
                      message_id = as.numeric(entry$id),
                      filename = filename_display,
@@ -506,6 +516,206 @@
                      ))
                   }
                }
+            }
+         } else if (function_name == "search_replace") {
+            # Check if this search_replace succeeded or failed by looking at function_call_output success field
+            search_replace_succeeded <- FALSE
+            for (log_entry in conversation_log) {
+               if (!is.null(log_entry$type) && log_entry$type == "function_call_output" && 
+                   !is.null(log_entry$related_to) && log_entry$related_to == entry$id &&
+                   !is.null(log_entry$success)) {
+                  search_replace_succeeded <- log_entry$success
+                  break
+               }
+            }
+            
+            if (search_replace_succeeded) {
+               # Success case: create widget from function call
+               args <- .rs.safe_parse_function_arguments(entry$function_call)
+            
+               if (!is.null(args)) {
+                  file_path <- if (!is.null(args$file_path)) args$file_path else "unknown"
+                  old_string <- if (!is.null(args$old_string)) args$old_string else ""
+                  new_string <- if (!is.null(args$new_string)) args$new_string else ""
+                  
+                  # Get stored diff data once and reuse it
+                  stored_diff <- .rs.get_stored_diff_data(entry$id)
+                  
+                  # Determine explanation text based on mode (create/append vs replace)
+                  explanation_text <- if (old_string == "") {
+                     # For empty old_string, determine if this was create or append from stored diff
+                     is_create_mode <- FALSE
+                     if (!is.null(stored_diff) && !is.null(stored_diff$original_content)) {
+                        is_create_mode <- (stored_diff$original_content == "")
+                     }
+                     
+                     if (is_create_mode) {
+                        paste("Create new file", basename(file_path))
+                     } else {
+                        paste("Append to", basename(file_path))
+                     }
+                  } else {
+                     paste("Search and replace in", basename(file_path))
+                  }
+                  if (!is.null(stored_diff) && !is.null(stored_diff$diff) && length(stored_diff$diff) > 0) {
+                     # Use stored diff data and recompute filename with stats
+                     diff_data <- stored_diff
+                     
+                     # Count added/deleted lines from stored diff
+                     added_count <- 0
+                     deleted_count <- 0
+                     for (diff_item in stored_diff$diff) {
+                        if (!is.null(diff_item$type)) {
+                           if (diff_item$type == "added") {
+                              added_count <- added_count + 1
+                           } else if (diff_item$type == "deleted") {
+                              deleted_count <- deleted_count + 1
+                           }
+                        }
+                     }
+                     
+                     # Generate filename with diff stats from stored data
+                     filename_with_stats <- basename(file_path)
+                     if (added_count > 0 || deleted_count > 0) {
+                        addition_text <- paste0('<span class="addition">+', added_count, '</span>')
+                        removal_text <- paste0('<span class="removal">-', deleted_count, '</span>')
+                        diff_text <- paste(addition_text, removal_text)
+                        filename_with_stats <- paste0(filename_with_stats, ' <span class="diff-stats">', diff_text, '</span>')
+                     }
+                     
+                     # Add filename_with_stats to diff_data for JavaScript processing
+                     diff_data$filename_with_stats <- filename_with_stats
+                     diff_data$added <- as.integer(added_count)
+                     diff_data$deleted <- as.integer(deleted_count)
+                     
+                     # Filter diff for display (show only changed lines plus context like edit_file)
+                     filtered_diff <- .rs.filter_diff_for_display(stored_diff$diff)
+                     
+                     # Get the filtered content from the diff data (for widget display)
+                     new_content <- ""
+                     for (diff_item in filtered_diff) {
+                        if (!is.null(diff_item$type) && diff_item$type != "deleted") {
+                           if (!is.null(diff_item$content)) {
+                              new_content <- paste0(new_content, diff_item$content, "\n")
+                           }
+                        }
+                     }
+                     # Remove trailing newline
+                     new_content <- sub("\n$", "", new_content)
+                     
+                     # Update diff_data to use filtered diff for widget display
+                     diff_data$diff <- filtered_diff
+                     
+                  } else {
+                     current_content <- .rs.get_effective_file_content(file_path)
+                     if (is.null(current_content)) {
+                        current_content <- ""
+                     }
+                     
+                     # Handle create/append vs normal replacement for fallback case
+                     if (old_string == "") {
+                        # Create/append mode: for diff display, only show the new_string being added
+                        new_content <- new_string
+                        # For create/append operations with old_string="", everything should be marked as added
+                        old_lines <- character(0)
+                        new_lines <- strsplit(new_content, "\n", fixed = TRUE)[[1]]
+                        # Only append mode if current content is non-empty (not a new file)
+                        is_append_mode <- (nchar(current_content) > 0)
+                     } else {
+                        # Normal replacement mode
+                        new_content <- gsub(old_string, new_string, current_content, fixed = TRUE)
+                        old_lines <- strsplit(current_content, "\n", fixed = TRUE)[[1]]
+                        new_lines <- strsplit(new_content, "\n", fixed = TRUE)[[1]]
+                        is_append_mode <- FALSE
+                     }
+                     
+                     # Get diff data for widget display
+                     diff_data <- tryCatch({
+                        diff_result <- .rs.compute_line_diff(old_lines, new_lines, is_from_edit_file = TRUE)
+                        
+                        # For append operations, adjust line numbers to start from current file length + 1
+                        if (is_append_mode && old_string == "") {
+                           existing_line_count <- length(strsplit(current_content, "\n", fixed = TRUE)[[1]])
+                           
+                           # Adjust new_line numbers in the diff data
+                           for (i in seq_along(diff_result$diff)) {
+                              if (!is.null(diff_result$diff[[i]]$new_line) && !is.na(diff_result$diff[[i]]$new_line)) {
+                                 diff_result$diff[[i]]$new_line <- diff_result$diff[[i]]$new_line + existing_line_count
+                              }
+                           }
+                        }
+                        
+                        diff_result
+                     }, error = function(e) {
+                        list(diff = list(), added = 0, deleted = 0)
+                     })
+                     
+                     # Filter diff for display (show only changed lines plus context)
+                     if (!is.null(diff_data$diff) && length(diff_data$diff) > 0) {
+                        filtered_diff <- .rs.filter_diff_for_display(diff_data$diff)
+                        diff_data$diff <- filtered_diff
+                        
+                        # Reconstruct new_content from filtered diff
+                        new_content <- ""
+                        for (diff_item in filtered_diff) {
+                           if (!is.null(diff_item$type) && diff_item$type != "deleted") {
+                              if (!is.null(diff_item$content)) {
+                                 new_content <- paste0(new_content, diff_item$content, "\n")
+                              }
+                           }
+                        }
+                        # Remove trailing newline
+                        new_content <- sub("\n$", "", new_content)
+                     }
+                     
+                     # Generate filename with diff stats
+                     filename_with_stats <- basename(file_path)
+                     if (diff_data$added > 0 || diff_data$deleted > 0) {
+                        addition_text <- paste0('<span class="addition">+', diff_data$added, '</span>')
+                        removal_text <- paste0('<span class="removal">-', diff_data$deleted, '</span>')
+                        diff_text <- paste(addition_text, removal_text)
+                        filename_with_stats <- paste0(filename_with_stats, ' <span class="diff-stats">', diff_text, '</span>')
+                     }
+                     
+                     # Add filename_with_stats to diff_data for JavaScript processing
+                     diff_data$filename_with_stats <- filename_with_stats
+                     
+                     # Store the recomputed diff data
+                     .rs.store_diff_data(entry$id, diff_data$diff, current_content, new_content)
+                  }
+                  
+                  # Create search_replace widget
+                  .rs.send_ai_operation("search_replace_command", list(
+                     message_id = as.numeric(entry$id),
+                     filename = filename_with_stats,
+                     content = new_content,
+                     explanation = explanation_text,
+                     request_id = entry$request_id,
+                     skip_diff_highlighting = FALSE,
+                     diff_data = diff_data
+                  ))
+                  items_created <- items_created + 1
+                  
+                  # Check if buttons should be hidden
+                  if (.rs.should_hide_buttons_for_restored_widget(entry$id)) {
+                     .rs.send_ai_operation("hide_widget_buttons", list(
+                        message_id = as.numeric(entry$id),
+                        content = "search_replace"
+                     ))
+                  }
+               } 
+            } else {
+               # Failure case: create function call message "Failed to edit [filename]"
+               args <- .rs.safe_parse_function_arguments(entry$function_call)
+               function_message <- .rs.generate_function_call_message(function_name, args, is_thinking = FALSE)
+               
+               # Send function call message creation event to client
+               .rs.send_ai_operation("create_function_call_message", list(
+                  message_id = as.numeric(entry$id),
+                  content = function_message,
+                  request_id = entry$request_id
+               ))
+               items_created <- items_created + 1
             }
          }
       }
@@ -560,13 +770,13 @@
                         related_request_id_cancelled <- related_entry$request_id
                      }
                      
-                     # For cancelled edits, create edit_file widget that shows cancellation message and has no buttons
+                     # For cancelled edits, create widget that shows cancellation message and has no buttons
                      .rs.send_ai_operation("edit_file_command", list(
-                        message_id = as.numeric(entry$related_to),  # Use edit_file function call ID as widget ID
+                        message_id = as.numeric(entry$related_to),  # Use function call ID as widget ID
                         filename = filename_with_stats,
                         content = paste0("CANCELLED:", entry$content),  # Mark as cancelled with prefix
                         explanation = paste("Edit", basename(filename), "(cancelled)"),
-                        request_id = related_request_id_cancelled  # Use the request_id from edit_file function call
+                        request_id = related_request_id_cancelled  # Use the request_id from function call
                      ))
                      items_created <- items_created + 1
                   } else {
@@ -582,14 +792,15 @@
                      # Use the related_to (edit_file function call ID) as the widget ID to match streaming events
                      
                      # PRE-COMPUTE DIFF DATA HERE instead of having Java call back to R
-                     diff_data <- .rs.get_diff_data_for_edit_file(entry$related_to)
+                     diff_data <- .rs.get_diff_data_for_file_editing(entry$related_to)
                      
+                     # Create edit_file widget                     
                      .rs.send_ai_operation("edit_file_command", list(
                         message_id = as.numeric(entry$related_to),  # Use related_to to match streaming
                         filename = filename_with_stats,
                         content = cleaned_content,
                         explanation = paste("Edit", basename(filename)),
-                        request_id = related_request_id,  # Use the request_id from edit_file function call
+                        request_id = related_request_id,  # Use the request_id from function call
                         skip_diff_highlighting = FALSE,
                         diff_data = diff_data  # Send as structured object, not JSON string - becomes JavaScriptObject on Java side
                      ))
@@ -599,7 +810,7 @@
                      if (.rs.should_hide_buttons_for_restored_widget(entry$related_to)) {
                         .rs.send_ai_operation("hide_widget_buttons", list(
                            message_id = as.numeric(entry$related_to),
-                           content = "edit_file"  # widget_type goes in content field for Java mapping
+                           content = "edit_file"
                         ))
                      }
                   }
@@ -608,7 +819,7 @@
             }
          }
          
-         # Only create assistant message if it's not edit_file related
+         # Only create assistant message if it's not file editing related
          if (!is_edit_file_related) {
             # Do NOT clean triple backticks from regular assistant messages
             # The markdown renderer will properly convert them to code blocks

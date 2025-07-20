@@ -12,7 +12,7 @@
  * SCROLLING SYSTEM:
  * This class manages automatic scrolling for AI conversation interfaces with the following behavior:
  * 
- * 1. SMART SCROLLING: Only scrolls if user is already near bottom (within 40px or 90% scroll distance)
+ * 1. SMART SCROLLING: Only scrolls if user is already near bottom (within 50px)
  *    - smartScrollToBottom() - Used during AI streaming to maintain "sticky bottom" behavior
  *    - If user scrolls up, streaming continues without forcing them back to bottom
  * 
@@ -45,6 +45,10 @@ public class AiScrollManager
    private Animation currentScrollAnimation_ = null;
    private boolean animationsEnabled_ = true;
    
+   // User scroll intent tracking
+   private boolean userHasScrolledManually_ = false;
+   private com.google.gwt.user.client.Timer resetScrollTrackingTimer_;
+   
    /**
     * Constructor for AiScrollManager
     * @param scrollContainer The widget that contains the scrollable content
@@ -52,6 +56,101 @@ public class AiScrollManager
    public AiScrollManager(Widget scrollContainer)
    {
       scrollContainer_ = scrollContainer;
+      setupScrollDetection();
+   }
+   
+   /**
+    * Set up scroll event detection on the actual scrollable container
+    */
+   private void setupScrollDetection()
+   {
+      if (scrollContainer_ == null) return;
+      
+      Element element = scrollContainer_.getElement();
+      if (element == null) return;
+      
+      addScrollListeners(element);
+   }
+   
+   /**
+    * Add native scroll event listeners to the scrollable element
+    */
+   private final native void addScrollListeners(Element element) /*-{
+      var self = this;
+      
+      // Listen for actual scroll events on the scrollable container
+      element.addEventListener("scroll", function(evt) {
+         self.@org.rstudio.studio.client.workbench.views.ai.AiScrollManager::onUserScrollDetected(*)(evt);
+      }, true);
+      
+      // Also listen for user input events that cause scrolling
+      // These fire before the scroll event and help distinguish user actions
+      element.addEventListener("wheel", function(evt) {
+         self.@org.rstudio.studio.client.workbench.views.ai.AiScrollManager::onUserScrollInput(*)(evt);
+      }, true);
+      
+      element.addEventListener("keydown", function(evt) {
+         // Only log navigation keys
+         var keyCode = evt.keyCode;
+         if (keyCode === 33 || keyCode === 34 ||  // Page Up/Down
+             keyCode === 35 || keyCode === 36 ||  // End/Home
+             keyCode === 37 || keyCode === 38 ||  // Left/Up arrows
+             keyCode === 39 || keyCode === 40) {  // Right/Down arrows
+            self.@org.rstudio.studio.client.workbench.views.ai.AiScrollManager::onUserScrollInput(*)(evt);
+         }
+      }, true);
+      
+      element.addEventListener("mousedown", function(evt) {
+         // Only trigger if mousedown is on scrollbar area
+         var rect = element.getBoundingClientRect();
+         var isNearRightEdge = (evt.clientX > rect.right - 20); // Within 20px of right edge
+         if (isNearRightEdge) {
+            self.@org.rstudio.studio.client.workbench.views.ai.AiScrollManager::onUserScrollInput(*)(evt);
+         }
+      }, true);
+      
+      element.addEventListener("touchstart", function(evt) {
+         self.@org.rstudio.studio.client.workbench.views.ai.AiScrollManager::onUserScrollInput(*)(evt);
+      }, true);
+   }-*/;
+   
+   /**
+    * Handle user scroll input events (before scrolling happens)
+    */
+   private void onUserScrollInput(com.google.gwt.dom.client.NativeEvent event)
+   {
+      // Mark that user has manually interacted with scroll
+      userHasScrolledManually_ = true;
+   }
+   
+   /**
+    * Handle actual scroll events (after scrolling happens)
+    */
+   private void onUserScrollDetected(com.google.gwt.dom.client.NativeEvent event)
+   {
+      Element element = scrollContainer_.getElement();
+      if (element != null) {
+         int scrollTop = element.getScrollTop();
+         int scrollHeight = element.getScrollHeight();
+         int clientHeight = element.getClientHeight();
+         int distanceFromBottom = (scrollHeight - scrollTop - clientHeight);
+         
+         // If user scrolls to the very bottom (within 0px), reset manual scroll flag
+         // This enables auto-scrolling when user deliberately returns to bottom
+         if (distanceFromBottom <= 0) {
+            boolean wasManuallyScrolled = userHasScrolledManually_;
+            userHasScrolledManually_ = false;
+         }
+      }
+   }
+   
+   /**
+    * Reset user scroll tracking (call when new user message is sent)
+    */
+   public void resetUserScrollTracking()
+   {
+      boolean wasManuallyScrolled = userHasScrolledManually_;
+      userHasScrolledManually_ = false;
    }
    
    /**
@@ -69,9 +168,13 @@ public class AiScrollManager
    public void smartScrollToBottom()
    {
       com.google.gwt.core.client.Scheduler.get().scheduleDeferred(() -> {
-         if (isUserAtBottom()) {
-            animateScrollToBottom();
+         // Only check: Did user manually scroll away?
+         if (userHasScrolledManually_) {
+            return;
          }
+         
+         // User hasn't manually scrolled, so auto-scroll during streaming
+         animateScrollToBottom();
       });
    }
    
@@ -193,19 +296,18 @@ public class AiScrollManager
    }
    
    /**
-    * Check if user is currently at bottom using default thresholds
+    * Check if user is currently at bottom using default threshold
     */
    public boolean isUserAtBottom()
    {
-      return isUserAtBottom(200, 0.8);
+      return isUserAtBottom(50);
    }
    
    /**
-    * Check if user is currently at bottom using custom thresholds
+    * Check if user is currently at bottom using custom pixel threshold
     * @param pixelThreshold Distance from bottom in pixels
-    * @param percentageThreshold Percentage of scroll distance (0.0 to 1.0)
     */
-   public boolean isUserAtBottom(int pixelThreshold, double percentageThreshold)
+   public boolean isUserAtBottom(int pixelThreshold)
    {
       Element element = scrollContainer_.getElement();
       if (element == null) return false;
@@ -214,7 +316,7 @@ public class AiScrollManager
       int scrollHeight = element.getScrollHeight();
       int clientHeight = element.getClientHeight();
       
-      return isAtBottom(scrollTop, scrollHeight, clientHeight, pixelThreshold, percentageThreshold);
+      return isAtBottom(scrollTop, scrollHeight, clientHeight, pixelThreshold);
    }
    
    /**
@@ -224,10 +326,9 @@ public class AiScrollManager
     * @param scrollHeight Total scrollable height
     * @param clientHeight Visible height
     * @param pixelThreshold Distance from bottom in pixels
-    * @param percentageThreshold Percentage of scroll distance (0.0 to 1.0)
     */
    public static boolean isAtBottom(int scrollTop, int scrollHeight, int clientHeight, 
-                                   int pixelThreshold, double percentageThreshold)
+                                   int pixelThreshold)
    {
       // Check if user is already near the bottom
       boolean isNearBottom = false;
@@ -235,8 +336,7 @@ public class AiScrollManager
          int scrollableDistance = scrollHeight - clientHeight;
          int distanceFromBottom = scrollableDistance - scrollTop;
          
-         isNearBottom = distanceFromBottom < pixelThreshold || 
-                       (scrollTop / (double)scrollableDistance) > percentageThreshold;
+         isNearBottom = distanceFromBottom < pixelThreshold;
       } else {
          // Content fits in viewport, always scroll
          isNearBottom = true;
