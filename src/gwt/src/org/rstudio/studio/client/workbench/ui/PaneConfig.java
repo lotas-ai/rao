@@ -60,13 +60,13 @@ public class PaneConfig extends UserPrefsAccessor.Panes
       panes.push(UserPrefsAccessor.Panes.QUADRANTS_HIDDENTABSET);
 
       JsArrayString tabSet1 = createArray().cast();
+      tabSet1.push(PaneManager.AI_PANE);
       tabSet1.push(PaneManager.ENVIRONMENT_PANE);
       tabSet1.push(PaneManager.HISTORY_PANE);
       tabSet1.push(PaneManager.CONNECTIONS_PANE);
       tabSet1.push(PaneManager.BUILD_PANE);
       tabSet1.push(PaneManager.VCS_PANE);
       tabSet1.push(PaneManager.TUTORIAL_PANE);
-      tabSet1.push(PaneManager.AI_PANE);
       tabSet1.push(PaneManager.PRESENTATION_PANE);
       
       JsArrayString tabSet2 = createArray().cast();

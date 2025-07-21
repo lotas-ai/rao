@@ -97,12 +97,13 @@ public class AiSettingsWidget extends Composite
    private com.google.gwt.user.client.ui.HTML temperatureSlider_;
    private TextBox temperatureInput_;
    private Label temperatureLabel_;
-   private TextBox workingDirectoryInput_;
-   private Button browseDirectoryButton_;
-   private Button setDirectoryButton_;
    private Label profileErrorLabel_;
    private Label directorySuccessLabel_;
    private Label directoryErrorLabel_;
+   private Label directoryPromptLabel_;
+   private TextBox workingDirectoryInput_;
+   private Button browseDirectoryButton_;
+   private Button setDirectoryButton_;
    private HTML securityModeToggle_;
    private HTML webSearchToggle_;
    private Label securityModeText_;
@@ -120,6 +121,7 @@ public class AiSettingsWidget extends Composite
    private AiUserProfile userProfile_ = null;
    private AiSubscriptionStatus subscriptionStatus_ = null;
    private boolean subscriptionDetailsAdded_ = false;
+   private boolean shouldShowDirectoryPrompt_ = false;
    
    public AiSettingsWidget(SettingsHandler handler, 
                           AiServerOperations server, 
@@ -156,15 +158,15 @@ public class AiSettingsWidget extends Composite
       profileSection_.addStyleName(styles_.settingsSection());
       mainPanel.add(profileSection_);
       
-      // Model Section
-      modelSection_ = new HTML();
-      modelSection_.addStyleName(styles_.settingsSection());
-      mainPanel.add(modelSection_);
-      
       // Working Directory Section
       workingDirectorySection_ = new HTML();
       workingDirectorySection_.addStyleName(styles_.settingsSection());
       mainPanel.add(workingDirectorySection_);
+      
+      // Model Section
+      modelSection_ = new HTML();
+      modelSection_.addStyleName(styles_.settingsSection());
+      mainPanel.add(modelSection_);
       
       // Security Section
       securitySection_ = new HTML();
@@ -279,6 +281,12 @@ public class AiSettingsWidget extends Composite
       profileErrorLabel_.addStyleName(styles_.errorMessage());
       profileErrorLabel_.setVisible(false);
       section.add(profileErrorLabel_);
+      
+      // Prompt message label - show after API key is saved
+      directoryPromptLabel_ = new Label("Please set a working directory below to use Rao.");
+      directoryPromptLabel_.addStyleName(styles_.successMessage());
+      directoryPromptLabel_.setVisible(shouldShowDirectoryPrompt_);
+      section.add(directoryPromptLabel_);
       
       profileSection_.getElement().setInnerHTML("");
       profileSection_.getElement().appendChild(section.getElement());
@@ -679,8 +687,8 @@ public class AiSettingsWidget extends Composite
    private void updateAllSections()
    {
       buildProfileSection();
-      buildModelSection();
       buildWorkingDirectorySection();
+      buildModelSection();
       buildSecuritySection();
       
       // Ensure directory input is populated after UI is built
@@ -692,7 +700,7 @@ public class AiSettingsWidget extends Composite
       if (userNameLabel_ != null && userProfile_ != null) {
          // Use the name from the profile (already formatted as full name)
          String name = userProfile_.getName();
-         userNameLabel_.setText(name != null ? name : "Loading...");
+         userNameLabel_.setText(name != null ? name : "");
       }
       
       if (subscriptionStatusLabel_ != null && subscriptionStatus_ != null) {
@@ -924,14 +932,14 @@ public class AiSettingsWidget extends Composite
          directorySuccessLabel_.setVisible(true);
          directoryErrorLabel_.setVisible(false);
          
-         // Auto-hide after 3 seconds
+         // Auto-hide after 10 seconds
          Timer timer = new Timer() {
             @Override
             public void run() {
                directorySuccessLabel_.setVisible(false);
             }
          };
-         timer.schedule(3000);
+         timer.schedule(10000);
       }
    }
    
@@ -959,12 +967,15 @@ public class AiSettingsWidget extends Composite
       if (workingDirectoryInput_ != null) {
          workingDirectoryInput_.setValue(path);
       }
-      showDirectorySuccess("Directory updated successfully");
+      shouldShowDirectoryPrompt_ = false;
+      buildProfileSection();
+      showDirectorySuccess("Click the top left + button to start a conversation. Directory updated successfully");
    }
    
    public void onApiKeySaved()
    {
       hasApiKey_ = true;
+      shouldShowDirectoryPrompt_ = true;
       updateAllSections();
       loadUserProfile();
       loadSubscriptionStatus();
@@ -1509,4 +1520,6 @@ public class AiSettingsWidget extends Composite
          console.warn("PostHog helper not available for security mode update");
       }
    }-*/;
+
+
 }

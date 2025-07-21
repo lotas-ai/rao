@@ -40,6 +40,7 @@ public class PersistentDiffGutterManager
 {
    private static final String GUTTER_CLASS_ACCEPTED = "ace_persistent_diff_accepted";
    private static final String GUTTER_CLASS_DELETED = "ace_persistent_diff_deleted";
+   private static final String GUTTER_CLASS_MIXED = "ace_persistent_diff_mixed";
    private static final String GUTTER_CLASS_EXPANDED = "expanded";
    private static final String LINE_WIDGET_TYPE = "persistent_diff";
    
@@ -514,39 +515,62 @@ public class PersistentDiffGutterManager
       
       int decorationsApplied = 0;
       
-      // First pass: Apply green gutter decorations only for accepted/added changes
+      // Collect all lines that need decorations
+      Map<Integer, Boolean> hasAddition = new HashMap<>();
+      Map<Integer, Boolean> hasDeletion = new HashMap<>();
+      
+      // First pass: Identify lines with additions/accepted changes
       for (Map.Entry<Integer, DiffLineInfo> entry : diffLines_.entrySet())
       {
          int line = entry.getKey();
          DiffLineInfo lineInfo = entry.getValue();
          
-         // Only show green decorations for accepted/added changes
          if ("accepted".equals(lineInfo.type) || "added".equals(lineInfo.type))
          {
-            // Remove any existing decorations for this line first to prevent accumulation
-            renderer.removeGutterDecoration(line, GUTTER_CLASS_ACCEPTED);
-            
-            renderer.addGutterDecoration(line, GUTTER_CLASS_ACCEPTED);
-            gutterDecorations_.add(line);
-            decorationsApplied++;
+            hasAddition.put(line, true);
          }
       }
       
-      // Second pass: Add red gutter decorations for lines with deleted content
+      // Second pass: Identify lines with deletions
       for (Map.Entry<Integer, List<String>> entry : deletedLineGroups_.entrySet())
       {
          int line = entry.getKey();
-         List<String> deletedLines = entry.getValue();
-         
-         Debug.log("RED ARROW POSITIONING: Adding red arrow decoration at line " + line + 
-                  " for " + deletedLines.size() + " deleted lines");
-         
+         hasDeletion.put(line, true);
+      }
+      
+      // Third pass: Apply appropriate decorations based on what's present
+      // Collect all unique lines that need decorations
+      for (Integer line : new java.util.HashSet<Integer>() {{ 
+         addAll(hasAddition.keySet()); 
+         addAll(hasDeletion.keySet()); 
+      }})
+      {
          // Remove any existing decorations for this line first to prevent accumulation
+         renderer.removeGutterDecoration(line, GUTTER_CLASS_ACCEPTED);
          renderer.removeGutterDecoration(line, GUTTER_CLASS_DELETED);
+         renderer.removeGutterDecoration(line, GUTTER_CLASS_MIXED);
          renderer.removeGutterDecoration(line, GUTTER_CLASS_EXPANDED);
          
-         // Add red arrow gutter decoration (just like green decorations)
-         renderer.addGutterDecoration(line, GUTTER_CLASS_DELETED);
+         boolean hasAdd = hasAddition.containsKey(line);
+         boolean hasDel = hasDeletion.containsKey(line);
+         
+         if (hasAdd && hasDel)
+         {
+            // Line has both addition and deletion - use mixed styling
+            renderer.addGutterDecoration(line, GUTTER_CLASS_MIXED);
+         }
+         else if (hasAdd)
+         {
+            // Line has only addition - use green styling
+            renderer.addGutterDecoration(line, GUTTER_CLASS_ACCEPTED);
+         }
+         else if (hasDel)
+         {
+            // Line has only deletion - use red styling
+            List<String> deletedLines = deletedLineGroups_.get(line);
+            renderer.addGutterDecoration(line, GUTTER_CLASS_DELETED);
+         }
+         
          gutterDecorations_.add(line);
          decorationsApplied++;
       }
@@ -824,6 +848,7 @@ public class PersistentDiffGutterManager
          {
             renderer.removeGutterDecoration(line, GUTTER_CLASS_ACCEPTED);
             renderer.removeGutterDecoration(line, GUTTER_CLASS_DELETED);
+            renderer.removeGutterDecoration(line, GUTTER_CLASS_MIXED);
             renderer.removeGutterDecoration(line, GUTTER_CLASS_EXPANDED);
          }
          

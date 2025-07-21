@@ -7,7 +7,7 @@
 @external ace_breakpoint, ace_inactive-breakpoint, ace_pending-breakpoint, ace_executing-line;
 @external ace_chunk-queued-line, ace_chunk-executed-line, ace_chunk-resting-line, ace_chunk-error-line;
 @external visual_chunk-queued-line, visual_chunk-executed-line, visual_chunk-resting-line, visual_chunk-error-line;
-@external ace_persistent_diff_accepted, ace_persistent_diff_deleted, ace_persistent_diff_collapsed;
+@external ace_persistent_diff_accepted, ace_persistent_diff_deleted, ace_persistent_diff_mixed, ace_persistent_diff_collapsed;
 @external ace_persistent_diff_expand, ace_persistent_diff_inline, ace_persistent_diff_inline_container;
 @external ace_persistent_diff_inline_line, ace_persistent_diff_deleted_line, ace_persistent_diff_deleted_lines;
 @external expanded;
@@ -2821,33 +2821,30 @@ body .rstudio-themes-alternate {
    background-color: rgba(76, 175, 80, 0.1) !important;
 }
 
-/* Red arrow for deleted lines (no background coloring) */
+/* Red bar indicator for deleted lines - no icons, just color */
 .ace_gutter-cell.ace_persistent_diff_deleted {
-   position: relative;
+   border-left: 3px solid #f44336 !important;
+   background-color: rgba(244, 67, 54, 0.1) !important;
 }
 
-/* Red arrow for deleted lines */
-.ace_gutter-cell.ace_persistent_diff_deleted:after {
-   content: "\25B6";  /* CSS escape for right-pointing triangle */
+.ace_gutter-cell.ace_persistent_diff_deleted::after {
+   content: "\25B6";
    color: #f44336;
-   font-size: 10px;
    position: absolute;
-   right: 4px;
-   top: 50%;
-   transform: translateY(-50%);
-   cursor: pointer;
-   user-select: none;
-   z-index: 10;
+   right: 2px;
+   top: -2px;
+   font-weight: bold;
 }
 
-/* Red arrow hover effect */
-.ace_gutter-cell.ace_persistent_diff_deleted:hover:after {
-   color: #d32f2f;
+.ace_gutter-cell.ace_persistent_diff_deleted.expanded::after {
+   content: "\25BC";
 }
 
-/* Expanded arrow (pointing down when widget is open) */
-.ace_gutter-cell.ace_persistent_diff_deleted.expanded:after {
-   content: "\25BC";  /* CSS escape for down-pointing triangle */
+/* Mixed red and green for lines with both addition and deletion */
+.ace_gutter-cell.ace_persistent_diff_mixed {
+   border-left: 3px solid transparent !important;
+   border-image: linear-gradient(to bottom, #4CAF50 0%, #4CAF50 50%, #f44336 50%, #f44336 100%) 1 !important;
+   background: linear-gradient(to bottom, rgba(76, 175, 80, 0.1) 0%, rgba(76, 175, 80, 0.1) 50%, rgba(244, 67, 54, 0.1) 50%, rgba(244, 67, 54, 0.1) 100%) !important;
 }
 
 /* Collapsed/folded diff indicator */
@@ -2865,6 +2862,10 @@ body .rstudio-themes-alternate {
    background-color: rgba(244, 67, 54, 0.2) !important;
 }
 
+.ace_dark .ace_gutter-cell.ace_persistent_diff_mixed {
+   background: linear-gradient(to bottom, rgba(76, 175, 80, 0.2) 0%, rgba(76, 175, 80, 0.2) 50%, rgba(244, 67, 54, 0.2) 50%, rgba(244, 67, 54, 0.2) 100%) !important;
+}
+
 .ace_dark .ace_gutter-cell.ace_persistent_diff_collapsed {
    background-color: rgba(255, 152, 0, 0.2) !important;
 }
@@ -2878,46 +2879,12 @@ body .rstudio-themes-alternate {
    background-color: rgba(244, 67, 54, 0.2) !important;
 }
 
+.ace_gutter-cell.ace_persistent_diff_mixed:hover {
+   background: linear-gradient(to bottom, rgba(76, 175, 80, 0.2) 0%, rgba(76, 175, 80, 0.2) 50%, rgba(244, 67, 54, 0.2) 50%, rgba(244, 67, 54, 0.2) 100%) !important;
+}
+
 .ace_gutter-cell.ace_persistent_diff_collapsed:hover {
    background-color: rgba(255, 152, 0, 0.2) !important;
-}
-
-/* Expand/collapse icon for deleted lines */
-.ace_persistent_diff_expand {
-   position: absolute;
-   right: 2px;
-   top: 50%;
-   transform: translateY(-50%);
-   cursor: pointer;
-   font-size: 8px;
-   color: #f44336;
-   user-select: none;
-   z-index: 100;
-   margin: 0;
-   padding: 0;
-}
-
-.ace_persistent_diff_expand:hover {
-   color: #d32f2f;
-}
-
-/* Dropdown arrow styles */
-.ace_persistent_diff_dropdown_arrow {
-   position: absolute;
-   right: 2px;
-   top: 50%;
-   transform: translateY(-50%);
-   cursor: pointer;
-   font-size: 10px;
-   color: #f44336;
-   user-select: none;
-   z-index: 100;
-   margin: 0;
-   padding: 0;
-}
-
-.ace_persistent_diff_dropdown_arrow:hover {
-   color: #d32f2f;
 }
 
 /* Deleted content popup styles */
