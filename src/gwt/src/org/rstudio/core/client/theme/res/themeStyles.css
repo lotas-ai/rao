@@ -10,6 +10,7 @@
 @external ace_persistent_diff_accepted, ace_persistent_diff_deleted, ace_persistent_diff_collapsed;
 @external ace_persistent_diff_expand, ace_persistent_diff_inline, ace_persistent_diff_inline_container;
 @external ace_persistent_diff_inline_line, ace_persistent_diff_deleted_line, ace_persistent_diff_deleted_lines;
+@external expanded;
 @external ace_gutter-cell-text, ace_dark;
 @external ace_sb;
 @external cueText;
@@ -2820,10 +2821,33 @@ body .rstudio-themes-alternate {
    background-color: rgba(76, 175, 80, 0.1) !important;
 }
 
-/* Red indicator for deleted lines */
+/* Red arrow for deleted lines (no background coloring) */
 .ace_gutter-cell.ace_persistent_diff_deleted {
-   border-left: 3px solid #f44336 !important;
-   background-color: rgba(244, 67, 54, 0.1) !important;
+   position: relative;
+}
+
+/* Red arrow for deleted lines */
+.ace_gutter-cell.ace_persistent_diff_deleted:after {
+   content: "\25B6";  /* CSS escape for right-pointing triangle */
+   color: #f44336;
+   font-size: 10px;
+   position: absolute;
+   right: 4px;
+   top: 50%;
+   transform: translateY(-50%);
+   cursor: pointer;
+   user-select: none;
+   z-index: 10;
+}
+
+/* Red arrow hover effect */
+.ace_gutter-cell.ace_persistent_diff_deleted:hover:after {
+   color: #d32f2f;
+}
+
+/* Expanded arrow (pointing down when widget is open) */
+.ace_gutter-cell.ace_persistent_diff_deleted.expanded:after {
+   content: "\25BC";  /* CSS escape for down-pointing triangle */
 }
 
 /* Collapsed/folded diff indicator */

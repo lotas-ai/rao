@@ -40,6 +40,7 @@ public class PersistentDiffGutterManager
 {
    private static final String GUTTER_CLASS_ACCEPTED = "ace_persistent_diff_accepted";
    private static final String GUTTER_CLASS_DELETED = "ace_persistent_diff_deleted";
+   private static final String GUTTER_CLASS_EXPANDED = "expanded";
    private static final String LINE_WIDGET_TYPE = "persistent_diff";
    
    private final AceEditor editor_;
@@ -522,21 +523,31 @@ public class PersistentDiffGutterManager
          // Only show green decorations for accepted/added changes
          if ("accepted".equals(lineInfo.type) || "added".equals(lineInfo.type))
          {
+            // Remove any existing decorations for this line first to prevent accumulation
+            renderer.removeGutterDecoration(line, GUTTER_CLASS_ACCEPTED);
+            
             renderer.addGutterDecoration(line, GUTTER_CLASS_ACCEPTED);
             gutterDecorations_.add(line);
             decorationsApplied++;
-         } else {
          }
       }
       
-      // Second pass: Add red dropdown arrows for lines with deleted content
+      // Second pass: Add red gutter decorations for lines with deleted content
       for (Map.Entry<Integer, List<String>> entry : deletedLineGroups_.entrySet())
       {
          int line = entry.getKey();
          List<String> deletedLines = entry.getValue();
          
-         // Add red dropdown arrow indicator (not gutter decoration)
-         addDropdownArrowToGutter(line);
+         Debug.log("RED ARROW POSITIONING: Adding red arrow decoration at line " + line + 
+                  " for " + deletedLines.size() + " deleted lines");
+         
+         // Remove any existing decorations for this line first to prevent accumulation
+         renderer.removeGutterDecoration(line, GUTTER_CLASS_DELETED);
+         renderer.removeGutterDecoration(line, GUTTER_CLASS_EXPANDED);
+         
+         // Add red arrow gutter decoration (just like green decorations)
+         renderer.addGutterDecoration(line, GUTTER_CLASS_DELETED);
+         gutterDecorations_.add(line);
          decorationsApplied++;
       }
       
@@ -614,64 +625,12 @@ public class PersistentDiffGutterManager
    }
    
    /**
-    * Add dropdown arrow to gutter using the specific editor instance
+    * Add CSS-based red arrow decoration using ACE's gutter system
+    * This is now handled by renderer.addGutterDecoration() with CSS styling
     */
-   private native void addDropdownArrowToGutter(int line) /*-{
-      try {
-         // Get the specific editor instance DOM element
-         var editor = this.@org.rstudio.studio.client.workbench.views.source.editors.text.PersistentDiffGutterManager::editor_.@org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor::getWidget()();
-         var editorElement = editor.@org.rstudio.studio.client.workbench.views.source.editors.text.AceEditorWidget::getElement()();
-         
-         if (!editorElement) {
-            return;
-         }
-         
-         // Find the gutter within this specific editor
-         var gutter = editorElement.querySelector('.ace_gutter');
-         if (!gutter) {
-            return;
-         }
-         
-         // Find the specific gutter cell for this line (0-based)
-         var gutterCells = gutter.querySelectorAll('.ace_gutter-cell');
-         if (line >= gutterCells.length) {
-            return;
-         }
-         
-         var gutterCell = gutterCells[line];
-         if (!gutterCell) {
-            return;
-         }
-         
-         // Check if arrow already exists
-         var existingArrow = gutterCell.querySelector('.ace_persistent_diff_dropdown_arrow');
-         if (existingArrow) {
-            return;
-         }
-         
-         // Create dropdown arrow element
-         var arrow = $doc.createElement('span');
-         arrow.className = 'ace_persistent_diff_dropdown_arrow';
-         arrow.innerHTML = '▶';  // Right-pointing triangle
-         arrow.style.cssText = 'display: inline-block; margin-left: 4px; vertical-align: middle; color: #f44336; cursor: pointer; font-size: 10px; user-select: none; z-index: 10; line-height: 1;';
-         
-         // Add click handler
-         var self = this;
-         arrow.onclick = function(e) {
-            e.stopPropagation();
-            self.@org.rstudio.studio.client.workbench.views.source.editors.text.PersistentDiffGutterManager::toggleDeletedLinesWidget(I)(line);
-         };
-         
-         // Don't modify gutter cell positioning - just append the arrow directly
-         // The arrow's absolute positioning will be relative to the nearest positioned ancestor
-         gutterCell.appendChild(arrow);
-      } catch (e) {
-         console.log("DEBUG: Exception in addDropdownArrowToGutter: " + e.message);
-      }
-   }-*/;
    
    /**
-    * Setup click handler for gutter
+    * Setup click handler for gutter using ACE's gutter click event
     */
    private void setupGutterClickHandler()
    {
@@ -679,22 +638,40 @@ public class PersistentDiffGutterManager
       if (editor == null)
          return;
       
-      registrations_.add(editor_.addMouseDownHandler(new MouseDownHandler()
-      {
-         @Override
-         public void onMouseDown(MouseDownEvent event)
-         {
-            Element target = event.getNativeEvent().getEventTarget().cast();
-            if (target.getClassName().contains("ace_gutter"))
-            {
-               int line = getLineFromGutterElement(target);
-               if (line >= 0 && deletedLineGroups_.containsKey(line))
-               {
-                  toggleDeletedLinesWidget(line);
-               }
+      // Use ACE's native gutter click event which provides proper line mapping
+      addGutterClickListener();
+   }
+   
+   /**
+    * Add native click listener for gutter using ACE's event system
+    */
+   private native void addGutterClickListener() /*-{
+      var self = this;
+      var aceEditor = this.@org.rstudio.studio.client.workbench.views.source.editors.text.PersistentDiffGutterManager::editor_.@org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor::getWidget()().@org.rstudio.studio.client.workbench.views.source.editors.text.AceEditorWidget::getEditor()();
+      
+      if (aceEditor) {
+         aceEditor.on('guttermousedown', function(e) {
+            // Get the line number from ACE's event system
+            var line = e.getDocumentPosition().row;
+            
+            // Check if this line has deleted content
+            var hasDeletedContent = self.@org.rstudio.studio.client.workbench.views.source.editors.text.PersistentDiffGutterManager::hasDeletedContentAtLine(I)(line);
+            
+            if (hasDeletedContent) {
+               // Prevent default ACE behavior and toggle our widget
+               e.stop();
+               self.@org.rstudio.studio.client.workbench.views.source.editors.text.PersistentDiffGutterManager::toggleDeletedLinesWidget(I)(line);
             }
-         }
-      }));
+         });
+      }
+   }-*/;
+   
+   /**
+    * Check if a line has deleted content
+    */
+   private boolean hasDeletedContentAtLine(int line)
+   {
+      return deletedLineGroups_.containsKey(line);
    }
    
    /**
@@ -704,57 +681,42 @@ public class PersistentDiffGutterManager
    {
       if (pinnedWidgets_.containsKey(line))
       {
-         // Hide the widget and change arrow to point right
+         // Hide the widget and update arrow state
          hideDeletedLinesWidget(line);
-         updateDropdownArrow(line, false);
+         updateArrowState(line, false);
       }
       else
       {
-         // Show the widget and change arrow to point down
+         // Show the widget and update arrow state  
          showDeletedLinesWidget(line);
-         updateDropdownArrow(line, true);
+         updateArrowState(line, true);
       }
    }
    
    /**
-    * Update dropdown arrow direction using the specific editor instance
+    * Update visual state when deleted lines widget is toggled
+    * Manages the "expanded" CSS class separately to avoid accumulation
     */
-   private native void updateDropdownArrow(int line, boolean expanded) /*-{
-      try {
-         // Get the specific editor instance DOM element
-         var editor = this.@org.rstudio.studio.client.workbench.views.source.editors.text.PersistentDiffGutterManager::editor_.@org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor::getWidget()();
-         var editorElement = editor.@org.rstudio.studio.client.workbench.views.source.editors.text.AceEditorWidget::getElement()();
-         
-         if (!editorElement) {
-            return;
-         }
-         
-         // Find the gutter within this specific editor
-         var gutter = editorElement.querySelector('.ace_gutter');
-         if (!gutter) {
-            return;
-         }
-         
-         // Find the specific gutter cell for this line (0-based)
-         var gutterCells = gutter.querySelectorAll('.ace_gutter-cell');
-         if (line >= gutterCells.length) {
-            return;
-         }
-         
-         var gutterCell = gutterCells[line];
-         if (!gutterCell) {
-            return;
-         }
-         
-         // Find the dropdown arrow for this line
-         var arrow = gutterCell.querySelector('.ace_persistent_diff_dropdown_arrow');
-         if (arrow) {
-            arrow.innerHTML = expanded ? '▼' : '▶';
-         }
-      } catch (e) {
-         console.log("DEBUG: Exception in updateDropdownArrow: " + e.message);
+   private void updateArrowState(int line, boolean expanded)
+   {
+      AceEditorNative editor = editor_.getWidget().getEditor();
+      if (editor == null) {
+         return;
       }
-   }-*/;
+      
+      Renderer renderer = editor.getRenderer();
+      if (renderer == null) {
+         return;
+      }
+      
+      // Always remove the expanded class first to prevent accumulation
+      renderer.removeGutterDecoration(line, GUTTER_CLASS_EXPANDED);
+      
+      // Add the expanded class only if needed
+      if (expanded) {
+         renderer.addGutterDecoration(line, GUTTER_CLASS_EXPANDED);
+      }
+   }
    
    /**
     * Show the deleted lines widget using simple HTML like console output
@@ -862,6 +824,7 @@ public class PersistentDiffGutterManager
          {
             renderer.removeGutterDecoration(line, GUTTER_CLASS_ACCEPTED);
             renderer.removeGutterDecoration(line, GUTTER_CLASS_DELETED);
+            renderer.removeGutterDecoration(line, GUTTER_CLASS_EXPANDED);
          }
          
          // Also clear all dropdown arrows
