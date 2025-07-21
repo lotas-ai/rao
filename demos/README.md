@@ -2,7 +2,7 @@
 
 [Rao](https://www.lotas.ai/) is a fork of RStudio with a fully integrated AI assistant that can read, write, and edit code; search for context; run code and commands; and view and interpret outputs. Its source code is [available here](https://github.com/lotas-ai/rao). If you have questions or bug reports, please direct them to the [Lotas Forum](https://community.lotas.ai/).
 
-This repository contains example use cases for Rao across different data analysis domains. Each demo showcases Rao's capabilities with real datasets and common analytical tasks.
+This directory contains example use cases for Rao across different data analysis domains. Each demo showcases Rao's capabilities with real datasets and common analytical tasks.
 
 ## Available Demos
 
