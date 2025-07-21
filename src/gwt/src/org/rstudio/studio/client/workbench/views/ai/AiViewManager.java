@@ -302,8 +302,7 @@ public class AiViewManager
          isInSettingsMode_ = true;
       }
       
-      // Refresh subscription status to ensure up-to-date information
-      settingsWidget_.refreshSubscriptionStatus();
+      settingsWidget_.refreshAllSettings();
       
       // Update title
       aiPane_.updateTitle("Settings");

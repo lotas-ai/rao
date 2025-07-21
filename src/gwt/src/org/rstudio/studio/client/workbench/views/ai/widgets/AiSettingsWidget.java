@@ -117,8 +117,6 @@ public class AiSettingsWidget extends Composite
    private String currentModel_ = null;
    private String currentDirectory_ = null;
    private double currentTemperature_ = 0.5; // Default temperature
-   private String currentSecurityMode_ = "secure"; // Default security mode
-   private boolean currentWebSearchEnabled_ = false; // Default web search
    private AiUserProfile userProfile_ = null;
    private AiSubscriptionStatus subscriptionStatus_ = null;
    private boolean subscriptionDetailsAdded_ = false;
@@ -481,7 +479,7 @@ public class AiSettingsWidget extends Composite
       securityTogglePanel.setWidth("100%");
       securityTogglePanel.setVerticalAlignment(HorizontalPanel.ALIGN_TOP);
       
-      securityModeText_ = new Label("On secure mode, no analytics are collected and zero data is retained by the model providers. Secure mode only uses search-replace for editing files rather than the third-party Morph LLM fast apply used for edit-file. This must be used for any sensitive data like PII. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: Secure");
+      securityModeText_ = new Label("On secure mode, no analytics are collected and zero data is retained by the model providers. Secure mode only uses search-replace for editing files rather than the third-party Morph LLM fast apply used for edit-file. This must be used for any sensitive data like PHI. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: Secure");
       securityModeText_.addStyleName(styles_.settingLabel());
       securityModeText_.getElement().getStyle().setProperty("fontWeight", "normal");
       securityModeText_.getElement().getStyle().setProperty("fontSize", "13px");
@@ -521,7 +519,7 @@ public class AiSettingsWidget extends Composite
       webSearchTogglePanel.setWidth("100%");
       webSearchTogglePanel.setVerticalAlignment(HorizontalPanel.ALIGN_TOP);
       
-      webSearchText_ = new Label("When web search is on, the model may choose to search the web. Such searches could involve information from the conversation history and should be disabled for sensitive data like PII. Web search is currently: off");
+      webSearchText_ = new Label("When web search is on, the model may choose to search the web. Such searches could involve information from the conversation history and should be disabled for sensitive data like PHI. Web search is currently: off");
       webSearchText_.addStyleName(styles_.settingLabel());
       webSearchText_.getElement().getStyle().setProperty("fontWeight", "normal");
       webSearchText_.getElement().getStyle().setProperty("fontSize", "13px");
@@ -636,43 +634,8 @@ public class AiSettingsWidget extends Composite
          }
       });
       
-      // Load current security mode
-      server_.getSecurityMode(new ServerRequestCallback<String>() {
-         @Override
-         public void onResponseReceived(String mode) {
-            currentSecurityMode_ = mode != null ? mode : "secure";
-            updateSecurityModeDisplay();
-            
-            // Initialize PostHog with current security mode
-            updatePostHogForSecurityMode(currentSecurityMode_);
-         }
-         
-         @Override
-         public void onError(ServerError error) {
-            Debug.log("Error loading security mode: " + error.getMessage());
-            currentSecurityMode_ = "secure"; // Default value
-            updateSecurityModeDisplay();
-            
-            // Initialize PostHog with secure mode as default
-            updatePostHogForSecurityMode("secure");
-         }
-      });
-      
-      // Load current web search enabled
-      server_.getWebSearchEnabled(new ServerRequestCallback<Boolean>() {
-         @Override
-         public void onResponseReceived(Boolean enabled) {
-            currentWebSearchEnabled_ = enabled != null ? enabled : false;
-            updateWebSearchDisplay();
-         }
-         
-         @Override
-         public void onError(ServerError error) {
-            Debug.log("Error loading web search enabled: " + error.getMessage());
-            currentWebSearchEnabled_ = false; // Default value
-            updateWebSearchDisplay();
-         }
-      });
+      updateSecurityModeDisplay();
+      updateWebSearchDisplay();
    }
    
    private void loadAvailableModels() {
@@ -1028,6 +991,22 @@ public class AiSettingsWidget extends Composite
    }
    
    /**
+    * Refresh all settings when the settings page is shown
+    * This ensures we always query fresh values and never rely on cached data
+    */
+   public void refreshAllSettings() {
+      // Refresh subscription status
+      refreshSubscriptionStatus();
+      
+      // Always query fresh security mode and web search values from R functions
+      updateSecurityModeDisplay();
+      updateWebSearchDisplay();
+      
+      // Refresh other settings that might have changed
+      loadCurrentSettings();
+   }
+   
+   /**
     * Refreshes the subscription status from the server
     * Called when navigating to the Settings page to ensure up-to-date information
     */
@@ -1372,69 +1351,143 @@ public class AiSettingsWidget extends Composite
    }
    
    private void handleSecurityModeChange() {
-      if (securityModeToggle_ != null) {
-         String mode = getToggleValue(securityModeToggle_.getElement());
-         if (mode != null) {
-            currentSecurityMode_ = mode;
+      // Never read from toggle elements - always query the server to get current state
+      server_.getSecurityMode(new ServerRequestCallback<String>() {
+         @Override
+         public void onResponseReceived(String mode) {
+            String currentMode = mode != null ? mode : "secure";
             
-            // Update the text label
+            // Toggle to the opposite of current mode
+            String newMode = "secure".equals(currentMode) ? "improve" : "secure";
+            
+            // Update the display immediately with new mode
+            if (securityModeToggle_ != null) {
+               updateToggleDisplay(securityModeToggle_.getElement(), newMode, "secure");
+            }
             if (securityModeText_ != null) {
-               boolean isSecure = "secure".equals(mode);
+               boolean isSecure = "secure".equals(newMode);
                String modeText = isSecure ? "Secure" : "Improve Rao for everyone";
-               securityModeText_.setText("On secure mode, no analytics are collected and zero data is retained by the model providers. This must be used for any sensitive data like PII. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: " + modeText);
+               securityModeText_.setText("On secure mode, no analytics are collected and zero data is retained by the model providers. This must be used for any sensitive data like PHI. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: " + modeText);
             }
             
-            handler_.onSecurityModeChange(mode);
+            // Initialize PostHog with new security mode
+            updatePostHogForSecurityMode(newMode);
+            
+            // Send change to handler
+            handler_.onSecurityModeChange(newMode);
          }
-      }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Error loading security mode for toggle: " + error.getMessage());
+            // On error, just refresh display without changing
+            updateSecurityModeDisplay();
+         }
+      });
    }
    
    private void handleWebSearchChange() {
-      if (webSearchToggle_ != null) {
-         String value = getToggleValue(webSearchToggle_.getElement());
-         if (value != null) {
-            boolean enabled = "true".equals(value);
-            currentWebSearchEnabled_ = enabled;
+      // Never read from toggle elements - always query the server to get current state
+      server_.getWebSearchEnabled(new ServerRequestCallback<Boolean>() {
+         @Override
+         public void onResponseReceived(Boolean enabled) {
+            boolean currentEnabled = enabled != null ? enabled : false;
             
-            // Update the text label
+            // Toggle to the opposite of current state
+            boolean newEnabled = !currentEnabled;
+            
+            // Update the display immediately with new state
+            if (webSearchToggle_ != null) {
+               updateToggleDisplay(webSearchToggle_.getElement(), newEnabled ? "true" : "false", "false");
+            }
             if (webSearchText_ != null) {
-               String statusText = enabled ? "on" : "off";
-               webSearchText_.setText("When web search is on, the model may choose to search the web. Such searches could involve information from the conversation history and should be disabled for sensitive data like PII. Web search is currently: " + statusText);
+               String statusText = newEnabled ? "on" : "off";
+               webSearchText_.setText("When web search is on, the model may choose to search the web. Such searches could involve information from the conversation history and should be disabled for sensitive data like PHI. Web search is currently: " + statusText);
             }
             
-            handler_.onWebSearchEnabledChange(enabled);
+            // Send change to handler
+            handler_.onWebSearchEnabledChange(newEnabled);
          }
-      }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Error loading web search enabled for toggle: " + error.getMessage());
+            // On error, just refresh display without changing
+            updateWebSearchDisplay();
+         }
+      });
    }
    
    private void updateSecurityModeDisplay() {
-      if (securityModeToggle_ != null) {
-         updateToggleDisplay(securityModeToggle_.getElement(), currentSecurityMode_, "secure");
-      }
-      if (securityModeText_ != null) {
-         boolean isSecure = "secure".equals(currentSecurityMode_);
-         String modeText = isSecure ? "Secure" : "Improve Rao for everyone";
-         securityModeText_.setText("On secure mode, no analytics are collected and zero data is retained by the model providers. This must be used for any sensitive data like PII. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: " + modeText);
-      }
+      // Always query fresh values from server instead of using cached values
+      server_.getSecurityMode(new ServerRequestCallback<String>() {
+         @Override
+         public void onResponseReceived(String mode) {
+            String currentMode = mode != null ? mode : "secure";
+            if (securityModeToggle_ != null) {
+               updateToggleDisplay(securityModeToggle_.getElement(), currentMode, "secure");
+            }
+            if (securityModeText_ != null) {
+               boolean isSecure = "secure".equals(currentMode);
+               String modeText = isSecure ? "Secure" : "Improve Rao for everyone";
+               securityModeText_.setText("On secure mode, no analytics are collected and zero data is retained by the model providers. This must be used for any sensitive data like PHI. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: " + modeText);
+            }
+            
+            // Initialize PostHog with current security mode
+            updatePostHogForSecurityMode(currentMode);
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Error loading security mode for display: " + error.getMessage());
+            // Use secure as default on error
+            if (securityModeToggle_ != null) {
+               updateToggleDisplay(securityModeToggle_.getElement(), "secure", "secure");
+            }
+            if (securityModeText_ != null) {
+               securityModeText_.setText("On secure mode, no analytics are collected and zero data is retained by the model providers. This must be used for any sensitive data like PHI. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: Secure");
+            }
+            
+            // Initialize PostHog with secure mode as default
+            updatePostHogForSecurityMode("secure");
+         }
+      });
    }
    
    private void updateWebSearchDisplay() {
-      if (webSearchToggle_ != null) {
-         updateToggleDisplay(webSearchToggle_.getElement(), currentWebSearchEnabled_ ? "true" : "false", "false");
-      }
-      if (webSearchText_ != null) {
-         String statusText = currentWebSearchEnabled_ ? "on" : "off";
-         webSearchText_.setText("When web search is on, the model may choose to search the web. Such searches could involve information from the conversation history and should be disabled for sensitive data like PII. Web search is currently: " + statusText);
-      }
+      // Always query fresh values from server instead of using cached values
+      server_.getWebSearchEnabled(new ServerRequestCallback<Boolean>() {
+         @Override
+         public void onResponseReceived(Boolean enabled) {
+            boolean currentEnabled = enabled != null ? enabled : false;
+            if (webSearchToggle_ != null) {
+               updateToggleDisplay(webSearchToggle_.getElement(), currentEnabled ? "true" : "false", "false");
+            }
+            if (webSearchText_ != null) {
+               String statusText = currentEnabled ? "on" : "off";
+               webSearchText_.setText("When web search is on, the model may choose to search the web. Such searches could involve information from the conversation history and should be disabled for sensitive data like PHI. Web search is currently: " + statusText);
+            }
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Error loading web search enabled for display: " + error.getMessage());
+            // Use false as default on error
+            if (webSearchToggle_ != null) {
+               updateToggleDisplay(webSearchToggle_.getElement(), "false", "false");
+            }
+            if (webSearchText_ != null) {
+               webSearchText_.setText("When web search is on, the model may choose to search the web. Such searches could involve information from the conversation history and should be disabled for sensitive data like PHI. Web search is currently: off");
+            }
+         }
+      });
    }
    
    public void onSecurityModeChanged(String mode) {
-      currentSecurityMode_ = mode;
       updateSecurityModeDisplay();
    }
    
    public void onWebSearchEnabledChanged(boolean enabled) {
-      currentWebSearchEnabled_ = enabled;
       updateWebSearchDisplay();
    }
    
