@@ -67,7 +67,7 @@ You did not match the taxonomic profiles correctly. Every taxonomic profile shou
 ```
 
 With these corrections, it should produce a plot like this: 
-<img src="https://github.com/lotas-ai/hutlab-demo/blob/d50b49a6986ee4a8a518cdce950887e85a802f98/media/images/pcoa.png" style="width:75%;">
+<img src="https://github.com/lotas-ai/rao/blob/d38a3025061631bae46c5aadf523c9be27183212/demos/media/images/metagenomics_pcoa.png" style="width:75%;">
 
 ## 4. Further exploration
 
