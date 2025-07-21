@@ -481,7 +481,7 @@ public class AiSettingsWidget extends Composite
       securityTogglePanel.setWidth("100%");
       securityTogglePanel.setVerticalAlignment(HorizontalPanel.ALIGN_TOP);
       
-      securityModeText_ = new Label("On secure mode, no analytics are collected and zero data is retained by the model providers. Secure mode only uses search-replace for editing files rather than the third-party Morph LLM fast apply used for edit-file. This must be used for any sensitive data. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: Secure");
+      securityModeText_ = new Label("On secure mode, no analytics are collected and zero data is retained by the model providers. Secure mode only uses search-replace for editing files rather than the third-party Morph LLM fast apply used for edit-file. This must be used for any sensitive data like PII. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: Secure");
       securityModeText_.addStyleName(styles_.settingLabel());
       securityModeText_.getElement().getStyle().setProperty("fontWeight", "normal");
       securityModeText_.getElement().getStyle().setProperty("fontSize", "13px");
@@ -521,7 +521,7 @@ public class AiSettingsWidget extends Composite
       webSearchTogglePanel.setWidth("100%");
       webSearchTogglePanel.setVerticalAlignment(HorizontalPanel.ALIGN_TOP);
       
-      webSearchText_ = new Label("When web search is on, the model may choose to search the web. Such searches could involve information from the conversation history and should be disabled for sensitive data. Web search is currently: off");
+      webSearchText_ = new Label("When web search is on, the model may choose to search the web. Such searches could involve information from the conversation history and should be disabled for sensitive data like PII. Web search is currently: off");
       webSearchText_.addStyleName(styles_.settingLabel());
       webSearchText_.getElement().getStyle().setProperty("fontWeight", "normal");
       webSearchText_.getElement().getStyle().setProperty("fontSize", "13px");
@@ -1381,7 +1381,7 @@ public class AiSettingsWidget extends Composite
             if (securityModeText_ != null) {
                boolean isSecure = "secure".equals(mode);
                String modeText = isSecure ? "Secure" : "Improve Rao for everyone";
-               securityModeText_.setText("On secure mode, no analytics are collected and zero data is retained by the model providers. This must be used for any sensitive data. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: " + modeText);
+               securityModeText_.setText("On secure mode, no analytics are collected and zero data is retained by the model providers. This must be used for any sensitive data like PII. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: " + modeText);
             }
             
             handler_.onSecurityModeChange(mode);
@@ -1399,7 +1399,7 @@ public class AiSettingsWidget extends Composite
             // Update the text label
             if (webSearchText_ != null) {
                String statusText = enabled ? "on" : "off";
-               webSearchText_.setText("When web search is on, the model may choose to search the web. Such searches could involve information from the conversation history and should be disabled for sensitive data. Web search is currently: " + statusText);
+               webSearchText_.setText("When web search is on, the model may choose to search the web. Such searches could involve information from the conversation history and should be disabled for sensitive data like PII. Web search is currently: " + statusText);
             }
             
             handler_.onWebSearchEnabledChange(enabled);
@@ -1414,7 +1414,7 @@ public class AiSettingsWidget extends Composite
       if (securityModeText_ != null) {
          boolean isSecure = "secure".equals(currentSecurityMode_);
          String modeText = isSecure ? "Secure" : "Improve Rao for everyone";
-         securityModeText_.setText("On secure mode, no analytics are collected and zero data is retained by the model providers. This must be used for any sensitive data. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: " + modeText);
+         securityModeText_.setText("On secure mode, no analytics are collected and zero data is retained by the model providers. This must be used for any sensitive data like PII. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: " + modeText);
       }
    }
    
@@ -1424,7 +1424,7 @@ public class AiSettingsWidget extends Composite
       }
       if (webSearchText_ != null) {
          String statusText = currentWebSearchEnabled_ ? "on" : "off";
-         webSearchText_.setText("When web search is on, the model may choose to search the web. Such searches could involve information from the conversation history and should be disabled for sensitive data. Web search is currently: " + statusText);
+         webSearchText_.setText("When web search is on, the model may choose to search the web. Such searches could involve information from the conversation history and should be disabled for sensitive data like PII. Web search is currently: " + statusText);
       }
    }
    

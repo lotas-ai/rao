@@ -1339,7 +1339,7 @@
                   stream_result <- .rs.stream_json_field_content(
                     search_replace_delta_accumulator,
                     "new_string",
-                    '\\s*"\\s*[,}]',
+                    '"}',
                     search_replace_message_id,
                     search_replace_new_string_streamed,
                     list(
