@@ -15,7 +15,7 @@ You can download and install R [here](https://cloud.r-project.org/). You should 
 3. Open the app, click on the AI pane in the top right (or enable it if necessary, see ["Opening the AI Pane"](https://www.lotas.ai/download)), click on the Settings gear in the top left of the pane, and paste in your API key.
 
 Once you've done this, you should see the following section (you might need to click the gear to refresh):
-<img src="https://github.com/lotas-ai/hutlab-demo/blob/713934d127340dd058dcb777983997b9c00720e4/media/images/rao-profile.jpg" style="width:75%;">
+<img src="https://github.com/lotas-ai/rao/blob/ec101d9c83242433c22ca2d005b415b02c77a4e8/demos/media/images/rao-profile.png" style="width:75%;">
 
 For the tutorial, you should also set the "Temperature" to 0 so that the outputs are deterministic. (Outputs will still vary between people for technical reasons related to how Rao provides context, but the variability should be low.) Clearing your environmental variables with `remove(list = ls())` is also recommended to increase consistency.
 
@@ -34,10 +34,10 @@ Then, use the "Browse..." button of the "Working Directory" section or use `setw
 The demo data consists of bone marrow transplant survival data with patient characteristics and outcomes. It can be downloaded with the following commands:
 ```
 dir.create("data", showWarnings = FALSE)
-download.file("https://raw.githubusercontent.com/lotas-ai/rao-demos/refs/heads/main/examples/survival_analysis/data/BoneMarrow_cleaned_2022.csv", 
+download.file("https://raw.githubusercontent.com/lotas-ai/rao/refs/heads/main/demos/examples/survival_analysis/data/BoneMarrow_cleaned_2022.csv", 
               "data/BoneMarrow_cleaned_2022.csv", 
               method = "curl")
-download.file("https://raw.githubusercontent.com/lotas-ai/rao-demos/refs/heads/main/examples/survival_analysis/data/BoneMarrow_docu.txt", 
+download.file("https://raw.githubusercontent.com/lotas-ai/rao/refs/heads/main/demos/examples/survival_analysis/data/BoneMarrow_docu.txt", 
               "data/BoneMarrow_docu.txt", 
               method = "curl")
 ```
