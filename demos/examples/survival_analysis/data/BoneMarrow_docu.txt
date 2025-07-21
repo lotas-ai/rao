@@ -1,0 +1,23 @@
+Bone marrow transplant data
+=========================================================================
+
+This data file contains data on 137 patients who underwent a bone marrow transplant. The data are a modified subset of a bigger dataset from the book Survival Analysis: Techniques for Censored and Truncated Data by Klein and Moeschberger (2003)
+
+The variables are (in column order):
+
+ 1  id          Patient id
+ 2  ageD        Age of the donor, years
+ 3  maleD       Gender of the donor; 0/1 = female/male
+ 4  cmvD        Cytomegalavirus status of the donor; 0/1 = negative/positive
+ 5  ageP        Age of the patient, years
+ 6  maleP       Gender of the patient; 0/1 = female/male
+ 7  cmvP        Cytomegalavirus status of the patient; 0/1 = negative/positive
+ 8  waittime    Waiting time to transplant, days
+ 9  group       Disease group; 1/2/3 = ALL/AML low risk/AML high risk
+10  mtx         Indicator of MTX use as a prophylactic for grant-versus-host disease; 0/1 = no/yes
+11  hosp        Indicator of hospital where the patient was treated; 1=The Ohio State University, 2=Alferd , 3=St. Vincent, 4=Hahnemann
+12  plateS      Indicator of platelet recovery to normal levels; 0/1 = no/yes
+13  plateT      Time to return of platelets to normal levels
+14  status      Status indicator of disease-free survival; 0/1 = alive and disease-free/relapsed or dead
+15  time        Disease-free survival time (time to relapse, death or end of study)
+16  waitCat     Waiting time categories; 0-90, 91-180, 181-365, >365
