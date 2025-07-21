@@ -60,6 +60,8 @@ Look at my gene expression data and its metadata and plot a visualization of the
 
 The model will take a series of actions including listing files, reading files, running console commands, and eventually creating visualizations and an R Markdown document. Note that it must perform many steps like properly reading the gene expression data, identifying how tumor stage is encoded, determining how to match the samples, and creating appropriate visualizations.
 
+<img src="https://github.com/lotas-ai/rao/blob/d14933d0aeff0ef9a0e5711ab07e90ab1f0d4433/demos/media/images/gene_expression.png" style="width:75%;">
+
 ## 4. Further exploration
 
 Some other functionality likely not activated by the query above includes:

@@ -63,6 +63,8 @@ The analysis will likely include:
 - Kaplan-Meier survival curves
 - Log-rank tests for group comparisons
 
+<img src="https://github.com/lotas-ai/rao/blob/d14933d0aeff0ef9a0e5711ab07e90ab1f0d4433/demos/media/images/survival_analysis.png" style="width:75%;">
+
 ## 4. Further exploration
 
 Some other functionality likely not activated by the query above includes:
