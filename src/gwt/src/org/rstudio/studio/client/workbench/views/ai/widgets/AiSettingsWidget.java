@@ -743,6 +743,8 @@ public class AiSettingsWidget extends Composite
          HorizontalPanel ruleContent = new HorizontalPanel();
          ruleContent.setWidth("100%");
          ruleContent.setVerticalAlignment(HorizontalPanel.ALIGN_TOP);
+         // Add right padding to leave space for the options button
+         ruleContent.getElement().getStyle().setProperty("paddingRight", "30px");
          
          // Rule text (takes most of the space)
          Label ruleText = new Label(rule);

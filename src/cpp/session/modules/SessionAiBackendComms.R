@@ -460,6 +460,19 @@
     if (is.null(version_info) || version_info == "") "unknown" else version_info
   }, error = function(e) "unknown")
   
+  # Get user rules for this query
+  user_rules <- tryCatch({
+    rules <- .rs.get_user_rules()
+    # Ensure it's always a list/array even for single elements to prevent JSON serialization issues
+    if (is.null(rules) || length(rules) == 0) {
+      list()  # Empty list for JSON array
+    } else {
+      as.list(rules)  # Convert to list to ensure JSON array serialization
+    }
+  }, error = function(e) {
+    list()  # Return empty list on error
+  })
+  
   request_data <- list(
     request_type = request_type,
     conversation = sorted_conversation,
@@ -472,7 +485,8 @@
     last_function_was_edit_file = is_after_edit_file,
     user_os_version = user_env_info$user_os_version,
     user_workspace_path = user_env_info$user_workspace_path,
-    user_shell = user_env_info$user_shell
+    user_shell = user_env_info$user_shell,
+    user_rules = user_rules
   )
   
   if (!is.null(attachment_data) && !is.null(attachment_data$has_attachments) && attachment_data$has_attachments) {
