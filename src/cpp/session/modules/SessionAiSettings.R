@@ -504,3 +504,164 @@
 .rs.addJsonRpcHandler("set_web_search_enabled", function(enabled) {
   return(.rs.set_web_search_enabled_action(enabled))
 })
+
+# User rules management functions
+.rs.addFunction("get_ai_rules_path", function() {
+  # Get the path to the AI rules file
+  base_ai_dir <- .rs.get_ai_base_dir()
+  rules_path <- file.path(base_ai_dir, "ai_rules.json")
+  return(rules_path)
+})
+
+.rs.addFunction("load_ai_rules", function() {
+  # Load AI rules from persistent storage
+  rules_path <- .rs.get_ai_rules_path()
+  
+  # Create default rules if file doesn't exist
+  if (!file.exists(rules_path)) {
+    return(character(0))  # Return empty character vector
+  }
+  
+  tryCatch({
+    # Read rules from file
+    rules_json <- readLines(rules_path, warn = FALSE)
+    rules <- jsonlite::fromJSON(paste(rules_json, collapse = ""), simplifyVector = TRUE)
+    
+    # Ensure we have a character vector
+    if (is.null(rules) || !is.character(rules)) {
+      rules <- character(0)
+    }
+    
+    return(rules)
+  }, error = function(e) {
+    warning("Failed to load AI rules: ", e$message, ". Using empty rules.")
+    return(character(0))
+  })
+})
+
+.rs.addFunction("save_ai_rules", function(rules) {
+  # Save AI rules to persistent storage
+  rules_path <- .rs.get_ai_rules_path()
+  
+  # Ensure directory exists
+  dir.create(dirname(rules_path), recursive = TRUE, showWarnings = FALSE)
+  
+  tryCatch({
+    # Ensure rules is a character vector
+    if (is.null(rules) || (!is.character(rules) && !is.list(rules))) {
+      rules <- character(0)
+    }
+    
+    # Convert to character vector if it's a list
+    if (is.list(rules)) {
+      rules <- unlist(rules, use.names = FALSE)
+      rules <- as.character(rules)
+    }
+    
+    # Write rules to file as JSON array
+    rules_json <- jsonlite::toJSON(rules, auto_unbox = FALSE)
+    writeLines(rules_json, rules_path)
+    return(TRUE)
+  }, error = function(e) {
+    warning("Failed to save AI rules: ", e$message)
+    return(FALSE)
+  })
+})
+
+.rs.addFunction("get_user_rules", function() {
+  return(.rs.load_ai_rules())
+})
+
+.rs.addFunction("add_user_rule", function(rule) {
+  if (is.null(rule) || !is.character(rule) || length(rule) != 1 || nchar(rule) == 0) {
+    return(list(success = FALSE, error = "Invalid rule"))
+  }
+  
+  # Get current rules
+  rules <- .rs.get_user_rules()
+  
+  # Add new rule
+  rules <- c(rules, rule)
+  
+  # Save updated rules
+  result <- .rs.save_ai_rules(rules)
+  
+  if (result) {
+    return(rules)  # Return rules array directly
+  } else {
+    return(list(success = FALSE, error = "Failed to save rule"))
+  }
+})
+
+.rs.addFunction("edit_user_rule", function(index, rule) {
+  if (is.null(index) || !is.numeric(index) || index < 1) {
+    return(list(success = FALSE, error = "Invalid rule index"))
+  }
+  
+  if (is.null(rule) || !is.character(rule) || length(rule) != 1 || nchar(rule) == 0) {
+    return(list(success = FALSE, error = "Invalid rule"))
+  }
+  
+  # Get current rules
+  rules <- .rs.get_user_rules()
+  
+  # Check if index is valid
+  if (index > length(rules)) {
+    return(list(success = FALSE, error = "Rule index out of range"))
+  }
+  
+  # Update rule
+  rules[index] <- rule
+  
+  # Save updated rules
+  result <- .rs.save_ai_rules(rules)
+  
+  if (result) {
+    return(rules)  # Return rules array directly
+  } else {
+    return(list(success = FALSE, error = "Failed to update rule"))
+  }
+})
+
+.rs.addFunction("delete_user_rule", function(index) {
+  if (is.null(index) || !is.numeric(index) || index < 1) {
+    return(list(success = FALSE, error = "Invalid rule index"))
+  }
+  
+  # Get current rules
+  rules <- .rs.get_user_rules()
+  
+  # Check if index is valid
+  if (index > length(rules)) {
+    return(list(success = FALSE, error = "Rule index out of range"))
+  }
+  
+  # Remove rule
+  rules <- rules[-index]
+  
+  # Save updated rules
+  result <- .rs.save_ai_rules(rules)
+  
+  if (result) {
+    return(rules)  # Return rules array directly
+  } else {
+    return(list(success = FALSE, error = "Failed to delete rule"))
+  }
+})
+
+# JSON RPC handlers for user rules
+.rs.addJsonRpcHandler("get_user_rules", function() {
+  return(.rs.get_user_rules())
+})
+
+.rs.addJsonRpcHandler("add_user_rule", function(rule) {
+  return(.rs.add_user_rule(rule))
+})
+
+.rs.addJsonRpcHandler("edit_user_rule", function(index, rule) {
+  return(.rs.edit_user_rule(index, rule))
+})
+
+.rs.addJsonRpcHandler("delete_user_rule", function(index) {
+  return(.rs.delete_user_rule(index))
+})

@@ -16,6 +16,7 @@ import com.google.gwt.user.client.ui.DockLayoutPanel;
 import com.google.gwt.user.client.ui.SimplePanel;
 import com.google.gwt.user.client.ui.Widget;
 import com.google.gwt.dom.client.Style.Unit;
+import com.google.gwt.core.client.JavaScriptObject;
 import org.rstudio.core.client.Debug;
 import org.rstudio.core.client.widget.RStudioThemedFrame;
 import org.rstudio.studio.client.common.AutoGlassPanel;
@@ -216,6 +217,54 @@ public class AiViewManager
                   Debug.log("setWebSearchEnabled failed: " + error.getMessage());
                   RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
                      "Error", "Failed to set web search enabled: " + error.getMessage());
+               }
+            });
+         }
+         
+         @Override
+         public void onAddRule(String rule) {
+            server_.addUserRule(rule, new ServerRequestCallback<JavaScriptObject>() {
+               @Override
+               public void onResponseReceived(JavaScriptObject response) {
+                  settingsWidget_.onRuleAdded();
+               }
+               
+               @Override
+               public void onError(ServerError error) {
+                  RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
+                     "Error", "Failed to add rule: " + error.getMessage());
+               }
+            });
+         }
+         
+         @Override
+         public void onEditRule(int index, String rule) {
+            server_.editUserRule(index, rule, new ServerRequestCallback<JavaScriptObject>() {
+               @Override
+               public void onResponseReceived(JavaScriptObject response) {
+                  settingsWidget_.onRuleEdited();
+               }
+               
+               @Override
+               public void onError(ServerError error) {
+                  RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
+                     "Error", "Failed to edit rule: " + error.getMessage());
+               }
+            });
+         }
+         
+         @Override
+         public void onDeleteRule(int index) {
+            server_.deleteUserRule(index, new ServerRequestCallback<JavaScriptObject>() {
+               @Override
+               public void onResponseReceived(JavaScriptObject response) {
+                  settingsWidget_.onRuleDeleted();
+               }
+               
+               @Override
+               public void onError(ServerError error) {
+                  RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
+                     "Error", "Failed to delete rule: " + error.getMessage());
                }
             });
          }

@@ -3118,6 +3118,86 @@ Error setSecurityMode(const json::JsonRpcRequest& request,
    return Success();
 }
 
+// User rules management functions
+Error getUserRules(const json::JsonRpcRequest& request,
+                  json::JsonRpcResponse* p_response)
+{   
+   json::Value result;
+   Error error = r::exec::RFunction(".rs.get_user_rules").call(&result);
+   if (error)
+   {
+      LOG_ERROR(error);
+      p_response->setResult(json::Array()); // Default empty array
+   }
+   else
+   {
+      p_response->setResult(result);
+   }
+   return Success();
+}
+
+Error addUserRule(const json::JsonRpcRequest& request,
+                 json::JsonRpcResponse* p_response,
+                 const std::string& rule)
+{   
+   // Call the R handler for adding user rule
+   json::Value result;
+   Error error = r::exec::RFunction(".rs.add_user_rule")
+         .addParam(rule)
+         .call(&result);
+         
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   p_response->setResult(result);
+   return Success();
+}
+
+Error editUserRule(const json::JsonRpcRequest& request,
+                  json::JsonRpcResponse* p_response,
+                  int index,
+                  const std::string& rule)
+{   
+   // Call the R handler for editing user rule
+   json::Value result;
+   Error error = r::exec::RFunction(".rs.edit_user_rule")
+         .addParam(index)
+         .addParam(rule)
+         .call(&result);
+         
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   p_response->setResult(result);
+   return Success();
+}
+
+Error deleteUserRule(const json::JsonRpcRequest& request,
+                    json::JsonRpcResponse* p_response,
+                    int index)
+{   
+   // Call the R handler for deleting user rule
+   json::Value result;
+   Error error = r::exec::RFunction(".rs.delete_user_rule")
+         .addParam(index)
+         .call(&result);
+         
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   p_response->setResult(result);
+   return Success();
+}
+
 Error getWebSearchEnabled(const json::JsonRpcRequest& request,
                          json::JsonRpcResponse* p_response)
 {   
@@ -3593,6 +3673,43 @@ Error initialize()
                   if (error)
                      return error;
                   return setWebSearchEnabled(request, p_response, enabled);
+               })))
+      // User rules management RPC methods
+      (bind(module_context::registerRpcMethod, "get_user_rules",
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  return getUserRules(request, p_response);
+               })))
+      (bind(module_context::registerRpcMethod, "add_user_rule",
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  std::string rule;
+                  Error error = json::readParam(request.params, 0, &rule);
+                  if (error)
+                     return error;
+                  return addUserRule(request, p_response, rule);
+               })))
+      (bind(module_context::registerRpcMethod, "edit_user_rule",
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  int index;
+                  std::string rule;
+                  Error error = json::readParam(request.params, 0, &index);
+                  if (error)
+                     return error;
+                  error = json::readParam(request.params, 1, &rule);
+                  if (error)
+                     return error;
+                  return editUserRule(request, p_response, index, rule);
+               })))
+      (bind(module_context::registerRpcMethod, "delete_user_rule",
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  int index;
+                  Error error = json::readParam(request.params, 0, &index);
+                  if (error)
+                     return error;
+                  return deleteUserRule(request, p_response, index);
                })))
       (bind(registerUriHandler, kAiLocation, handleAiRequest));
    

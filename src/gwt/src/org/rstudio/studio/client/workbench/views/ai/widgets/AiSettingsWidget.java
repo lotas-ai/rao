@@ -13,11 +13,26 @@
 package org.rstudio.studio.client.workbench.views.ai.widgets;
 
 import com.google.gwt.user.client.ui.*;
+import com.google.gwt.user.client.ui.TextArea;
+import com.google.gwt.user.client.ui.HasHorizontalAlignment;
+import com.google.gwt.user.client.ui.HasVerticalAlignment;
 import com.google.gwt.resources.client.ClientBundle;
 import com.google.gwt.resources.client.CssResource;
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.JsArrayString;
 import org.rstudio.core.client.Debug;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
+import com.google.gwt.user.client.Command;
+import com.google.gwt.event.dom.client.ClickHandler;
+import com.google.gwt.event.dom.client.ClickEvent;
+import com.google.gwt.event.dom.client.MouseDownHandler;
+import com.google.gwt.event.dom.client.MouseDownEvent;
+import com.google.gwt.core.client.JavaScriptObject;
+import com.google.gwt.user.client.Timer;
+import org.rstudio.core.client.widget.ToolbarPopupMenu;
 
 import com.google.gwt.user.client.ui.PasswordTextBox;
 import org.rstudio.studio.client.common.GlobalDisplay;
@@ -41,6 +56,9 @@ public class AiSettingsWidget extends Composite
       void onTemperatureChange(double temperature);
       void onSecurityModeChange(String mode);
       void onWebSearchEnabledChange(boolean enabled);
+      void onAddRule(String rule);
+      void onEditRule(int index, String rule);
+      void onDeleteRule(int index);
    }
    
    public interface Styles extends CssResource
@@ -70,6 +88,22 @@ public class AiSettingsWidget extends Composite
       String profileTitlePanel();
       String profileName();
       String signOutContainer();
+      String sectionHeaderPanel();
+      String sectionChevron();
+      String sectionContent();
+      String sectionContentCollapsed();
+      String collapsed();
+      String lightGrayButton();
+      String ruleTextArea();
+      String ruleContainer();
+      String ruleText();
+      String optionsButton();
+      String optionsMenu();
+      String menuButton();
+      String buttonPanel();
+      String inputContainer();
+      String addRuleButton();
+      String compactButton();
    }
    
    public interface Resources extends ClientBundle
@@ -108,9 +142,16 @@ public class AiSettingsWidget extends Composite
    private HTML webSearchToggle_;
    private Label securityModeText_;
    private Label webSearchText_;
+   private Button addRuleButton_;
+   private VerticalPanel rulesContainer_;
+   private TextArea newRuleInput_;
+   private Button saveNewRuleButton_;
+   private Button cancelNewRuleButton_;
+   private VerticalPanel newRulePanel_;
    private HTML profileSection_;
    private HTML modelSection_;
    private HTML workingDirectorySection_;
+   private HTML rulesSection_;
    private HTML securitySection_;
    
    // State
@@ -122,6 +163,16 @@ public class AiSettingsWidget extends Composite
    private AiSubscriptionStatus subscriptionStatus_ = null;
    private boolean subscriptionDetailsAdded_ = false;
    private boolean shouldShowDirectoryPrompt_ = false;
+   private List<String> currentRules_ = new ArrayList<>();
+   private Map<Integer, VerticalPanel> ruleMenus_ = new HashMap<>();
+   private Map<Integer, TextArea> editInputs_ = new HashMap<>();
+   
+   // Section expanded/collapsed state
+   private boolean profileSectionExpanded_ = true;
+   private boolean modelSectionExpanded_ = true;
+   private boolean workingDirectorySectionExpanded_ = true;
+   private boolean rulesSectionExpanded_ = true;
+   private boolean securitySectionExpanded_ = true;
    
    public AiSettingsWidget(SettingsHandler handler, 
                           AiServerOperations server, 
@@ -163,6 +214,11 @@ public class AiSettingsWidget extends Composite
       workingDirectorySection_.addStyleName(styles_.settingsSection());
       mainPanel.add(workingDirectorySection_);
       
+      // Rules Section
+      rulesSection_ = new HTML();
+      rulesSection_.addStyleName(styles_.settingsSection());
+      mainPanel.add(rulesSection_);
+      
       // Model Section
       modelSection_ = new HTML();
       modelSection_.addStyleName(styles_.settingsSection());
@@ -190,20 +246,56 @@ public class AiSettingsWidget extends Composite
       VerticalPanel section = new VerticalPanel();
       section.setWidth("100%");
       
-      // Section title with name on the right - using FlowPanel with CSS Grid
-      FlowPanel titleContainer = new FlowPanel();
-      titleContainer.setWidth("100%");
-      titleContainer.addStyleName(styles_.profileTitlePanel());
+      // Create header using CSS flexbox instead of table-based layout
+      HTML headerContainer = new HTML();
+      headerContainer.setWidth("100%");
+      headerContainer.addStyleName(styles_.sectionHeaderPanel());
       
-      Label title = new Label("Profile");
-      title.addStyleName(styles_.sectionTitle());
-      titleContainer.add(title);
+      // Build the header HTML directly with flexbox
+      if (userNameLabel_ == null) {
+         userNameLabel_ = new Label();
+         userNameLabel_.addStyleName(styles_.profileName());
+      }
       
-      userNameLabel_ = new Label();
-      userNameLabel_.addStyleName(styles_.profileName());
-      titleContainer.add(userNameLabel_);
+      String userName = userNameLabel_.getText();
+      if (userName == null || userName.isEmpty()) {
+         userName = ""; // Default to empty if no user name yet
+      }
       
-      section.add(titleContainer);
+               String headerHtml = 
+            "<div style='display: flex; align-items: center; width: 100%; position: relative; padding-right: 35px;'>" +
+               "<div style='flex: 0 0 auto;'>" +
+                  "<span class='" + styles_.sectionTitle() + "'>Profile</span>" +
+               "</div>" +
+               "<div style='flex: 1 1 auto;'></div>" + // Spacer
+               "<div style='flex: 0 0 auto; margin-right: 10px;'>" +
+                  "<span class='" + styles_.profileName() + "' style='white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;'>" + userName + "</span>" +
+               "</div>" +
+            "</div>" +
+            "<div style='position: absolute; top: 8px; right: 8px; z-index: 10;'>" +
+               "<div style='width: 20px; height: 20px; background: transparent; border: 1px solid #ccc; border-radius: 3px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: border-color 0.2s ease;' " +
+               "onmouseover='this.style.borderColor=\"#999\"' onmouseout='this.style.borderColor=\"#ccc\"' onclick='window.handleProfileChevronClick && window.handleProfileChevronClick();'>" +
+                  "<svg width='10' height='12' viewBox='0 0 10 12' style='flex-shrink: 0;'>" +
+                     "<path d='M2 4L5 2L8 4' stroke='#666' stroke-width='1.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/>" +
+                     "<path d='M2 8L5 10L8 8' stroke='#666' stroke-width='1.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/>" +
+                  "</svg>" +
+               "</div>" +
+            "</div>";
+      
+      headerContainer.setHTML(headerHtml);
+      
+      // Add native click handler for the chevron
+      addNativeProfileChevronHandler();
+      
+      section.add(headerContainer);
+      
+      // Content section (collapsible)
+      VerticalPanel contentPanel = new VerticalPanel();
+      contentPanel.setWidth("100%");
+      contentPanel.addStyleName(styles_.sectionContent());
+      if (!profileSectionExpanded_) {
+         contentPanel.addStyleName(styles_.sectionContentCollapsed());
+      }
       
       if (!hasApiKey_) {
          // API Key input section
@@ -232,7 +324,7 @@ public class AiSettingsWidget extends Composite
          keyInputContainer.add(saveApiKeyButton_);
          
          keyInputPanel.add(keyInputContainer);
-         section.add(keyInputPanel);
+         contentPanel.add(keyInputPanel);
          
       } else {
          // Profile info section
@@ -267,29 +359,42 @@ public class AiSettingsWidget extends Composite
          deleteApiKeyButton_ = new Button("Sign out");
          deleteApiKeyButton_.addStyleName(styles_.settingButton());
          deleteApiKeyButton_.addStyleName(styles_.dangerButton());
+         deleteApiKeyButton_.addStyleName(styles_.compactButton());
          
          // Add native DOM click event listener (same pattern as console/terminal/edit file widgets)
          addNativeClickHandler(deleteApiKeyButton_.getElement(), "Sign out");
          signOutContainer.add(deleteApiKeyButton_);
          profileInfo.add(signOutContainer);
          
-         section.add(profileInfo);
+         contentPanel.add(profileInfo);
       }
       
       // Error message label
       profileErrorLabel_ = new Label();
       profileErrorLabel_.addStyleName(styles_.errorMessage());
       profileErrorLabel_.setVisible(false);
-      section.add(profileErrorLabel_);
+      contentPanel.add(profileErrorLabel_);
       
       // Prompt message label - show after API key is saved
       directoryPromptLabel_ = new Label("Please set a working directory below to use Rao.");
       directoryPromptLabel_.addStyleName(styles_.successMessage());
       directoryPromptLabel_.setVisible(shouldShowDirectoryPrompt_);
-      section.add(directoryPromptLabel_);
+      contentPanel.add(directoryPromptLabel_);
+      
+      // Add content panel to section
+      section.add(contentPanel);
       
       profileSection_.getElement().setInnerHTML("");
       profileSection_.getElement().appendChild(section.getElement());
+      
+      // Apply collapsed class if section is collapsed
+      if (!profileSectionExpanded_) {
+         profileSection_.addStyleName(styles_.collapsed());
+         // Immediately apply the visual collapse using JavaScript
+         applyImmediateCollapse(profileSection_.getElement());
+      } else {
+         profileSection_.removeStyleName(styles_.collapsed());
+      }
    }
    
    private void buildModelSection()
@@ -297,10 +402,21 @@ public class AiSettingsWidget extends Composite
       VerticalPanel section = new VerticalPanel();
       section.setWidth("100%");
       
-      // Section title
-      Label title = new Label("Model");
-      title.addStyleName(styles_.sectionTitle());
-      section.add(title);
+      // Section header
+      HorizontalPanel headerPanel = createSectionHeader("Model", "model", modelSectionExpanded_);
+      section.add(headerPanel);
+      
+      // Add chevron button positioned absolutely on the right
+      HTML chevronButton = createChevronButton("model", modelSectionExpanded_);
+      section.add(chevronButton);
+      
+      // Content section (collapsible)
+      VerticalPanel contentPanel = new VerticalPanel();
+      contentPanel.setWidth("100%");
+      contentPanel.addStyleName(styles_.sectionContent());
+      if (!modelSectionExpanded_) {
+         contentPanel.addStyleName(styles_.sectionContentCollapsed());
+      }
       
       if (hasApiKey_) {
          HorizontalPanel modelPanel = new HorizontalPanel();
@@ -324,7 +440,7 @@ public class AiSettingsWidget extends Composite
          modelContainer.add(modelSelect_);
          
          modelPanel.add(modelContainer);
-         section.add(modelPanel);
+         contentPanel.add(modelPanel);
          
          // Temperature slider section
          HorizontalPanel temperaturePanel = new HorizontalPanel();
@@ -369,7 +485,7 @@ public class AiSettingsWidget extends Composite
          temperatureInput_.setValue(String.valueOf(currentTemperature_));
          temperatureInput_.setWidth("60px");
          temperatureInput_.addStyleName(styles_.settingInput());
-         temperatureInput_.getElement().setAttribute("placeholder", "0.7");
+         temperatureInput_.getElement().setAttribute("placeholder", "0.5");
          
          // Add native event handlers for input
          addNativeInputChangeHandler(temperatureInput_.getElement());
@@ -378,18 +494,30 @@ public class AiSettingsWidget extends Composite
          
          temperatureContainer.add(sliderInputPanel);
          temperaturePanel.add(temperatureContainer);
-         section.add(temperaturePanel);
+         contentPanel.add(temperaturePanel);
          
          // Load available models
          loadAvailableModels();
       } else {
          Label noKeyLabel = new Label("Please add your API key first to select a model.");
          noKeyLabel.addStyleName(styles_.settingLabel());
-         section.add(noKeyLabel);
+         contentPanel.add(noKeyLabel);
       }
+      
+      // Add content panel to section
+      section.add(contentPanel);
       
       modelSection_.getElement().setInnerHTML("");
       modelSection_.getElement().appendChild(section.getElement());
+      
+      // Apply collapsed class if section is collapsed
+      if (!modelSectionExpanded_) {
+         modelSection_.addStyleName(styles_.collapsed());
+         // Immediately apply the visual collapse using JavaScript
+         applyImmediateCollapse(modelSection_.getElement());
+      } else {
+         modelSection_.removeStyleName(styles_.collapsed());
+      }
    }
    
    private void buildWorkingDirectorySection()
@@ -397,14 +525,25 @@ public class AiSettingsWidget extends Composite
       VerticalPanel section = new VerticalPanel();
       section.setWidth("100%");
       
-      // Section title
-      Label title = new Label("Working Directory");
-      title.addStyleName(styles_.sectionTitle());
-      section.add(title);
+      // Section header
+      HorizontalPanel headerPanel = createSectionHeader("Working Directory", "workingDirectory", workingDirectorySectionExpanded_);
+      section.add(headerPanel);
+      
+      // Add chevron button positioned absolutely on the right
+      HTML chevronButton = createChevronButton("workingDirectory", workingDirectorySectionExpanded_);
+      section.add(chevronButton);
+      
+      // Content section (collapsible)
+      VerticalPanel contentPanel = new VerticalPanel();
+      contentPanel.setWidth("100%");
+      contentPanel.addStyleName(styles_.sectionContent());
+      if (!workingDirectorySectionExpanded_) {
+         contentPanel.addStyleName(styles_.sectionContentCollapsed());
+      }
       
       Label description = new Label("Setting a narrow working directory helps Rao understand your project context better.");
       description.addStyleName(styles_.settingLabel());
-      section.add(description);
+      contentPanel.add(description);
       
       // Directory input row
       VerticalPanel directoryContainer = new VerticalPanel();
@@ -438,26 +577,394 @@ public class AiSettingsWidget extends Composite
       setDirectoryButton_ = new Button("Set Directory");
       setDirectoryButton_.addStyleName(styles_.settingButton());
       setDirectoryButton_.addStyleName(styles_.primaryButton());
+      setDirectoryButton_.addStyleName(styles_.compactButton());
       setDirectoryButton_.getElement().getStyle().setProperty("marginTop", "8px");
       
       // Add native DOM click event listener (same pattern as console/terminal/edit file widgets)
       addNativeClickHandler(setDirectoryButton_.getElement(), "Set Directory");
       directoryContainer.add(setDirectoryButton_);
-      section.add(directoryContainer);
+      contentPanel.add(directoryContainer);
       
       // Success/Error messages
       directorySuccessLabel_ = new Label();
       directorySuccessLabel_.addStyleName(styles_.successMessage());
       directorySuccessLabel_.setVisible(false);
-      section.add(directorySuccessLabel_);
+      contentPanel.add(directorySuccessLabel_);
       
       directoryErrorLabel_ = new Label();
       directoryErrorLabel_.addStyleName(styles_.errorMessage());
       directoryErrorLabel_.setVisible(false);
-      section.add(directoryErrorLabel_);
+      contentPanel.add(directoryErrorLabel_);
+      
+      // Add content panel to section
+      section.add(contentPanel);
       
       workingDirectorySection_.getElement().setInnerHTML("");
       workingDirectorySection_.getElement().appendChild(section.getElement());
+      
+      // Apply collapsed class if section is collapsed
+      if (!workingDirectorySectionExpanded_) {
+         workingDirectorySection_.addStyleName(styles_.collapsed());
+         // Immediately apply the visual collapse using JavaScript
+         applyImmediateCollapse(workingDirectorySection_.getElement());
+      } else {
+         workingDirectorySection_.removeStyleName(styles_.collapsed());
+      }
+   }
+   
+   private void buildRulesSection()
+   {
+      VerticalPanel section = new VerticalPanel();
+      section.setWidth("100%");
+      
+      // Section header
+      HorizontalPanel headerPanel = createSectionHeader("Rules", "rules", rulesSectionExpanded_);
+      section.add(headerPanel);
+      
+      // Add chevron button positioned absolutely on the right
+      HTML chevronButton = createChevronButton("rules", rulesSectionExpanded_);
+      section.add(chevronButton);
+      
+      // Content section (collapsible)
+      VerticalPanel contentPanel = new VerticalPanel();
+      contentPanel.setWidth("100%");
+      contentPanel.addStyleName(styles_.sectionContent());
+      if (!rulesSectionExpanded_) {
+         contentPanel.addStyleName(styles_.sectionContentCollapsed());
+      }
+      
+      // Container for description and add button
+      HorizontalPanel descriptionPanel = new HorizontalPanel();
+      descriptionPanel.setWidth("100%");
+      descriptionPanel.setVerticalAlignment(HorizontalPanel.ALIGN_TOP);
+      descriptionPanel.setHorizontalAlignment(HorizontalPanel.ALIGN_LEFT);
+      
+      Label description = new Label("These rules are provided to the AI on each query to guide its response.");
+      description.addStyleName(styles_.settingLabel());
+      description.setWidth("100%");
+      descriptionPanel.add(description);
+      descriptionPanel.setCellWidth(description, "100%");
+      descriptionPanel.setCellHorizontalAlignment(description, HasHorizontalAlignment.ALIGN_LEFT);
+      
+      // Add rule button positioned on the right with fixed size
+      addRuleButton_ = new Button("+ Add Rule");
+      addRuleButton_.addStyleName(styles_.settingButton());
+      addRuleButton_.addStyleName(styles_.primaryButton());
+      addRuleButton_.addStyleName(styles_.addRuleButton());
+      
+      // Add native DOM click event listener
+      addNativeClickHandler(addRuleButton_.getElement(), "+ Add Rule");
+      descriptionPanel.add(addRuleButton_);
+      descriptionPanel.setCellHorizontalAlignment(addRuleButton_, HasHorizontalAlignment.ALIGN_RIGHT);
+      descriptionPanel.setCellVerticalAlignment(addRuleButton_, HasVerticalAlignment.ALIGN_TOP);
+      
+      contentPanel.add(descriptionPanel);
+      
+      // Rules container (will expand with rules)
+      rulesContainer_ = new VerticalPanel();
+      rulesContainer_.setWidth("100%");
+      rulesContainer_.addStyleName(styles_.settingRow());
+      contentPanel.add(rulesContainer_);
+      
+      // New rule input panel (initially hidden)
+      newRulePanel_ = new VerticalPanel();
+      newRulePanel_.setWidth("100%");
+      newRulePanel_.setVisible(false);
+      newRulePanel_.addStyleName(styles_.settingRow());
+      newRulePanel_.getElement().getStyle().setProperty("marginTop", "8px");
+      
+      // Container for input and buttons with relative positioning
+      VerticalPanel inputContainer = new VerticalPanel();
+      inputContainer.setWidth("100%");
+      inputContainer.addStyleName(styles_.inputContainer());
+      
+      newRuleInput_ = new TextArea();
+      newRuleInput_.getElement().setAttribute("placeholder", "Enter a rule for the AI to follow");
+      newRuleInput_.addStyleName(styles_.ruleTextArea());
+      newRuleInput_.setVisibleLines(3); // Start with 3 lines
+      inputContainer.add(newRuleInput_);
+      
+      // Button panel positioned absolutely at bottom right
+      HorizontalPanel buttonPanel = new HorizontalPanel();
+      buttonPanel.addStyleName(styles_.buttonPanel());
+      
+      saveNewRuleButton_ = new Button("Save");
+      saveNewRuleButton_.addStyleName(styles_.lightGrayButton());
+      addNativeClickHandler(saveNewRuleButton_.getElement(), "Save");
+      buttonPanel.add(saveNewRuleButton_);
+      
+      cancelNewRuleButton_ = new Button("Cancel");
+      cancelNewRuleButton_.addStyleName(styles_.lightGrayButton());
+      cancelNewRuleButton_.getElement().getStyle().setProperty("marginLeft", "4px");
+      addNativeClickHandler(cancelNewRuleButton_.getElement(), "Cancel");
+      buttonPanel.add(cancelNewRuleButton_);
+      
+      inputContainer.add(buttonPanel);
+      newRulePanel_.add(inputContainer);
+      contentPanel.add(newRulePanel_);
+      
+      // Build the rules list
+      buildRulesList();
+      
+      // Add content panel to section
+      section.add(contentPanel);
+      
+      rulesSection_.getElement().setInnerHTML("");
+      rulesSection_.getElement().appendChild(section.getElement());
+      
+      // Apply collapsed class if section is collapsed
+      if (!rulesSectionExpanded_) {
+         rulesSection_.addStyleName(styles_.collapsed());
+         // Immediately apply the visual collapse using JavaScript
+         applyImmediateCollapse(rulesSection_.getElement());
+      } else {
+         rulesSection_.removeStyleName(styles_.collapsed());
+      }
+   }
+   
+   private void buildRulesList()
+   {
+      // Clear existing rules and menu map
+      rulesContainer_.clear();
+      ruleMenus_.clear();
+      editInputs_.clear();
+      
+      // Add each rule as a panel with edit/delete options
+      for (int i = 0; i < currentRules_.size(); i++) {
+         final int ruleIndex = i;
+         final String rule = currentRules_.get(i);
+         
+         // Create rule container with white background to match input
+         VerticalPanel ruleContainer = new VerticalPanel();
+         ruleContainer.setWidth("100%");
+         ruleContainer.addStyleName(styles_.ruleContainer());
+         
+         // Rule content panel
+         HorizontalPanel ruleContent = new HorizontalPanel();
+         ruleContent.setWidth("100%");
+         ruleContent.setVerticalAlignment(HorizontalPanel.ALIGN_TOP);
+         
+         // Rule text (takes most of the space)
+         Label ruleText = new Label(rule);
+         ruleText.addStyleName(styles_.ruleText());
+         ruleContent.add(ruleText);
+         
+         // Options menu button (Text-based for reliable clicking - following codebase patterns)
+         Button optionsButton = new Button("•••"); // Simple text instead of SVG
+         optionsButton.addStyleName(styles_.optionsButton());
+         
+
+         
+         // Create options menu
+         final VerticalPanel optionsMenu = createRuleOptionsMenu(ruleIndex, rule);
+         
+         // Style the menu as a minimal popup that can overlap other sections
+         optionsMenu.setVisible(false);
+         optionsMenu.addStyleName(styles_.optionsMenu());
+         
+         // Store menu for later access by click handler
+         ruleMenus_.put(ruleIndex, optionsMenu);
+         
+         // Use the EXACT same pattern as working buttons (Add Rule, Sign out, etc.)
+         addNativeClickHandler(optionsButton.getElement(), "Options-" + ruleIndex);
+         
+         // Add options button directly to rule container (positioned absolutely)
+         ruleContainer.add(ruleContent);
+         ruleContainer.add(optionsButton);
+         ruleContainer.add(optionsMenu);
+         
+
+         
+         rulesContainer_.add(ruleContainer); // Add to bottom for correct indexing
+      }
+   }
+   
+      private void toggleOptionsMenu(VerticalPanel targetMenu) {
+      
+      // Hide all other menus first
+      for (int i = 0; i < rulesContainer_.getWidgetCount(); i++) {
+         VerticalPanel container = (VerticalPanel) rulesContainer_.getWidget(i);
+         for (int j = 0; j < container.getWidgetCount(); j++) {
+            Widget widget = container.getWidget(j);
+            if (widget instanceof VerticalPanel && widget != targetMenu && ruleMenus_.containsValue(widget)) {
+               widget.setVisible(false);
+            }
+         }
+      }
+      
+      // Toggle target menu visibility
+      boolean newVisible = !targetMenu.isVisible();
+      if (newVisible) {
+         // Position the menu correctly using fixed positioning
+         positionFixedMenu(targetMenu);
+         // Add click outside handler to hide menu
+         addClickOutsideHandler(targetMenu);
+      }
+      targetMenu.setVisible(newVisible);
+   }
+   
+   private void positionFixedMenu(VerticalPanel menu) {
+      // Find the button that triggered this menu
+      Button triggerButton = findTriggerButton(menu);
+      if (triggerButton != null) {
+         positionMenuRelativeToButton(menu.getElement(), triggerButton.getElement());
+      }
+   }
+   
+   private Button findTriggerButton(VerticalPanel menu) {
+      // Find which rule index this menu belongs to
+      for (Map.Entry<Integer, VerticalPanel> entry : ruleMenus_.entrySet()) {
+         if (entry.getValue() == menu) {
+            int ruleIndex = entry.getKey();
+            // Find the button in the corresponding rule container
+            if (ruleIndex < rulesContainer_.getWidgetCount()) {
+               VerticalPanel ruleContainer = (VerticalPanel) rulesContainer_.getWidget(ruleIndex);
+               for (int j = 0; j < ruleContainer.getWidgetCount(); j++) {
+                  Widget widget = ruleContainer.getWidget(j);
+                  if (widget instanceof Button) {
+                     return (Button) widget;
+                  }
+               }
+            }
+            break;
+         }
+      }
+      return null;
+   }
+   
+   private native void positionMenuRelativeToButton(com.google.gwt.dom.client.Element menuElement, com.google.gwt.dom.client.Element buttonElement) /*-{
+      var buttonRect = buttonElement.getBoundingClientRect();
+      var windowHeight = $wnd.innerHeight;
+      var menuHeight = 80; // Approximate menu height
+      
+      // Position to the right of the button, below it
+      var left = buttonRect.right - 60; // Align right edge with some offset
+      var top = buttonRect.bottom + 2; // Just below the button
+      
+      // Adjust if it would go off the bottom of the screen
+      if (top + menuHeight > windowHeight) {
+         top = buttonRect.top - menuHeight - 2; // Position above the button instead
+      }
+      
+      // Adjust if it would go off the left of the screen  
+      if (left < 5) {
+         left = 5;
+      }
+      
+      menuElement.style.left = left + 'px';
+      menuElement.style.top = top + 'px';
+   }-*/;
+      
+   private void addClickOutsideHandler(VerticalPanel menu) {
+      addClickOutsideHandlerNative(menu.getElement());
+   }
+   
+   private native void addClickOutsideHandlerNative(com.google.gwt.dom.client.Element menuElement) /*-{
+      var self = this;
+      
+      // Remove any existing outside click handler
+      if ($wnd.currentMenuOutsideHandler) {
+         $doc.removeEventListener('click', $wnd.currentMenuOutsideHandler);
+      }
+      
+      // Add new outside click handler
+      $wnd.currentMenuOutsideHandler = function(event) {
+         // Check if click is outside the menu
+         if (!menuElement.contains(event.target)) {
+            // Hide the menu
+            menuElement.style.display = 'none';
+            // Remove the handler
+            $doc.removeEventListener('click', $wnd.currentMenuOutsideHandler);
+            $wnd.currentMenuOutsideHandler = null;
+         }
+      };
+      
+      // Add handler after a short delay to avoid immediate hiding
+      setTimeout(function() {
+         $doc.addEventListener('click', $wnd.currentMenuOutsideHandler);
+      }, 100);
+   }-*/;
+   
+
+   
+
+   
+   private VerticalPanel createRuleOptionsMenu(final int ruleIndex, final String rule)
+   {
+      VerticalPanel menu = new VerticalPanel();
+      menu.setWidth("100%");
+      
+      // Create Edit button using the working pattern
+      Button editButton = new Button("Edit");
+      editButton.addStyleName(styles_.menuButton());
+      
+      // Use the SAME working pattern as triple dots
+      addNativeClickHandler(editButton.getElement(), "Edit-" + ruleIndex);
+      
+      // Create Delete button using the working pattern  
+      Button deleteButton = new Button("Delete");
+      deleteButton.addStyleName(styles_.menuButton());
+      
+      // Use the SAME working pattern as triple dots
+      addNativeClickHandler(deleteButton.getElement(), "Delete-" + ruleIndex);
+      
+
+      
+      menu.add(editButton);
+      menu.add(deleteButton);
+      
+      return menu;
+   }
+   
+
+   
+   private void startEditingRule(int ruleIndex, String currentRule)
+   {
+      // Hide the rule in the list and show edit interface
+      // For simplicity, we'll replace the rule display with an edit interface
+      VerticalPanel ruleContainer = (VerticalPanel) rulesContainer_.getWidget(ruleIndex);
+      ruleContainer.clear();
+      
+      // Container for input and buttons with relative positioning
+      VerticalPanel editContainer = new VerticalPanel();
+      editContainer.setWidth("100%");
+      editContainer.addStyleName(styles_.inputContainer());
+      
+      // Add edit interface - use TextArea to match new input styling
+      TextArea editInput = new TextArea();
+      editInput.setValue(currentRule);
+      editInput.addStyleName(styles_.ruleTextArea());
+      editInput.setVisibleLines(3); // Start with 3 lines
+      editContainer.add(editInput);
+      
+      // Button panel positioned absolutely at bottom right
+      HorizontalPanel buttonPanel = new HorizontalPanel();
+      buttonPanel.addStyleName(styles_.buttonPanel());
+      
+      Button saveButton = new Button("Save");
+      saveButton.addStyleName(styles_.lightGrayButton());
+      
+      // Store the edit input globally for access in handler
+      storeEditInput(ruleIndex, editInput);
+      
+      // Use the SAME working pattern as all other buttons
+      addNativeClickHandler(saveButton.getElement(), "EditSave-" + ruleIndex);
+      buttonPanel.add(saveButton);
+      
+      Button cancelButton = new Button("Cancel");
+      cancelButton.addStyleName(styles_.lightGrayButton());
+      cancelButton.getElement().getStyle().setProperty("marginLeft", "4px");
+      
+      // Use the SAME working pattern as all other buttons
+      addNativeClickHandler(cancelButton.getElement(), "EditCancel-" + ruleIndex);
+      buttonPanel.add(cancelButton);
+      
+      editContainer.add(buttonPanel);
+      ruleContainer.add(editContainer);
+   }
+   
+   private void storeEditInput(int ruleIndex, TextArea editInput) {
+      editInputs_.put(ruleIndex, editInput);
    }
    
    private void buildSecuritySection()
@@ -465,10 +972,21 @@ public class AiSettingsWidget extends Composite
       VerticalPanel section = new VerticalPanel();
       section.setWidth("100%");
       
-      // Section title
-      Label title = new Label("Security");
-      title.addStyleName(styles_.sectionTitle());
-      section.add(title);
+      // Section header
+      HorizontalPanel headerPanel = createSectionHeader("Security", "security", securitySectionExpanded_);
+      section.add(headerPanel);
+      
+      // Add chevron button positioned absolutely on the right
+      HTML chevronButton = createChevronButton("security", securitySectionExpanded_);
+      section.add(chevronButton);
+      
+      // Content section (collapsible)
+      VerticalPanel contentPanel = new VerticalPanel();
+      contentPanel.setWidth("100%");
+      contentPanel.addStyleName(styles_.sectionContent());
+      if (!securitySectionExpanded_) {
+         contentPanel.addStyleName(styles_.sectionContentCollapsed());
+      }
       
       // Security mode setting
       HorizontalPanel securityModePanel = new HorizontalPanel();
@@ -508,7 +1026,7 @@ public class AiSettingsWidget extends Composite
       
       securityModeContainer.add(securityTogglePanel);
       securityModePanel.add(securityModeContainer);
-      section.add(securityModePanel);
+      contentPanel.add(securityModePanel);
       
       // Web search setting
       HorizontalPanel webSearchPanel = new HorizontalPanel();
@@ -548,10 +1066,22 @@ public class AiSettingsWidget extends Composite
       
       webSearchContainer.add(webSearchTogglePanel);
       webSearchPanel.add(webSearchContainer);
-      section.add(webSearchPanel);
+      contentPanel.add(webSearchPanel);
+      
+      // Add content panel to section
+      section.add(contentPanel);
       
       securitySection_.getElement().setInnerHTML("");
       securitySection_.getElement().appendChild(section.getElement());
+      
+      // Apply collapsed class if section is collapsed
+      if (!securitySectionExpanded_) {
+         securitySection_.addStyleName(styles_.collapsed());
+         // Immediately apply the visual collapse using JavaScript
+         applyImmediateCollapse(securitySection_.getElement());
+      } else {
+         securitySection_.removeStyleName(styles_.collapsed());
+      }
    }
    
    private void loadUserProfile() {
@@ -571,7 +1101,6 @@ public class AiSettingsWidget extends Composite
          
          @Override
          public void onError(ServerError error) {
-            Debug.log("Error loading user profile: " + error.getMessage());
             showError("Failed to load user profile: " + error.getMessage());
          }
       });
@@ -630,20 +1159,22 @@ public class AiSettingsWidget extends Composite
       server_.getTemperature(new ServerRequestCallback<Double>() {
          @Override
          public void onResponseReceived(Double temperature) {
-            currentTemperature_ = temperature != null ? temperature : 0.7;
+            currentTemperature_ = temperature != null ? temperature : 0.5;
             updateTemperatureDisplay();
          }
          
          @Override
          public void onError(ServerError error) {
-            Debug.log("Error loading temperature: " + error.getMessage());
-            currentTemperature_ = 0.7; // Default value
+            currentTemperature_ = 0.5; // Default value
             updateTemperatureDisplay();
          }
       });
       
       updateSecurityModeDisplay();
       updateWebSearchDisplay();
+      
+      // Load user rules
+      refreshRules();
    }
    
    private void loadAvailableModels() {
@@ -688,6 +1219,7 @@ public class AiSettingsWidget extends Composite
    {
       buildProfileSection();
       buildWorkingDirectorySection();
+      buildRulesSection();
       buildModelSection();
       buildSecuritySection();
       
@@ -1107,9 +1639,8 @@ public class AiSettingsWidget extends Composite
       
       element.addEventListener('change', function(event) {
          self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleModelChange()();
-         event.preventDefault();
-         event.stopPropagation();
-      }, true); // Use capture phase
+         // Don't prevent default for change events - this allows normal form behavior
+      }, false);
    }-*/;
    
    // Add native DOM event handler for temperature slider
@@ -1118,9 +1649,8 @@ public class AiSettingsWidget extends Composite
       
       element.addEventListener('input', function(event) {
          self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleSliderChange()();
-         event.preventDefault();
-         event.stopPropagation();
-      }, true); // Use capture phase
+         // Don't prevent default for input events - this allows normal form behavior
+      }, false);
    }-*/;
    
    // Add native DOM event handler for temperature input
@@ -1130,18 +1660,17 @@ public class AiSettingsWidget extends Composite
       // Handle blur event (when field loses focus)
       element.addEventListener('blur', function(event) {
          self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleInputChange()();
-         event.preventDefault();
-         event.stopPropagation();
-      }, true);
+         // Don't prevent default for blur events - this allows normal form behavior
+      }, false);
       
       // Handle Enter key
       element.addEventListener('keydown', function(event) {
          if (event.key === 'Enter' || event.keyCode === 13) {
             self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleInputChange()();
-            event.preventDefault();
+            event.preventDefault(); // Only prevent default for Enter key
             event.stopPropagation();
          }
-      }, true);
+      }, false);
       }-*/;
    
    // Add native DOM event handler for security mode toggle
@@ -1170,10 +1699,13 @@ public class AiSettingsWidget extends Composite
             }
             
             self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleSecurityModeChange()();
+            
+            // Only prevent default when actually handling the toggle
+            event.preventDefault();
+            event.stopPropagation();
          }
-         event.preventDefault();
-         event.stopPropagation();
-      }, true);
+         // If not a toggle click, let it bubble normally (allows text selection)
+      }, false);
    }-*/;
    
    // Add native DOM event handler for web search toggle
@@ -1194,11 +1726,125 @@ public class AiSettingsWidget extends Composite
             slider.style.left = isEnabled ? '17px' : '1px';
             
             self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleWebSearchChange()();
+            
+            // Only prevent default when actually handling the toggle
+            event.preventDefault();
+            event.stopPropagation();
          }
-         event.preventDefault();
-         event.stopPropagation();
-      }, true);
+         // If not a toggle click, let it bubble normally (allows text selection)
+      }, false);
    }-*/;
+   
+   // Rule management handlers
+   private void handleAddRule() {
+      // Show the new rule input panel
+      if (newRulePanel_ != null) {
+         newRulePanel_.setVisible(true);
+         newRuleInput_.setValue("");
+         newRuleInput_.setFocus(true);
+      }
+   }
+   
+   private void handleSaveNewRule() {
+      if (newRuleInput_ != null) {
+         String rule = newRuleInput_.getValue().trim();
+         if (!rule.isEmpty() && handler_ != null) {
+            handler_.onAddRule(rule);
+         }
+      }
+   }
+   
+   private void handleCancelNewRule() {
+      // Hide the new rule panel and show the add rule button
+      if (newRulePanel_ != null) {
+         newRulePanel_.setVisible(false);
+      }
+      if (addRuleButton_ != null) {
+         addRuleButton_.setVisible(true);
+      }
+   }
+   
+   private void handleOptionsMenu(int ruleIndex) {
+      VerticalPanel menu = ruleMenus_.get(ruleIndex);
+      if (menu != null) {
+         toggleOptionsMenu(menu);
+      }
+   }
+   
+   private void handleEditRule(int ruleIndex) {
+      if (ruleIndex < currentRules_.size()) {
+         String rule = currentRules_.get(ruleIndex);
+         startEditingRule(ruleIndex, rule);
+         
+         // Hide the menu
+         VerticalPanel menu = ruleMenus_.get(ruleIndex);
+         if (menu != null) {
+            menu.setVisible(false);
+         }
+      }
+   }
+   
+   private void handleDeleteRule(int ruleIndex) {
+      if (handler_ != null) {
+         handler_.onDeleteRule(ruleIndex + 1); // Convert to 1-based index for R
+      }
+      
+      // Hide the menu
+      VerticalPanel menu = ruleMenus_.get(ruleIndex);
+      if (menu != null) {
+         menu.setVisible(false);
+      }
+   }
+   
+   private void handleEditSave(int ruleIndex) {
+      try {
+         // Find the TextArea directly in the DOM instead of relying on the map
+         String editedText = findEditTextAreaValue(ruleIndex);
+         if (editedText != null && handler_ != null) {
+            handler_.onEditRule(ruleIndex + 1, editedText); // Convert to 1-based index for R
+         }
+      } catch (Exception e) {
+         Debug.logException(e);
+      }
+   }
+   
+   private String findEditTextAreaValue(int ruleIndex) {
+      // Find the TextArea in the rule container directly
+      if (ruleIndex < rulesContainer_.getWidgetCount()) {
+         VerticalPanel ruleContainer = (VerticalPanel) rulesContainer_.getWidget(ruleIndex);
+         String result = findTextAreaInContainer(ruleContainer);
+         return result;
+      }
+      return null;
+   }
+   
+   private String findTextAreaInContainer(VerticalPanel container) {
+      for (int i = 0; i < container.getWidgetCount(); i++) {
+         Widget widget = container.getWidget(i);
+         
+         if (widget instanceof VerticalPanel) {
+            VerticalPanel subContainer = (VerticalPanel) widget;
+            for (int j = 0; j < subContainer.getWidgetCount(); j++) {
+               Widget subWidget = subContainer.getWidget(j);
+               if (subWidget instanceof TextArea) {
+                  TextArea textArea = (TextArea) subWidget;
+                  String value = textArea.getValue();
+                  return value;
+               }
+            }
+         } else if (widget instanceof TextArea) {
+            TextArea textArea = (TextArea) widget;
+            String value = textArea.getValue();
+            return value;
+         }
+      }
+      return null;
+   }
+   
+   private void handleEditCancel(int ruleIndex) {
+      // Rebuild the rules list to cancel editing
+      buildRulesList();
+   }
    
    // Native method to get toggle value
    private native String getToggleValue(com.google.gwt.dom.client.Element element) /*-{
@@ -1242,7 +1888,7 @@ public class AiSettingsWidget extends Composite
             return parseFloat(slider.value);
          }
       }
-      return 0.7; // Default value
+      return 0.5; // Default value
    }-*/;
    
    // Native method to set slider value
@@ -1259,19 +1905,45 @@ public class AiSettingsWidget extends Composite
       var self = this;
       
       element.addEventListener('click', function(event) {
-         if (buttonText === 'Save API Key') {
-            self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleSaveApiKey()();
-         } else if (buttonText === 'Sign out') {
-            self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleDeleteApiKey()();
-         } else if (buttonText === 'Browse...') {
-            self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleBrowseDirectory()();
-         } else if (buttonText === 'Set Directory') {
-            self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleSetDirectory()();
+         // Only handle clicks that are specifically on button elements to preserve text selection
+         if (event.target === element || element.contains(event.target)) {
+            if (buttonText === 'Save API Key') {
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleSaveApiKey()();
+            } else if (buttonText === 'Sign out') {
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleDeleteApiKey()();
+            } else if (buttonText === 'Browse...') {
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleBrowseDirectory()();
+            } else if (buttonText === 'Set Directory') {
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleSetDirectory()();
+            } else if (buttonText === '+ Add Rule') {
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleAddRule()();
+            } else if (buttonText === 'Save') {
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleSaveNewRule()();
+            } else if (buttonText === 'Cancel') {
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleCancelNewRule()();
+            } else if (buttonText.startsWith('Options-')) {
+               var ruleIndex = parseInt(buttonText.split('-')[1]);
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleOptionsMenu(I)(ruleIndex);
+            } else if (buttonText.startsWith('Edit-')) {
+               var ruleIndex = parseInt(buttonText.split('-')[1]);
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleEditRule(I)(ruleIndex);
+            } else if (buttonText.startsWith('Delete-')) {
+               var ruleIndex = parseInt(buttonText.split('-')[1]);
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleDeleteRule(I)(ruleIndex);
+            } else if (buttonText.startsWith('EditSave-')) {
+               var ruleIndex = parseInt(buttonText.split('-')[1]);
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleEditSave(I)(ruleIndex);
+            } else if (buttonText.startsWith('EditCancel-')) {
+               var ruleIndex = parseInt(buttonText.split('-')[1]);
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleEditCancel(I)(ruleIndex);
+            }
+            
+            // Only prevent default for actual button clicks
+            event.preventDefault();
+            event.stopPropagation();
          }
-         
-         event.preventDefault();
-         event.stopPropagation();
-      }, true); // Use capture phase
+         // If the click is not on the button element, let it bubble normally (allows text selection)
+      }, false); // Use bubbling phase instead of capture to allow text selection to work first
    }-*/;
    
    // Button click handlers
@@ -1502,6 +2174,76 @@ public class AiSettingsWidget extends Composite
       updateWebSearchDisplay();
    }
    
+   // Rule management callback methods
+   public void onRuleAdded() {
+      // Hide the new rule panel and show the add rule button
+      if (newRulePanel_ != null) {
+         newRulePanel_.setVisible(false);
+      }
+      if (addRuleButton_ != null) {
+         addRuleButton_.setVisible(true);
+      }
+      // Refresh rules from server and rebuild the rules list
+      refreshRules();
+   }
+   
+   public void onRuleEdited() {
+      // Refresh rules from server and rebuild the rules list
+      refreshRules();
+   }
+   
+   public void onRuleDeleted() {
+      // Refresh rules from server and rebuild the rules list
+      refreshRules();
+   }
+   
+   private void refreshRules() {
+      server_.getUserRules(new ServerRequestCallback<JavaScriptObject>() {
+         @Override
+         public void onResponseReceived(JavaScriptObject response) {
+            // Extract rules from response and update current rules
+            JsArrayString rulesArray = extractRulesArray(response);
+            currentRules_.clear();
+            for (int i = 0; i < rulesArray.length(); i++) {
+               currentRules_.add(rulesArray.get(i));
+            }
+            // Rebuild the rules list
+            buildRulesList();
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Error loading user rules: " + error.getMessage());
+         }
+      });
+   }
+   
+   private native JsArrayString extractRulesArray(JavaScriptObject response) /*-{
+      // Handle different possible response formats from R
+      if (response) {
+         // If response is already an array
+         if (response.length !== undefined) {
+            return response;
+         }
+         // If response is an object with a rules property
+         if (response.rules && response.rules.length !== undefined) {
+            return response.rules;
+         }
+         // If response is a list/object, convert to array
+         var rules = [];
+         var keys = Object.keys(response);
+         for (var i = 0; i < keys.length; i++) {
+            var key = keys[i];
+            if (key !== 'success' && key !== 'error') {
+               rules.push(response[key]);
+            }
+         }
+         return rules;
+      }
+      // Return empty array if no rules found
+      return [];
+   }-*/;
+   
    /**
     * Update PostHog tracking based on security mode
     * @param mode The security mode ("secure" or "make_rao_better")
@@ -1520,6 +2262,279 @@ public class AiSettingsWidget extends Composite
          console.warn("PostHog helper not available for security mode update");
       }
    }-*/;
-
+   
+   /**
+    * Creates a section header with just the title
+    */
+   private HorizontalPanel createSectionHeader(String title, String sectionName, boolean isExpanded) {
+      HorizontalPanel headerPanel = new HorizontalPanel();
+      headerPanel.setWidth("100%");
+      headerPanel.addStyleName(styles_.sectionHeaderPanel());
+      headerPanel.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
+      
+      // Section title only
+      Label titleLabel = new Label(title);
+      titleLabel.addStyleName(styles_.sectionTitle());
+      headerPanel.add(titleLabel);
+      
+      return headerPanel;
+   }
+   
+   /**
+    * Creates a chevron button positioned absolutely on the right side of the section
+    */
+   private HTML createChevronButton(String sectionName, boolean isExpanded) {
+      HTML chevronButton = new HTML();
+      chevronButton.addStyleName(styles_.sectionChevron());
+      
+      // Create double chevron SVG icon with transparent background and border
+      String chevronSvg = 
+         "<div style='width: 20px; height: 20px; background: transparent; border: 1px solid #ccc; border-radius: 3px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: border-color 0.2s ease;' " +
+         "onmouseover='this.style.borderColor=\"#999\"' onmouseout='this.style.borderColor=\"#ccc\"'>" +
+         "<svg width='10' height='12' viewBox='0 0 10 12' style='flex-shrink: 0;'>" +
+         "<path d='M2 4L5 2L8 4' stroke='#666' stroke-width='1.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/>" +
+         "<path d='M2 8L5 10L8 8' stroke='#666' stroke-width='1.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/>" +
+         "</svg>" +
+         "</div>";
+      
+      chevronButton.setHTML(chevronSvg);
+      
+      // Position absolutely on the right side of the section
+      chevronButton.getElement().getStyle().setProperty("position", "absolute");
+      chevronButton.getElement().getStyle().setProperty("top", "8px");
+      chevronButton.getElement().getStyle().setProperty("right", "8px");
+      chevronButton.getElement().getStyle().setProperty("zIndex", "10");
+      
+      // Add click handler that actually works
+      addNativeSectionToggleHandler(chevronButton.getElement(), sectionName);
+      
+      return chevronButton;
+   }
+   
+   /**
+    * Toggles a section's expanded/collapsed state
+    */
+   private void toggleSection(String sectionName) {
+      boolean wasExpanded = getSectionExpandedState(sectionName);
+      boolean newExpanded = !wasExpanded;
+      setSectionExpandedState(sectionName, newExpanded);
+      
+      // Get the section element and toggle its content
+      HTML sectionElement = getSectionElement(sectionName);
+      if (sectionElement != null) {
+         toggleSectionContent(sectionElement.getElement(), newExpanded);
+      }
+   }
+   
+   /**
+    * Gets the section HTML element for a given section name
+    */
+   private HTML getSectionElement(String sectionName) {
+      switch (sectionName) {
+         case "profile":
+            return profileSection_;
+         case "model":
+            return modelSection_;
+         case "workingDirectory":
+            return workingDirectorySection_;
+         case "rules":
+            return rulesSection_;
+         case "security":
+            return securitySection_;
+         default:
+            return null;
+      }
+   }
+   
+   /**
+    * Native method to properly collapse/expand section content with animation
+    */
+   private native void toggleSectionContent(com.google.gwt.dom.client.Element sectionElement, boolean expanded) /*-{
+      try {
+         // Get the actual obfuscated class names
+         var sectionContentClass = this.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::getSectionContentClassName()();
+         var sectionContentCollapsedClass = this.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::getSectionContentCollapsedClassName()();
+         var collapsedClass = this.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::getCollapsedClassName()();
+         
+         // Find the content panel within the section using the actual class name
+         var contentPanel = sectionElement.querySelector('.' + sectionContentClass);
+         if (!contentPanel) {
+            return;
+         }
+         
+         if (expanded) {
+            // Expanding: restore content panel and section container
+            contentPanel.style.height = 'auto';
+            contentPanel.style.maxHeight = 'none';
+            contentPanel.style.opacity = '1';
+            contentPanel.style.overflow = 'visible';
+            contentPanel.style.marginTop = '8px';
+            if (contentPanel.classList) {
+               contentPanel.classList.remove(sectionContentCollapsedClass);
+            }
+            
+            // CRITICAL: Restore section container height
+            sectionElement.style.height = 'auto';
+            sectionElement.style.minHeight = 'auto';
+            sectionElement.style.maxHeight = 'none';
+            sectionElement.style.overflow = 'visible';
+            
+            // Remove collapsed class from section container to restore full padding
+            if (sectionElement.classList) {
+               sectionElement.classList.remove(collapsedClass);
+            }
+            console.log('Section expanded');
+         } else {
+            
+            // Add the collapsed class which should have !important rules
+            if (contentPanel.classList) {
+               contentPanel.classList.add(sectionContentCollapsedClass);
+            }
+            
+            // Add collapsed class to section container to reduce padding
+            if (sectionElement.classList) {
+               sectionElement.classList.add(collapsedClass);
+            }
+            
+            // Also force the section container to collapse by setting its height
+            var headerHeight = 36;
+            sectionElement.style.height = headerHeight + 'px';
+            sectionElement.style.minHeight = headerHeight + 'px';
+            sectionElement.style.maxHeight = headerHeight + 'px';
+            sectionElement.style.overflow = 'hidden';
+         }
+      } catch (e) {
+         console.error('Error toggling section content:', e);
+      }
+   }-*/;
+   
+   /**
+    * Get the actual obfuscated CSS class name for sectionContent
+    */
+   private String getSectionContentClassName() {
+      return styles_.sectionContent();
+   }
+   
+   /**
+    * Get the actual obfuscated CSS class name for sectionContentCollapsed
+    */
+   private String getSectionContentCollapsedClassName() {
+      return styles_.sectionContentCollapsed();
+   }
+   
+   /**
+    * Get the actual obfuscated CSS class name for collapsed
+    */
+   private String getCollapsedClassName() {
+      return styles_.collapsed();
+   }
+   
+   /**
+    * Gets the expanded state for a section
+    */
+   private boolean getSectionExpandedState(String sectionName) {
+      switch (sectionName) {
+         case "profile":
+            return profileSectionExpanded_;
+         case "model":
+            return modelSectionExpanded_;
+         case "workingDirectory":
+            return workingDirectorySectionExpanded_;
+         case "rules":
+            return rulesSectionExpanded_;
+         case "security":
+            return securitySectionExpanded_;
+         default:
+            return true;
+      }
+   }
+   
+   /**
+    * Sets the expanded state for a section
+    */
+   private void setSectionExpandedState(String sectionName, boolean expanded) {
+      switch (sectionName) {
+         case "profile":
+            profileSectionExpanded_ = expanded;
+            break;
+         case "model":
+            modelSectionExpanded_ = expanded;
+            break;
+         case "workingDirectory":
+            workingDirectorySectionExpanded_ = expanded;
+            break;
+         case "rules":
+            rulesSectionExpanded_ = expanded;
+            break;
+         case "security":
+            securitySectionExpanded_ = expanded;
+            break;
+      }
+   }
+   
+   /**
+    * Native DOM event handler for section header clicks
+    */
+   private native void addNativeSectionToggleHandler(com.google.gwt.dom.client.Element element, String sectionName) /*-{
+      var self = this;
+      
+      element.addEventListener('click', function(event) {
+         try {
+            self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::toggleSection(Ljava/lang/String;)(sectionName);
+         } catch (e) {
+            console.error('Error toggling section:', e);
+         }
+         event.preventDefault();
+         event.stopPropagation();
+      }, false); // Use bubbling phase to allow text selection
+   }-*/;
+   
+   /**
+    * Native handler for the profile section chevron specifically
+    */
+   private native void addNativeProfileChevronHandler() /*-{
+      var self = this;
+      
+      $wnd.handleProfileChevronClick = function() {
+         try {
+            self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::toggleSection(Ljava/lang/String;)('profile');
+         } catch (e) {
+            console.error('Error toggling profile section:', e);
+         }
+      };
+   }-*/;
+   
+   /**
+    * Immediately applies visual collapse to a section without animation
+    * Used on page load to ensure collapsed sections appear collapsed
+    */
+   private native void applyImmediateCollapse(com.google.gwt.dom.client.Element sectionElement) /*-{
+      try {
+         // Get the actual obfuscated class names
+         var sectionContentClass = this.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::getSectionContentClassName()();
+         var sectionContentCollapsedClass = this.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::getSectionContentCollapsedClassName()();
+         var collapsedClass = this.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::getCollapsedClassName()();
+         
+         // Find the content panel within the section
+         var contentPanel = sectionElement.querySelector('.' + sectionContentClass);
+         if (contentPanel) {
+            // Add collapsed classes (to match the toggle behavior)
+            if (contentPanel.classList) {
+               contentPanel.classList.add(sectionContentCollapsedClass);
+            }
+            if (sectionElement.classList) {
+               sectionElement.classList.add(collapsedClass);
+            }
+            // Use same height as toggle method for consistency
+            var headerHeight = 36; // Match the toggle method height
+            sectionElement.style.height = headerHeight + 'px';
+            sectionElement.style.minHeight = headerHeight + 'px';
+            sectionElement.style.maxHeight = headerHeight + 'px';
+            sectionElement.style.overflow = 'hidden';
+         }
+      } catch (e) {
+         console.error('Error applying immediate collapse:', e);
+      }
+   }-*/;
 
 }

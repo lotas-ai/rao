@@ -201,4 +201,13 @@ public interface AiServerOperations
    void getWebSearchEnabled(ServerRequestCallback<Boolean> requestCallback);
    
    void setWebSearchEnabled(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback);
+   
+   // User rules management
+   void getUserRules(ServerRequestCallback<JavaScriptObject> requestCallback);
+   
+   void addUserRule(String rule, ServerRequestCallback<JavaScriptObject> requestCallback);
+   
+   void editUserRule(int index, String rule, ServerRequestCallback<JavaScriptObject> requestCallback);
+   
+   void deleteUserRule(int index, ServerRequestCallback<JavaScriptObject> requestCallback);
 }

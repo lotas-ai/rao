@@ -2821,10 +2821,9 @@ body .rstudio-themes-alternate {
    background-color: rgba(76, 175, 80, 0.1) !important;
 }
 
-/* Red bar indicator for deleted lines - no icons, just color */
+/* Red bar indicator for deleted lines - no gutter background color */
 .ace_gutter-cell.ace_persistent_diff_deleted {
    border-left: 3px solid #f44336 !important;
-   background-color: rgba(244, 67, 54, 0.1) !important;
 }
 
 .ace_gutter-cell.ace_persistent_diff_deleted::after {
@@ -2840,11 +2839,23 @@ body .rstudio-themes-alternate {
    content: "\25BC";
 }
 
-/* Mixed red and green for lines with both addition and deletion */
+/* Mixed lines with green background and red arrow icon */
 .ace_gutter-cell.ace_persistent_diff_mixed {
-   border-left: 3px solid transparent !important;
-   border-image: linear-gradient(to bottom, #4CAF50 0%, #4CAF50 50%, #f44336 50%, #f44336 100%) 1 !important;
-   background: linear-gradient(to bottom, rgba(76, 175, 80, 0.1) 0%, rgba(76, 175, 80, 0.1) 50%, rgba(244, 67, 54, 0.1) 50%, rgba(244, 67, 54, 0.1) 100%) !important;
+   border-left: 3px solid #4CAF50 !important;
+   background-color: rgba(76, 175, 80, 0.1) !important;
+}
+
+.ace_gutter-cell.ace_persistent_diff_mixed::after {
+   content: "\25B6";
+   color: #f44336;
+   position: absolute;
+   right: 2px;
+   top: -2px;
+   font-weight: bold;
+}
+
+.ace_gutter-cell.ace_persistent_diff_mixed.expanded::after {
+   content: "\25BC";
 }
 
 /* Collapsed/folded diff indicator */
@@ -2858,12 +2869,8 @@ body .rstudio-themes-alternate {
    background-color: rgba(76, 175, 80, 0.2) !important;
 }
 
-.ace_dark .ace_gutter-cell.ace_persistent_diff_deleted {
-   background-color: rgba(244, 67, 54, 0.2) !important;
-}
-
 .ace_dark .ace_gutter-cell.ace_persistent_diff_mixed {
-   background: linear-gradient(to bottom, rgba(76, 175, 80, 0.2) 0%, rgba(76, 175, 80, 0.2) 50%, rgba(244, 67, 54, 0.2) 50%, rgba(244, 67, 54, 0.2) 100%) !important;
+   background-color: rgba(76, 175, 80, 0.2) !important;
 }
 
 .ace_dark .ace_gutter-cell.ace_persistent_diff_collapsed {
@@ -2875,12 +2882,8 @@ body .rstudio-themes-alternate {
    background-color: rgba(76, 175, 80, 0.2) !important;
 }
 
-.ace_gutter-cell.ace_persistent_diff_deleted:hover {
-   background-color: rgba(244, 67, 54, 0.2) !important;
-}
-
 .ace_gutter-cell.ace_persistent_diff_mixed:hover {
-   background: linear-gradient(to bottom, rgba(76, 175, 80, 0.2) 0%, rgba(76, 175, 80, 0.2) 50%, rgba(244, 67, 54, 0.2) 50%, rgba(244, 67, 54, 0.2) 100%) !important;
+   background-color: rgba(76, 175, 80, 0.2) !important;
 }
 
 .ace_gutter-cell.ace_persistent_diff_collapsed:hover {

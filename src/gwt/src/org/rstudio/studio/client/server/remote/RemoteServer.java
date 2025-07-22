@@ -7774,6 +7774,12 @@ public class RemoteServer implements Server, AiServerOperations
    private static final String BROWSE_FOR_FILE = "browse_for_file";
    private static final String CANCEL_ACTIVE_API_REQUEST = "cancel_active_api_request";
    private static final String PROCESS_AI_OPERATION = "process_ai_operation";
+   
+   // User rules management
+   private static final String GET_USER_RULES = "get_user_rules";
+   private static final String ADD_USER_RULE = "add_user_rule";
+   private static final String EDIT_USER_RULE = "edit_user_rule";
+   private static final String DELETE_USER_RULE = "delete_user_rule";
 
    private static final String CHECK_IMAGE_CONTENT_DUPLICATE = "check_image_content_duplicate";
    private static final String GET_PERSISTENT_DIFF_DATA = "get_persistent_diff_data";
@@ -8153,6 +8159,37 @@ public class RemoteServer implements Server, AiServerOperations
       JSONArray params = new JSONArray();
       params.set(0, JSONBoolean.getInstance(enabled));
       sendRequest(RPC_SCOPE, "set_web_search_enabled", params, requestCallback);
+   }
+   
+   @Override
+   public void getUserRules(ServerRequestCallback<JavaScriptObject> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, GET_USER_RULES, requestCallback);
+   }
+   
+   @Override
+   public void addUserRule(String rule, ServerRequestCallback<JavaScriptObject> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(rule));
+      sendRequest(RPC_SCOPE, ADD_USER_RULE, params, requestCallback);
+   }
+   
+   @Override
+   public void editUserRule(int index, String rule, ServerRequestCallback<JavaScriptObject> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONNumber(index));
+      params.set(1, new JSONString(rule));
+      sendRequest(RPC_SCOPE, EDIT_USER_RULE, params, requestCallback);
+   }
+   
+   @Override
+   public void deleteUserRule(int index, ServerRequestCallback<JavaScriptObject> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONNumber(index));
+      sendRequest(RPC_SCOPE, DELETE_USER_RULE, params, requestCallback);
    }
 }
 
