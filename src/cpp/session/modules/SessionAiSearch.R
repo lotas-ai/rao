@@ -779,6 +779,31 @@
       new_string <- .rs.remove_line_numbers(new_string)
    }
    
+   # Validate that old_string and new_string are different
+   if (!is.null(old_string) && !is.null(new_string) && old_string == new_string) {
+      error_message <- "Your old_string and new_string were the same. They must be different."
+      
+      function_output_id <- .rs.get_next_message_id()
+      function_call_output <- list(
+        id = function_output_id,
+        type = "function_call_output",
+        call_id = function_call$call_id,
+        output = error_message,
+        related_to = function_call$msg_id,
+        success = FALSE
+      )
+      
+      # Update conversation display immediately when search_replace fails
+      .rs.update_conversation_display()
+      
+      return(list(
+         function_call_output = function_call_output,
+         function_output_id = function_output_id,
+         breakout_of_function_calls = TRUE,
+         status = "continue_silent"
+      ))
+   }
+   
    # Validate required arguments
    if (is.null(file_path) || is.null(old_string) || is.null(new_string)) {
       error_message <- "Error: Missing required arguments (file_path, old_string, or new_string)"
@@ -1005,7 +1030,6 @@
       } else {
          error_message <- paste0("The old_string does not exist in the file and no similar content was found. Read the content and try again with the exact text.")
       }
-      print(error_message)
       
       function_output_id <- .rs.get_next_message_id()
       function_call_output <- list(

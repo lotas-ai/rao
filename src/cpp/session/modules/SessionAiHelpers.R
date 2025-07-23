@@ -1515,8 +1515,7 @@ tryCatch({
       
       # Use unified diff calculation for both function types
       diff_result <- .rs.compute_line_diff(old_lines, new_lines, is_from_edit_file = TRUE)
-      
-      # Note: Do NOT store recomputed diff data - it would overwrite the original correct data
+      .rs.store_diff_data(message_id, diff_result$diff, previous_content, cleaned_content)
       
       # Format filename with diff stats
       filename_with_stats <- basename(filename)
