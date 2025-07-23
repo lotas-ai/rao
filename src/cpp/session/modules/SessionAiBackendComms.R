@@ -370,15 +370,16 @@
 .rs.addFunction("send_backend_query", function(request_type, conversation, provider = NULL, model = NULL, temperature = NULL, request_id, additional_data = NULL) {
   .rs.check_required_packages()
   
+  is_conversation_name_request <- (request_type == "generate_conversation_name")
+  is_summarization_request <- (request_type == "summarize_conversation")
+  
   # CRITICAL FIX: Check cancellation FIRST before any backend communication
   # This prevents new API calls when user has already cancelled
-  if (.rs.get_conversation_var("ai_cancelled")) {
+  # IMPORTANT: Never cancel conversation name generation - these should always proceed
+  if (.rs.get_conversation_var("ai_cancelled") && !is_conversation_name_request) {
     cat("DEBUG CANCELLATION: send_backend_query returning NULL due to ai_cancelled\n")
     return(NULL)
   }
-  
-  is_conversation_name_request <- (request_type == "generate_conversation_name")
-  is_summarization_request <- (request_type == "summarize_conversation")
   
   # Check if there's already a thinking message active and set default if not
   # Skip thinking messages for conversation name generation (silent background operation)
@@ -398,8 +399,8 @@
       .rs.enqueClientEvent("update_thinking_message", list(message = "", hide_cancel = TRUE))
     }
     .rs.reset_ai_cancellation()
-    # Don't cancel summarization requests
-    if (is_summarization_request) {
+    # Don't cancel summarization requests or conversation name requests
+    if (is_summarization_request || is_conversation_name_request) {
       .rs.reset_ai_cancellation()
     } else {
       return(NULL)
@@ -547,7 +548,7 @@
       return(FALSE)
     }
     
-    if (check_cancelled()) {
+    if (check_cancelled() && !is_conversation_name_request) {
       if (!is_conversation_name_request) {
         .rs.enqueClientEvent("update_thinking_message", list(message = "", hide_cancel = TRUE))
       }
@@ -569,7 +570,7 @@
     async_info <- .rs.run_api_request_async(request_data = request_data, request_id = request_id)
     response <- .rs.poll_api_request_result(async_info)
 
-    if (check_cancelled()) {
+    if (check_cancelled() && !is_conversation_name_request) {
       if (!is_conversation_name_request) {
         .rs.enqueClientEvent("update_thinking_message", list(message = "", hide_cancel = TRUE))
       }

@@ -2170,7 +2170,14 @@
    if (file_ext %in% c("rmd", "qmd")) {
       # Extract only R code chunks from the content
       code_content <- .rs.extract_r_code_from_rmd(file_content)
-      command <- paste(code_content, collapse = "\n")
+      
+      # If no R code chunks were found (e.g., line range doesn't include ``` markers),
+      # treat the content as regular code and run it directly
+      if (length(code_content) == 0) {
+         command <- paste(file_content, collapse = "\n")
+      } else {
+         command <- paste(code_content, collapse = "\n")
+      }
    } else {
       # For regular files, use all content
       command <- paste(file_content, collapse = "\n")

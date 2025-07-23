@@ -526,6 +526,7 @@
     # Skip thinking messages for conversation name generation and summarization (silent background operations)
     is_conversation_name_request <- !is.null(final_request_data$request_type) && final_request_data$request_type == "generate_conversation_name"
     is_summarization_request <- !is.null(final_request_data$request_type) && final_request_data$request_type == "summarize_conversation"
+    request_type <- final_request_data$request_type
     
     if (!is_conversation_name_request && !is_summarization_request) {
       last_thinking_time <- .rs.getVar("last_thinking_message_time")
@@ -799,7 +800,8 @@
       using_backend = TRUE,
       using_callr = TRUE,
       bg_process = bg_process,
-      stream_file = stream_file
+      stream_file = stream_file,
+      request_type = request_type
     ))
     
   }, error = function(e) {
@@ -888,6 +890,8 @@
 .rs.addFunction("poll_api_request_result", function(request_info, max_attempts = 3000, sleep_time = 0.1, blocking = TRUE) {
   request_id <- request_info$request_id
   bg_process <- request_info$bg_process
+  request_type <- request_info$request_type
+  is_conversation_name_request <- !is.null(request_type) && request_type == "generate_conversation_name"
   
   # Initialize streaming variables
   temp_dir <- .rs.get_temp_dir()
@@ -978,7 +982,7 @@
       break
     }
     
-    if (.rs.get_conversation_var("ai_cancelled")) {
+    if (.rs.get_conversation_var("ai_cancelled") && !is_conversation_name_request) {
       break
     }
     
@@ -988,7 +992,7 @@
     }
     
     cancel_requested <- .rs.check_cancellation_files(request_id)
-    if (cancel_requested) {
+    if (cancel_requested && !is_conversation_name_request) {
       # Use streaming request ID for cancellation if available, otherwise fall back to client request ID
       cancel_request_id <- if (!is.null(streaming_request_id)) streaming_request_id else request_id
       # Send HTTP POST cancellation request to backend
