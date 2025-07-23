@@ -941,8 +941,15 @@ tryCatch({
     if (total_length > max_total_chars) {
         # First, limit the number of lines if necessary
         if (length(output_text) > max_lines) {
-            output_text <- output_text[1:max_lines]
-            output_text <- c(output_text, "... (output truncated)")
+            # Take equal amounts from start and end instead of just from start
+            total_lines <- length(output_text)
+            lines_per_side <- floor((max_lines - 1) / 2)  # -1 to account for truncation message
+            
+            start_lines <- output_text[1:lines_per_side]
+            end_lines <- output_text[(total_lines - lines_per_side + 1):total_lines]
+            
+            truncation_msg <- paste0("... (", total_lines - 2 * lines_per_side, " lines truncated) ...")
+            output_text <- c(start_lines, truncation_msg, end_lines)
         }
         
         # Only truncate individual lines if we're still over the limit
