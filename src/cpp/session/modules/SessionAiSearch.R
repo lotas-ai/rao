@@ -673,86 +673,155 @@
   # Convert file to single text string
   file_text <- paste(file_lines, collapse = "\n")
   
-  # Use the minimum length to avoid going beyond file bounds
-  search_len <- min(nchar(search_string), nchar(file_text))
+  search_len <- nchar(search_string)
+  file_len <- nchar(file_text)
   
-  if (search_len < 3) {
+  if (search_len < 3 || file_len < search_len) {
     return(list())
   }
   
-  # Trim search_string if it's longer than file
-  if (nchar(search_string) > nchar(file_text)) {
-    search_string <- substr(search_string, 1, nchar(file_text))
-  }
+  # Seed-and-extend algorithm for fast approximate matching
+  # Similar to BLAST algorithm used in bioinformatics
   
-  # Create sliding window positions
-  max_pos <- nchar(file_text) - search_len + 1
-  if (max_pos <= 0) {
-    return(list())
-  }
+  # Step 1: Generate seeds from trimmed lines of the search string
+  search_lines <- strsplit(search_string, "\n", fixed = TRUE)[[1]]
+  seeds <- character(0)
+  seed_positions <- integer(0)
   
-  # For performance, sample positions if file is very large
-  if (max_pos > 10000) {
-    # Sample every 10th position for large files
-    positions <- seq(1, max_pos, by = 10)
-  } else {
-    positions <- 1:max_pos
-  }
-  
-  # Compare each window to search_text using string distance
-  distances <- sapply(positions, function(pos) {
-    window <- substr(file_text, pos, pos + search_len - 1)
-    adist(search_string, window)[1, 1]
-  })
-  
-  # Find positions with reasonable similarity (allow up to 30% differences)
-  max_distance <- ceiling(search_len * 0.3)
-  good_matches <- which(distances <= max_distance)
-  
-  if (length(good_matches) == 0) {
-    return(list())
-  }
-  
-  # Get the best matching positions and create results
-  best_positions <- positions[good_matches]
-  best_distances <- distances[good_matches]
-  
-  # Sort by distance (best matches first)
-  sorted_indices <- order(best_distances)
-  best_positions <- best_positions[sorted_indices]
-  best_distances <- best_distances[sorted_indices]
-  
-  # Create match results with actual text and similarity
-  results <- list()
-  used_positions <- integer(0)
-  
-  for (i in seq_along(best_positions)) {
-    pos <- best_positions[i]
-    distance <- best_distances[i]
+  # Use entire lines as seeds, with leading/trailing whitespace removed
+  for (i in seq_along(search_lines)) {
+    line <- search_lines[i]
+    trimmed_line <- trimws(line)
     
-    # Skip if too close to a previous match (within 20 characters)
-    if (any(abs(used_positions - pos) < 20)) {
+    # Only use non-empty trimmed lines as seeds
+    if (nchar(trimmed_line) > 0) {
+      # Find the actual position of this trimmed seed in the original search string
+      seed_match <- gregexpr(trimmed_line, search_string, fixed = TRUE)[[1]]
+      if (seed_match[1] != -1) {
+        # Use the first occurrence position
+        seeds <- c(seeds, trimmed_line)
+        seed_positions <- c(seed_positions, seed_match[1])
+      }
+    }
+  }
+  
+  
+  # Step 2: Find all exact matches of seeds in the text (very fast)
+  candidate_positions <- list()
+  for (j in seq_along(seeds)) {
+    seed <- seeds[j]
+    seed_pos <- seed_positions[j]
+    
+    # Use gregexpr for fast exact matching (much faster than sliding window)
+    matches <- gregexpr(seed, file_text, fixed = TRUE)[[1]]
+    if (matches[1] != -1) {
+      for (match_pos in matches) {
+        # Calculate where the full search string would align
+        align_start <- match_pos - seed_pos + 1
+        candidate_positions[[length(candidate_positions) + 1]] <- list(
+          file_pos = align_start,
+          seed_match_pos = match_pos,
+          seed_in_search = seed_pos
+        )
+      }
+    }
+  }
+  
+  if (length(candidate_positions) == 0) {
+    return(list())
+  }
+  
+  # Step 3: Group nearby candidates and evaluate alignments
+  # Sort candidates by file position
+  file_positions <- sapply(candidate_positions, function(x) x$file_pos)
+  sorted_indices <- order(file_positions)
+  
+  alignments <- list()
+  processed_positions <- integer(0)
+  
+  for (i in sorted_indices) {
+    candidate <- candidate_positions[[i]]
+    file_pos <- candidate$file_pos
+    
+    # Skip if we've already processed a nearby position (within 10 chars)
+    if (any(abs(processed_positions - file_pos) < 10)) {
       next
     }
     
-    # Extract the matched text
-    matched_text <- substr(file_text, pos, pos + search_len - 1)
+    # Calculate alignment boundaries
+    align_start <- max(1, file_pos)
+    align_end <- min(file_len, align_start + search_len - 1)
     
-    # Calculate similarity percentage
-    similarity <- round((1 - distance / search_len) * 100, 1)
+    if (align_end > align_start + 2) {  # Need at least 3 chars
+      # Extract aligned region from file
+      aligned_text <- substr(file_text, align_start, align_end)
+      actual_len <- nchar(aligned_text)
+      
+      # Use the shorter of the two lengths for fair comparison
+      compare_len <- min(search_len, actual_len)
+      if (compare_len >= 3) {
+        search_substr <- substr(search_string, 1, compare_len)
+        aligned_substr <- substr(aligned_text, 1, compare_len)
+        
+        # Fast edit distance calculation only for promising candidates
+        distance <- adist(search_substr, aligned_substr)[1, 1]
+        similarity <- round((1 - distance / compare_len) * 100, 1)
+        
+        # Only keep reasonably good matches (>= 50% similarity)
+        if (similarity >= 50) {
+          # Find line number for display
+          text_before <- substr(file_text, 1, align_start - 1)
+          line_num <- length(strsplit(text_before, "\n")[[1]])
+          
+          alignments[[length(alignments) + 1]] <- list(
+            text = aligned_text,
+            similarity = similarity,
+            line = line_num,
+            distance = distance,
+            file_pos = align_start
+          )
+          
+          processed_positions <- c(processed_positions, file_pos)
+        }
+      }
+    }
+  }
+  
+  if (length(alignments) == 0) {
+    return(list())
+  }
+  
+  # Step 4: Sort by similarity and return top matches
+  similarities <- sapply(alignments, function(x) x$similarity)
+  sorted_indices <- order(similarities, decreasing = TRUE)
+  
+  results <- list()
+  used_line_ranges <- list()
+  
+  for (i in sorted_indices) {
+    alignment <- alignments[[i]]
     
-    # Find line number for display
-    text_before <- substr(file_text, 1, pos - 1)
-    line_num <- length(strsplit(text_before, "\n")[[1]])
+    # Calculate line range for this match
+    start_line <- alignment$line
+    match_lines <- strsplit(alignment$text, "\n", fixed = TRUE)[[1]]
+    end_line <- start_line + length(match_lines) - 1
     
-    results[[length(results) + 1]] <- list(
-      text = matched_text,
-      similarity = similarity,
-      line = line_num,
-      distance = distance
-    )
+    # Check for overlap with any previously used line ranges
+    has_overlap <- FALSE
+    for (used_range in used_line_ranges) {
+      if (!(end_line < used_range$start || start_line > used_range$end)) {
+        has_overlap <- TRUE
+        break
+      }
+    }
     
-    used_positions <- c(used_positions, pos)
+    # Skip if overlaps with previous result
+    if (has_overlap) {
+      next
+    }
+    
+    results[[length(results) + 1]] <- alignment
+    used_line_ranges[[length(used_line_ranges) + 1]] <- list(start = start_line, end = end_line)
     
     # Limit to 5 best distinct matches
     if (length(results) >= 5) {
