@@ -1789,8 +1789,7 @@
               .rs.set_conversation_var("widget_command_streamed", NULL)
               .rs.set_conversation_var("widget_type", NULL)
               
-              # Clean up search_replace streaming context
-              search_replace_delta_accumulator <- ""
+              # Clean up search_replace streaming context (except accumulator - that's cleaned up after completion event)
               search_replace_filename_printed <- FALSE
               search_replace_old_string_started <- FALSE
               search_replace_new_string_started <- FALSE
@@ -1846,15 +1845,24 @@
               }
               
               if (!is.null(event_data$field) && (event_data$field == "edit_file" || event_data$field == "search_replace") && 
-                         !is.null(event_data$response) && event_data$isComplete) {
+                         event_data$isComplete) {                
                 # Use the real call_id from the event, or generate one if missing
                 call_id <- if (!is.null(event_data$call_id)) event_data$call_id else stop("call_id is required and cannot be NULL for edit_file/search_replace completion")
                 
+                # Always use accumulated content for all streaming functions
+                arguments_content <- if (event_data$field == "search_replace") {
+                  search_replace_delta_accumulator
+                } else if (event_data$field == "edit_file") {
+                  edit_file_delta_accumulator
+                } else {
+                  ""
+                }
+                                
                 # Create the function_call structure WITHOUT modifying event_data
                 function_call_structure <- list(
                   name = event_data$field,
                   call_id = call_id,
-                  arguments = event_data$response
+                  arguments = arguments_content
                 )
                 
                 # Preserve response_id for reasoning model chaining
@@ -1879,19 +1887,35 @@
                 # Add to buffer
                 buffer_count <- .rs.add_to_function_call_buffer(function_call_data)
                 event_data$buffered_function_calls <- TRUE
+                
+                # Clean up search_replace accumulator after using it for completion
+                if (event_data$field == "search_replace") {
+                  search_replace_delta_accumulator <- ""
+                  search_replace_filename_printed <- FALSE
+                  search_replace_old_string_started <- FALSE
+                  search_replace_new_string_started <- FALSE
+                  search_replace_message_id <- NULL
+                  search_replace_old_string_streamed <- ""
+                  search_replace_new_string_streamed <- ""
+                  search_replace_new_comment_streamed <- FALSE
+                }
               }
               
               # Handle console/terminal command completion events - follow same pattern as edit_file
               if (!is.null(event_data$field) && (event_data$field == "run_console_cmd" || event_data$field == "run_terminal_cmd") && 
-                         !is.null(event_data$response) && event_data$isComplete) {
+                         event_data$isComplete) {
                 # Use the real call_id from the event, or generate one if missing
                 call_id <- if (!is.null(event_data$call_id)) event_data$call_id else stop("call_id is required and cannot be NULL for console/terminal completion")
+                
+                # Always use accumulated content for console/terminal commands
+                current_accumulator <- console_terminal_delta_accumulators[[call_id]]
+                arguments_content <- if (!is.null(current_accumulator)) current_accumulator else ""
                                 
                 # Create the function_call structure WITHOUT modifying event_data
                 function_call_structure <- list(
                   name = event_data$field,  # "run_console_cmd" or "run_terminal_cmd"
                   call_id = call_id,
-                  arguments = event_data$response
+                  arguments = arguments_content
                 )
                 
                 # Preserve response_id for reasoning model chaining

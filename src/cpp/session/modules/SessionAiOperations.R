@@ -89,7 +89,7 @@
       },
       "grep_search" = {
          pattern <- if (!is.null(arguments$query)) arguments$query else "unknown"
-         display_pattern <- if (nchar(pattern) > 25) paste0(substr(pattern, 1, 25), "...") else pattern
+         display_pattern <- if (nchar(pattern) > 50) paste0(substr(pattern, 1, 50), "...") else pattern
          
          # Build patterns info
          patterns_info <- ""

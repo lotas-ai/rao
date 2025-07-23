@@ -522,7 +522,7 @@
          function_response <- paste0("Error: Path is a directory, not a file: ", image_path)
          file_exists <- FALSE
       } else {
-         # Check file size (limit to 10MB like many image services)
+         # Check file size (limit to 10MB)
          file_size <- file.info(image_path)$size
          max_size <- 10 * 1024 * 1024  # 10MB
          if (file_size > max_size) {
@@ -660,6 +660,107 @@
       function_call_output = function_call_output,
       function_output_id = function_output_id
    ))
+})
+
+.rs.addFunction("perform_fuzzy_search_in_content", function(search_string, file_lines) {
+  if (is.null(search_string) || nchar(trimws(search_string)) == 0 || is.null(file_lines) || length(file_lines) == 0) {
+    return(list())
+  }
+  
+  # Clean up the search string
+  search_string <- trimws(search_string)
+  
+  # Convert file to single text string
+  file_text <- paste(file_lines, collapse = "\n")
+  
+  # Use the minimum length to avoid going beyond file bounds
+  search_len <- min(nchar(search_string), nchar(file_text))
+  
+  if (search_len < 3) {
+    return(list())
+  }
+  
+  # Trim search_string if it's longer than file
+  if (nchar(search_string) > nchar(file_text)) {
+    search_string <- substr(search_string, 1, nchar(file_text))
+  }
+  
+  # Create sliding window positions
+  max_pos <- nchar(file_text) - search_len + 1
+  if (max_pos <= 0) {
+    return(list())
+  }
+  
+  # For performance, sample positions if file is very large
+  if (max_pos > 10000) {
+    # Sample every 10th position for large files
+    positions <- seq(1, max_pos, by = 10)
+  } else {
+    positions <- 1:max_pos
+  }
+  
+  # Compare each window to search_text using string distance
+  distances <- sapply(positions, function(pos) {
+    window <- substr(file_text, pos, pos + search_len - 1)
+    adist(search_string, window)[1, 1]
+  })
+  
+  # Find positions with reasonable similarity (allow up to 30% differences)
+  max_distance <- ceiling(search_len * 0.3)
+  good_matches <- which(distances <= max_distance)
+  
+  if (length(good_matches) == 0) {
+    return(list())
+  }
+  
+  # Get the best matching positions and create results
+  best_positions <- positions[good_matches]
+  best_distances <- distances[good_matches]
+  
+  # Sort by distance (best matches first)
+  sorted_indices <- order(best_distances)
+  best_positions <- best_positions[sorted_indices]
+  best_distances <- best_distances[sorted_indices]
+  
+  # Create match results with actual text and similarity
+  results <- list()
+  used_positions <- integer(0)
+  
+  for (i in seq_along(best_positions)) {
+    pos <- best_positions[i]
+    distance <- best_distances[i]
+    
+    # Skip if too close to a previous match (within 20 characters)
+    if (any(abs(used_positions - pos) < 20)) {
+      next
+    }
+    
+    # Extract the matched text
+    matched_text <- substr(file_text, pos, pos + search_len - 1)
+    
+    # Calculate similarity percentage
+    similarity <- round((1 - distance / search_len) * 100, 1)
+    
+    # Find line number for display
+    text_before <- substr(file_text, 1, pos - 1)
+    line_num <- length(strsplit(text_before, "\n")[[1]])
+    
+    results[[length(results) + 1]] <- list(
+      text = matched_text,
+      similarity = similarity,
+      line = line_num,
+      distance = distance
+    )
+    
+    used_positions <- c(used_positions, pos)
+    
+    # Limit to 5 best distinct matches
+    if (length(results) >= 5) {
+      break
+    }
+  }
+  
+  return(results)
 })
 
 .rs.addFunction("handle_search_replace", function(function_call, current_log, related_to_id, request_id) {
@@ -885,7 +986,26 @@
    
    # Handle different match scenarios - return errors that trigger continue
    if (match_count == 0) {
-      error_message <- paste0("The old_string does not exist in the file. Read the content and try again with the exact text.")
+      # Perform fuzzy search when no exact matches are found
+      file_lines <- strsplit(effective_content, "\n")[[1]]
+      fuzzy_results <- .rs.perform_fuzzy_search_in_content(old_string, file_lines)
+      
+      if (length(fuzzy_results) > 0) {
+         # Create match details directly from fuzzy results
+         match_details <- sapply(seq_along(fuzzy_results), function(i) {
+            result <- fuzzy_results[[i]]
+            paste0("Match ", i, " (", result$similarity, "% similar, around line ", result$line, "):\n```\n", 
+                   result$text, "\n```")
+         })
+         
+         error_message <- paste0("The old_string was not found exactly in the file ", file_path, 
+                                ". However, here are similar content matches that might be what you're looking for. ",
+                                "If this is what you wanted, please use the exact text from one of these matches:\n\n", 
+                                paste(match_details, collapse = "\n\n"))
+      } else {
+         error_message <- paste0("The old_string does not exist in the file and no similar content was found. Read the content and try again with the exact text.")
+      }
+      print(error_message)
       
       function_output_id <- .rs.get_next_message_id()
       function_call_output <- list(
@@ -1554,14 +1674,14 @@
          header_part <- file_lines[1:header_end]
          content_part <- file_lines[(header_end + 1):length(file_lines)]
          
-         # Apply the same limiting as console/terminal commands
-         limited_content <- .rs.limit_output_text(content_part)
+         # Apply file-specific limiting: 250 lines max, 50,000 chars total, 200 chars per line
+         limited_content <- .rs.limit_output_text(content_part, max_total_chars = 50000, max_lines = 250, max_line_length = 200)
          
          # Recombine header and limited content
          file_content <- paste(c(header_part, limited_content), collapse = "\n")
       } else {
-         # No clear header found, limit the entire content
-         limited_lines <- .rs.limit_output_text(file_lines)
+         # No clear header found, limit the entire content with file-specific limits
+         limited_lines <- .rs.limit_output_text(file_lines, max_total_chars = 50000, max_lines = 250, max_line_length = 200)
          file_content <- paste(limited_lines, collapse = "\n")
       }
    }

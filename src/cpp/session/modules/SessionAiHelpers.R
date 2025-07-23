@@ -930,30 +930,33 @@ tryCatch({
    return(TRUE)
 })
 
-.rs.addFunction("limit_output_text", function(output_text) {
+.rs.addFunction("limit_output_text", function(output_text, max_total_chars = 10000, max_lines = 50, max_line_length = 200) {
     if (!is.character(output_text)) {
         output_text <- as.character(output_text)
     }
     
     total_length <- sum(nchar(output_text))
     
-    # Check if we need to truncate based on total length
-    if (total_length > 10000) {
+    # Only limit if total characters exceed the threshold
+    if (total_length > max_total_chars) {
         # First, limit the number of lines if necessary
-        if (length(output_text) > 50) {
-            output_text <- output_text[1:50]
+        if (length(output_text) > max_lines) {
+            output_text <- output_text[1:max_lines]
             output_text <- c(output_text, "... (output truncated)")
         }
-    }
-    
-    # Truncate individual lines that are too long
-    output_text <- vapply(output_text, function(line) {
-        if (nchar(line) > 200) {
-            paste0(substr(line, 1, 197), "...")
-        } else {
-            line
+        
+        # Only truncate individual lines if we're still over the limit
+        current_total <- sum(nchar(output_text))
+        if (current_total > max_total_chars) {
+            output_text <- vapply(output_text, function(line) {
+                if (nchar(line) > max_line_length) {
+                    paste0(substr(line, 1, max_line_length - 3), "...")
+                } else {
+                    line
+                }
+            }, character(1), USE.NAMES = FALSE)
         }
-    }, character(1), USE.NAMES = FALSE)
+    }
     
     return(output_text)
 })
@@ -1904,6 +1907,8 @@ tryCatch({
    # Now supports include/exclude pattern filtering like the disk search
    # Returns list of matches with file paths and line information
    
+   pattern <- gsub('\\\\', '\\', pattern, fixed = TRUE)
+
    results <- list()
    
    # Get all open documents
