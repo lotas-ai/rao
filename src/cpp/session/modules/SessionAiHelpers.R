@@ -931,41 +931,41 @@ tryCatch({
 })
 
 .rs.addFunction("limit_output_text", function(output_text, max_total_chars = 10000, max_lines = 50, max_line_length = 200) {
-    if (!is.character(output_text)) {
-        output_text <- as.character(output_text)
-    }
-    
-    total_length <- sum(nchar(output_text))
-    
-    # Only limit if total characters exceed the threshold
-    if (total_length > max_total_chars) {
-        # First, limit the number of lines if necessary
-        if (length(output_text) > max_lines) {
-            # Take equal amounts from start and end instead of just from start
-            total_lines <- length(output_text)
-            lines_per_side <- floor((max_lines - 1) / 2)  # -1 to account for truncation message
-            
-            start_lines <- output_text[1:lines_per_side]
-            end_lines <- output_text[(total_lines - lines_per_side + 1):total_lines]
-            
-            truncation_msg <- paste0("... (", total_lines - 2 * lines_per_side, " lines truncated) ...")
-            output_text <- c(start_lines, truncation_msg, end_lines)
-        }
-        
-        # Only truncate individual lines if we're still over the limit
-        current_total <- sum(nchar(output_text))
-        if (current_total > max_total_chars) {
-            output_text <- vapply(output_text, function(line) {
-                if (nchar(line) > max_line_length) {
-                    paste0(substr(line, 1, max_line_length - 3), "...")
-                } else {
-                    line
-                }
-            }, character(1), USE.NAMES = FALSE)
-        }
-    }
-    
-    return(output_text)
+   if (!is.character(output_text)) {
+      output_text <- as.character(output_text)
+   }
+   
+   total_length <- sum(nchar(output_text))
+   
+   # Only limit if total characters exceed the threshold
+   if (total_length > max_total_chars) {
+      # First, limit the number of lines if necessary
+      if (length(output_text) > max_lines) {
+         # Take equal amounts from start and end instead of just from start
+         total_lines <- length(output_text)
+         lines_per_side <- floor((max_lines - 1) / 2)  # -1 to account for truncation message
+         
+         start_lines <- output_text[1:lines_per_side]
+         end_lines <- output_text[(total_lines - lines_per_side + 1):total_lines]
+         
+         truncation_msg <- paste0("... (", total_lines - 2 * lines_per_side, " lines truncated) ...")
+         output_text <- c(start_lines, truncation_msg, end_lines)
+      }
+      
+      # Only truncate individual lines if we're still over the limit
+      current_total <- sum(nchar(output_text))
+      if (current_total > max_total_chars) {
+         output_text <- vapply(output_text, function(line) {
+               if (nchar(line) > max_line_length) {
+                  paste0(substr(line, 1, max_line_length - 3), "...")
+               } else {
+                  line
+               }
+         }, character(1), USE.NAMES = FALSE)
+      }
+   }
+   
+   return(output_text)
 })
 
 .rs.addFunction("check_required_packages", function(pkgs = c("httr2", "httr", "jsonlite", "curl", "commonmark", "htmltools", "base64enc", "processx", "callr", "magick")) {
