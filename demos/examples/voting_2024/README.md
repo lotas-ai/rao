@@ -49,7 +49,7 @@ Each country has the number of GOP votes, the number of Democratic votes, the to
 
 Now, we can make a request. Open a new conversation with the `+` button in the top left and paste in this query. Hit enter to run.
 ```
-Using the voting data, write an R file that creates a map of the US colored by county.
+Using the voting data, write an R file that creates a map of the US colored by county and run it.
 ```
 
 The model should produce a map of the U.S like this:
