@@ -21,6 +21,9 @@ Analyze taxonomic abundances with metadata including PCoA visualization by diagn
 ### [Italy COVID Sentiment](examples/italy_covid/README.md)
 Finish the demographic analysis from a partially completed analysis on survey data from Italians early in the COVID-19 pandemic.
 
+### [2024 Election County-Level Plotting](examples/voting_2024/README.md)
+Plot a map of the U.S. colored by vote proportion in the 2024 presidential election.
+
 ## Getting Started
 
 1. Install R (version 4.0 or later) from [CRAN](https://cloud.r-project.org/)
