@@ -18,6 +18,9 @@ Visualize electricity access trends in African countries over time. This demo sh
 ### [Metagenomics Analysis](examples/metagenomics/README.md)
 Analyze taxonomic abundances with metadata including PCoA visualization by diagnosis status. This demo showcases Rao's handling of large, complex datasets.
 
+### [Italy COVID Sentiment](examples/italy_covid/README.md)
+Finish the demographic analysis from a partially completed analysis on survey data from Italians early in the COVID-19 pandemic.
+
 ## Getting Started
 
 1. Install R (version 4.0 or later) from [CRAN](https://cloud.r-project.org/)
