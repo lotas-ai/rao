@@ -280,12 +280,13 @@
   settings_path <- .rs.get_ai_settings_path()
   
   # Create default settings if file doesn't exist
+  # Set to improve only here when it's loaded for the first time
   if (!file.exists(settings_path)) {
     return(list(
       selected_model = "claude-sonnet-4-20250514",
       working_directory = NULL,
       temperature = 0.5,
-      security_mode = "secure",
+      security_mode = "improve",
       web_search_enabled = FALSE
     ))
   }

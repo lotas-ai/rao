@@ -3097,13 +3097,13 @@ public interface CmdConstants extends Constants {
     String aiForwardDesc();
     
     // aiHome
-    @DefaultStringValue("Show R Ai") // $NON-NLS-1$
+    @DefaultStringValue("Settings") // $NON-NLS-1$
     String aiHomeLabel();
     @DefaultStringValue("") // $NON-NLS-1$
     String aiHomeButtonLabel();
-    @DefaultStringValue("R _Ai") // $NON-NLS-1$
+    @DefaultStringValue("Settings") // $NON-NLS-1$
     String aiHomeMenuLabel();
-    @DefaultStringValue("Show R Ai") // $NON-NLS-1$
+    @DefaultStringValue("Settings") // $NON-NLS-1$
     String aiHomeDesc();
     
     // aiSearch
@@ -3135,13 +3135,13 @@ public interface CmdConstants extends Constants {
     String aiPopoutDesc();
     
     // refreshAi
-    @DefaultStringValue("Refresh Ai Topic") // $NON-NLS-1$
+    @DefaultStringValue("New conversation") // $NON-NLS-1$
     String refreshAiLabel();
     @DefaultStringValue("") // $NON-NLS-1$
     String refreshAiButtonLabel();
-    @DefaultStringValue("Refresh") // $NON-NLS-1$
+    @DefaultStringValue("New conversation") // $NON-NLS-1$
     String refreshAiMenuLabel();
-    @DefaultStringValue("Refresh topic") // $NON-NLS-1$
+    @DefaultStringValue("New conversation") // $NON-NLS-1$
     String refreshAiDesc();
     
     // tutorialPopout
