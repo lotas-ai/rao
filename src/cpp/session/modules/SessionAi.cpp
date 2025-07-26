@@ -814,6 +814,30 @@ Error deleteApiKey(const json::JsonRpcRequest& request,
    return Success();
 }
 
+Error signInWithWebsite(const json::JsonRpcRequest& request,
+                       json::JsonRpcResponse* p_response,
+                       const std::string& websiteUrl)
+{
+   std::string signInUrl;
+   Error error = r::exec::RFunction(".rs.sign_in_with_website")
+         .addParam(websiteUrl)
+         .call(&signInUrl);
+
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+
+   if (signInUrl.empty())
+   {
+      return systemError(boost::system::errc::invalid_argument, "Empty sign-in URL returned", ERROR_LOCATION);
+   }
+
+   p_response->setResult(signInUrl);
+   return Success();
+}
+
 Error setActiveProvider(const json::JsonRpcRequest& request,
                         json::JsonRpcResponse* p_response,
                         const std::string& provider)
@@ -3438,6 +3462,15 @@ Error initialize()
                   if (error)
                      return error;
                   return deleteApiKey(request, p_response, provider);
+               })))
+      (bind(module_context::registerRpcMethod, "sign_in_with_website",
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  std::string websiteUrl;
+                  Error error = json::readParam(request.params, 0, &websiteUrl);
+                  if (error)
+                     return error;
+                  return signInWithWebsite(request, p_response, websiteUrl);
                })))
       (bind(module_context::registerRpcMethod, "set_active_provider",
             boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(

@@ -104,6 +104,29 @@ public class AiViewManager
          }
          
          @Override
+         public void onSignInWithWebsite() {
+            server_.signInWithWebsite("", new ServerRequestCallback<String>() {
+               @Override
+               public void onResponseReceived(String signInUrl) {
+                  if (signInUrl != null && !signInUrl.isEmpty()) {
+                     // Open the sign-in URL in a new window
+                     openSignInWindow(signInUrl);
+                  } else {
+                     RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
+                        "Error", "Received empty sign-in URL");
+                  }
+               }
+               
+               @Override
+               public void onError(ServerError error) {
+                  Debug.log("Sign-in URL error: " + error.getMessage());
+                  RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
+                     "Error", "Failed to get sign-in URL: " + error.getMessage());
+               }
+            });
+         }
+         
+         @Override
          public void onModelChange(String model) {
             server_.setModel("rao", model, new ServerRequestCallback<java.lang.Void>() {
                @Override
@@ -537,5 +560,65 @@ public class AiViewManager
          console.warn("PostHog helper not available for security mode update");
       }
    }-*/;
+   
+   /**
+    * Open sign-in window and handle the callback
+    */
+   private native void openSignInWindow(String signInUrl) /*-{
+      var self = this;
+      
+      // Open sign-in window
+      var signInWindow = $wnd.open(signInUrl, "rao_signin", "width=500,height=600,scrollbars=yes,resizable=yes");
+      
+      // Listen for messages from the sign-in window
+      var messageHandler = function(event) {
+         if (event.origin !== "https://www.lotas.ai" && event.origin !== "http://localhost:3000") {
+            return;
+         }
+         
+         if (event.data && event.data.type === "rao_signin_success" && event.data.apiKey) {
+            // Close the sign-in window
+            if (signInWindow) {
+               signInWindow.close();
+            }
+            
+            // Remove the message listener
+            $wnd.removeEventListener("message", messageHandler);
+            
+            // Save the API key
+            self.@org.rstudio.studio.client.workbench.views.ai.AiViewManager::handleApiKeyFromSignIn(Ljava/lang/String;)(event.data.apiKey);
+         }
+      };
+      
+      $wnd.addEventListener("message", messageHandler);
+      
+      // Clean up if window is closed manually
+      var checkClosed = function() {
+         if (signInWindow.closed) {
+            $wnd.removeEventListener("message", messageHandler);
+         } else {
+            setTimeout(checkClosed, 1000);
+         }
+      };
+      checkClosed();
+   }-*/;
+   
+   /**
+    * Handle API key received from sign-in flow
+    */
+   private void handleApiKeyFromSignIn(String apiKey) {
+      server_.saveApiKey("rao", apiKey, new ServerRequestCallback<java.lang.Void>() {
+         @Override
+         public void onResponseReceived(java.lang.Void response) {
+            settingsWidget_.onApiKeySaved();
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
+               "Error", "Failed to save API key: " + error.getMessage());
+         }
+      });
+   }
    
 } 

@@ -50,6 +50,7 @@ public class AiSettingsWidget extends Composite
    {
       void onSaveApiKey(String apiKey);
       void onDeleteApiKey();
+      void onSignInWithWebsite();
       void onModelChange(String model);
       void onWorkingDirectoryChange(String directory);
       void onBrowseDirectory();
@@ -125,6 +126,9 @@ public class AiSettingsWidget extends Composite
    private PasswordTextBox apiKeyInput_;
    private Button saveApiKeyButton_;
    private Button deleteApiKeyButton_;
+   private Button signInButton_;
+   private Button optionsButton_;
+   private VerticalPanel apiKeySection_;
    private Label userNameLabel_;
    private HTML subscriptionStatusLabel_;
    private ListBox modelSelect_;
@@ -298,33 +302,56 @@ public class AiSettingsWidget extends Composite
       }
       
       if (!hasApiKey_) {
-         // API Key input section
-         HorizontalPanel keyInputPanel = new HorizontalPanel();
-         keyInputPanel.setWidth("100%");
-         keyInputPanel.addStyleName(styles_.settingRow());
+         // Sign in button section - use a container with proper alignment
+         VerticalPanel signInContainer = new VerticalPanel();
+         signInContainer.setWidth("100%");
+         signInContainer.addStyleName(styles_.settingRow());
          
-         VerticalPanel keyInputContainer = new VerticalPanel();
-         keyInputContainer.setWidth("100%");
+         HorizontalPanel buttonPanel = new HorizontalPanel();
+         buttonPanel.getElement().getStyle().setProperty("display", "flex");
+         buttonPanel.getElement().getStyle().setProperty("alignItems", "center");
+         buttonPanel.getElement().getStyle().setProperty("gap", "8px");
+         
+         // Sign In button
+         signInButton_ = new Button("Sign in");
+         signInButton_.addStyleName(styles_.settingButton());
+         signInButton_.addStyleName(styles_.primaryButton());
+         addNativeClickHandler(signInButton_.getElement(), "Sign in");
+         
+         // Options button (...)
+         optionsButton_ = new Button("...");
+         optionsButton_.addStyleName(styles_.settingButton());
+         optionsButton_.addStyleName(styles_.primaryButton());
+         optionsButton_.getElement().getStyle().setProperty("flexShrink", "0");
+         addNativeClickHandler(optionsButton_.getElement(), "Options");
+         
+         buttonPanel.add(signInButton_);
+         buttonPanel.add(optionsButton_);
+         signInContainer.add(buttonPanel);
+         contentPanel.add(signInContainer);
+         
+         // API Key input section (initially hidden)
+         apiKeySection_ = new VerticalPanel();
+         apiKeySection_.setWidth("100%");
+         apiKeySection_.addStyleName(styles_.settingRow());
+         apiKeySection_.setVisible(false);
          
          Label keyLabel = new Label("API Key");
          keyLabel.addStyleName(styles_.settingLabel());
-         keyInputContainer.add(keyLabel);
+         apiKeySection_.add(keyLabel);
          
          apiKeyInput_ = new PasswordTextBox();
          apiKeyInput_.addStyleName(styles_.settingInput());
          apiKeyInput_.getElement().setAttribute("placeholder", "Enter your Rao API key from www.lotas.ai/account");
-         keyInputContainer.add(apiKeyInput_);
+         apiKeySection_.add(apiKeyInput_);
          
          saveApiKeyButton_ = new Button("Save API Key");
          saveApiKeyButton_.addStyleName(styles_.settingButton());
          saveApiKeyButton_.addStyleName(styles_.primaryButton());
-         
-         // Add native DOM click event listener (same pattern as console/terminal/edit file widgets)
          addNativeClickHandler(saveApiKeyButton_.getElement(), "Save API Key");
-         keyInputContainer.add(saveApiKeyButton_);
+         apiKeySection_.add(saveApiKeyButton_);
          
-         keyInputPanel.add(keyInputContainer);
-         contentPanel.add(keyInputPanel);
+         contentPanel.add(apiKeySection_);
          
       } else {
          // Profile info section
@@ -1911,6 +1938,10 @@ public class AiSettingsWidget extends Composite
          if (event.target === element || element.contains(event.target)) {
             if (buttonText === 'Save API Key') {
                self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleSaveApiKey()();
+            } else if (buttonText === 'Sign in') {
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleSignIn()();
+            } else if (buttonText === 'Options') {
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleOptionsClick()();
             } else if (buttonText === 'Sign out') {
                self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleDeleteApiKey()();
             } else if (buttonText === 'Browse...') {
@@ -1960,6 +1991,15 @@ public class AiSettingsWidget extends Composite
    
    private void handleDeleteApiKey() {
       handler_.onDeleteApiKey();
+   }
+   
+   private void handleSignIn() {
+      handler_.onSignInWithWebsite();
+   }
+   
+   private void handleOptionsClick() {
+      boolean isVisible = apiKeySection_.isVisible();
+      apiKeySection_.setVisible(!isVisible);
    }
    
    private void handleBrowseDirectory() {

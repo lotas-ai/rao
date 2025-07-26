@@ -162,7 +162,6 @@ public interface AiServerOperations
    
    void getCurrentConversationIndex(ServerRequestCallback<Double> requestCallback);
    
-   // Image operations
    void saveAiImage(String imagePath, ServerRequestCallback<java.lang.Void> requestCallback);
    
    void createTempImageFile(String dataUrl, String fileName, ServerRequestCallback<String> requestCallback);
@@ -177,7 +176,6 @@ public interface AiServerOperations
    
    void getPersistentDiffData(String filePath, ServerRequestCallback<JavaScriptObject> requestCallback);
    
-   // Settings and User Profile Operations
    void getUserProfile(ServerRequestCallback<AiUserProfile> requestCallback);
    
    void getSubscriptionStatus(ServerRequestCallback<AiSubscriptionStatus> requestCallback);
@@ -202,7 +200,6 @@ public interface AiServerOperations
    
    void setWebSearchEnabled(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback);
    
-   // User rules management
    void getUserRules(ServerRequestCallback<JavaScriptObject> requestCallback);
    
    void addUserRule(String rule, ServerRequestCallback<JavaScriptObject> requestCallback);
@@ -210,4 +207,6 @@ public interface AiServerOperations
    void editUserRule(int index, String rule, ServerRequestCallback<JavaScriptObject> requestCallback);
    
    void deleteUserRule(int index, ServerRequestCallback<JavaScriptObject> requestCallback);
+   
+   void signInWithWebsite(String websiteUrl, ServerRequestCallback<String> requestCallback);
 }

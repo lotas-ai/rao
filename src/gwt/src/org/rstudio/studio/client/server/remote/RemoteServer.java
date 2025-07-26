@@ -1935,6 +1935,12 @@ public class RemoteServer implements Server, AiServerOperations
    {
       sendRequest(RPC_SCOPE, SET_ACTIVE_PROVIDER, provider, requestCallback);
    }
+   
+   @Override
+   public void signInWithWebsite(String websiteUrl, ServerRequestCallback<String> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, SIGN_IN_WITH_WEBSITE, websiteUrl, requestCallback);
+   }
 
    @Override
    public void setModel(String provider, String model, ServerRequestCallback<java.lang.Void> requestCallback)
@@ -7742,6 +7748,7 @@ public class RemoteServer implements Server, AiServerOperations
    private static final String SAVE_API_KEY = "save_api_key";
    private static final String DELETE_API_KEY = "delete_api_key";
    private static final String SET_ACTIVE_PROVIDER = "set_active_provider";
+   private static final String SIGN_IN_WITH_WEBSITE = "sign_in_with_website";
    private static final String SET_MODEL = "set_model";
    private static final String GET_TEMPERATURE = "get_temperature";
    private static final String SET_TEMPERATURE = "set_temperature";

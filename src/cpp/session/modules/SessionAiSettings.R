@@ -142,6 +142,10 @@
   return(.rs.delete_api_key(provider))
 })
 
+.rs.addJsonRpcHandler("sign_in_with_website", function(websiteUrl) {
+  return(.rs.sign_in_with_website(websiteUrl))
+})
+
 .rs.addJsonRpcHandler("set_model", function(provider, model) {  
   return(.rs.set_model_action(provider, model))
 })
@@ -665,4 +669,20 @@
 
 .rs.addJsonRpcHandler("delete_user_rule", function(index) {
   return(.rs.delete_user_rule(index))
+})
+
+# Sign in with website flow
+.rs.addFunction("sign_in_with_website", function(websiteUrl) {
+  backend_env <- .rs.detect_backend_environment()
+    
+  if (backend_env == "local") {
+    # Use localhost for local development - redirect to dedicated callback page
+    sign_in_url <- "http://localhost:3000/rao-callback"
+  } else {
+    # Use production website - redirect to dedicated callback page
+    sign_in_url <- "https://www.lotas.ai/rao-callback"
+  }
+  
+  # Return just the URL string
+  sign_in_url
 })
