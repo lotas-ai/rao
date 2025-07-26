@@ -24,6 +24,7 @@ import com.google.gwt.user.client.ui.SimplePanel;
 import com.google.gwt.user.client.ui.VerticalPanel;
 import com.google.gwt.user.client.ui.Widget;
 import com.google.gwt.dom.client.Style;
+import org.rstudio.core.client.Debug;
 
 import org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor;
 import org.rstudio.studio.client.common.filetypes.FileTypeRegistry;
@@ -127,6 +128,26 @@ public class AiTerminalWidget extends AiWidgetBase
       terminalWrapper.setWidget(editorContainer);
       container.add(terminalWrapper);
       
+      // Don't create buttons during widget creation - they will be created when streaming completes
+      
+      return container;
+   }
+   
+   /**
+    * Create buttons when streaming completes
+    */
+   public void createButtons() {
+      if (runButton_ != null || cancelButton_ != null) {
+         return; // Buttons already created
+      }
+      
+      // Find the main container to add buttons to
+      Widget widget = this.getWidget();
+      if (!(widget instanceof VerticalPanel)) {
+         return;
+      }
+      VerticalPanel container = (VerticalPanel) widget;
+      
       // Create a container for buttons
       SimplePanel buttonContainer = new SimplePanel();
       buttonContainer.addStyleName("aiTerminalButtons");
@@ -152,10 +173,7 @@ public class AiTerminalWidget extends AiWidgetBase
       
       buttonContainer.setWidget(buttonWrapper);
       container.add(buttonContainer);
-      
-      return container;
    }
-   
 
    
    private void setupEditor()

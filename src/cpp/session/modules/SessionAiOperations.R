@@ -2297,30 +2297,16 @@
             request_id = request_id
          )
       )
-   } else {
-      # CRITICAL FIX: Check for cancellation before returning continue_silent
-      # If cancelled, return done to stop the conversation chain
-      if (.rs.get_conversation_var("ai_cancelled")) {
-         result <- .rs.create_ai_operation_result(
-            status = "done",
-            data = list(
-               message = "Terminal command finalized - request cancelled, stopping conversation chain",
-               related_to_id = related_to_id,
-               conversation_index = .rs.get_current_conversation_index(),
-               request_id = request_id
-            )
+   } else {      
+      result <- .rs.create_ai_operation_result(
+         status = "continue_silent",
+         data = list(
+            message = "Terminal command finalized - returning control to orchestrator",
+            related_to_id = related_to_id,
+            conversation_index = .rs.get_current_conversation_index(),
+            request_id = request_id
          )
-      } else {
-         result <- .rs.create_ai_operation_result(
-            status = "continue_silent",
-            data = list(
-               message = "Terminal command finalized - returning control to orchestrator",
-               related_to_id = related_to_id,
-               conversation_index = .rs.get_current_conversation_index(),
-               request_id = request_id
-            )
-         )
-      }
+      )
    }
    
    return(result)
@@ -2490,29 +2476,15 @@
          )
       )
    } else {
-      # CRITICAL FIX: Check for cancellation before returning continue_silent
-      # If cancelled, return done to stop the conversation chain
-      if (.rs.get_conversation_var("ai_cancelled")) {
-         result <- .rs.create_ai_operation_result(
-            status = "done",
-            data = list(
-               message = "Console command finalized - request cancelled, stopping conversation chain",
-               related_to_id = related_to_id,
-               conversation_index = .rs.get_current_conversation_index(),
-               request_id = request_id
-            )
+      result <- .rs.create_ai_operation_result(
+         status = "continue_silent",
+         data = list(
+            message = "Console command finalized - returning control to orchestrator",
+            related_to_id = related_to_id,
+            conversation_index = .rs.get_current_conversation_index(),
+            request_id = request_id
          )
-      } else {
-         result <- .rs.create_ai_operation_result(
-            status = "continue_silent",
-            data = list(
-               message = "Console command finalized - returning control to orchestrator",
-               related_to_id = related_to_id,
-               conversation_index = .rs.get_current_conversation_index(),
-               request_id = request_id
-            )
-         )
-      }
+      )
    }
    
    return(result)

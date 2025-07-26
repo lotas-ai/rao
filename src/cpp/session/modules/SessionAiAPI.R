@@ -1402,6 +1402,10 @@
                   }
                   
                   console_terminal_widget_states[[widget_created_key]] <- TRUE
+                  
+                  # Store the widget type for later button creation
+                  widget_type_key <- paste0("widget_type_", call_id)
+                  console_terminal_widget_states[[widget_type_key]] <- if (is_console_cmd) "console" else "terminal"
                 }
                 
                 # Detect start of command content for this specific call_id
@@ -2216,6 +2220,32 @@
   search_replace_new_string_streamed <- ""
   search_replace_old_comment_streamed <- FALSE
   search_replace_new_comment_streamed <- FALSE
+  
+  # Send create_widget_buttons operations for any active console/terminal widgets
+  if (length(console_terminal_message_ids) > 0) {
+    for (call_id in names(console_terminal_message_ids)) {
+      widget_message_id <- console_terminal_message_ids[[call_id]]
+      if (!is.null(widget_message_id)) {
+        # Check if widget was created
+        widget_created_key <- paste0("widget_created_", call_id)
+        widget_created <- console_terminal_widget_states[[widget_created_key]]
+        
+        if (!is.null(widget_created) && widget_created) {
+          # Get the stored widget type
+          widget_type_key <- paste0("widget_type_", call_id)
+          widget_type <- console_terminal_widget_states[[widget_type_key]]
+          
+          if (!is.null(widget_type)) {
+            # Send create_widget_buttons operation
+            .rs.send_ai_operation("create_widget_buttons", list(
+              message_id = as.character(widget_message_id),
+              content = widget_type
+            ))
+          }
+        }
+      }
+    }
+  }
   
   # Clean up console/terminal streaming context variables
   console_terminal_delta_accumulators <- list()

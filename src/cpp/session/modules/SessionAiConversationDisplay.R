@@ -458,12 +458,18 @@
                ))
                items_created <- items_created + 1
                
-               # CRITICAL: Check if buttons should be hidden after widget creation
+               # CRITICAL: Always create buttons for restored widgets, then hide if they were already used
+               widget_type <- if (widget_op$is_console) "console" else "terminal"
+               .rs.send_ai_operation("create_widget_buttons", list(
+                  message_id = as.character(entry$id),
+                  content = widget_type
+               ))
+               
+               # Hide buttons if they were already clicked before
                if (.rs.should_hide_buttons_for_restored_widget(entry$id)) {
-                  widget_type <- if (widget_op$is_console) "console" else "terminal"
                   .rs.send_ai_operation("hide_widget_buttons", list(
                      message_id = as.character(entry$id),
-                     content = widget_type  # widget_type goes in content field for Java mapping
+                     content = widget_type
                   ))
                }
             }

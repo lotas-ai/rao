@@ -430,6 +430,7 @@ public class ClientEventDispatcher
                 "search_replace_command".equals(operationType) ||
                 "revert_button".equals(operationType) ||
                 "hide_widget_buttons".equals(operationType) ||
+                "create_widget_buttons".equals(operationType) ||
                 "create_function_call_message".equals(operationType) ||
                 "start_background_recreation".equals(operationType) ||
                 "finish_background_recreation".equals(operationType)) {

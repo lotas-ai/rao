@@ -74,12 +74,25 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
       editorWrapper.setWidget(editor_.getWidget());
       container.add(editorWrapper);
       
-      // Create buttons if editable
-      if (isEditable_ && !isCancelled_) {
+      // Create buttons if editable and diff data is available (not during streaming)
+      if (isEditable_ && !isCancelled_ && preComputedDiffData_ != null) {
          createButtonContainer(container);
       }
       
       return container;
+   }
+   
+   /**
+    * Create buttons when they don't exist yet (for restored widgets)
+    */
+   public void createButtonsIfNeeded()
+   {
+      if (acceptButton_ == null && cancelButton_ == null && isEditable_ && !isCancelled_) {
+         Widget parent = this.getWidget();
+         if (parent instanceof VerticalPanel) {
+            createButtonContainer((VerticalPanel) parent);
+         }
+      }
    }
    
    /**
@@ -356,6 +369,15 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
          
          // Set up custom line numbers for diff display
          setupDiffLineNumbers(diffArray);
+         
+         // Create buttons now if they don't exist yet (streaming completion)
+         if (acceptButton_ == null && cancelButton_ == null && isEditable_ && !isCancelled_) {
+            // Find the container to add buttons to
+            Widget parent = this.getWidget();
+            if (parent instanceof VerticalPanel) {
+               createButtonContainer((VerticalPanel) parent);
+            }
+         }
       }
    }
    

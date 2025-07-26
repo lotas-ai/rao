@@ -136,6 +136,26 @@ public class AiConsoleWidget extends AiWidgetBase
       
       container.add(consoleWrapper);
       
+      // Don't create buttons during widget creation - they will be created when streaming completes
+      
+      return container;
+   }
+   
+   /**
+    * Create buttons when streaming completes
+    */
+   public void createButtons() {
+      if (runButton_ != null || cancelButton_ != null) {
+         return; // Buttons already created
+      }
+      
+      // Find the main container to add buttons to
+      Widget widget = this.getWidget();
+      if (!(widget instanceof VerticalPanel)) {
+         return;
+      }
+      VerticalPanel container = (VerticalPanel) widget;
+      
       // Create button container with absolute positioning for precise control
       SimplePanel buttonContainer = new SimplePanel();
       buttonContainer.addStyleName("aiConsoleButtons");
@@ -161,7 +181,7 @@ public class AiConsoleWidget extends AiWidgetBase
       buttonContainer.setWidget(buttonWrapper);
       container.add(buttonContainer);
       
-      return container;
+      Debug.log("DEBUG: Console buttons created successfully for messageId: " + getMessageId());
    }
    
    private AceEditor createConsoleEditor()

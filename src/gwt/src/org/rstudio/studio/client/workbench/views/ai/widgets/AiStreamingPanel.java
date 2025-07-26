@@ -408,6 +408,10 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
             // Hide buttons for widgets that were already clicked before page refresh
             hideWidgetButtonsSynchronously(event.messageId, event.content); // content contains widget_type
             break;
+         case "create_widget_buttons":
+            // Create buttons for restored widgets that haven't been clicked yet
+            createWidgetButtonsSynchronously(event.messageId, event.content); // content contains widget_type
+            break;
          case "create_function_call_message":
             // Create permanent function call message
             createFunctionCallMessageSynchronously(event.messageId, event.content);
@@ -1166,6 +1170,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          // Update scroll manager streaming status
          updateScrollManagerStreamingStatus();
          
+         // Create widget buttons when console streaming completes
+         consoleWidget.createButtons();
+         
          // Hide cancel button when console streaming completes
          AiPane aiPane = AiPane.getCurrentInstance();
          if (aiPane != null) {
@@ -1194,6 +1201,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       {
          // Update scroll manager streaming status
          updateScrollManagerStreamingStatus();
+         
+         // Create widget buttons when terminal streaming completes
+         terminalWidget.createButtons();
          
          // Hide cancel button when terminal streaming completes
          AiPane aiPane = AiPane.getCurrentInstance();
@@ -1330,6 +1340,73 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
             searchReplaceWidget.hideButtons();
          }
       }
+   }
+   
+   /**
+    * Create buttons for the specified widget type by message ID
+    */
+   private void createWidgetButtonsSynchronously(String messageId, String widgetType)
+   {
+      if ("console".equals(widgetType))
+      {
+         AiConsoleWidget consoleWidget = consoleWidgets_.get(messageId);
+         if (consoleWidget != null)
+         {
+            consoleWidget.createButtons();
+         }
+      }
+      else if ("terminal".equals(widgetType))
+      {
+         AiTerminalWidget terminalWidget = terminalWidgets_.get(messageId);
+         if (terminalWidget != null)
+         {
+            terminalWidget.createButtons();
+         }
+      }
+      else if ("edit_file".equals(widgetType))
+      {
+         org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget = editFileWidgets_.get(messageId);
+         if (editFileWidget != null)
+         {
+            // For edit_file widgets, we need to create the button container manually
+            // since they don't have a createButtons() method like console/terminal widgets
+            createEditFileButtons(editFileWidget);
+         }
+      }
+      else if ("search_replace".equals(widgetType))
+      {
+         AiSearchReplaceWidget searchReplaceWidget = searchReplaceWidgets_.get(messageId);
+         if (searchReplaceWidget != null)
+         {
+            // For search_replace widgets, we need to create the button container manually
+            createSearchReplaceButtons(searchReplaceWidget);
+         }
+      }
+   }
+   
+   /**
+    * Create buttons for edit_file widgets that were restored without buttons
+    */
+   private void createEditFileButtons(org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget widget)
+   {
+      createFileEditorButtons(widget);
+   }
+   
+   /**
+    * Create buttons for search_replace widgets that were restored without buttons
+    */
+   private void createSearchReplaceButtons(AiSearchReplaceWidget widget)
+   {
+      createFileEditorButtons(widget);
+   }
+   
+   /**
+    * Common method to create buttons for file editor widgets (edit_file and search_replace)
+    */
+   private void createFileEditorButtons(org.rstudio.studio.client.workbench.views.ai.widgets.AiFileEditorWidgetBase widget)
+   {
+      // Use the public method to create buttons if they don't exist yet
+      widget.createButtonsIfNeeded();
    }
    
    /**

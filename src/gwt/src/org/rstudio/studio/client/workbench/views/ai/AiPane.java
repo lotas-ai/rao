@@ -1793,12 +1793,12 @@ public class AiPane extends WorkbenchPane
    }
    
    public void handleCancelConsoleCommand(String messageId) {
+      hideButtonsInWidget(messageId, "console");
+      
       // IMMEDIATELY mark button as run to make it disappear - no advancement, just gone forever
       server_.markButtonAsRun(messageId, "cancel", new ServerRequestCallback<Boolean>() {
          @Override
          public void onResponseReceived(Boolean result) {
-            // Hide the buttons in the widget
-            hideButtonsInWidget(messageId, "console");
             
             // Get the request ID from the console widget (like edit file widgets do)
             String requestId = null;
@@ -1817,6 +1817,9 @@ public class AiPane extends WorkbenchPane
                globalDisplay_.showErrorMessage("Console Command Error", errorMessage);
                return;
             }
+            
+            // Initialize console tracking BEFORE starting cancellation (same as acceptance)
+            responses_.initializeConsoleTracking();
             
             // Now proceed with the actual cancellation
             server_.cancelConsoleCommand(messageId, requestId, new ServerRequestCallback<java.lang.Void>() {
@@ -1890,12 +1893,13 @@ public class AiPane extends WorkbenchPane
    }
    
    public void handleCancelTerminalCommand(String messageId) {
+      // Hide buttons IMMEDIATELY when cancel is clicked (don't wait for server)
+      hideButtonsInWidget(messageId, "terminal");
+      
       // IMMEDIATELY mark button as run to make it disappear - no advancement, just gone forever
       server_.markButtonAsRun(messageId, "cancel", new ServerRequestCallback<Boolean>() {
          @Override
          public void onResponseReceived(Boolean result) {
-            // Hide the buttons in the widget
-            hideButtonsInWidget(messageId, "terminal");
             
             // Get the request ID from the terminal widget (like edit file widgets do)
             String requestId = null;
@@ -2462,12 +2466,13 @@ public class AiPane extends WorkbenchPane
    }
    
    public void handleCancelSearchReplaceCommand(String messageId) {
+      // Hide buttons IMMEDIATELY when cancel is clicked (don't wait for server)
+      hideButtonsInWidget(messageId, "search_replace");
+      
       // IMMEDIATELY mark button as run to make it disappear - no advancement, just gone forever
       server_.markButtonAsRun(messageId, "cancel", new ServerRequestCallback<Boolean>() {
          @Override
          public void onResponseReceived(Boolean result) {
-            // Hide the buttons in the widget
-            hideButtonsInWidget(messageId, "search_replace");
             
             // Now proceed with the actual search replace cancellation
             // Get the request ID from the search replace widget
@@ -2496,7 +2501,60 @@ public class AiPane extends WorkbenchPane
             server_.cancelSearchReplaceCommand(messageId, finalRequestId, new ServerRequestCallback<JavaScriptObject>() {
                @Override
                public void onResponseReceived(JavaScriptObject result) {
-                  // Handle success - the AI orchestrator will continue automatically
+                  // Check if the result contains a status that needs processing (same as edit_file)
+                  if (result != null) {
+                     JSONObject resultObj = new JSONObject(result);
+                     if (resultObj.containsKey("status")) {
+                        String status = responses_.getString(resultObj, "status", "");
+                        if ("continue_silent".equals(status)) {
+                           // R wants us to continue the conversation
+                           Integer relatedToId = null;
+                           Integer conversationIndex = null;
+                           
+                           if (resultObj.containsKey("data")) {
+                              JSONObject dataObj = resultObj.get("data").isObject();
+                              if (dataObj != null) {
+                                 if (dataObj.containsKey("related_to_id")) {
+                                    relatedToId = responses_.getInteger(dataObj, "related_to_id", null);
+                                 }
+                                 if (dataObj.containsKey("conversation_index")) {
+                                    conversationIndex = responses_.getInteger(dataObj, "conversation_index", null);
+                                 }
+                              }
+                           }
+                           
+                           // Validate required parameters
+                           if (conversationIndex == null) {
+                              globalDisplay_.showErrorMessage("Error", "Search replace command response missing conversation_index");
+                              return;
+                           }
+                           
+                           if (relatedToId == null) {
+                              globalDisplay_.showErrorMessage("Error", "Search replace command response missing related_to_id");
+                              return;
+                           }
+                           
+                           // Use orchestrator to continue the conversation
+                           if (aiOrchestrator_ != null) {
+                              aiOrchestrator_.continueConversation(relatedToId, conversationIndex, finalRequestId);
+                           } else {
+                              Debug.log("DEBUG handleCancelSearchReplaceCommand: aiOrchestrator_ is null!");
+                           }
+                           return;
+                        }
+                        else if ("done".equals(status)) {
+                           // Processing is complete - no further action needed
+                           return;
+                        } else {
+                           Debug.log("DEBUG handleCancelSearchReplaceCommand: status is not continue_silent or done, it is: " + status);
+                        }
+                     } else {
+                        Debug.log("DEBUG handleCancelSearchReplaceCommand: result does not contain status key");
+                     }
+                  } else {
+                     Debug.log("DEBUG handleCancelSearchReplaceCommand: result is null");
+                  }
+                  // No recognized status or null result - no further action needed
                }
                
                @Override

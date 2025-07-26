@@ -631,7 +631,7 @@
     
     # Connection errors
     if (grepl("Connection refused|Cannot connect|timeout|DNS|network|Could not resolve host|Backend.*unreachable|Backend request timed out|Backend connection error", error_msg, ignore.case = TRUE)) {
-      stop("Cannot connect to backend server. Please check that the backend is running at ", config$url, " If the problem persists, please open a thread at https://community.lotas.ai/.")
+      stop("Cannot connect to backend server. Please check your internet connection and try again. If the problem persists, please open a thread at https://community.lotas.ai/.")
     }
     
     # Rate limiting errors
@@ -1200,11 +1200,7 @@
     has_completion <- any(stream_content == "COMPLETE")
     has_error <- any(grepl("^BG ERROR:", stream_content))
     
-    if (has_completion || has_error) {
-      if (has_error) {
-        cat("DEBUG: Background summarization failed with error for query", state$target_query, "\n")
-      }
-      
+    if (has_completion || has_error) {      
       # Extract the final response from EVENT: lines
       response_text <- ""
       event_count <- 0
@@ -1233,8 +1229,6 @@
       if (!has_error && nchar(response_text) > 0) {
         .rs.save_conversation_summary(state$target_query, response_text)
         return(TRUE)
-      } else if (has_error) {
-        cat("DEBUG: Background summarization had error, not saving summary\n")
       }
     }
     

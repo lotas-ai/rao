@@ -153,6 +153,34 @@ public class AiSearch
          return;
       }
       
+      // ALWAYS cancel any currently running request before starting a new one
+      // This ensures that clicking send or pressing enter will stop current operations
+      // and start fresh. Only skip cancellation for continue tokens since they're 
+      // part of the same logical conversation flow.
+      if (!isContinue) {
+         // Check if there's an active request that needs cancelling
+         String activeRequestId = aiPane.getActiveRequestId();
+         if (activeRequestId != null && !activeRequestId.isEmpty()) {            
+            // Use the existing cancelAiRequest method to handle cancellation
+            cancelAiRequest();
+            
+            // Small delay to ensure cancellation is processed before starting new request
+            Scheduler.get().scheduleDeferred(() -> {
+               // Now proceed with the new request
+               startNewSearchRequest(topic, aiPane);
+            });
+            return;
+         }
+      }
+      
+      // No active request to cancel, proceed directly with new request
+      startNewSearchRequest(topic, aiPane);
+   }
+   
+   /**
+    * Helper method to start a new search request after any necessary cancellation
+    */
+   private void startNewSearchRequest(String topic, AiPane aiPane) {
       // Ensure we have the WebSocket port ready for cancellation
       ensureWebSocketPortAvailable();
       
