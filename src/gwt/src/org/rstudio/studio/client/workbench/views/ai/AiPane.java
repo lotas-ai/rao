@@ -401,6 +401,11 @@ public class AiPane extends WorkbenchPane
    {
       super.onBeforeUnselected();
       lifecycle_.onBeforeUnselected();
+      
+      // Clear persistent diff indicators when switching away from AI pane
+      if (getStreamingPanel() != null) {
+         getStreamingPanel().clearPersistentDiffIndicators();
+      }
    }
 
    @Override
@@ -408,6 +413,13 @@ public class AiPane extends WorkbenchPane
    {
       super.onSelected();
       lifecycle_.onSelected();
+      
+      // Re-initialize persistent diff indicators when returning to AI pane,
+      // but NOT when we're in settings mode
+      if (getStreamingPanel() != null && 
+          !(toolbars_.getViewManager() != null && toolbars_.getViewManager().isInSettingsMode())) {
+         getStreamingPanel().reinitializePersistentDiffIndicators();
+      }
       
       // Load context items to synchronize UI with R session state
       if (aiContext_ != null) {
@@ -3041,5 +3053,4 @@ public class AiPane extends WorkbenchPane
    public AiPaneScroll getScrollHandler() {
       return scrollHandler_;
    }
-
 }

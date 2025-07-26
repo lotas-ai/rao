@@ -340,6 +340,11 @@ public class AiViewManager
     */
    public void showSettings()
    {
+      // Clear persistent diff indicators when entering settings mode
+      if (streamingPanel_ != null) {
+         streamingPanel_.clearPersistentDiffIndicators();
+      }
+      
       if (!isInSettingsMode_) {
          // Hide search container by setting size to 0 (don't remove it)
          mainPanel_.setWidgetSize(searchContainer_, 0);
@@ -373,6 +378,11 @@ public class AiViewManager
          searchContainer_.setVisible(true);
          
          isInSettingsMode_ = false;
+         
+         // Re-initialize persistent diff indicators when returning to conversations
+         if (streamingPanel_ != null) {
+            streamingPanel_.reinitializePersistentDiffIndicators();
+         }
       }
       
       // Always show streaming panel in center (regardless of previous mode)
@@ -528,5 +538,4 @@ public class AiViewManager
       }
    }-*/;
    
-
 } 

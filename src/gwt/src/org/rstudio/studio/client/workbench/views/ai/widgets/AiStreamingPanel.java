@@ -2317,7 +2317,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    /**
     * Clear persistent diff indicators from all open editors when switching conversations
     */
-   private void clearPersistentDiffIndicators()
+   public void clearPersistentDiffIndicators()
    {
       clearAllPersistentDiffIndicatorsNative();
    }
@@ -2326,7 +2326,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
     * Re-initialize persistent diff indicators for all open editors
     * This loads the diff indicators for the current conversation
     */
-   private void reinitializePersistentDiffIndicators()
+   public void reinitializePersistentDiffIndicators()
    {
       try {
          // Access the SourceColumnManager directly from RStudioGinjector

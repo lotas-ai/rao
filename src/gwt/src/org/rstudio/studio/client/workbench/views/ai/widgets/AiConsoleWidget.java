@@ -180,8 +180,6 @@ public class AiConsoleWidget extends AiWidgetBase
       
       buttonContainer.setWidget(buttonWrapper);
       container.add(buttonContainer);
-      
-      Debug.log("DEBUG: Console buttons created successfully for messageId: " + getMessageId());
    }
    
    private AceEditor createConsoleEditor()
