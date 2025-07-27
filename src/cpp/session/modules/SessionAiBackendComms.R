@@ -423,7 +423,7 @@
         if (!is_conversation_name_request) {
           .rs.enqueClientEvent("update_thinking_message", list(message = "", hide_cancel = TRUE))
         }
-        stop("No AI provider available. Please set up an API key in the API key management pane (key icon) before attempting to use AI features.")
+        stop("No AI provider available. Please set up an API key in the Settings (gear icon) before attempting to use AI features.")
       }
     }
   }
@@ -433,7 +433,7 @@
     if (!is_conversation_name_request) {
       .rs.enqueClientEvent("update_thinking_message", list(message = "", hide_cancel = TRUE))
     }
-    stop(paste0("No API key found for ", provider, ". Please set up a valid API key in the API key management pane."))
+    stop(paste0("No API key found for ", provider, ". Please set up a valid API key in the Settings (gear icon)."))
   }
   
   symbols_note <- NULL
@@ -631,7 +631,7 @@
     
     # Authentication errors (only specific authentication failures)
     if (grepl("Authentication failed|API key|No user found|401|403|Unauthorized|Forbidden", error_msg, ignore.case = TRUE)) {
-      stop("Authentication failed. Please check your Rao API key in the API key management pane (key icon in the top right). If the problem persists, please open a thread at https://community.lotas.ai/.")
+      stop("Authentication failed. Please check your Rao API key in the Settings (gear icon in the top right). If the problem persists, please open a thread at https://community.lotas.ai/.")
     }
     
     # Connection errors
