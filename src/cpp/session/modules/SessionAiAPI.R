@@ -723,9 +723,9 @@
               } else if (status_code == 404) {
                 error_message <- "Backend endpoint not found. Please check your backend configuration."
               } else if (status_code == 429) {
-                error_message <- "Rate limit exceeded. Please wait before trying again."
+                error_message <- "Rate limit exceeded. Please wait before trying again. If the problem persists, please open a thread at https://community.lotas.ai/."
               } else if (status_code >= 500) {
-                error_message <- "Backend server error. Please try again later."
+                error_message <- "Backend server error. Please try again later. If the problem persists, please open a thread at https://community.lotas.ai/."
               } else {
                 error_message <- paste("HTTP", status_code, "error from backend server")
               }
