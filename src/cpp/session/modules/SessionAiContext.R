@@ -546,3 +546,174 @@
 .rs.addJsonRpcHandler("get_categorized_environment_variables", function(include_hidden = FALSE) {
    return(.rs.get_categorized_environment_variables(globalenv(), include_hidden))
 })
+
+.rs.addFunction("count_by_extension", function(files) {
+  counts <- list()
+  for (file in files) {
+    ext_match <- regmatches(file, regexec("\\.(\\w+)$", file))
+    if (length(ext_match[[1]]) > 1) {
+      ext <- ext_match[[1]][2]
+    } else {
+      ext <- "txt"  # default for files without extension
+    }
+    
+    if (is.null(counts[[ext]])) {
+      counts[[ext]] <- 0
+    }
+    counts[[ext]] <- counts[[ext]] + 1
+  }
+  return(counts)
+})
+
+.rs.addFunction("generate_file_summary", function(files, dir_count) {
+  MAX_EXTENSIONS_IN_SUMMARY <- 3
+  
+  # Build the summary components
+  parts <- c()
+  
+  # Add files part if there are files
+  if (length(files) > 0) {
+    extension_counts <- .rs.count_by_extension(files)
+    sorted_extensions <- names(extension_counts)[order(unlist(extension_counts), decreasing = TRUE)]
+    
+    # Build extension breakdown
+    breakdown_parts <- c()
+    max_to_show <- min(MAX_EXTENSIONS_IN_SUMMARY, length(sorted_extensions))
+    
+    for (i in 1:max_to_show) {
+      ext <- sorted_extensions[i]
+      count <- extension_counts[[ext]]
+      breakdown_parts <- c(breakdown_parts, paste0(count, " *.", ext))
+    }
+    
+    if (length(sorted_extensions) > MAX_EXTENSIONS_IN_SUMMARY) {
+      breakdown_parts <- c(breakdown_parts, "...")
+    }
+    
+    breakdown <- paste(breakdown_parts, collapse = ", ")
+    parts <- c(parts, paste0(length(files), " files (", breakdown, ")"))
+  }
+  
+  # Add dirs part if there are directories
+  if (dir_count > 0) {
+    parts <- c(parts, paste0(dir_count, " dirs"))
+  }
+  
+  # Return empty if nothing to show
+  if (length(parts) == 0) {
+    return("")
+  }
+  
+  return(paste0("[+", paste(parts, collapse = " & "), "]"))
+})
+
+.rs.addFunction("print_with_indent", function(text, depth, output_lines) {
+  INDENT_SIZE <- 2
+  indent <- paste(rep(" ", depth * INDENT_SIZE), collapse = "")
+  line <- paste0(indent, text)
+  output_lines[[length(output_lines) + 1]] <- line
+  return(output_lines)
+})
+
+.rs.addFunction("generate_tree_recursive", function(directory_path, current_depth, output_lines) {
+    MAX_INDIVIDUAL_FILES <- 3
+    MAX_DEPTH <- 3  # Based on original example showing individual dirs up to depth 2, summary at depth 3+
+    
+    # Stop recursion if we've reached max depth
+    if (current_depth > MAX_DEPTH) {
+      return(output_lines)
+    }
+    
+    # Get all entries, excluding .gitignore patterns
+  tryCatch({
+    # Get all entries (files and directories)
+    all_entries <- list.files(directory_path, full.names = FALSE, all.files = FALSE, no.. = TRUE)
+    
+    # Separate files from directories using file.info
+    full_paths <- file.path(directory_path, all_entries)
+    is_dir <- file.info(full_paths)$isdir
+    is_dir[is.na(is_dir)] <- FALSE
+    
+    files <- all_entries[!is_dir]
+    dirs <- all_entries[is_dir]
+    
+    # Filter out common ignore patterns
+    ignore_patterns <- c("\\.git$", "\\.DS_Store$", "node_modules$", "\\.Rproj\\.user$", 
+                        "target$", "build$", "dist$", "\\.idea$", "\\.vscode$")
+    
+    for (pattern in ignore_patterns) {
+      files <- files[!grepl(pattern, files)]
+      dirs <- dirs[!grepl(pattern, dirs)]
+    }
+    
+    if (length(files) == 0 && length(dirs) == 0) {
+      return(output_lines)
+    }
+    
+    # Use the pre-separated files and directories
+    subdirs <- dirs
+    
+    # Sort alphabetically
+    files <- sort(files)
+    subdirs <- sort(subdirs)
+    
+    # Check if content would exceed max depth when displayed
+    content_depth <- current_depth + 1
+    
+    if (content_depth > MAX_DEPTH) {
+      # Summarize instead of showing individual items
+      if (length(files) > 0 || length(subdirs) > 0) {
+        summary <- .rs.generate_file_summary(files, length(subdirs))
+        if (summary != "") {  # Only show if summary is not empty
+          output_lines <- .rs.print_with_indent(paste0("- ", summary), content_depth, output_lines)
+        }
+      }
+    } else {
+      # Show individual files and recurse into subdirectories
+      
+      # Output individual files
+      for (file in files) {
+        output_lines <- .rs.print_with_indent(paste0("- ", file), content_depth, output_lines)
+      }
+      
+      # Output all subdirectories and recurse into them
+      for (subdir in subdirs) {
+        output_lines <- .rs.print_with_indent(paste0("- ", subdir, "/"), content_depth, output_lines)
+        subdir_path <- file.path(directory_path, subdir)
+        output_lines <- .rs.generate_tree_recursive(subdir_path, content_depth, output_lines)
+      }
+    }
+    
+    return(output_lines)
+    
+  }, error = function(e) {
+    # On error, return the output_lines as-is
+    return(output_lines)
+  })
+})
+
+.rs.addFunction("generate_directory_tree", function(root_path = NULL) {
+  if (is.null(root_path)) {
+    root_path <- getwd()
+  }
+  
+  tryCatch({
+    # Get the directory name for the root
+    root_name <- basename(root_path)
+    if (root_name == "") {
+      root_name <- "workspace"
+    }
+    
+    # Start with root directory
+    output_lines <- list(paste0(root_name, "/"))
+    
+    # Generate the tree recursively
+    output_lines <- .rs.generate_tree_recursive(root_path, 0, output_lines)
+    
+    # Convert list to character vector and join with newlines
+    return(paste(unlist(output_lines), collapse = "\n"))
+    
+  }, error = function(e) {
+    return(paste0(basename(getwd()), "/\n  - [Error generating directory tree: ", e$message, "]"))
+  })
+})

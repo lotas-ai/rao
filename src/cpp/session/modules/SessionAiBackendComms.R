@@ -360,10 +360,14 @@
     }
   }
   
+  # Generate project layout
+  project_layout <- .rs.generate_directory_tree(workspace_path)
+  
   return(list(
     user_os_version = os_version,
     user_workspace_path = workspace_path,
-    user_shell = shell
+    user_shell = shell,
+    project_layout = project_layout
   ))
 })
 
@@ -487,6 +491,7 @@
     user_os_version = user_env_info$user_os_version,
     user_workspace_path = user_env_info$user_workspace_path,
     user_shell = user_env_info$user_shell,
+    project_layout = user_env_info$project_layout,
     user_rules = user_rules
   )
   
