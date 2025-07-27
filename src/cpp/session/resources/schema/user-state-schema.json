@@ -396,6 +396,12 @@
             "default": false,
             "title": "Quarto Website Sync Editor",
             "description": "Sync source editor to Quarto website preview navigation."
+        },
+        "rao_api_key": {
+            "type": "string",
+            "default": "",
+            "title": "Rao API Key",
+            "description": "Key for making Rao API calls"
         }
     }
 }

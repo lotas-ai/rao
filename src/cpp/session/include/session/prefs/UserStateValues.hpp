@@ -114,6 +114,7 @@ namespace prefs {
 #define kZoteroApiKey "zotero_api_key"
 #define kZoteroDataDir "zotero_data_dir"
 #define kQuartoWebsiteSyncEditor "quarto_website_sync_editor"
+#define kRaoApiKey "rao_api_key"
 
 class UserStateValues: public Preferences
 {
@@ -298,6 +299,12 @@ public:
     */
    std::string zoteroDataDir();
    core::Error setZoteroDataDir(std::string val);
+
+   /**
+    * Key for making Rao API calls
+    */
+   std::string raoApiKey();
+   core::Error setRaoApiKey(std::string val);
 
    /**
     * Sync source editor to Quarto website preview navigation.

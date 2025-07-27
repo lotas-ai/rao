@@ -17,6 +17,9 @@
 
 .rs.addFunction("save_api_key", function(provider, key) {
   if (provider == "rao" || provider == "openai") {  # Accept both for compatibility
+    # Store persistently using the secure user state infrastructure
+    .rs.writeUserState("rao_api_key", key)
+    # Also set in memory for immediate use
     .rs.set_rao_key(key)
   }
   
@@ -109,6 +112,9 @@
 
 .rs.addFunction("delete_api_key", function(provider) {
   if (provider == "rao" || provider == "openai") {  # Accept both for compatibility
+    # Clear persistent storage
+    .rs.writeUserState("rao_api_key", "")
+    # Clear in-memory storage
     .rs.set_rao_key(NULL)
   }
   
@@ -122,12 +128,17 @@
 })
 
 .rs.addFunction("get_api_key", function(provider) {
-  # Frontend only uses RAO_API_KEY regardless of provider
-  # Backend handles routing to actual providers based on model
-  
-  # Check stored key first
+  # Check in-memory key first (for immediate use after setting)
   stored_key <- if (exists(".rs.ai_rao_key", envir = .GlobalEnv)) get(".rs.ai_rao_key", envir = .GlobalEnv) else NULL
   if (!is.null(stored_key)) return(stored_key)
+  
+  # Check persistent storage
+  persistent_key <- .rs.readUserState("rao_api_key")
+  if (!is.null(persistent_key) && nchar(persistent_key) > 0) {
+    # Load into memory for performance and return
+    .rs.set_rao_key(persistent_key)
+    return(persistent_key)
+  }
   
   # Fallback to environment variable
   env_key <- Sys.getenv("RAO_API_KEY", unset = "")

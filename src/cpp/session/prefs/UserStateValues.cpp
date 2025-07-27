@@ -414,6 +414,19 @@ core::Error UserStateValues::setZoteroDataDir(std::string val)
 }
 
 /**
+ * Key for making Rao API calls
+ */
+std::string UserStateValues::raoApiKey()
+{
+   return readPref<std::string>("rao_api_key");
+}
+
+core::Error UserStateValues::setRaoApiKey(std::string val)
+{
+   return writePref("rao_api_key", val);
+}
+
+/**
  * Sync source editor to Quarto website preview navigation.
  */
 bool UserStateValues::quartoWebsiteSyncEditor()
@@ -459,6 +472,7 @@ std::vector<std::string> UserStateValues::allKeys()
       kZoteroUseBetterBibtex,
       kZoteroApiKey,
       kZoteroDataDir,
+      kRaoApiKey,
       kQuartoWebsiteSyncEditor,
    });
 }
