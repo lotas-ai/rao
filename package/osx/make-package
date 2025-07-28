@@ -450,6 +450,62 @@ if [ "${build_package}" = "1" ]; then
       mv "${RSTUDIO_BUNDLE_NAME}.dmg" "${BUILD_DIR_X86_64}/"
 
       info "'${BUILD_DIR_X86_64}/${RSTUDIO_BUNDLE_NAME}.dmg' has been created."
+      
+      # Notarize app for auto-updates (if credentials available)
+      cd install
+      if [ -n "$APPLE_ID_USR" ] && [ -n "$APPLE_ID_PSW" ]; then
+         info "Notarizing Rao.app for auto-updates..."
+         
+         # Create temporary ZIP for notarization submission
+         TEMP_ZIP="Rao-temp-notarization.zip"
+         zip -r --symlinks "${TEMP_ZIP}" "Rao.app" >/dev/null
+         
+         # Submit ZIP for notarization and capture output
+         NOTARIZE_OUTPUT=$(xcrun notarytool submit --wait \
+            --apple-id "$APPLE_ID_USR" \
+            --password "$APPLE_ID_PSW" \
+            --team-id NZDS29363Z \
+            --progress \
+            "${TEMP_ZIP}" 2>&1)
+         
+         echo "$NOTARIZE_OUTPUT"
+         
+         # Check if notarization was successful (status should not be "Invalid")
+         if echo "$NOTARIZE_OUTPUT" | grep -q "status: Accepted"; then
+            info "Notarization completed successfully."
+            
+            # Staple the notarization ticket to the .app bundle
+            xcrun stapler staple "Rao.app"
+            info "Notarization ticket stapled to Rao.app"
+         else
+            info "WARNING: Notarization failed or was rejected. Creating ZIP with signed-only app."
+            if echo "$NOTARIZE_OUTPUT" | grep -q "status: Invalid"; then
+               info "Notarization status: Invalid - check Apple's notarization requirements"
+            fi
+         fi
+         
+         # Clean up temporary ZIP
+         rm -f "${TEMP_ZIP}"
+      else
+         info "APPLE_ID_USR/APPLE_ID_PSW not set. Creating ZIP with signed-only app."
+      fi
+      
+      # Create ZIP for auto-updates
+      info "Creating ZIP for auto-updates..."
+      ZIP_NAME="${RSTUDIO_BUNDLE_NAME}-darwin-x64.zip"
+      
+      # Fix permissions and remove quarantine attributes to prevent installation issues  
+      info "Fixing file permissions for auto-updates..."
+      find "Rao.app" -type f -perm 444 -exec chmod 644 {} \; 2>/dev/null || true
+      find "Rao.app" -name "*.dylib" -exec chmod 755 {} \; 2>/dev/null || true
+      
+      info "Removing quarantine attributes for auto-updates..."
+      xattr -rd com.apple.quarantine "Rao.app" 2>/dev/null || true
+      
+      zip -r --symlinks "${ZIP_NAME}" "Rao.app" >/dev/null
+      mv "${ZIP_NAME}" "${BUILD_DIR_X86_64}/"
+      info "'${BUILD_DIR_X86_64}/${ZIP_NAME}' has been created for auto-updates."
+      cd ..
    fi
 
    info "Done!"

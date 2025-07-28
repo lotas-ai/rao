@@ -13,9 +13,10 @@
  *
  */
 
-import { app, BrowserWindow, dialog, Event, Menu, screen, WebContents } from 'electron';
+import { app, autoUpdater, BrowserWindow, dialog, Event, Menu, screen, WebContents } from 'electron';
 import i18next from 'i18next';
 import path from 'path';
+import { updateElectronApp, UpdateSourceType } from 'update-electron-app';
 import { getenv, setenv } from '../core/environment';
 import { FilePath } from '../core/file-path';
 import { logger } from '../core/logger';
@@ -396,8 +397,110 @@ export class Application implements AppState {
 
     this.setDockMenu();
     
-    // Check for updates on startup
-    checkForUpdatesOnStartup();
+    // Auto-updates for macOS using S3 with enhanced logic
+    if (process.platform === 'darwin' && app.isPackaged) {
+      let updateDownloaded = false;
+      let installedOnStartup = false;
+      
+      // Add event listeners to the global autoUpdater before calling updateElectronApp
+      autoUpdater.on('checking-for-update', () => {
+        logger().logInfo('Auto-updater: checking-for-update');
+      });
+      
+      autoUpdater.on('update-available', () => {
+        logger().logInfo('Auto-updater: update-available');
+      });
+      
+      autoUpdater.on('update-not-available', () => {
+        logger().logInfo('Auto-updater: update-not-available');
+      });
+      
+      autoUpdater.on('update-downloaded', (event, releaseNotes, releaseName, releaseDate, updateURL) => {
+        updateDownloaded = true;
+        logger().logInfo('Auto-updater: update-downloaded - showing notification now');
+        logger().logInfo(`Update details: ${releaseName} (${releaseDate})`);
+        
+        // Show notification with "Later" option
+        const options = {
+          type: 'info' as const,
+          title: 'Update Available',
+          message: `Rao ${releaseName} is ready to install. Restart now or it will install automatically when you quit the app.`,
+          detail: releaseNotes || 'New version available',
+          buttons: ['Restart Now', 'Later'],
+          defaultId: 0,
+          cancelId: 1
+        };
+        
+        dialog.showMessageBox(options).then(result => {
+          if (result.response === 0) {
+            // User chose "Restart Now"
+            autoUpdater.quitAndInstall();
+          }
+          // If "Later", we'll install on app quit (handled below)
+        });
+      });
+      
+      autoUpdater.on('error', (error: Error) => {
+        logger().logError(`Auto-updater error: ${error.message}`);
+      });
+
+      // Enhanced version checking before starting auto-updater
+      const checkVersionBeforeUpdate = async () => {
+        try {
+          const currentVersion = app.getVersion();
+          const response = await fetch('https://lotas-downloads.s3.us-east-2.amazonaws.com/darwin/x64/RELEASES.json');
+          const releaseData = await response.json();
+          const latestVersion = releaseData.version;
+          
+          logger().logInfo(`Version check: current=${currentVersion}, latest=${latestVersion}`);
+          
+          // Use semver for proper version comparison
+          const semver = require('semver');
+          if (semver.gt(latestVersion, currentVersion)) {
+            logger().logInfo('Update available - starting auto-updater');
+            startAutoUpdater();
+          } else {
+            logger().logInfo('Already on latest version - skipping auto-updater');
+          }
+        } catch (error) {
+          logger().logError(`Version check failed: ${error} - starting auto-updater anyway`);
+          startAutoUpdater();
+        }
+      };
+
+      const startAutoUpdater = () => {
+        updateElectronApp({
+          updateSource: {
+            type: UpdateSourceType.StaticStorage,
+            baseUrl: 'https://lotas-downloads.s3.us-east-2.amazonaws.com/darwin/x64'
+          },
+          updateInterval: '5 minutes',
+          notifyUser: false, // We handle notifications manually
+          logger: {
+            info: (message: string) => logger().logInfo(`UEA: ${message}`),
+            warn: (message: string) => logger().logWarning(`UEA: ${message}`),
+            error: (message: string) => logger().logError(`UEA: ${message}`),
+            log: (message: string) => logger().logInfo(`UEA: ${message}`)
+          }
+        });
+      };
+
+      // Install on app quit if update was downloaded but user chose "Later"
+      app.on('before-quit', (event) => {
+        if (updateDownloaded && !installedOnStartup) {
+          logger().logInfo('Installing update on quit...');
+          autoUpdater.quitAndInstall();
+        }
+      });
+
+      // Start version check
+      checkVersionBeforeUpdate();
+    }
+    
+    // Manual update check for Linux and Windows only (Mac uses auto-updater)
+    if (process.platform !== 'darwin') {
+      checkForUpdatesOnStartup();
+    }
 
     return run();
   }
@@ -495,15 +598,6 @@ export class Application implements AppState {
           label: i18next.t('applicationTs.newRstudioWindow'),
           click: () => {
             this.appLaunch?.launchRStudio({ workingDirectory: appState().projectDirectory });
-          },
-        },
-        {
-          type: 'separator'
-        },
-        {
-          label: 'Check for Updates',
-          click: () => {
-            void checkForUpdatesManually();
           },
         },
       ]);
