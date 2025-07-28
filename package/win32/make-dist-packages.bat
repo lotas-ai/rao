@@ -12,7 +12,6 @@
 :: AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
 ::
 @echo off
-setlocal EnableDelayedExpansion
 
 if "%1" == "--help" goto :showhelp
 if "%1" == "-h" goto :showhelp
@@ -59,93 +58,19 @@ if not defined NOZIP (
     )
 )
 
-REM Generate Squirrel.Windows packages for auto-updates
-if not defined NOSQUIRREL (
-    echo Creating Squirrel.Windows packages for auto-updates...
-    
-    REM Find the Electron app directory - try ZIP extraction first
-    set "ELECTRON_APP_DIR="
-    set "TEMP_DIR=%BUILD_DIR%\temp-electron-app"
-    
-    REM Extract the ZIP file to get the Electron app
-    for %%f in ("%BUILD_DIR%\*.zip") do (
-        mkdir "!TEMP_DIR!" 2>NUL
-        7z x "%%f" "-o!TEMP_DIR!" -y >NUL
-        goto :check_extraction
-    )
-    
-    :check_extraction
-    REM Check if extraction was successful
-    if exist "%TEMP_DIR%\rao.exe" (
-        set "ELECTRON_APP_DIR=%TEMP_DIR%"
-    ) else (
-        REM Fallback to original location
-        set "ELECTRON_APP_DIR=%BUILD_DIR%\out\Rao-win32-x64"
-    )
-    
-    if exist "%ELECTRON_APP_DIR%\rao.exe" (
-        echo Found Electron app at: %ELECTRON_APP_DIR%
-        
-        REM Use electron-winstaller to create Squirrel packages
-        pushd "%PACKAGE_DIR%\..\..\src\node\desktop"
-        
-        REM Find Node.js path dynamically  
-        set "NODE_PATH="
-        if exist "..\..\..\dependencies\common\node\22.13.1\node.exe" (
-            set "NODE_PATH=..\..\..\dependencies\common\node\22.13.1\node.exe"
-        ) else (
-            REM Try to find node in PATH
-            where node >nul 2>&1
-            if not ERRORLEVEL 1 (
-                set "NODE_PATH=node"
-            ) else (
-                echo ERROR: Node.js not found
-                echo Please ensure Node.js is installed and in PATH
-                popd
-                goto :error
-            )
-        )
-        
-        echo Using Node.js at: !NODE_PATH!
-        
-        REM Create Squirrel packages using separate script
-        "%NODE_PATH%" "create-squirrel-packages.js" "%ELECTRON_APP_DIR%" "%BUILD_DIR%\squirrel"
-        
-        popd
-        
-        REM Move Squirrel files to build directory
-        if exist "%BUILD_DIR%\squirrel" (
-            echo Moving Squirrel packages to build directory...
-            move "%BUILD_DIR%\squirrel\*.nupkg" "%BUILD_DIR%\"
-            move "%BUILD_DIR%\squirrel\RELEASES" "%BUILD_DIR%\"
-            move "%BUILD_DIR%\squirrel\Setup.exe" "%BUILD_DIR%\RaoSetup-Squirrel.exe"
-            echo Squirrel auto-update files created successfully
-        )
-        
-        REM Cleanup temp directory
-        if exist "%TEMP_DIR%" (
-            rmdir /s /q "%TEMP_DIR%" 2>NUL
-        )
-    ) else (
-        echo WARNING: Electron app directory not found at %ELECTRON_APP_DIR%
-        echo Skipping Squirrel package generation
-    )
-)
+
 
 popd
 
-endlocal
 goto :EOF
 
 :showhelp
 echo.
 echo make-dist-packages
 echo.
-echo. Produces the RStudio setup package, zip file (installerless), and Squirrel.Windows 
-echo. auto-update packages using already-built binaries.
+echo. Produces the RStudio setup package and zip file (installerless) using already-built binaries.
 echo.
 echo  Must be invoked from the "package\win32" folder (in the cloned RStudio repository).
-echo  Use "set NOSQUIRREL=1" to skip Squirrel.Windows package generation.
 echo.
 exit /b 0
 
