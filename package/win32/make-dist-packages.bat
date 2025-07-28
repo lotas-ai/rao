@@ -93,13 +93,11 @@ if not defined NOSQUIRREL (
         set "NODE_PATH="
         if exist "..\..\..\dependencies\common\node\22.13.1\node.exe" (
             set "NODE_PATH=..\..\..\dependencies\common\node\22.13.1\node.exe"
-            echo Using Node.js at: !NODE_PATH!
         ) else (
             REM Try to find node in PATH
             where node >nul 2>&1
             if not ERRORLEVEL 1 (
                 set "NODE_PATH=node"
-                echo Using Node.js from PATH: !NODE_PATH!
             ) else (
                 echo ERROR: Node.js not found
                 echo Please ensure Node.js is installed and in PATH
@@ -107,6 +105,8 @@ if not defined NOSQUIRREL (
                 goto :error
             )
         )
+        
+        echo Using Node.js at: !NODE_PATH!
         
         REM Create Squirrel packages using separate script
         "%NODE_PATH%" "create-squirrel-packages.js" "%ELECTRON_APP_DIR%" "%BUILD_DIR%\squirrel"
