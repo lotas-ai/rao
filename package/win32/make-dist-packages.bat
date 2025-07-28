@@ -12,7 +12,7 @@
 :: AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
 ::
 @echo off
-setlocal
+setlocal EnableDelayedExpansion
 
 if "%1" == "--help" goto :showhelp
 if "%1" == "-h" goto :showhelp
@@ -64,19 +64,25 @@ if not defined NOSQUIRREL (
     echo Creating Squirrel.Windows packages for auto-updates...
     
     REM Find the Electron app directory - try ZIP extraction first
-    set "ELECTRON_APP_DIR=%BUILD_DIR%\temp-electron-app"
+    set "ELECTRON_APP_DIR="
+    set "TEMP_DIR=%BUILD_DIR%\temp-electron-app"
     
     REM Extract the ZIP file to get the Electron app
     for %%f in ("%BUILD_DIR%\*.zip") do (
-        mkdir "%ELECTRON_APP_DIR%" 2>NUL
-        7z x "%%f" -o"%ELECTRON_APP_DIR%" -y >NUL
-        goto :check_app
+        if not defined ELECTRON_APP_DIR (
+            mkdir "!TEMP_DIR!" 2>NUL
+            7z x "%%f" "-o!TEMP_DIR!" -y >NUL
+            if exist "!TEMP_DIR!\rao.exe" (
+                set "ELECTRON_APP_DIR=!TEMP_DIR!"
+            )
+        )
     )
     
-    REM Fallback to original location if no ZIP found
-    set "ELECTRON_APP_DIR=%BUILD_DIR%\out\Rao-win32-x64"
+    REM Fallback to original location if no ZIP found or extraction failed
+    if not defined ELECTRON_APP_DIR (
+        set "ELECTRON_APP_DIR=%BUILD_DIR%\out\Rao-win32-x64"
+    )
     
-    :check_app
     if exist "%ELECTRON_APP_DIR%\rao.exe" (
         echo Found Electron app at: %ELECTRON_APP_DIR%
         
@@ -107,8 +113,8 @@ if not defined NOSQUIRREL (
         )
         
         REM Cleanup temp directory
-        if exist "%BUILD_DIR%\temp-electron-app" (
-            rmdir /s /q "%BUILD_DIR%\temp-electron-app" 2>NUL
+        if exist "%TEMP_DIR%" (
+            rmdir /s /q "%TEMP_DIR%" 2>NUL
         )
     ) else (
         echo WARNING: Electron app directory not found at %ELECTRON_APP_DIR%
