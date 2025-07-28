@@ -67,36 +67,8 @@ REM Generate Squirrel.Windows packages for auto-updates
 if not defined NOSQUIRREL (
     echo Creating Squirrel.Windows packages for auto-updates...
     
-    REM Find the ZIP file and extract it to create the Electron app directory
-    for %%f in ("%BUILD_DIR%\*.zip") do (
-        if exist "%%f" (
-            echo Found ZIP file: %%f
-            set "ZIP_FILE=%%f"
-        )
-    )
-    
-    if defined ZIP_FILE (
-        echo Extracting ZIP to create Electron app directory...
-        set "ELECTRON_APP_DIR=%BUILD_DIR%\temp-electron-app"
-        mkdir "%ELECTRON_APP_DIR%" 2>NUL
-        "%SEVEN_ZIP%" x "!ZIP_FILE!" -o"%ELECTRON_APP_DIR%" -y >NUL
-        
-        REM Find the actual app directory inside the extracted content
-        for /d %%d in ("%ELECTRON_APP_DIR%\*") do (
-            if exist "%%d\rao.exe" (
-                set "ELECTRON_APP_DIR=%%d"
-                echo Found Electron app at: !ELECTRON_APP_DIR!
-                goto :found_app
-            )
-        )
-        echo ERROR: Could not find rao.exe in extracted ZIP
-        goto :skip_squirrel
-        
-        :found_app
-    ) else (
-        REM Fallback: Try the original location
-        set "ELECTRON_APP_DIR=%BUILD_DIR%\out\Rao-win32-x64"
-    )
+    REM Find and extract the ZIP file to get the Electron app
+    call :extract_electron_app
     
     if exist "%ELECTRON_APP_DIR%\rao.exe" (
         echo Found Electron app at: %ELECTRON_APP_DIR%
@@ -129,7 +101,6 @@ if not defined NOSQUIRREL (
     ) else (
         echo WARNING: Electron app directory not found
         echo Skipping Squirrel package generation
-        :skip_squirrel
     )
     
     REM Cleanup temp directory
@@ -153,6 +124,30 @@ echo.
 echo  Must be invoked from the "package\win32" folder (in the cloned RStudio repository).
 echo  Use "set NOSQUIRREL=1" to skip Squirrel.Windows package generation.
 echo.
+exit /b 0
+
+:extract_electron_app
+REM Extract ZIP file to find Electron app
+for %%f in ("%BUILD_DIR%\*.zip") do (
+    echo Found ZIP file: %%f
+    set "ELECTRON_APP_DIR=%BUILD_DIR%\temp-electron-app"
+    mkdir "!ELECTRON_APP_DIR!" 2>NUL
+    "%SEVEN_ZIP%" x "%%f" -o"!ELECTRON_APP_DIR!" -y >NUL
+    
+    REM Look for rao.exe in subdirectories
+    for /d %%d in ("!ELECTRON_APP_DIR!\*") do (
+        if exist "%%d\rao.exe" (
+            set "ELECTRON_APP_DIR=%%d"
+            echo Found Electron app at: !ELECTRON_APP_DIR!
+            goto :extract_done
+        )
+    )
+)
+
+REM Fallback to original location
+set "ELECTRON_APP_DIR=%BUILD_DIR%\out\Rao-win32-x64"
+
+:extract_done
 exit /b 0
 
 :error
