@@ -82,8 +82,30 @@ if exist "%ELECTRON_APP_DIR%\rao.exe" (
     
     echo Using Node.js at: !NODE_PATH!
     
-    REM Create Squirrel packages using separate script
-    "!NODE_PATH!" "create-squirrel-packages.js" "%ELECTRON_APP_DIR%" "%BUILD_DIR%\squirrel"
+    REM Build version string from environment variables
+    set "VERSION_FULL="
+    if defined RSTUDIO_VERSION_MAJOR (
+        set "VERSION_FULL=!RSTUDIO_VERSION_MAJOR!"
+        if defined RSTUDIO_VERSION_MINOR (
+            set "VERSION_FULL=!RSTUDIO_VERSION_MAJOR!.!RSTUDIO_VERSION_MINOR!"
+            if defined RSTUDIO_VERSION_PATCH (
+                set "VERSION_FULL=!RSTUDIO_VERSION_MAJOR!.!RSTUDIO_VERSION_MINOR!.!RSTUDIO_VERSION_PATCH!"
+                if defined RSTUDIO_VERSION_SUFFIX (
+                    set "VERSION_FULL=!RSTUDIO_VERSION_MAJOR!.!RSTUDIO_VERSION_MINOR!.!RSTUDIO_VERSION_PATCH!!RSTUDIO_VERSION_SUFFIX!"
+                )
+            )
+        )
+    )
+    
+    if defined VERSION_FULL (
+        echo Using version: !VERSION_FULL!
+        REM Create Squirrel packages using separate script with version
+        "!NODE_PATH!" "create-squirrel-packages.js" "%ELECTRON_APP_DIR%" "%BUILD_DIR%\squirrel" "!VERSION_FULL!"
+    ) else (
+        echo No version information found, using default from package.json
+        REM Create Squirrel packages using separate script without version
+        "!NODE_PATH!" "create-squirrel-packages.js" "%ELECTRON_APP_DIR%" "%BUILD_DIR%\squirrel"
+    )
     
     popd
     
