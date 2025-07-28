@@ -568,7 +568,7 @@
       }, error = function(e) FALSE)
       
       if (!backend_healthy) {
-        stop("Cannot connect to backend server. Please check your connectivity. If the problem persists, please open a thread at https://community.lotas.ai/.")
+        stop("Could not connect to backend server within 30 seconds. Please check your connectivity and try again. Often this is solved by just retrying. If the problem persists, please open a thread at https://community.lotas.ai/.")
       }
     }
     
@@ -835,9 +835,8 @@
     request <- httr2::request(config$url)
     request <- httr2::req_url_path(request, "/actuator/health")
     request <- httr2::req_method(request, "GET")
-    request <- httr2::req_timeout(request, 5)
+    request <- httr2::req_timeout(request, 30)
     response <- httr2::req_perform(request)
-    
     status <- httr2::resp_status(response)
     if (status == 200) {
       body <- httr2::resp_body_json(response)
