@@ -12,7 +12,7 @@
 :: AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
 ::
 @echo off
-setlocal EnableDelayedExpansion
+setlocal
 
 if "%1" == "--help" goto :showhelp
 if "%1" == "-h" goto :showhelp
@@ -24,10 +24,6 @@ if "%BUILD_DIR%" == "" set BUILD_DIR=build
 if "%CMAKE_BUILD_TYPE%" == "" set CMAKE_BUILD_TYPE=RelWithDebInfo
 if "%CMAKE_BUILD_TYPE%" == "Debug" set BUILD_DIR=build-debug
 if "%PKG_TEMP_DIR%" == "" set PKG_TEMP_DIR=C:/rsbuild
-
-REM Set 7-Zip path
-set "SEVEN_ZIP=7z"
-if exist "C:\Program Files\7-Zip\7z.exe" set "SEVEN_ZIP=C:\Program Files\7-Zip\7z.exe"
 
 echo DEBUG: make-dist-packages.bat using following values:
 echo DEBUG:     PACKAGE_DIR=%PACKAGE_DIR%
@@ -67,9 +63,20 @@ REM Generate Squirrel.Windows packages for auto-updates
 if not defined NOSQUIRREL (
     echo Creating Squirrel.Windows packages for auto-updates...
     
-    REM Find and extract the ZIP file to get the Electron app
-    call :extract_electron_app
+    REM Find the Electron app directory - try ZIP extraction first
+    set "ELECTRON_APP_DIR=%BUILD_DIR%\temp-electron-app"
     
+    REM Extract the ZIP file to get the Electron app
+    for %%f in ("%BUILD_DIR%\*.zip") do (
+        mkdir "%ELECTRON_APP_DIR%" 2>NUL
+        7z x "%%f" -o"%ELECTRON_APP_DIR%" -y >NUL
+        goto :check_app
+    )
+    
+    REM Fallback to original location if no ZIP found
+    set "ELECTRON_APP_DIR=%BUILD_DIR%\out\Rao-win32-x64"
+    
+    :check_app
     if exist "%ELECTRON_APP_DIR%\rao.exe" (
         echo Found Electron app at: %ELECTRON_APP_DIR%
         
@@ -85,8 +92,25 @@ if not defined NOSQUIRREL (
             goto :error
         )
         
-        REM Create Squirrel packages using separate script
-        node "%PACKAGE_DIR%\create-squirrel-packages.js" "%ELECTRON_APP_DIR%" "%BUILD_DIR%\squirrel"
+        REM Create Squirrel packages
+        node -e "
+        const electronWinstaller = require('electron-winstaller');
+        
+        electronWinstaller.createWindowsInstaller({
+          appDirectory: '%ELECTRON_APP_DIR%',
+          outputDirectory: '%BUILD_DIR%\\squirrel',
+          authors: 'Lotas',
+          exe: 'rao.exe',
+          iconUrl: 'https://lotas-downloads.s3.us-east-2.amazonaws.com/icon.ico',
+          setupIcon: '%ELECTRON_APP_DIR%\\resources\\app\\resources\\icons\\Rao.ico',
+          noMsi: true
+        }).then(() => {
+          console.log('Squirrel packages created successfully');
+        }).catch((e) => {
+          console.error('Squirrel package creation failed:', e);
+          process.exit(1);
+        });
+        "
         
         popd
         
@@ -98,14 +122,14 @@ if not defined NOSQUIRREL (
             move "%BUILD_DIR%\squirrel\Setup.exe" "%BUILD_DIR%\RaoSetup-Squirrel.exe"
             echo Squirrel auto-update files created successfully
         )
+        
+        REM Cleanup temp directory
+        if exist "%BUILD_DIR%\temp-electron-app" (
+            rmdir /s /q "%BUILD_DIR%\temp-electron-app" 2>NUL
+        )
     ) else (
-        echo WARNING: Electron app directory not found
+        echo WARNING: Electron app directory not found at %ELECTRON_APP_DIR%
         echo Skipping Squirrel package generation
-    )
-    
-    REM Cleanup temp directory
-    if exist "%BUILD_DIR%\temp-electron-app" (
-        rmdir /s /q "%BUILD_DIR%\temp-electron-app" 2>NUL
     )
 )
 
@@ -124,30 +148,6 @@ echo.
 echo  Must be invoked from the "package\win32" folder (in the cloned RStudio repository).
 echo  Use "set NOSQUIRREL=1" to skip Squirrel.Windows package generation.
 echo.
-exit /b 0
-
-:extract_electron_app
-REM Extract ZIP file to find Electron app
-for %%f in ("%BUILD_DIR%\*.zip") do (
-    echo Found ZIP file: %%f
-    set "ELECTRON_APP_DIR=%BUILD_DIR%\temp-electron-app"
-    mkdir "!ELECTRON_APP_DIR!" 2>NUL
-    "%SEVEN_ZIP%" x "%%f" -o"!ELECTRON_APP_DIR!" -y >NUL
-    
-    REM Look for rao.exe in subdirectories
-    for /d %%d in ("!ELECTRON_APP_DIR!\*") do (
-        if exist "%%d\rao.exe" (
-            set "ELECTRON_APP_DIR=%%d"
-            echo Found Electron app at: !ELECTRON_APP_DIR!
-            goto :extract_done
-        )
-    )
-)
-
-REM Fallback to original location
-set "ELECTRON_APP_DIR=%BUILD_DIR%\out\Rao-win32-x64"
-
-:extract_done
 exit /b 0
 
 :error
