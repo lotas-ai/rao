@@ -156,7 +156,20 @@ REM Build RStudio version suffix.
 if not defined RSTUDIO_VERSION_MAJOR set RSTUDIO_VERSION_MAJOR=99
 if not defined RSTUDIO_VERSION_MINOR set RSTUDIO_VERSION_MINOR=9
 if not defined RSTUDIO_VERSION_PATCH set RSTUDIO_VERSION_PATCH=9
-if not defined RSTUDIO_VERSION_SUFFIX set RSTUDIO_VERSION_SUFFIX=-dev+999
+
+REM Handle RSTUDIO_VERSION_SUFFIX: if defined but empty, keep it empty; if not defined, use default
+if defined RSTUDIO_VERSION_SUFFIX (
+    REM Variable is defined, check if it's empty or just spaces
+    if "%RSTUDIO_VERSION_SUFFIX%"=="" (
+        set RSTUDIO_VERSION_SUFFIX=
+    ) else if "%RSTUDIO_VERSION_SUFFIX%"==" " (
+        set RSTUDIO_VERSION_SUFFIX=
+    )
+) else (
+    REM Variable is not defined, use default
+    set RSTUDIO_VERSION_SUFFIX=-dev+999
+)
+
 set RSTUDIO_VERSION_FULL=%RSTUDIO_VERSION_MAJOR%.%RSTUDIO_VERSION_MINOR%.%RSTUDIO_VERSION_PATCH%%RSTUDIO_VERSION_SUFFIX%
 
 REM Set default CMake build type.
