@@ -72,10 +72,13 @@ if not defined NOSQUIRREL (
         REM Use electron-winstaller to create Squirrel packages
         pushd "%PACKAGE_DIR%\..\..\src\node\desktop"
         
-        REM Install electron-winstaller if not present
-        if not exist "node_modules\electron-winstaller" (
-            echo Installing electron-winstaller...
-            call npm install electron-winstaller --save-dev
+        REM Check if electron-winstaller is available
+        node -e "try { require('electron-winstaller'); console.log('electron-winstaller found'); } catch(e) { console.error('electron-winstaller not found - please run npm install first'); process.exit(1); }"
+        if ERRORLEVEL 1 (
+            echo ERROR: electron-winstaller not found
+            echo Please run: cd src\node\desktop ^&^& npm install
+            popd
+            goto :error
         )
         
         REM Create Squirrel packages
