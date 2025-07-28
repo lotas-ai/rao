@@ -69,17 +69,17 @@ if not defined NOSQUIRREL (
     
     REM Extract the ZIP file to get the Electron app
     for %%f in ("%BUILD_DIR%\*.zip") do (
-        if not defined ELECTRON_APP_DIR (
-            mkdir "!TEMP_DIR!" 2>NUL
-            7z x "%%f" "-o!TEMP_DIR!" -y >NUL
-            if exist "!TEMP_DIR!\rao.exe" (
-                set "ELECTRON_APP_DIR=!TEMP_DIR!"
-            )
-        )
+        mkdir "!TEMP_DIR!" 2>NUL
+        7z x "%%f" "-o!TEMP_DIR!" -y >NUL
+        goto :check_extraction
     )
     
-    REM Fallback to original location if no ZIP found or extraction failed
-    if not defined ELECTRON_APP_DIR (
+    :check_extraction
+    REM Check if extraction was successful
+    if exist "%TEMP_DIR%\rao.exe" (
+        set "ELECTRON_APP_DIR=%TEMP_DIR%"
+    ) else (
+        REM Fallback to original location
         set "ELECTRON_APP_DIR=%BUILD_DIR%\out\Rao-win32-x64"
     )
     
@@ -89,8 +89,11 @@ if not defined NOSQUIRREL (
         REM Use electron-winstaller to create Squirrel packages
         pushd "%PACKAGE_DIR%\..\..\src\node\desktop"
         
+        REM Set Node.js path
+        set "NODE_PATH=C:\Users\willnickols\rao\dependencies\common\node\22.13.1\node.exe"
+        
         REM Check if electron-winstaller is available
-        node -e "try { require('electron-winstaller'); console.log('electron-winstaller found'); } catch(e) { console.error('electron-winstaller not found - please run npm install first'); process.exit(1); }"
+        "%NODE_PATH%" -e "try { require('electron-winstaller'); console.log('electron-winstaller found'); } catch(e) { console.error('electron-winstaller not found - please run npm install first'); process.exit(1); }"
         if ERRORLEVEL 1 (
             echo ERROR: electron-winstaller not found
             echo Please run: cd src\node\desktop ^&^& npm install
@@ -99,7 +102,7 @@ if not defined NOSQUIRREL (
         )
         
         REM Create Squirrel packages using separate script
-        node "%PACKAGE_DIR%\create-squirrel-packages.js" "%ELECTRON_APP_DIR%" "%BUILD_DIR%\squirrel"
+        "%NODE_PATH%" "create-squirrel-packages.js" "%ELECTRON_APP_DIR%" "%BUILD_DIR%\squirrel"
         
         popd
         
