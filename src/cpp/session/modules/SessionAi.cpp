@@ -703,58 +703,6 @@ Error finalizeTerminalCommand(const json::JsonRpcRequest& request,
    return Success();
 }
 
-Error addConsoleOutputToAiConversation(const json::JsonRpcRequest& request,
-                                     json::JsonRpcResponse* p_response,
-                                     const int message_id)
-{
-   SEXP result_sexp;
-   r::sexp::Protect rp;
-   
-   Error error = r::exec::RFunction(".rs.add_console_output_to_conversation")
-         .addParam(message_id)
-         .call(&result_sexp, &rp);
-
-   if (error)
-   {
-      LOG_ERROR(error);
-      return error;
-   }
-   
-   // Set the result (has_error) in the response
-   bool has_error = false;
-   if (TYPEOF(result_sexp) == LGLSXP)
-      has_error = Rf_asLogical(result_sexp) == TRUE;
-      
-   p_response->setResult(has_error);
-   return Success();
-}
-
-Error addTerminalOutputToAiConversation(const json::JsonRpcRequest& request,
-                                     json::JsonRpcResponse* p_response,
-                                     const int message_id)
-{
-   SEXP result_sexp;
-   r::sexp::Protect rp;
-   
-   Error error = r::exec::RFunction(".rs.add_terminal_output_to_conversation")
-         .addParam(message_id)
-         .call(&result_sexp, &rp);
-
-   if (error)
-   {
-      LOG_ERROR(error);
-      return error;
-   }
-   
-   // Set the result (has_error) in the response
-   bool has_error = false;
-   if (TYPEOF(result_sexp) == LGLSXP)
-      has_error = Rf_asLogical(result_sexp) == TRUE;
-      
-   p_response->setResult(has_error);
-   return Success();
-}
-
 Error revertAiMessage(const json::JsonRpcRequest& request,
                     json::JsonRpcResponse* p_response,
                     int message_id)
@@ -3309,24 +3257,6 @@ Error initialize()
       (bind(module_context::registerRpcMethod, "get_all_open_documents", getAllOpenDocuments))
       (bind(module_context::registerRpcMethod, "remove_context_item", removeContextItem))
       (bind(module_context::registerRpcMethod, "clear_context_items", clearContextItems))
-      (bind(module_context::registerRpcMethod, "add_terminal_output_to_conversation", 
-            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
-               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
-                  int message_id;
-                  Error error = json::readParam(request.params, 0, &message_id);
-                  if (error)
-                     return error;
-                  return addTerminalOutputToAiConversation(request, p_response, message_id);
-               })))
-      (bind(module_context::registerRpcMethod, "add_console_output_to_conversation", 
-            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
-               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
-                  int message_id;
-                  Error error = json::readParam(request.params, 0, &message_id);
-                  if (error)
-                     return error;
-                  return addConsoleOutputToAiConversation(request, p_response, message_id);
-               })))
       (bind(module_context::registerRpcMethod, "create_new_conversation", createNewConversation))
       (bind(module_context::registerRpcMethod, "list_attachments", listAttachments))
       (bind(module_context::registerRpcMethod, "delete_attachment", 

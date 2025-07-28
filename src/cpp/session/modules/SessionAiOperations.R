@@ -635,10 +635,10 @@
       }
       
       # For edit_file, exclude ALL messages related to this specific edit_file command:
-      # - function_call_output (type = "function_call_output", related_to = function_call_id)
-      # - assistant message (role = "assistant", related_to = function_call_id) 
-      # - procedural user message (role = "user", procedural = true, related_to = function_call_id)
-      # - images related to this function call (role = "user", related_to = function_call_id)
+      # - function_call_output (type = "function_call_output", related_to = function_call_message_id)
+      # - assistant message (role = "assistant", related_to = function_call_message_id) 
+      # - procedural user message (role = "user", procedural = true, related_to = function_call_message_id)
+      # - images related to this function call (role = "user", related_to = function_call_message_id)
       if (!is.null(entry$related_to) && entry$related_to == function_call_message_id) {
          return(FALSE)
       }
@@ -778,7 +778,8 @@
       
       if (is.null(current_content)) {
          # File doesn't exist - record function call output and return done
-         function_output_id <- .rs.get_next_message_id()
+         # Use pre-allocated message ID for function call output (index 2 for interactive functions)
+         function_output_id <- .rs.get_preallocated_message_id(search_replace_entry$function_call$call_id, 2)
          function_call_output <- list(
             id = function_output_id,
             type = "function_call_output",
@@ -1692,9 +1693,7 @@
          
          # Log resizing info if plot was resized
          if (resize_result$resized) {
-            cat("DEBUG: Plot resized from", resize_result$original_size_kb, "KB to", resize_result$final_size_kb, "KB\n")
             if (!is.null(resize_result$new_dimensions)) {
-               cat("DEBUG: Plot dimensions:", resize_result$new_dimensions, "\n")
             }
          }
          
@@ -2258,10 +2257,9 @@
             return(FALSE)
          }
          
-         # CRITICAL FIX: Exclude other console/terminal function calls from the same parallel batch
+         # CRITICAL FIX: Exclude ALL function calls from the same parallel batch
          # These are not "newer messages" - they are part of the same AI response being processed
          if (!is.null(entry$function_call) && !is.null(entry$function_call$name) &&
-             entry$function_call$name %in% c("run_console_cmd", "run_terminal_cmd", "delete_file") &&
              !is.null(entry$related_to) && entry$related_to == related_to_id) {
             return(FALSE)
          }
@@ -2451,6 +2449,27 @@
             return(FALSE)
          }
          
+         # CRITICAL FIX: Exclude ALL function calls from the same parallel batch
+         # These are not "newer messages" - they are part of the same AI response being processed
+         if (!is.null(entry$function_call) && !is.null(entry$function_call$name) &&
+             !is.null(entry$related_to) && entry$related_to == related_to_id) {
+            return(FALSE)
+         }
+         
+         # CRITICAL FIX: Exclude function_call_outputs for ALL parallel function calls in the same batch
+         # Check if this function_call_output belongs to any parallel function call in the same batch
+         if (!is.null(entry$type) && entry$type == "function_call_output" && 
+             !is.null(entry$related_to)) {
+            # Find the function call this output belongs to
+            for (fc_entry in conversation_log) {
+               if (!is.null(fc_entry$id) && fc_entry$id == entry$related_to &&
+                   !is.null(fc_entry$function_call) && !is.null(fc_entry$function_call$name) &&
+                   !is.null(fc_entry$related_to) && fc_entry$related_to == related_to_id) {
+                  return(FALSE)  # This is an output for a parallel function call in the same batch
+               }
+            }
+         }
+         
          newer_messages_found <<- c(newer_messages_found, entry$id)
          return(TRUE)
       }))
@@ -2490,7 +2509,7 @@
    return(result)
 })
 
-.rs.addFunction("process_single_function_call", function(function_call, related_to_id, request_id, response_id = NULL) {
+.rs.addFunction("process_single_function_call", function(function_call, related_to_id, request_id, response_id = NULL, message_id = NULL) {
    function_name <- if (is.list(function_call$name)) function_call$name[[1]] else function_call$name
    call_id <- if (is.list(function_call$call_id)) function_call$call_id[[1]] else function_call$call_id
    
@@ -2514,13 +2533,40 @@
      }
    }
    
-   # Always create normalized_function_call at the beginning
-   function_call_id <- .rs.get_next_message_id()
+   # Always check if function call exists in conversation log, regardless of provided message_id
+   function_call_exists <- FALSE
+   existing_entry_index <- NULL
+   
+   for (i in seq_along(conversation_log)) {
+      entry <- conversation_log[[i]]
+      if (!is.null(entry$function_call)) {
+         entry_call_id <- if (is.list(entry$function_call$call_id)) entry$function_call$call_id[[1]] else entry$function_call$call_id
+         if (entry_call_id == call_id) {
+            function_call_exists <- TRUE
+            existing_entry_index <- i
+            # Use the existing message ID from the conversation log
+            function_call_message_id <- entry$id
+            break
+         }
+      }
+   }
+   
+   # Use provided message_id if function call doesn't exist and message_id was provided
+   if (!function_call_exists) {
+      if (!is.null(message_id)) {
+         # Use the pre-allocated message ID passed from buffer processing
+         function_call_message_id <- message_id
+      } else {
+         # Fallback: try to get pre-allocated ID, otherwise generate new one
+         function_call_message_id <- .rs.get_preallocated_message_id(call_id, 1)
+      }
+   }
+   
    normalized_function_call <- list(
       name = function_name,
       arguments = if (is.list(function_call$arguments)) function_call$arguments[[1]] else function_call$arguments,
       call_id = call_id,
-      msg_id = function_call_id
+      msg_id = function_call_message_id
    )
    
    current_logForChecking <- Filter(function(entry) {
@@ -2534,24 +2580,6 @@
       }
       return(TRUE)
    }, conversation_log)
-      
-   function_call_exists <- FALSE
-   existing_entry_index <- NULL
-   for (i in seq_along(conversation_log)) {
-      entry <- conversation_log[[i]]
-      if (!is.null(entry$function_call)) {
- 
-         entry_call_id <- if (is.list(entry$function_call$call_id)) entry$function_call$call_id[[1]] else entry$function_call$call_id
-         if (entry_call_id == call_id) {
-            function_call_exists <- TRUE
-            existing_entry_index <- i
-            # CRITICAL FIX: Use the existing message ID from the streamed function call
-            # The widgets are already created with this ID, so we must use it
-            normalized_function_call$msg_id <- entry$id
-            break
-         }
-      }
-   }
 
    if (!function_call_exists) {
       # No function calls need to be excluded - end_turn is now handled as standalone event
@@ -2560,7 +2588,7 @@
       # Only add to conversation log if not excluded
       if (!should_exclude) {
          function_call_entry <- list(
-            id = function_call_id,
+            id = function_call_message_id,
             role = "assistant",
             function_call = normalized_function_call,
             related_to = related_to_id,
@@ -2581,20 +2609,56 @@
       
       # Create immediate "Response pending..." for interactive functions
       if (function_name %in% c("run_console_cmd", "run_terminal_cmd", "delete_file", "run_file")) {
-         # For console/terminal commands: create function_call_output
-         pending_output_id <- .rs.get_next_message_id()
+         # For console/terminal commands: create function_call_output using pre-allocated ID (index 2)
+         pending_output_id <- .rs.get_preallocated_message_id(call_id, 2)
          pending_output <- list(
             id = pending_output_id,
             type = "function_call_output",
             call_id = call_id,
             output = "Response pending...",
-            related_to = function_call_id,
+            related_to = function_call_message_id,
             procedural = TRUE  # Mark as procedural so it doesn't show in UI
          )
          conversation_log <- c(conversation_log, list(pending_output))
       }
       
       .rs.write_conversation_log(conversation_log)
+      
+      # For buffered console/terminal commands (subsequent function calls), create widgets
+      if (function_name %in% c("run_console_cmd", "run_terminal_cmd")) {
+         # Extract command details for widget creation
+         cmd_info <- .rs.extract_command_and_explanation(list(
+            id = function_call_message_id,
+            function_call = normalized_function_call
+         ), NULL)
+         
+         # Create widget for this function call
+         is_console <- (function_name %in% c("run_console_cmd"))
+         
+         # Send widget creation event
+         if (is_console) {
+            .rs.send_ai_operation("create_console_command", list(
+               message_id = as.numeric(function_call_message_id),
+               command = cmd_info$command,
+               explanation = cmd_info$explanation,
+               request_id = request_id
+            ))
+         } else {
+            .rs.send_ai_operation("create_terminal_command", list(
+               message_id = as.numeric(function_call_message_id),
+               command = cmd_info$command,
+               explanation = cmd_info$explanation,
+               request_id = request_id
+            ))
+         }
+         
+         # CRITICAL: Also create buttons for the widget (same as conversation display does)
+         widget_type <- if (is_console) "console" else "terminal"
+         .rs.send_ai_operation("create_widget_buttons", list(
+            message_id = as.character(function_call_message_id),
+            content = widget_type
+         ))
+      }
       
       # Note: Function calls are now stored only in conversation_log.json (not conversation.json)
    }
@@ -2630,7 +2694,8 @@
       function_result <- .rs.handle_run_file(normalized_function_call, conversation_log, related_to_id, request_id)
    } else {
       # Fallback for unknown function calls
-      function_output_id <- .rs.get_next_message_id()
+      # Try to use pre-allocated ID (index 2), fall back to new ID if not available
+      function_output_id <- .rs.get_preallocated_message_id(normalized_function_call$call_id, 2)
       
       function_call_output <- list(
         id = function_output_id,
@@ -2766,6 +2831,11 @@
                command = widget_op$command,
                explanation = widget_op$explanation,
                request_id = widget_op$request_id
+            ))
+
+            .rs.send_ai_operation("create_widget_buttons", list(
+               message_id = as.character(widget_op$message_id),
+               content = "console"
             ))
             
             # Determine command type for return value
@@ -3025,10 +3095,14 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
       
       # If there are buffered function calls AND this is NOT an edit_file continuation,
       # process the next buffered function call instead of calling API
-      if (.rs.has_buffered_function_calls() && !is_edit_file_continuation) {
+      has_buffered_calls <- .rs.has_buffered_function_calls()      
+      if (has_buffered_calls && !is_edit_file_continuation) {
          
          next_call <- .rs.get_next_buffered_function_call()
          if (!is.null(next_call)) {
+            function_name <- if (!is.null(next_call$function_call$name)) next_call$function_call$name else "UNKNOWN"
+            call_id <- if (!is.null(next_call$function_call$call_id)) next_call$function_call$call_id else "UNKNOWN"
+            
             # Clear the related_to_id since we're processing a function call
             .rs.set_conversation_var("current_related_to_id", NULL)
             
@@ -3037,7 +3111,8 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
                next_call$function_call,
                related_to_id,
                next_call$request_id,
-               next_call$response_id
+               next_call$response_id,
+               next_call$message_id
             )
             
             return(result)
@@ -3071,12 +3146,16 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
       .rs.increment_assistant_message_count()
       
       # Use backend_ai_api_call (now uses streaming infrastructure)
+      has_buffered_before_api <- .rs.has_buffered_function_calls()
+      
       streaming_result <- .rs.backend_ai_api_call(
          conversation = api_conversation_log, 
          model = model, 
          temperature = temperature,
          request_id = request_id
       )
+      
+      has_buffered_after_api <- .rs.has_buffered_function_calls()
       
       # Clear the related_to_id after streaming completes, but keep assistant_message_id for process_assistant_response
       .rs.set_conversation_var("current_related_to_id", NULL)

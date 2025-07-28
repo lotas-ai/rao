@@ -65,11 +65,7 @@ public interface AiServerOperations
    void clearConsoleDoneFlag(int messageId, ServerRequestCallback<Void> requestCallback);
    
    void clearTerminalDoneFlag(int messageId, ServerRequestCallback<Void> requestCallback);
-   
-   void addConsoleOutputToAiConversation(int messageId, ServerRequestCallback<Boolean> requestCallback);
-   
-   void addTerminalOutputToAiConversation(int messageId, ServerRequestCallback<Boolean> requestCallback);
-   
+      
    void revertAiMessage(int messageId, ServerRequestCallback<Void> requestCallback);
       
    void switchConversation(int index);

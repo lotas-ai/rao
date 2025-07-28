@@ -1869,16 +1869,6 @@ public class RemoteServer implements Server, AiServerOperations
    {
       sendRequest(RPC_SCOPE, CLEAR_TERMINAL_DONE_FLAG, messageId, requestCallback);
    }
-
-   public void addConsoleOutputToAiConversation(int messageId, ServerRequestCallback<Boolean> requestCallback)
-   {
-      sendRequest(RPC_SCOPE, ADD_CONSOLE_OUTPUT_TO_CONVERSATION, messageId, requestCallback);
-   }
-
-   public void addTerminalOutputToAiConversation(int messageId, ServerRequestCallback<Boolean> requestCallback)
-   {
-      sendRequest(RPC_SCOPE, ADD_TERMINAL_OUTPUT_TO_CONVERSATION, messageId, requestCallback);
-   }
    
    public void revertAiMessage(int messageId, ServerRequestCallback<java.lang.Void> requestCallback)
    {
@@ -7303,8 +7293,6 @@ public class RemoteServer implements Server, AiServerOperations
    private static final String ACCEPT_SEARCH_REPLACE_COMMAND = "accept_search_replace_command";
    private static final String CANCEL_SEARCH_REPLACE_COMMAND = "cancel_search_replace_command";
    private static final String ACCEPT_RUN_LATEST_AI_CODE = "accept_run_latest_ai_code";
-   public static final String ADD_CONSOLE_OUTPUT_TO_CONVERSATION = "add_console_output_to_conversation";
-   public static final String ADD_TERMINAL_OUTPUT_TO_CONVERSATION = "add_terminal_output_to_conversation";
    
    private static final String STAT = "stat";
    private static final String IS_TEXT_FILE = "is_text_file";
