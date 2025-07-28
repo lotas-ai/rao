@@ -12,7 +12,7 @@
 :: AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
 ::
 @echo off
-setlocal
+setlocal EnableDelayedExpansion
 
 if "%1" == "--help" goto :showhelp
 if "%1" == "-h" goto :showhelp
@@ -24,6 +24,10 @@ if "%BUILD_DIR%" == "" set BUILD_DIR=build
 if "%CMAKE_BUILD_TYPE%" == "" set CMAKE_BUILD_TYPE=RelWithDebInfo
 if "%CMAKE_BUILD_TYPE%" == "Debug" set BUILD_DIR=build-debug
 if "%PKG_TEMP_DIR%" == "" set PKG_TEMP_DIR=C:/rsbuild
+
+REM Set 7-Zip path
+set "SEVEN_ZIP=7z"
+if exist "C:\Program Files\7-Zip\7z.exe" set "SEVEN_ZIP=C:\Program Files\7-Zip\7z.exe"
 
 echo DEBUG: make-dist-packages.bat using following values:
 echo DEBUG:     PACKAGE_DIR=%PACKAGE_DIR%
@@ -63,10 +67,38 @@ REM Generate Squirrel.Windows packages for auto-updates
 if not defined NOSQUIRREL (
     echo Creating Squirrel.Windows packages for auto-updates...
     
-    REM Find the Electron app directory (should be in the build output)
-    set "ELECTRON_APP_DIR=%BUILD_DIR%\out\Rao-win32-x64"
+    REM Find the ZIP file and extract it to create the Electron app directory
+    for %%f in ("%BUILD_DIR%\*.zip") do (
+        if exist "%%f" (
+            echo Found ZIP file: %%f
+            set "ZIP_FILE=%%f"
+        )
+    )
     
-    if exist "%ELECTRON_APP_DIR%" (
+    if defined ZIP_FILE (
+        echo Extracting ZIP to create Electron app directory...
+        set "ELECTRON_APP_DIR=%BUILD_DIR%\temp-electron-app"
+        mkdir "%ELECTRON_APP_DIR%" 2>NUL
+        "%SEVEN_ZIP%" x "!ZIP_FILE!" -o"%ELECTRON_APP_DIR%" -y >NUL
+        
+        REM Find the actual app directory inside the extracted content
+        for /d %%d in ("%ELECTRON_APP_DIR%\*") do (
+            if exist "%%d\rao.exe" (
+                set "ELECTRON_APP_DIR=%%d"
+                echo Found Electron app at: !ELECTRON_APP_DIR!
+                goto :found_app
+            )
+        )
+        echo ERROR: Could not find rao.exe in extracted ZIP
+        goto :skip_squirrel
+        
+        :found_app
+    ) else (
+        REM Fallback: Try the original location
+        set "ELECTRON_APP_DIR=%BUILD_DIR%\out\Rao-win32-x64"
+    )
+    
+    if exist "%ELECTRON_APP_DIR%\rao.exe" (
         echo Found Electron app at: %ELECTRON_APP_DIR%
         
         REM Use electron-winstaller to create Squirrel packages
@@ -95,8 +127,14 @@ if not defined NOSQUIRREL (
             echo Squirrel auto-update files created successfully
         )
     ) else (
-        echo WARNING: Electron app directory not found at %ELECTRON_APP_DIR%
+        echo WARNING: Electron app directory not found
         echo Skipping Squirrel package generation
+        :skip_squirrel
+    )
+    
+    REM Cleanup temp directory
+    if exist "%BUILD_DIR%\temp-electron-app" (
+        rmdir /s /q "%BUILD_DIR%\temp-electron-app" 2>NUL
     )
 )
 
