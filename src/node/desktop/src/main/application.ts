@@ -397,8 +397,8 @@ export class Application implements AppState {
 
     this.setDockMenu();
     
-    // Auto-updates for macOS using S3 with enhanced logic
-    if (process.platform === 'darwin' && app.isPackaged) {
+    // Auto-updates for macOS and Windows using S3 with enhanced logic
+    if ((process.platform === 'darwin' || process.platform === 'win32') && app.isPackaged) {
       let updateDownloaded = false;
       let installedOnStartup = false;
       
@@ -444,46 +444,24 @@ export class Application implements AppState {
         logger().logError(`Auto-updater error: ${error.message}`);
       });
 
-      // Enhanced version checking before starting auto-updater
-      const checkVersionBeforeUpdate = async () => {
-        try {
-          const currentVersion = app.getVersion();
-          const response = await fetch('https://lotas-downloads.s3.us-east-2.amazonaws.com/darwin/x64/RELEASES.json');
-          const releaseData = await response.json();
-          const latestVersion = releaseData.version;
-          
-          logger().logInfo(`Version check: current=${currentVersion}, latest=${latestVersion}`);
-          
-          // Use semver for proper version comparison
-          const semver = require('semver');
-          if (semver.gt(latestVersion, currentVersion)) {
-            logger().logInfo('Update available - starting auto-updater');
-            startAutoUpdater();
-          } else {
-            logger().logInfo('Already on latest version - skipping auto-updater');
-          }
-        } catch (error) {
-          logger().logError(`Version check failed: ${error} - starting auto-updater anyway`);
-          startAutoUpdater();
+      // Start auto-updater
+      const platform = process.platform === 'darwin' ? 'darwin' : 'win32';
+      const baseUrl = `https://lotas-downloads.s3.us-east-2.amazonaws.com/${platform}/x64`;
+      
+      updateElectronApp({
+        updateSource: {
+          type: UpdateSourceType.StaticStorage,
+          baseUrl: baseUrl
+        },
+        updateInterval: '5 minutes',
+        notifyUser: false, // We handle notifications manually
+        logger: {
+          info: (message: string) => logger().logInfo(`UEA: ${message}`),
+          warn: (message: string) => logger().logWarning(`UEA: ${message}`),
+          error: (message: string) => logger().logError(`UEA: ${message}`),
+          log: (message: string) => logger().logInfo(`UEA: ${message}`)
         }
-      };
-
-      const startAutoUpdater = () => {
-        updateElectronApp({
-          updateSource: {
-            type: UpdateSourceType.StaticStorage,
-            baseUrl: 'https://lotas-downloads.s3.us-east-2.amazonaws.com/darwin/x64'
-          },
-          updateInterval: '5 minutes',
-          notifyUser: false, // We handle notifications manually
-          logger: {
-            info: (message: string) => logger().logInfo(`UEA: ${message}`),
-            warn: (message: string) => logger().logWarning(`UEA: ${message}`),
-            error: (message: string) => logger().logError(`UEA: ${message}`),
-            log: (message: string) => logger().logInfo(`UEA: ${message}`)
-          }
-        });
-      };
+      });
 
       // Install on app quit if update was downloaded but user chose "Later"
       app.on('before-quit', (event) => {
@@ -492,13 +470,10 @@ export class Application implements AppState {
           autoUpdater.quitAndInstall();
         }
       });
-
-      // Start version check
-      checkVersionBeforeUpdate();
     }
     
-    // Manual update check for Linux and Windows only (Mac uses auto-updater)
-    if (process.platform !== 'darwin') {
+    // Manual update check for Linux only (Mac and Windows use auto-updater)
+    if (process.platform === 'linux') {
       checkForUpdatesOnStartup();
     }
 

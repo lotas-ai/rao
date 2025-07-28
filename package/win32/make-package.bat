@@ -31,6 +31,7 @@ call %RSTUDIO_DEPENDENCIES%\tools\rstudio-tools.cmd
 set BUILD_GWT=1
 set QUICK=
 set NOZIP=
+set NOSQUIRREL=
 set CLEANBUILD=
 set RSTUDIO_TARGET=Electron
 set PACKAGE_VERSION_SET=
@@ -73,6 +74,10 @@ for %%A in (%*) do (
     )
     if /I "%%A" == "nozip" (
         set NOZIP=1
+        set KNOWN_ARG=1
+    )
+    if /I "%%A" == "nosquirrel" (
+        set NOSQUIRREL=1
         set KNOWN_ARG=1
     )
     if /I "%%A" == "quick" (
@@ -268,7 +273,7 @@ goto :eof
 
 :showhelp
 echo.
-echo make-package [clean] [debug] [electron] [multiarch] [nogwt] [nozip] [quick]
+echo make-package [clean] [debug] [electron] [multiarch] [nogwt] [nozip] [nosquirrel] [quick]
 echo.
 echo     clean:      perform full rebuild
 echo     debug:      perform a debug build
@@ -276,6 +281,7 @@ echo     electron:   build Electron desktop (default)
 echo     multiarch:  produce both 32-bit and 64-bit rsession executables
 echo     nogwt:      skip GWT build (use previous GWT build)
 echo     nozip:      skip creation of ZIP file
+echo     nosquirrel: skip creation of Squirrel.Windows auto-update packages
 echo     quick:      skip creation of setup package
 echo.
 echo     Environment variables specify the product's build version (default is 99.9.9).
