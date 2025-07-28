@@ -20,7 +20,6 @@ electronWinstaller.createWindowsInstaller({
   authors: 'Lotas',
   exe: 'rao.exe',
   iconUrl: 'https://lotas-downloads.s3.us-east-2.amazonaws.com/icon.ico',
-  setupIcon: path.join(appDirectory, 'resources', 'app', 'resources', 'icons', 'Rao.ico'),
   noMsi: true
 }).then(() => {
   console.log('Squirrel packages created successfully');
