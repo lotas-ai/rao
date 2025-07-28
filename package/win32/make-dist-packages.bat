@@ -89,17 +89,24 @@ if not defined NOSQUIRREL (
         REM Use electron-winstaller to create Squirrel packages
         pushd "%PACKAGE_DIR%\..\..\src\node\desktop"
         
-        REM Set Node.js path
-        set "NODE_PATH=C:\Users\willnickols\rao\dependencies\common\node\22.13.1\node.exe"
-        
-        REM Check if electron-winstaller is available
-        "%NODE_PATH%" -e "try { require('electron-winstaller'); console.log('electron-winstaller found'); } catch(e) { console.error('electron-winstaller not found - please run npm install first'); process.exit(1); }"
-        if ERRORLEVEL 1 (
-            echo ERROR: electron-winstaller not found
-            echo Please run: cd src\node\desktop ^&^& npm install
-            popd
-            goto :error
+        REM Find Node.js path dynamically  
+        set "NODE_PATH="
+        if exist "..\..\..\dependencies\common\node\22.13.1\node.exe" (
+            set "NODE_PATH=..\..\..\dependencies\common\node\22.13.1\node.exe"
+        ) else (
+            REM Try to find node in PATH
+            where node >nul 2>&1
+            if not ERRORLEVEL 1 (
+                set "NODE_PATH=node"
+            ) else (
+                echo ERROR: Node.js not found
+                echo Please ensure Node.js is installed and in PATH
+                popd
+                goto :error
+            )
         )
+        
+        echo Using Node.js at: %NODE_PATH%
         
         REM Create Squirrel packages using separate script
         "%NODE_PATH%" "create-squirrel-packages.js" "%ELECTRON_APP_DIR%" "%BUILD_DIR%\squirrel"
