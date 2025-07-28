@@ -139,6 +139,8 @@ echo  Use "set NOSQUIRREL=1" to skip Squirrel.Windows package generation.
 echo.
 exit /b 0
 
+
+
 :error
 echo ERROR: Failed to package RStudio!
 exit /b 1
