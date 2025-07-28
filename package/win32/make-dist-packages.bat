@@ -81,25 +81,8 @@ if not defined NOSQUIRREL (
             goto :error
         )
         
-        REM Create Squirrel packages
-        node -e "
-        const electronWinstaller = require('electron-winstaller');
-        
-        electronWinstaller.createWindowsInstaller({
-          appDirectory: '%ELECTRON_APP_DIR%',
-          outputDirectory: '%BUILD_DIR%\\squirrel',
-          authors: 'Lotas',
-          exe: 'rao.exe',
-          iconUrl: 'https://lotas-downloads.s3.us-east-2.amazonaws.com/icon.ico',
-          setupIcon: '%ELECTRON_APP_DIR%\\resources\\app\\resources\\icons\\Rao.ico',
-          noMsi: true
-        }).then(() => {
-          console.log('Squirrel packages created successfully');
-        }).catch((e) => {
-          console.error('Squirrel package creation failed:', e);
-          process.exit(1);
-        });
-        "
+        REM Create Squirrel packages using separate script
+        node "%PACKAGE_DIR%\create-squirrel-packages.js" "%ELECTRON_APP_DIR%" "%BUILD_DIR%\squirrel"
         
         popd
         
