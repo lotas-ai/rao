@@ -474,53 +474,105 @@
                }
             }
          } else if (function_name == "edit_file") {
-            # Check if there's an assistant message with related_to equal to this edit_file function call ID
-            has_assistant_response <- FALSE
+            # Look for related assistant message to get the content
+            assistant_content <- NULL
+            assistant_request_id <- NULL
+            is_cancelled_edit <- FALSE
+            
             for (check_entry in conversation_log) {
                if (!is.null(check_entry$role) && check_entry$role == "assistant" && 
                      !is.null(check_entry$related_to) && check_entry$related_to == entry$id) {
-                  has_assistant_response <- TRUE
+                  assistant_content <- check_entry$content
+                  # Check if this is a cancelled edit
+                  is_cancelled_edit <- (!is.null(check_entry$content) && check_entry$content == "The model chose to cancel the edit.")
                   break
                }
             }
             
-            # If no assistant response, create edit_file widget with code_edit from function call
-            if (!has_assistant_response) {
-               # Parse function call arguments to get filename and code_edit
-               args <- .rs.safe_parse_function_arguments(entry$function_call)
+            # Use the function call's request_id
+            if (!is.null(entry$request_id)) {
+               assistant_request_id <- entry$request_id
+            }
+            
+            # Always create widget (whether or not there's an assistant response)
+            # Parse function call arguments to get filename
+            args <- .rs.safe_parse_function_arguments(entry$function_call)
+            
+            if (!is.null(args)) {
+               filename <- "unknown"
+               if (!is.null(args$filename)) {
+                  filename <- args$filename
+               }
                
-               if (!is.null(args)) {
-                  filename <- "unknown"
-                  if (!is.null(args$filename)) {
-                     filename <- args$filename
+               # Determine content and display settings based on whether we have assistant content
+               if (!is.null(assistant_content)) {
+                  # Use assistant content (like the old logic in assistant message processing)
+                  if (is_cancelled_edit) {
+                     # Cancelled edit
+                     widget_content <- paste0("CANCELLED:", assistant_content)
+                     explanation <- paste("Edit", basename(filename), "(cancelled)")
+                     skip_diff <- TRUE
+                  } else {
+                     # Normal edit with assistant content
+                     cleaned_content <- .rs.parse_code_block_content(assistant_content, filename)
+                     widget_content <- cleaned_content
+                     explanation <- paste("Edit", basename(filename))
+                     skip_diff <- FALSE
                   }
                   
-                  code_edit <- ""
+                  # Get filename with diff stats for completed edits
+                  filename_with_stats <- .rs.get_message_title(entry$id, conversation_log)
+                  if (is.null(filename_with_stats)) {
+                     filename_with_stats <- basename(filename)
+                  }
+                  filename_display <- filename_with_stats
+               } else {
+                  # No assistant content - use code_edit from function call (like the old logic)
+                  widget_content <- ""
                   if (!is.null(args$code_edit)) {
-                     code_edit <- args$code_edit
+                     widget_content <- args$code_edit
                   }
-                  
-                  # Get filename display name
                   filename_display <- basename(filename)
-                  
-                  # Create widget with function content
-                  .rs.send_ai_operation("edit_file_command", list(
-                     message_id = as.numeric(entry$id),
-                     filename = filename_display,
-                     content = code_edit,
-                     explanation = paste("Edit", basename(filename)),
-                     request_id = entry$request_id,
-                     skip_diff_highlighting = TRUE
-                  ))
-                  items_created <- items_created + 1
-                  
-                  # Check if buttons should be hidden
+                  explanation <- paste("Edit", basename(filename))
+                  skip_diff <- TRUE
+               }
+               
+               # Add diff data for completed edits with assistant content
+               widget_params <- list(
+                  message_id = as.numeric(entry$id),  # Use function call ID
+                  filename = filename_display,
+                  content = widget_content,
+                  explanation = explanation,
+                  request_id = assistant_request_id,
+                  skip_diff_highlighting = skip_diff
+               )
+               
+               # Add diff data for completed edits
+               if (!is.null(assistant_content) && !is_cancelled_edit) {
+                  diff_data <- .rs.get_diff_data_for_file_editing(entry$id)
+                  widget_params$diff_data <- diff_data
+               }
+               
+               # Create the widget
+               .rs.send_ai_operation("edit_file_command", widget_params)
+               items_created <- items_created + 1
+               
+               # Check if buttons should be hidden for completed edits
+               if (!is.null(assistant_content) && !is_cancelled_edit) {
                   if (.rs.should_hide_buttons_for_restored_widget(entry$id)) {
                      .rs.send_ai_operation("hide_widget_buttons", list(
                         message_id = as.numeric(entry$id),
                         content = "edit_file"
                      ))
                   }
+               }
+               
+               # Check if buttons should be hidden
+               if (.rs.should_hide_buttons_for_restored_widget(entry$id)) {
+                  .rs.send_ai_operation("hide_widget_buttons", list(
+                     message_id = as.numeric(entry$id),
+                     content = "edit_file"
+                  ))
                }
             }
          } else if (function_name == "search_replace") {
@@ -752,74 +804,6 @@
                    !is.null(related_entry$function_call) && !is.null(related_entry$function_call$name) &&
                    related_entry$function_call$name == "edit_file") {
                   is_edit_file_related <- TRUE
-                  
-                  # Create edit_file widget instead of assistant message
-                  filename <- "unknown"
-                  args <- .rs.safe_parse_function_arguments(related_entry$function_call)
-                  
-                  if (!is.null(args) && !is.null(args$filename)) {
-                     filename <- args$filename
-                  }
-                  
-                  # Get the filename with diff stats
-                  filename_with_stats <- .rs.get_message_title(entry$id, conversation_log)
-                  if (is.null(filename_with_stats)) {
-                     filename_with_stats <- basename(filename)
-                  }
-                  
-                  # Check if this is a cancelled edit (assistant message says "The model chose to cancel the edit.")
-                  is_cancelled_edit <- (!is.null(entry$content) && entry$content == "The model chose to cancel the edit.")
-                  if (is_cancelled_edit) {
-                     # Get the request_id from the related edit_file function call for cancelled edits too
-                     related_request_id_cancelled <- NULL
-                     if (!is.null(related_entry$request_id)) {
-                        related_request_id_cancelled <- related_entry$request_id
-                     }
-                     
-                     # For cancelled edits, create widget that shows cancellation message and has no buttons
-                     .rs.send_ai_operation("edit_file_command", list(
-                        message_id = as.numeric(entry$related_to),  # Use function call ID as widget ID
-                        filename = filename_with_stats,
-                        content = paste0("CANCELLED:", entry$content),  # Mark as cancelled with prefix
-                        explanation = paste("Edit", basename(filename), "(cancelled)"),
-                        request_id = related_request_id_cancelled  # Use the request_id from function call
-                     ))
-                     items_created <- items_created + 1
-                  } else {
-                     # Parse and clean the content to remove code block markers
-                     cleaned_content <- .rs.parse_code_block_content(entry$content, filename)
-                     
-                     # Get the request_id from the related edit_file function call
-                     related_request_id <- NULL
-                     if (!is.null(related_entry$request_id)) {
-                        related_request_id <- related_entry$request_id
-                     }
-                     
-                     # Use the related_to (edit_file function call ID) as the widget ID to match streaming events
-                     
-                     # PRE-COMPUTE DIFF DATA HERE instead of having Java call back to R
-                     diff_data <- .rs.get_diff_data_for_file_editing(entry$related_to)
-                     
-                     # Create edit_file widget                     
-                     .rs.send_ai_operation("edit_file_command", list(
-                        message_id = as.numeric(entry$related_to),  # Use related_to to match streaming
-                        filename = filename_with_stats,
-                        content = cleaned_content,
-                        explanation = paste("Edit", basename(filename)),
-                        request_id = related_request_id,  # Use the request_id from function call
-                        skip_diff_highlighting = FALSE,
-                        diff_data = diff_data  # Send as structured object, not JSON string - becomes JavaScriptObject on Java side
-                     ))
-                     items_created <- items_created + 1
-                     
-                     # CRITICAL: Check if buttons should be hidden after widget creation
-                     if (.rs.should_hide_buttons_for_restored_widget(entry$related_to)) {
-                        .rs.send_ai_operation("hide_widget_buttons", list(
-                           message_id = as.numeric(entry$related_to),
-                           content = "edit_file"
-                        ))
-                     }
-                  }
                   break
                }
             }

@@ -189,8 +189,9 @@
    }
    
    if (!is.null(related_function_call)) {
-      # Create procedural user message for edit_file pending
-      pending_message_id <- .rs.get_next_message_id()
+      # Create procedural user message for edit_file pending using pre-allocated ID (index 4 for edit_file)
+      call_id <- related_function_call$function_call$call_id
+      pending_message_id <- .rs.get_preallocated_message_id(call_id, 4)
       pending_message <- list(
          id = pending_message_id,
          role = "user",
@@ -304,7 +305,7 @@
       paste0("'", keyword, "' is not a keyword and did not return any results. Only find context for keyword.")
    }
    
-   function_output_id <- .rs.get_next_message_id()
+   function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
    function_call_output <- list(
      id = function_output_id,
      type = "function_call_output",
@@ -544,7 +545,7 @@
       function_response <- paste0("Error: Image not found: ", image_path)
    }
    
-   function_output_id <- .rs.get_next_message_id()
+   function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
    function_call_output <- list(
       id = function_output_id,
       type = "function_call_output",
@@ -647,7 +648,7 @@
       file_content <- effective_content
    }
 
-   function_output_id <- .rs.get_next_message_id()
+   function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
    function_call_output <- list(
      id = function_output_id,
      type = "function_call_output",
@@ -852,7 +853,7 @@
    if (!is.null(old_string) && !is.null(new_string) && old_string == new_string) {
       error_message <- "Your old_string and new_string were the same. They must be different."
       
-      function_output_id <- .rs.get_next_message_id()
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
       function_call_output <- list(
         id = function_output_id,
         type = "function_call_output",
@@ -877,7 +878,7 @@
    if (is.null(file_path) || is.null(old_string) || is.null(new_string)) {
       error_message <- "Error: Missing required arguments (file_path, old_string, or new_string)"
       
-      function_output_id <- .rs.get_next_message_id()
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
       function_call_output <- list(
         id = function_output_id,
         type = "function_call_output",
@@ -995,8 +996,8 @@
       
       .rs.send_ai_operation("search_replace_command", widget_data)
       
-      # Create function_call_output showing create/append operation ready
-      function_output_id <- .rs.get_next_message_id()
+      # Create function_call_output showing create/append operation ready (using pre-allocated ID)
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
       function_call_output <- list(
         id = function_output_id,
         type = "function_call_output",
@@ -1012,8 +1013,8 @@
       # Add function_call_output to conversation log FIRST
       conversation_log <- c(conversation_log, list(function_call_output))
       
-      # Create procedural user message for search_replace pending
-      pending_message_id <- .rs.get_next_message_id()
+      # Create procedural user message for search_replace pending (using pre-allocated ID)
+      pending_message_id <- .rs.get_preallocated_message_id(function_call$call_id, 3)
       pending_message <- list(
          id = pending_message_id,
          role = "user",
@@ -1051,7 +1052,7 @@
       # File doesn't exist - return error message and continue
       error_message <- paste0("File not found: ", file_path, ". Please check the file path or read the current file structure.")
       
-      function_output_id <- .rs.get_next_message_id()
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
       function_call_output <- list(
         id = function_output_id,
         type = "function_call_output",
@@ -1100,7 +1101,7 @@
          error_message <- paste0("The old_string does not exist in the file and no similar content was found. Read the content and try again with the exact text.")
       }
       
-      function_output_id <- .rs.get_next_message_id()
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
       function_call_output <- list(
         id = function_output_id,
         type = "function_call_output",
@@ -1148,7 +1149,7 @@
                              "Please provide a more specific old_string that matches exactly one location. ",
                              "Here are all the matches with context:\n\n", paste(match_details, collapse = "\n\n"))
       
-      function_output_id <- .rs.get_next_message_id()
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
       function_call_output <- list(
         id = function_output_id,
         type = "function_call_output",
@@ -1237,8 +1238,8 @@
    
    .rs.send_ai_operation("search_replace_command", widget_data)
    
-   # Create function_call_output showing validation succeeded
-   function_output_id <- .rs.get_next_message_id()
+   # Create function_call_output showing validation succeeded (using pre-allocated ID)
+   function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
    function_call_output <- list(
      id = function_output_id,
      type = "function_call_output",
@@ -1255,8 +1256,8 @@
    # Add function_call_output to conversation log FIRST
    conversation_log <- c(conversation_log, list(function_call_output))
    
-   # Create procedural user message for search_replace pending
-   pending_message_id <- .rs.get_next_message_id()
+   # Create procedural user message for search_replace pending (using pre-allocated ID)
+   pending_message_id <- .rs.get_preallocated_message_id(function_call$call_id, 3)
    pending_message <- list(
       id = pending_message_id,
       role = "user",
@@ -1293,7 +1294,7 @@
    
    # Validate required parameters
    if (is.null(query) || query == "") {
-      function_output_id <- .rs.get_next_message_id()
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
       function_call_output <- list(
         id = function_output_id,
         type = "function_call_output",
@@ -1309,7 +1310,7 @@
    }
    
    if (is.null(arguments$case_sensitive)) {
-      function_output_id <- .rs.get_next_message_id()
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
       function_call_output <- list(
         id = function_output_id,
         type = "function_call_output",
@@ -1498,7 +1499,7 @@
       }
    }
    
-   function_output_id <- .rs.get_next_message_id()
+   function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
    function_call_output <- list(
      id = function_output_id,
      type = "function_call_output",
@@ -1779,7 +1780,7 @@
       }
    }
    
-   function_output_id <- .rs.get_next_message_id()
+   function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
    function_call_output <- list(
       id = function_output_id,
       type = "function_call_output",
@@ -1864,7 +1865,7 @@
       }
    }
    
-   function_output_id <- .rs.get_next_message_id()
+   function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
    
    # Apply consistent output limiting like console/terminal commands
    if (!is.null(dirListing) && nchar(dirListing) > 0) {
@@ -1988,7 +1989,7 @@
       search_results <- paste(result_lines, collapse = "\n")
    }
    
-   function_output_id <- .rs.get_next_message_id()
+   function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
    
    # Apply consistent output limiting like console/terminal commands
    if (!is.null(search_results) && nchar(search_results) > 0) {
@@ -2021,7 +2022,7 @@
    
    if (startsWith(target_file, "/")) {
       # Return error immediately for absolute paths
-      function_output_id <- .rs.get_next_message_id()
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
       function_call_output <- list(
         id = function_output_id,
         type = "function_call_output",
@@ -2041,7 +2042,7 @@
    
    if (!startsWith(normalized_path, normalizePath(cwd, winslash = "/", mustWork = FALSE))) {
       # Return error immediately for path traversal
-      function_output_id <- .rs.get_next_message_id()
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
       function_call_output <- list(
         id = function_output_id,
         type = "function_call_output",
@@ -2059,7 +2060,7 @@
    file_name <- basename(normalized_path)
    if (file_name %in% c(".", "..", ".git", ".gitignore", "README.md", "LICENSE")) {
       # Return error immediately for protected files
-      function_output_id <- .rs.get_next_message_id()
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
       function_call_output <- list(
         id = function_output_id,
         type = "function_call_output",
@@ -2076,7 +2077,7 @@
    
    if (dir.exists(normalized_path)) {
       # Return error immediately for directories
-      function_output_id <- .rs.get_next_message_id()
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
       function_call_output <- list(
         id = function_output_id,
         type = "function_call_output",
@@ -2134,7 +2135,7 @@
    
    if (!startsWith(normalized_path, normalizePath(cwd, winslash = "/", mustWork = FALSE))) {
       # Return error immediately for path traversal
-      function_output_id <- .rs.get_next_message_id()
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
       function_call_output <- list(
         id = function_output_id,
         type = "function_call_output",
@@ -2155,7 +2156,7 @@
    # Check if file exists on disk only if not found in editor
    if (is.null(effective_content) && !file.exists(normalized_path)) {
       # Return error for non-existent files that are not open in editor
-      function_output_id <- .rs.get_next_message_id()
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
       function_call_output <- list(
         id = function_output_id,
         type = "function_call_output",
@@ -2172,7 +2173,7 @@
    
    if (file.exists(normalized_path) && dir.exists(normalized_path)) {
       # Return error immediately for directories
-      function_output_id <- .rs.get_next_message_id()
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
       function_call_output <- list(
         id = function_output_id,
         type = "function_call_output",
@@ -2189,7 +2190,7 @@
    
    if (is.null(effective_content)) {
       # Return error for unreadable files
-      function_output_id <- .rs.get_next_message_id()
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
       function_call_output <- list(
         id = function_output_id,
         type = "function_call_output",
@@ -2216,7 +2217,7 @@
       end_line <- if (is.null(end_line)) total_lines else min(total_lines, as.integer(end_line))
       
       if (start_line > total_lines) {
-         function_output_id <- .rs.get_next_message_id()
+         function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
          function_call_output <- list(
            id = function_output_id,
            type = "function_call_output",
@@ -2253,7 +2254,7 @@
    }
    
    if (nchar(trimws(command)) == 0) {
-      function_output_id <- .rs.get_next_message_id()
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
       function_call_output <- list(
         id = function_output_id,
         type = "function_call_output",
@@ -2318,7 +2319,7 @@
    explanation <- if (!is.null(arguments$explanation)) arguments$explanation else "Running terminal command"
    
    if (is.null(command) || command == "") {
-      function_output_id <- .rs.get_next_message_id()
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
       function_call_output <- list(
          id = function_output_id,
          type = "function_call_output",
@@ -2367,7 +2368,7 @@
    
    if (is.null(command) || command == "") {
       
-      function_output_id <- .rs.get_next_message_id()
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
       function_call_output <- list(
          id = function_output_id,
          type = "function_call_output",

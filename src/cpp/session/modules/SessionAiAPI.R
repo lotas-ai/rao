@@ -908,21 +908,21 @@
   assistant_message_id <- NULL  # Will be generated when streaming starts
   captured_response_id <- NULL  # Capture response_id from streaming events
   
-  # Variables for edit_file delta accumulation
-  edit_file_delta_accumulator <- ""
+  # Variables for edit_file delta accumulation (per call_id)
+  edit_file_delta_accumulators <- list()
+  edit_file_message_ids <- list()
   edit_file_function_call_saved <- FALSE
-  edit_file_filename_printed <- FALSE
-  edit_file_instructions_printed <- FALSE
-  edit_file_code_edit_started <- FALSE
-  edit_file_message_id <- NULL
-  edit_file_code_edit_streamed <- ""  # Track what code_edit content we've already streamed
+  edit_file_filename_printed <- list()
+  edit_file_instructions_printed <- list()
+  edit_file_code_edit_started <- list()
+  edit_file_code_edit_streamed <- list()
   
-  # Variables for search_replace delta accumulation
-  search_replace_delta_accumulator <- ""
+  # Variables for search_replace delta accumulation (per call_id)
+  search_replace_delta_accumulators <- list()
+  search_replace_message_ids <- list()
   search_replace_filename_printed <- FALSE
   search_replace_old_string_started <- FALSE
   search_replace_new_string_started <- FALSE
-  search_replace_message_id <- NULL
   search_replace_old_string_streamed <- ""  # Track what old_string content we've already streamed
   search_replace_new_string_streamed <- ""  # Track what new_string content we've already streamed
   search_replace_old_comment_streamed <- FALSE  # Track if "Old content" comment has been streamed
@@ -931,7 +931,7 @@
   # Variables for console/terminal command delta accumulation (following edit_file pattern)
   # Use lists to track multiple parallel console/terminal commands by call_id
   console_terminal_delta_accumulators <- list()  # call_id -> accumulator string
-  console_terminal_widget_states <- list()  # "widget_created_call_id" -> boolean
+  interactive_widget_states <- list()  # "widget_created_call_id" -> boolean
   console_terminal_command_states <- list()  # "command_started_call_id" -> boolean
   console_terminal_message_ids <- list()  # call_id -> message_id
   console_terminal_command_streamed_states <- list()  # "command_streamed_call_id" -> streamed content
@@ -1079,7 +1079,7 @@
       
       # Clean up console/terminal streaming context variables
       console_terminal_delta_accumulators <- list()
-      console_terminal_widget_states <- list()
+      interactive_widget_states <- list()
       console_terminal_command_states <- list()
       console_terminal_message_ids <- list()
       console_terminal_command_streamed_states <- list()
@@ -1093,15 +1093,26 @@
       .rs.set_conversation_var("widget_type", NULL)
       
       # Clean up search_replace streaming context
-      search_replace_delta_accumulator <- ""
+      search_replace_delta_accumulators <- list()
+      search_replace_message_ids <- list()
       search_replace_filename_printed <- FALSE
       search_replace_old_string_started <- FALSE
       search_replace_new_string_started <- FALSE
-      search_replace_message_id <- NULL
       search_replace_old_string_streamed <- ""
       search_replace_new_string_streamed <- ""
       search_replace_old_comment_streamed <- FALSE
       search_replace_new_comment_streamed <- FALSE
+      
+      # Clean up early widget calls tracking
+      .rs.set_conversation_var("early_widget_calls", NULL)
+      
+      # Clean up first function call tracking (only if no buffered calls remain)
+      # During cancellation, preserve first_function_call_id if there are buffered calls
+      # that might still be processed after cancellation
+      has_buffered_calls <- .rs.has_buffered_function_calls()
+      if (!has_buffered_calls) {
+        .rs.set_conversation_var("first_function_call_id", NULL)
+      }
       
       return(list(cancelled = TRUE, accumulated_response = accumulated_response, assistant_message_id = assistant_message_id))
     }
@@ -1169,53 +1180,103 @@
               
               # For edit_file deltas, accumulate and save the complete function call
               if (!is.null(event_data$field) && event_data$field == "edit_file") {   
-                # Generate message ID once when edit_file streaming starts
-                if (is.null(edit_file_message_id)) {
-                  edit_file_message_id <- .rs.get_next_message_id()
+                # Get call_id for this delta
+                call_id <- if (!is.null(event_data$call_id)) event_data$call_id else "unknown"
+                
+                # Pre-allocate message IDs if not already done (delta processing may happen before function_call action event)
+                function_name <- "edit_file"
+                .rs.preallocate_function_message_ids(function_name, call_id)
+                
+                # Use pre-allocated message ID for edit_file (index 1 = function call itself)
+                current_edit_file_message_id <- edit_file_message_ids[[call_id]]
+                if (is.null(current_edit_file_message_id)) {
+                  current_edit_file_message_id <- .rs.get_preallocated_message_id(call_id, 1)
+                  edit_file_message_ids[[call_id]] <- current_edit_file_message_id
                 }
                 
-                # Accumulate the delta
-                edit_file_delta_accumulator <- paste0(edit_file_delta_accumulator, event_data$delta)
+                # Initialize accumulator for this call_id if not exists
+                if (is.null(edit_file_delta_accumulators[[call_id]])) {
+                  edit_file_delta_accumulators[[call_id]] <- ""
+                }
+                
+                # Accumulate the delta for this specific call_id
+                edit_file_delta_accumulators[[call_id]] <- paste0(edit_file_delta_accumulators[[call_id]], event_data$delta)
                                 
-                # Extract filename if available and widget not yet created
-                if (!edit_file_filename_printed) {
-                  if (grepl('"filename"\\s*:\\s*"[^"]*"', edit_file_delta_accumulator, perl = TRUE)) {
-                    filename_match <- regmatches(edit_file_delta_accumulator, 
-                                                regexpr('"filename"\\s*:\\s*"([^"]*)"', edit_file_delta_accumulator, perl = TRUE))
+                # Extract filename if available and widget not yet created for this call_id
+                current_filename_printed <- edit_file_filename_printed[[call_id]]
+                if (is.null(current_filename_printed)) {
+                  current_filename_printed <- FALSE
+                }
+                
+                if (!current_filename_printed) {
+                  current_accumulator <- edit_file_delta_accumulators[[call_id]]
+                  if (!is.null(current_accumulator) && grepl('"filename"\\s*:\\s*"[^"]*"', current_accumulator, perl = TRUE)) {
+                    filename_match <- regmatches(current_accumulator, 
+                                                regexpr('"filename"\\s*:\\s*"([^"]*)"', current_accumulator, perl = TRUE))
                     if (length(filename_match) > 0) {
                       # Extract just the filename value
                       filename <- gsub('"filename"\\s*:\\s*"([^"]*)"', '\\1', filename_match, perl = TRUE)
                       
-                      # Create edit_file widget
-                      .rs.send_ai_operation("edit_file_command", list(
-                        message_id = as.numeric(edit_file_message_id),
-                        command = "",
-                        explanation = "",
-                        request_id = request_id,
-                        filename = filename,
-                        content = ""
-                      ))
+                      # Only create edit_file widget if it's the first function call in the parallel set
+                      is_first_widget <- .rs.is_first_function_call_in_parallel_set(call_id)
                       
-                      edit_file_filename_printed <- TRUE
+                      if (is_first_widget) {
+                        # Create edit_file widget for first function call only
+                        .rs.send_ai_operation("edit_file_command", list(
+                          message_id = as.numeric(current_edit_file_message_id),
+                          command = "",
+                          explanation = "",
+                          request_id = request_id,
+                          filename = filename,
+                          content = ""
+                        ))
+                        
+                        # Add to unified widget tracking (like console/terminal and search_replace)
+                        if (is.null(interactive_widget_states)) {
+                          interactive_widget_states <- list()
+                        }
+                        widget_created_key <- paste0("widget_created_", call_id)
+                        interactive_widget_states[[widget_created_key]] <- TRUE
+                      }
+                      
+                      # Only mark filename as printed if widget was actually created
+                      if (is_first_widget) {
+                        edit_file_filename_printed[[call_id]] <- TRUE
+                        current_filename_printed <- TRUE
+                      }
                     }
                   }
                 }
                 
-                # Detect start of code_edit
-                if (edit_file_filename_printed && !edit_file_code_edit_started) {
-                  if (grepl('"code_edit"\\s*:\\s*"', edit_file_delta_accumulator, perl = TRUE)) {
-                    edit_file_code_edit_started <- TRUE
+                # Detect start of code_edit for this call_id
+                current_code_edit_started <- edit_file_code_edit_started[[call_id]]
+                if (is.null(current_code_edit_started)) {
+                  current_code_edit_started <- FALSE
+                }
+                
+                if (current_filename_printed && !current_code_edit_started) {
+                  current_accumulator <- edit_file_delta_accumulators[[call_id]]
+                  if (!is.null(current_accumulator) && grepl('"code_edit"\\s*:\\s*"', current_accumulator, perl = TRUE)) {
+                    edit_file_code_edit_started[[call_id]] <- TRUE
+                    current_code_edit_started <- TRUE
                   }
                 }
                 
-                # Extract and stream partial code_edit content using helper function
-                if (edit_file_filename_printed && edit_file_code_edit_started) {
+                # Extract and stream partial code_edit content using helper function  
+                if (current_filename_printed && current_code_edit_started) {
+                  current_accumulator <- edit_file_delta_accumulators[[call_id]]
+                  # Get current streamed content for this call_id
+                  current_code_edit_streamed <- edit_file_code_edit_streamed[[call_id]]
+                  if (is.null(current_code_edit_streamed)) {
+                    current_code_edit_streamed <- ""
+                  }
+                  
                   stream_result <- .rs.stream_json_field_content(
-                    edit_file_delta_accumulator,
+                    if (!is.null(current_accumulator)) current_accumulator else "",
                     "code_edit",
                     '\\s*"\\s*,\\s*"instructions"',
-                    edit_file_message_id,
-                    edit_file_code_edit_streamed,
+                    current_edit_file_message_id,
+                    current_code_edit_streamed,
                     list(
                       isEditFile = TRUE,
                       filename = filename,
@@ -1224,65 +1285,111 @@
                   )
                   
                   if (!is.null(stream_result) && !is.null(stream_result$has_new_content) && stream_result$has_new_content) {
-                    edit_file_code_edit_streamed <- stream_result$new_streamed_content
+                    edit_file_code_edit_streamed[[call_id]] <- stream_result$new_streamed_content
                   }
                 }
                 
                 next  # Don't process edit_file deltas further
               }
               
-              # For search_replace deltas, accumulate and stream to widget (following edit_file pattern)
+              # For search_replace deltas, accumulate and stream to widget
               if (!is.null(event_data$field) && event_data$field == "search_replace") {
-                # Generate message ID once when search_replace streaming starts
-                if (is.null(search_replace_message_id)) {
-                  search_replace_message_id <- .rs.get_next_message_id()
+                # Get call_id for this delta
+                call_id <- if (!is.null(event_data$call_id)) event_data$call_id else "unknown"
+                
+                # Pre-allocate message IDs if not already done (delta processing may happen before function_call action event)
+                function_name <- "search_replace"
+                .rs.preallocate_function_message_ids(function_name, call_id)
+                
+                # Generate unique message ID per call_id (like console/terminal commands)
+                if (is.null(search_replace_message_ids)) {
+                  search_replace_message_ids <- list()
+                }
+                current_search_replace_message_id <- search_replace_message_ids[[call_id]]
+                if (is.null(current_search_replace_message_id)) {
+                  # Use pre-allocated message ID for search_replace (index 1 = function call itself)
+                  current_search_replace_message_id <- .rs.get_preallocated_message_id(call_id, 1)
+                  search_replace_message_ids[[call_id]] <- current_search_replace_message_id
                 }
                 
-                # Accumulate the delta
-                search_replace_delta_accumulator <- paste0(search_replace_delta_accumulator, event_data$delta)
+                # Initialize accumulator for this call_id if not exists
+                if (is.null(search_replace_delta_accumulators[[call_id]])) {
+                  search_replace_delta_accumulators[[call_id]] <- ""
+                }
+                
+                # Accumulate the delta for this specific call_id
+                search_replace_delta_accumulators[[call_id]] <- paste0(search_replace_delta_accumulators[[call_id]], event_data$delta)
                                 
                 # Extract filename if available and widget not yet created
                 if (!search_replace_filename_printed) {
-                  if (grepl('"file_path"\\s*:\\s*"[^"]*"', search_replace_delta_accumulator, perl = TRUE)) {
-                    filename_match <- regmatches(search_replace_delta_accumulator, 
-                                                regexpr('"file_path"\\s*:\\s*"([^"]*)"', search_replace_delta_accumulator, perl = TRUE))
+                  current_accumulator <- search_replace_delta_accumulators[[call_id]]
+                  if (!is.null(current_accumulator) && grepl('"file_path"\\s*:\\s*"[^"]*"', current_accumulator, perl = TRUE)) {
+                    filename_match <- regmatches(current_accumulator, 
+                                                regexpr('"file_path"\\s*:\\s*"([^"]*)"', current_accumulator, perl = TRUE))
                     if (length(filename_match) > 0) {
                       # Extract just the filename value
                       filename <- gsub('"file_path"\\s*:\\s*"([^"]*)"', '\\1', filename_match, perl = TRUE)
                       
-                      # CRITICAL: ONLY send streaming event to Java (like edit_file does)
-                      # Do NOT create operation command during streaming - that creates duplicates
-                      .rs.enqueClientEvent("ai_stream_data", list(
-                        messageId = search_replace_message_id,
-                        delta = "",
-                        isComplete = FALSE,
-                        isSearchReplace = TRUE,
-                        filename = filename,
-                        requestId = request_id,
-                        sequence = .rs.get_next_ai_operation_sequence()
-                      ))
+                      # Only create widget for the first interactive function call during streaming (following console/terminal pattern)
+                      widget_created_key <- paste0("widget_created_", call_id)
+                      if (is.null(interactive_widget_states[[widget_created_key]]) || !interactive_widget_states[[widget_created_key]]) {
+
+                        # Check if this is the first function call in the parallel set
+                        is_first_widget <- .rs.is_first_function_call_in_parallel_set(call_id)
+                        
+                        if (is_first_widget) {
+                          # CRITICAL: ONLY send streaming event to Java (like edit_file does)
+                          # Do NOT create operation command during streaming - that creates duplicates
+                          .rs.enqueClientEvent("ai_stream_data", list(
+                            messageId = current_search_replace_message_id,
+                            delta = "",
+                            isComplete = FALSE,
+                            isSearchReplace = TRUE,
+                            filename = filename,
+                            requestId = request_id,
+                            sequence = .rs.get_next_ai_operation_sequence()
+                          ))
+                          
+                          # Mark this call_id as having a widget created
+                          interactive_widget_states[[widget_created_key]] <- TRUE
+                        }
+                      }
                       
                       search_replace_filename_printed <- TRUE
                     }
                   }
                 }
                 
-                # Detect start of old_string
-                if (search_replace_filename_printed && !search_replace_old_string_started) {
-                  if (grepl('"old_string"\\s*:\\s*"', search_replace_delta_accumulator, perl = TRUE)) {
-                    search_replace_old_string_started <- TRUE
+                # Detect start of old_string for this specific call_id (following console/terminal pattern)
+                old_string_started_key <- paste0("old_string_started_", call_id)
+                current_old_string_started <- interactive_widget_states[[old_string_started_key]]
+                if (is.null(current_old_string_started)) {
+                  current_old_string_started <- FALSE
+                }
+                
+                widget_created_key <- paste0("widget_created_", call_id)
+                widget_created <- interactive_widget_states[[widget_created_key]]
+                if (is.null(widget_created)) {
+                  widget_created <- FALSE
+                }
+                
+                if (widget_created && !current_old_string_started) {
+                  current_accumulator <- search_replace_delta_accumulators[[call_id]]
+                  if (!is.null(current_accumulator) && grepl('"old_string"\\s*:\\s*"', current_accumulator, perl = TRUE)) {
+                    interactive_widget_states[[old_string_started_key]] <- TRUE
+                    current_old_string_started <- TRUE
                   }
                 }
                 
-                # Extract and stream partial old_string content using helper function
-                if (search_replace_filename_printed && search_replace_old_string_started && !search_replace_new_string_started) {
+                # Extract and stream partial old_string content using helper function (only if widget was created for this call_id)
+                if (widget_created && current_old_string_started) {
                   # Stream "Old content" comment before actual content (only once)
                   if (!search_replace_old_comment_streamed) {
                     comment_syntax <- .rs.get_comment_syntax(filename)
                     old_comment <- paste0(comment_syntax, "Old content\n")
                     
                     .rs.enqueClientEvent("ai_stream_data", list(
-                      messageId = search_replace_message_id,
+                      messageId = current_search_replace_message_id,
                       delta = old_comment,
                       isComplete = FALSE,
                       isSearchReplace = TRUE,
@@ -1295,11 +1402,12 @@
                     search_replace_old_comment_streamed <- TRUE
                   }
                   
+                  current_accumulator <- search_replace_delta_accumulators[[call_id]]
                   stream_result <- .rs.stream_json_field_content(
-                    search_replace_delta_accumulator,
+                    if (!is.null(current_accumulator)) current_accumulator else "",
                     "old_string",
                     '\\s*"\\s*,\\s*"new_string"',
-                    search_replace_message_id,
+                    current_search_replace_message_id,
                     search_replace_old_string_streamed,
                     list(
                       isSearchReplace = TRUE,
@@ -1314,20 +1422,27 @@
                       search_replace_old_string_streamed <- stream_result$new_streamed_content
                     }
                     if (!is.null(stream_result$end_reached) && stream_result$end_reached) {
-                      search_replace_new_string_started <- TRUE
+                      new_string_started_key <- paste0("new_string_started_", call_id)
+                      interactive_widget_states[[new_string_started_key]] <- TRUE
                     }
                   }
                 }
                 
-                # Extract and stream partial new_string content using helper function
-                if (search_replace_filename_printed && search_replace_new_string_started) {
+                # Extract and stream partial new_string content using helper function (only if widget was created for this call_id)
+                new_string_started_key <- paste0("new_string_started_", call_id)
+                current_new_string_started <- interactive_widget_states[[new_string_started_key]]
+                if (is.null(current_new_string_started)) {
+                  current_new_string_started <- FALSE
+                }
+                
+                if (widget_created && current_new_string_started) {
                   # Stream "New content" comment before actual content (only once)
                   if (!search_replace_new_comment_streamed) {
                     comment_syntax <- .rs.get_comment_syntax(filename)
                     new_comment <- paste0("\n\n", comment_syntax, "New content\n")
                     
                     .rs.enqueClientEvent("ai_stream_data", list(
-                      messageId = search_replace_message_id,
+                      messageId = current_search_replace_message_id,
                       delta = new_comment,
                       isComplete = FALSE,
                       isSearchReplace = TRUE,
@@ -1340,11 +1455,12 @@
                     search_replace_new_comment_streamed <- TRUE
                   }
                   
+                  current_accumulator <- search_replace_delta_accumulators[[call_id]]
                   stream_result <- .rs.stream_json_field_content(
-                    search_replace_delta_accumulator,
+                    if (!is.null(current_accumulator)) current_accumulator else "",
                     "new_string",
                     '"}',
-                    search_replace_message_id,
+                    current_search_replace_message_id,
                     search_replace_new_string_streamed,
                     list(
                       isSearchReplace = TRUE,
@@ -1367,10 +1483,15 @@
                 is_console_cmd <- event_data$field == "run_console_cmd"
                 call_id <- event_data$call_id
                 
-                # Generate unique message ID for each function call (not shared across calls)
+                # Pre-allocate message IDs if not already done (delta processing may happen before function_call action event)
+                function_name <- event_data$field
+                .rs.preallocate_function_message_ids(function_name, call_id)
+                
+                # Use pre-allocated message ID for each function call (not shared across calls)
                 current_widget_message_id <- console_terminal_message_ids[[call_id]]
                 if (is.null(current_widget_message_id)) {
-                  current_widget_message_id <- .rs.get_next_message_id()
+                  # Use pre-allocated message ID for console/terminal (index 1 = function call itself)
+                  current_widget_message_id <- .rs.get_preallocated_message_id(call_id, 1)
                   console_terminal_message_ids[[call_id]] <- current_widget_message_id
                 }
                 
@@ -1380,32 +1501,36 @@
                 }
                 console_terminal_delta_accumulators[[call_id]] <- paste0(console_terminal_delta_accumulators[[call_id]], event_data$delta)
                                 
-                # Create widget immediately when streaming starts (per-call_id widget creation)
+                # Only create widget for the first interactive function call during streaming
                 widget_created_key <- paste0("widget_created_", call_id)
-                if (is.null(console_terminal_widget_states[[widget_created_key]]) || !console_terminal_widget_states[[widget_created_key]]) {
+                if (is.null(interactive_widget_states[[widget_created_key]]) || !interactive_widget_states[[widget_created_key]]) {
 
-                  # Create appropriate widget with placeholder values
-                  if (is_console_cmd) {
-                    .rs.send_ai_operation("create_console_command", list(
-                      message_id = as.numeric(current_widget_message_id),
-                      command = "",
-                      explanation = "Execute command",
-                      request_id = request_id
-                    ))
-                  } else {
-                    .rs.send_ai_operation("create_terminal_command", list(
-                      message_id = as.numeric(current_widget_message_id),
-                      command = "",
-                      explanation = "Execute command",
-                      request_id = request_id
-                    ))
+                  # Check if this is the first function call in the parallel set
+                  is_first_widget <- .rs.is_first_function_call_in_parallel_set(call_id)
+                  if (is_first_widget) {
+                    # Create appropriate widget with placeholder values for first function call only
+                    if (is_console_cmd) {
+                      .rs.send_ai_operation("create_console_command", list(
+                        message_id = as.numeric(current_widget_message_id),
+                        command = "",
+                        explanation = "Execute command",
+                        request_id = request_id
+                      ))
+                    } else {
+                      .rs.send_ai_operation("create_terminal_command", list(
+                        message_id = as.numeric(current_widget_message_id),
+                        command = "",
+                        explanation = "Execute command",
+                        request_id = request_id
+                      ))
+                    }
+                    
+                    interactive_widget_states[[widget_created_key]] <- TRUE
+                    
+                    # Store the widget type for later button creation
+                    widget_type_key <- paste0("widget_type_", call_id)
+                    interactive_widget_states[[widget_type_key]] <- if (is_console_cmd) "console" else "terminal"
                   }
-                  
-                  console_terminal_widget_states[[widget_created_key]] <- TRUE
-                  
-                  # Store the widget type for later button creation
-                  widget_type_key <- paste0("widget_type_", call_id)
-                  console_terminal_widget_states[[widget_type_key]] <- if (is_console_cmd) "console" else "terminal"
                 }
                 
                 # Detect start of command content for this specific call_id
@@ -1416,7 +1541,7 @@
                 }
                 
                 widget_created_key <- paste0("widget_created_", call_id)
-                widget_created <- console_terminal_widget_states[[widget_created_key]]
+                widget_created <- interactive_widget_states[[widget_created_key]]
                 if (is.null(widget_created)) {
                   widget_created <- FALSE
                 }
@@ -1534,8 +1659,29 @@
 
               # Generate assistant message ID once when streaming starts (skip for summarization)
               if (is.null(assistant_message_id) && !is_summary_request) {
-                # First delta - generate the message ID that will be used throughout
-                assistant_message_id <- .rs.get_next_message_id()
+                # Check if this is an edit_file related response that needs pre-allocated ID
+                related_to_id <- .rs.get_conversation_var("current_related_to_id")
+                
+                if (!is.null(related_to_id)) {
+                  function_call_type <- .rs.get_function_call_type_for_message(related_to_id)
+                  if (!is.null(function_call_type) && function_call_type == "edit_file") {
+                    # For edit_file, find the call_id and use pre-allocated assistant message ID (index 3)
+                    conversation_log <- .rs.read_conversation_log()
+                    for (entry in conversation_log) {
+                      if (!is.null(entry$id) && entry$id == related_to_id && 
+                          !is.null(entry$function_call) && !is.null(entry$function_call$call_id)) {
+                        call_id <- entry$function_call$call_id
+                        assistant_message_id <- .rs.get_preallocated_message_id(call_id, 3)
+                        break
+                      }
+                    }
+                  }
+                }
+                
+                # If not edit_file or couldn't find call_id, use next available ID
+                if (is.null(assistant_message_id)) {
+                  assistant_message_id <- .rs.get_next_message_id()
+                }
               }
               
               # Clean the delta to remove triple backticks for regular assistant messages (not edit_file)
@@ -1550,7 +1696,7 @@
               
               # Check if this is an edit_file related response
               # For edit_file cases, skip streaming assistant message entirely
-              is_edit_file_response <- FALSE
+              skip_assistant_message_streaming <- FALSE
               
               # On first chunk, check if we're in an edit_file streaming context
               if (nchar(accumulated_response) == nchar(event_data$delta)) {
@@ -1569,11 +1715,11 @@
                   # Instead, we'll prepare and display the diff widget directly
                   # Store the function call ID for widget identification
                   .rs.set_conversation_var("current_edit_file_function_call_id", related_to_id)
-                  is_edit_file_response <- TRUE
-                } else if (!is.null(function_call_type) && (function_call_type == "run_console_cmd" || function_call_type == "run_terminal_cmd" || function_call_type == "search_replace")) {
-                  # For console/terminal/search_replace commands, DON'T stream assistant message content
-                  # The widgets are already created during streaming, so skip assistant message
-                  is_edit_file_response <- TRUE  # Reuse the same flag to skip streaming
+                  skip_assistant_message_streaming <- TRUE
+                } else if (!is.null(function_call_type) && (function_call_type == "run_console_cmd" || function_call_type == "run_terminal_cmd" || function_call_type == "search_replace" || function_call_type == "run_file" || function_call_type == "delete_file")) {
+                  # For all interactive function calls, DON'T stream assistant message content
+                  # Interactive functions either: 1) show content via streaming, or 2) populate content during processing
+                  skip_assistant_message_streaming <- TRUE
                 } else {
                   # For non-edit_file responses, continue with normal streaming logic
                   stream_event$messageId <- assistant_message_id
@@ -1583,7 +1729,7 @@
                 edit_file_function_call_id <- .rs.get_conversation_var("current_edit_file_function_call_id")
                 if (!is.null(edit_file_function_call_id)) {
                   # This is an edit_file response - skip streaming
-                  is_edit_file_response <- TRUE
+                  skip_assistant_message_streaming <- TRUE
                 } else {
                   # Regular response - continue with normal streaming
                   stream_event$messageId <- assistant_message_id
@@ -1691,8 +1837,8 @@
                 }
               }
 
-              # Send real-time update to UI only if we have content to send and it's not edit_file (skip for summarization)
-              if (should_send_delta && nchar(stream_event$delta) > 0 && !is_summary_request && !is_edit_file_response) {
+              # Send real-time update to UI only if we have content to send and we're not skipping assistant streaming
+              if (should_send_delta && nchar(stream_event$delta) > 0 && !is_summary_request && !skip_assistant_message_streaming) {
                 # Use the unified sequence system for all events (operations and streaming)
                 stream_event$sequence <- .rs.get_next_ai_operation_sequence()
                 .rs.enqueClientEvent("ai_stream_data", stream_event)
@@ -1739,16 +1885,27 @@
               # If so, DON'T add to buffer - process it immediately via the existing return mechanism
               function_name <- if (!is.null(event_data$function_call$name)) event_data$function_call$name else "UNKNOWN"
               
-              if (function_name == "edit_file" || function_name == "search_replace" || function_name == "run_console_cmd" || function_name == "run_terminal_cmd") {
-                # Process edit_file and console/terminal commands immediately - don't add to buffer
+              if (function_name == "edit_file") {
+                # Process edit_file immediately - don't add to buffer
                 # Set last_event_data to return this function call for immediate processing
                 last_event_data <- event_data
               } else {
                 # Add to buffer for parallel function call sequential processing
+                function_name <- if (!is.null(event_data$function_call$name)) event_data$function_call$name else "UNKNOWN"
+                call_id <- if (!is.null(event_data$function_call$call_id)) event_data$function_call$call_id else "UNKNOWN"
+                
+                # CRITICAL: Mark this as the first function call if it's the first one we encounter
+                # This needs to happen for ALL function calls, not just streaming ones
+                is_first_function_call <- .rs.is_first_function_call_in_parallel_set(call_id)
+                
+                # CRITICAL: Pre-allocate ALL message IDs for temporal order preservation
+                pre_assigned_message_id <- .rs.preallocate_function_message_ids(function_name, call_id)
+                
                 function_call_data <- list(
                   function_call = event_data$function_call,
                   request_id = request_id,
-                  response_id = captured_response_id
+                  response_id = captured_response_id,
+                  message_id = pre_assigned_message_id
                 )
                 
                 # Initialize buffer if not already done
@@ -1768,7 +1925,19 @@
               }
               
               # Reset assistant_message_id so new content gets a new messageId
-              assistant_message_id <- NULL
+              # EXCEPT for edit_file operations where we need to preserve the pre-allocated ID
+              related_to_id <- .rs.get_conversation_var("current_related_to_id")
+              is_edit_file_related <- FALSE
+              if (!is.null(related_to_id)) {
+                function_call_type <- .rs.get_function_call_type_for_message(related_to_id)
+                if (!is.null(function_call_type) && function_call_type == "edit_file") {
+                  is_edit_file_related <- TRUE
+                }
+              }
+              
+              if (!is_edit_file_related) {
+                assistant_message_id <- NULL
+              }
               
               # Clean up edit_file streaming context
               edit_file_function_call_id <- .rs.get_conversation_var("current_edit_file_function_call_id")
@@ -1784,10 +1953,22 @@
               
               # Clean up console/terminal streaming context variables
               console_terminal_delta_accumulators <- list()
-              console_terminal_widget_states <- list()
+              interactive_widget_states <- list()
               console_terminal_command_states <- list()
               console_terminal_message_ids <- list()
               console_terminal_command_streamed_states <- list()
+              
+              # Clean up edit_file streaming accumulators
+              edit_file_delta_accumulators <- list()
+              edit_file_message_ids <- list()
+              edit_file_filename_printed <- list()
+              edit_file_instructions_printed <- list()
+              edit_file_code_edit_started <- list()
+              edit_file_code_edit_streamed <- list()
+              
+              # Clean up search_replace streaming accumulators  
+              search_replace_delta_accumulators <- list()
+              search_replace_message_ids <- list()
               
               # Clean up widget streaming context
               .rs.set_conversation_var("widget_delta_accumulator", NULL)
@@ -1801,7 +1982,6 @@
               search_replace_filename_printed <- FALSE
               search_replace_old_string_started <- FALSE
               search_replace_new_string_started <- FALSE
-              search_replace_message_id <- NULL
               search_replace_old_string_streamed <- ""
               search_replace_new_string_streamed <- ""
               search_replace_old_comment_streamed <- FALSE
@@ -1821,7 +2001,15 @@
               if (!should_skip_streaming && !is_summary_request) {
                 # Generate assistant message ID if not already generated
                 if (is.null(assistant_message_id)) {
-                  assistant_message_id <- .rs.get_next_message_id()
+                  # Check if this is an edit_file related response that needs pre-allocated ID
+                  if (!is.null(event_data$function_call) && !is.null(event_data$function_call$name) && 
+                      event_data$function_call$name == "edit_file" && !is.null(event_data$function_call$call_id)) {
+                    # For edit_file, use pre-allocated assistant message ID (index 3)
+                    call_id <- event_data$function_call$call_id
+                    assistant_message_id <- .rs.get_preallocated_message_id(call_id, 3)
+                  } else {
+                    assistant_message_id <- .rs.get_next_message_id()
+                  }
                 }
                 
                 # Use the assistant message ID
@@ -1859,9 +2047,13 @@
                 
                 # Always use accumulated content for all streaming functions
                 arguments_content <- if (event_data$field == "search_replace") {
-                  search_replace_delta_accumulator
+                  # Get accumulator for this specific call_id
+                  current_accumulator <- search_replace_delta_accumulators[[call_id]]
+                  if (!is.null(current_accumulator)) current_accumulator else ""
                 } else if (event_data$field == "edit_file") {
-                  edit_file_delta_accumulator
+                  # Get accumulator for this specific call_id
+                  current_accumulator <- edit_file_delta_accumulators[[call_id]]
+                  if (!is.null(current_accumulator)) current_accumulator else ""
                 } else {
                   ""
                 }
@@ -1881,10 +2073,24 @@
                 
                 # CRITICAL FIX: Process the edit_file function call immediately instead of waiting
                 # Add this function call to the buffer for sequential processing
+                
+                # CRITICAL: Pre-assign message ID for ALL function calls to preserve temporal order
+                # This ensures the first function call streamed gets the lowest message ID
+                streaming_message_id <- NULL
+                if (event_data$field == "edit_file") {
+                  streaming_message_id <- edit_file_message_ids[[call_id]]
+                } else if (event_data$field == "search_replace") {
+                  streaming_message_id <- search_replace_message_ids[[call_id]]
+                } else {
+                  # For non-streaming functions, pre-allocate all message IDs now to preserve order
+                  streaming_message_id <- .rs.preallocate_function_message_ids(event_data$field, call_id)
+                }
+                
                 function_call_data <- list(
                   function_call = function_call_structure,
                   request_id = request_id,
-                  response_id = captured_response_id
+                  response_id = captured_response_id,
+                  message_id = streaming_message_id
                 )
                 
                 # Initialize buffer if not already done
@@ -1898,11 +2104,11 @@
                 
                 # Clean up search_replace accumulator after using it for completion
                 if (event_data$field == "search_replace") {
-                  search_replace_delta_accumulator <- ""
+                  # Clear this specific call_id's accumulator
+                  search_replace_delta_accumulators[[call_id]] <- NULL
                   search_replace_filename_printed <- FALSE
                   search_replace_old_string_started <- FALSE
                   search_replace_new_string_started <- FALSE
-                  search_replace_message_id <- NULL
                   search_replace_old_string_streamed <- ""
                   search_replace_new_string_streamed <- ""
                   search_replace_new_comment_streamed <- FALSE
@@ -1936,7 +2142,8 @@
                 function_call_data <- list(
                   function_call = function_call_structure,
                   request_id = request_id,
-                  response_id = captured_response_id
+                  response_id = captured_response_id,
+                  message_id = current_widget_message_id
                 )
                 
                 # Initialize buffer if not already done
@@ -1948,8 +2155,12 @@
                 buffer_count <- .rs.add_to_function_call_buffer(function_call_data)
                 event_data$buffered_function_calls <- TRUE
                 
-                # CRITICAL: Also add the function call entry to conversation log immediately
-                # This is needed for accept_console_command and accept_terminal_command to work
+                # Only add function calls that have widgets to conversation log
+                # Check if THIS specific call_id has a widget created
+                widget_created_key <- paste0("widget_created_", call_id)
+                has_widget <- !is.null(interactive_widget_states[[widget_created_key]]) && interactive_widget_states[[widget_created_key]]
+                
+                if (has_widget) {
                 conversation_log <- .rs.read_conversation_log()
                 
                 # Get the related_to_id from conversation variables (the original user message ID)
@@ -1958,7 +2169,7 @@
                   stop("related_to_id is required but was NULL when processing console/terminal function call")
                 }
                 
-                # Create function call entry (same structure as process_single_function_call)
+                # Create function call entry
                 # Use the same unique message ID that was created for the widget
                 function_call_message_id <- console_terminal_message_ids[[call_id]]
                 function_call_entry <- list(
@@ -1972,8 +2183,8 @@
                 # Add function call entry to conversation log
                 conversation_log <- c(conversation_log, list(function_call_entry))
                 
-                # Also add pending function call output (same as process_single_function_call)
-                pending_output_id <- .rs.get_next_message_id()
+                # Also add pending function call output using pre-allocated ID (index 2)
+                pending_output_id <- .rs.get_preallocated_message_id(call_id, 2)
                 pending_output <- list(
                   id = pending_output_id,
                   type = "function_call_output",
@@ -1985,6 +2196,7 @@
                 conversation_log <- c(conversation_log, list(pending_output))
                 
                 .rs.write_conversation_log(conversation_log)
+                }
               }
               
               
@@ -1992,7 +2204,29 @@
               
               # Generate assistant message ID if not already generated (skip for summarization)
               if (is.null(assistant_message_id) && !is_summary_request) {
-                assistant_message_id <- .rs.get_next_message_id()
+                # Check if this is an edit_file related response that needs pre-allocated ID
+                related_to_id <- .rs.get_conversation_var("current_related_to_id")
+                
+                if (!is.null(related_to_id)) {
+                  function_call_type <- .rs.get_function_call_type_for_message(related_to_id)
+                  if (!is.null(function_call_type) && function_call_type == "edit_file") {
+                    # For edit_file, find the call_id and use pre-allocated assistant message ID (index 3)
+                    conversation_log <- .rs.read_conversation_log()
+                    for (entry in conversation_log) {
+                      if (!is.null(entry$id) && entry$id == related_to_id && 
+                          !is.null(entry$function_call) && !is.null(entry$function_call$call_id)) {
+                        call_id <- entry$function_call$call_id
+                        assistant_message_id <- .rs.get_preallocated_message_id(call_id, 3)
+                        break
+                      }
+                    }
+                  }
+                }
+                
+                # If not edit_file or couldn't find call_id, use next available ID
+                if (is.null(assistant_message_id)) {
+                  assistant_message_id <- .rs.get_next_message_id()
+                }
               }
               
               # Save the completed message to conversation log using proper function (skip for summarization)
@@ -2056,7 +2290,19 @@
               accumulated_response <- ""
               
               # Reset assistant_message_id so next content gets a new messageId
-              assistant_message_id <- NULL
+              # EXCEPT for edit_file operations where we need to preserve the pre-allocated ID
+              related_to_id <- .rs.get_conversation_var("current_related_to_id")
+              is_edit_file_related <- FALSE
+              if (!is.null(related_to_id)) {
+                function_call_type <- .rs.get_function_call_type_for_message(related_to_id)
+                if (!is.null(function_call_type) && function_call_type == "edit_file") {
+                  is_edit_file_related <- TRUE
+                }
+              }
+              
+              if (!is_edit_file_related) {
+                assistant_message_id <- NULL
+              }
             } else if (!is.null(event_data$response_id)) {
               # Capture response_id for reasoning model chaining
               captured_response_id <- event_data$response_id
@@ -2100,8 +2346,21 @@
                   }
                   
                   # Clear accumulated response and reset assistant message ID for new content
+                  # EXCEPT for edit_file operations where we need to preserve the pre-allocated ID
                   accumulated_response <- ""
-                  assistant_message_id <- NULL
+                  
+                  related_to_id <- .rs.get_conversation_var("current_related_to_id")
+                  is_edit_file_related <- FALSE
+                  if (!is.null(related_to_id)) {
+                    function_call_type <- .rs.get_function_call_type_for_message(related_to_id)
+                    if (!is.null(function_call_type) && function_call_type == "edit_file") {
+                      is_edit_file_related <- TRUE
+                    }
+                  }
+                  
+                  if (!is_edit_file_related) {
+                    assistant_message_id <- NULL
+                  }
                 }
                 
                 related_to_id <- .rs.get_conversation_var("current_related_to_id")
@@ -2205,51 +2464,59 @@
   .rs.setVar("active_api_request_id", NULL)
   .rs.setVar("active_api_bg_process", NULL)
   
+  # Send create_widget_buttons operations for the first interactive function call BEFORE cleanup
+  # Only the first function call gets a widget, so only it needs buttons
+  first_function_call_id <- .rs.get_conversation_var("first_function_call_id")
+  
+  if (!is.null(first_function_call_id)) {
+    # Read conversation log to find the function call details
+    conversation_log <- .rs.read_conversation_log()
+    
+    for (entry in conversation_log) {
+      if (!is.null(entry$function_call) && !is.null(entry$function_call$call_id) && 
+          entry$function_call$call_id == first_function_call_id) {
+        
+        function_name <- entry$function_call$name
+        
+        # Only create buttons for interactive functions
+        if (function_name %in% c("run_console_cmd", "run_terminal_cmd", "delete_file", "run_file")) {
+          # Get the message ID for this function call (should be the entry ID)
+          widget_message_id <- entry$id
+          
+          # Determine widget type
+          widget_type <- if (function_name == "run_console_cmd") "console" else if (function_name == "run_terminal_cmd") "terminal" else "interactive"
+          
+          # Send create_widget_buttons operation
+          .rs.send_ai_operation("create_widget_buttons", list(
+            message_id = as.character(widget_message_id),
+            content = widget_type
+          ))
+          
+          break
+        }
+      }
+    }
+  }
+  
   # Clean up edit_file streaming context
   .rs.set_conversation_var("current_edit_file_function_call_id", NULL)
   .rs.set_conversation_var("current_edit_file_filename", NULL)
   .rs.set_conversation_var("current_edit_file_request_id", NULL)
   
   # Clean up search_replace streaming context
-  search_replace_delta_accumulator <- ""
+  search_replace_delta_accumulators <- list()
+  search_replace_message_ids <- list()
   search_replace_filename_printed <- FALSE
   search_replace_old_string_started <- FALSE
   search_replace_new_string_started <- FALSE
-  search_replace_message_id <- NULL
   search_replace_old_string_streamed <- ""
   search_replace_new_string_streamed <- ""
   search_replace_old_comment_streamed <- FALSE
   search_replace_new_comment_streamed <- FALSE
   
-  # Send create_widget_buttons operations for any active console/terminal widgets
-  if (length(console_terminal_message_ids) > 0) {
-    for (call_id in names(console_terminal_message_ids)) {
-      widget_message_id <- console_terminal_message_ids[[call_id]]
-      if (!is.null(widget_message_id)) {
-        # Check if widget was created
-        widget_created_key <- paste0("widget_created_", call_id)
-        widget_created <- console_terminal_widget_states[[widget_created_key]]
-        
-        if (!is.null(widget_created) && widget_created) {
-          # Get the stored widget type
-          widget_type_key <- paste0("widget_type_", call_id)
-          widget_type <- console_terminal_widget_states[[widget_type_key]]
-          
-          if (!is.null(widget_type)) {
-            # Send create_widget_buttons operation
-            .rs.send_ai_operation("create_widget_buttons", list(
-              message_id = as.character(widget_message_id),
-              content = widget_type
-            ))
-          }
-        }
-      }
-    }
-  }
-  
   # Clean up console/terminal streaming context variables
   console_terminal_delta_accumulators <- list()
-  console_terminal_widget_states <- list()
+  interactive_widget_states <- list()
   console_terminal_command_states <- list()
   console_terminal_message_ids <- list()
   console_terminal_command_streamed_states <- list()
@@ -2261,7 +2528,18 @@
   .rs.set_conversation_var("widget_command_started", NULL)
   .rs.set_conversation_var("widget_command_streamed", NULL)
   .rs.set_conversation_var("widget_type", NULL)
-    
+  
+  # Clean up early widget calls tracking
+  .rs.set_conversation_var("early_widget_calls", NULL)
+  
+  # Clean up first function call tracking (only if no buffered calls remain)
+  # If there are still buffered function calls, keep the first_function_call_id 
+  # so subsequent API requests don't interfere with temporal ordering
+  has_buffered_calls <- .rs.has_buffered_function_calls()
+  if (!has_buffered_calls) {
+    .rs.set_conversation_var("first_function_call_id", NULL)
+  }
+      
   # Clean up stream file
   if (file.exists(stream_file)) {
     unlink(stream_file)
@@ -2416,11 +2694,23 @@
     "UNKNOWN"
   }
   
+  # For run_file and delete_file, immediately mark as having widgets to prevent subsequent streaming widgets
+  if (function_name == "run_file" || function_name == "delete_file") {
+    # Store this in conversation variables so it's accessible during streaming
+    existing_widget_calls <- .rs.get_conversation_var("early_widget_calls")
+    if (is.null(existing_widget_calls)) {
+      existing_widget_calls <- list()
+    }
+    existing_widget_calls[[call_id]] <- TRUE
+    .rs.set_conversation_var("early_widget_calls", existing_widget_calls)
+  }
+  
   # Add the function call to buffer with timestamp
   buffered_call <- list(
     function_call = function_call_data$function_call,
     request_id = function_call_data$request_id,
     response_id = function_call_data$response_id,
+    message_id = function_call_data$message_id,
     timestamp = Sys.time()
   )
   
@@ -2598,5 +2888,86 @@
     return("! ")
   } else {
     return("# ")  # Default fallback
+  }
+})
+
+# Helper function to determine how many message IDs a function type needs
+.rs.addFunction("get_function_message_id_count", function(function_name) {
+  # Based on analysis of actual handlers:
+  
+  # Simple non-interactive: function_call + function_call_output = 2 IDs
+  simple_functions <- c("list_dir", "find_keyword_context", "grep_search", "read_file", "view_image", "search_for_file")
+  
+  # Interactive functions: function_call + function_call_output + procedural message = 3 IDs  
+  interactive_functions <- c("run_console_cmd", "run_terminal_cmd", "delete_file", "run_file", "search_replace")
+  
+  # Edit file: function_call + function_call_output + assistant_message + procedural_user_message = 4 IDs
+  edit_file_functions <- c("edit_file")
+  
+  if (function_name %in% simple_functions) {
+    return(2)
+  } else if (function_name %in% interactive_functions) {
+    return(3) 
+  } else if (function_name %in% edit_file_functions) {
+    return(4)
+  } else {
+    # Default for unknown functions
+    return(2)
+  }
+})
+
+# Helper function to pre-allocate message IDs for a function call
+.rs.addFunction("preallocate_function_message_ids", function(function_name, call_id) {
+  # Check if this call_id already has pre-allocated IDs
+  preallocated_ids <- .rs.get_conversation_var("preallocated_message_ids", list())
+  
+  if (!is.null(preallocated_ids[[call_id]])) {
+    # Already exists - return the first message ID from the existing set
+    existing_ids <- preallocated_ids[[call_id]]
+    return(existing_ids[[1]])
+  }
+  
+  # Get the number of message IDs needed
+  id_count <- .rs.get_function_message_id_count(function_name)
+  
+  # Pre-allocate all needed message IDs
+  message_ids <- list()
+  for (i in 1:id_count) {
+    message_ids[[i]] <- .rs.get_next_message_id()
+  }
+  
+  # Store them in conversation variables keyed by call_id
+  preallocated_ids[[call_id]] <- message_ids
+  .rs.set_conversation_var("preallocated_message_ids", preallocated_ids)
+  
+  # Return the first message ID (for the function call itself)
+  return(message_ids[[1]])
+})
+
+# Helper function to get pre-allocated message ID for a function call
+.rs.addFunction("get_preallocated_message_id", function(call_id, index = 1) {
+  preallocated_ids <- .rs.get_conversation_var("preallocated_message_ids", list())
+  
+  if (!is.null(preallocated_ids[[call_id]]) && length(preallocated_ids[[call_id]]) >= index) {
+    return(preallocated_ids[[call_id]][[index]])
+  }
+  
+  # Fallback - generate new ID if not found
+  return(.rs.get_next_message_id())
+})
+
+# Helper function to determine if this call_id is the first function call in the parallel set
+.rs.addFunction("is_first_function_call_in_parallel_set", function(call_id) {
+  # Track the first function call we encounter during this streaming session
+  first_function_call_id <- .rs.get_conversation_var("first_function_call_id")
+  
+  if (is.null(first_function_call_id)) {
+    # This is the first function call we've encountered - mark it and return TRUE
+    .rs.set_conversation_var("first_function_call_id", call_id)
+    return(TRUE)
+  } else {
+    # Check if this call_id matches the first one we encountered
+    is_first <- call_id == first_function_call_id
+    return(is_first)
   }
 })
