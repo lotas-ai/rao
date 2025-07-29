@@ -13,9 +13,10 @@
  *
  */
 
-import { app, BrowserWindow, dialog, Event, Menu, screen, WebContents } from 'electron';
+import { app, autoUpdater, BrowserWindow, dialog, Event, Menu, screen, WebContents } from 'electron';
 import i18next from 'i18next';
 import path from 'path';
+import { updateElectronApp, UpdateSourceType } from 'update-electron-app';
 import { getenv, setenv } from '../core/environment';
 import { FilePath } from '../core/file-path';
 import { logger } from '../core/logger';
@@ -396,8 +397,85 @@ export class Application implements AppState {
 
     this.setDockMenu();
     
-    // Check for updates on startup
-    checkForUpdatesOnStartup();
+    // Auto-updates for macOS and Windows using S3 with enhanced logic
+    if ((process.platform === 'darwin' || process.platform === 'win32') && app.isPackaged) {
+      let updateDownloaded = false;
+      let installedOnStartup = false;
+      
+      // Add event listeners to the global autoUpdater before calling updateElectronApp
+      autoUpdater.on('checking-for-update', () => {
+        logger().logInfo('Auto-updater: checking-for-update');
+      });
+      
+      autoUpdater.on('update-available', () => {
+        logger().logInfo('Auto-updater: update-available');
+      });
+      
+      autoUpdater.on('update-not-available', () => {
+        logger().logInfo('Auto-updater: update-not-available');
+      });
+      
+      autoUpdater.on('update-downloaded', (event, releaseNotes, releaseName, releaseDate, updateURL) => {
+        updateDownloaded = true;
+        logger().logInfo('Auto-updater: update-downloaded - showing notification now');
+        logger().logInfo(`Update details: ${releaseName} (${releaseDate})`);
+        
+        // Show notification with "Later" option
+        const options = {
+          type: 'info' as const,
+          title: 'Update Available',
+          message: `Rao ${releaseName} is ready to install. Restart now or it will install automatically when you quit the app.`,
+          detail: releaseNotes || 'New version available',
+          buttons: ['Restart Now', 'Later'],
+          defaultId: 0,
+          cancelId: 1
+        };
+        
+        dialog.showMessageBox(options).then(result => {
+          if (result.response === 0) {
+            // User chose "Restart Now"
+            autoUpdater.quitAndInstall();
+          }
+          // If "Later", we'll install on app quit (handled below)
+        });
+      });
+      
+      autoUpdater.on('error', (error: Error) => {
+        logger().logError(`Auto-updater error: ${error.message}`);
+      });
+
+      // Start auto-updater
+      const platform = process.platform === 'darwin' ? 'darwin' : 'win32';
+      const baseUrl = `https://lotas-downloads.s3.us-east-2.amazonaws.com/${platform}/x64`;
+      
+      updateElectronApp({
+        updateSource: {
+          type: UpdateSourceType.StaticStorage,
+          baseUrl: baseUrl
+        },
+        updateInterval: '5 minutes',
+        notifyUser: false, // We handle notifications manually
+        logger: {
+          info: (message: string) => logger().logInfo(`UEA: ${message}`),
+          warn: (message: string) => logger().logWarning(`UEA: ${message}`),
+          error: (message: string) => logger().logError(`UEA: ${message}`),
+          log: (message: string) => logger().logInfo(`UEA: ${message}`)
+        }
+      });
+
+      // Install on app quit if update was downloaded but user chose "Later"
+      app.on('before-quit', (event) => {
+        if (updateDownloaded && !installedOnStartup) {
+          logger().logInfo('Installing update on quit...');
+          autoUpdater.quitAndInstall();
+        }
+      });
+    }
+    
+    // Manual update check for Linux, or for dev builds on Mac/Windows
+    if (process.platform === 'linux' || !app.isPackaged) {
+      checkForUpdatesOnStartup();
+    }
 
     return run();
   }
@@ -495,15 +573,6 @@ export class Application implements AppState {
           label: i18next.t('applicationTs.newRstudioWindow'),
           click: () => {
             this.appLaunch?.launchRStudio({ workingDirectory: appState().projectDirectory });
-          },
-        },
-        {
-          type: 'separator'
-        },
-        {
-          label: 'Check for Updates',
-          click: () => {
-            void checkForUpdatesManually();
           },
         },
       ]);

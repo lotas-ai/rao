@@ -13,6 +13,15 @@
  *
  */
 
+/**
+ * Manual update checker for platforms that don't support auto-updates.
+ * Currently used for Linux only.
+ * 
+ * macOS: Uses auto-updater with update-electron-app (ZIP files)
+ * Windows: Uses auto-updater with update-electron-app (Squirrel.Windows .nupkg files)
+ * Linux: Uses this manual update system (manual download of .deb/.rpm/.AppImage files)
+ */
+
 import { app, dialog, shell } from 'electron';
 import { logger } from '../core/logger';
 import * as https from 'https';

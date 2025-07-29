@@ -48,6 +48,7 @@
     "copy-webpack-plugin": "12.0.2",
     "css-loader": "7.1.2",
     "electron": "34.5.1",
+    "electron-winstaller": "^5.4.0",
     "electron-mocha": "13.0.1",
     "eslint": "8.57",
     "fork-ts-checker-webpack-plugin": "9.0.2",
@@ -83,6 +84,7 @@
     "posthog-js": "^1.240.4",
     "properties-reader": "2.3.0",
     "semver": "7.7.1",
+    "update-electron-app": "^3.0.0",
     "uuid": "10.0.0",
     "vue": "3.5.13",
     "winston": "3.14.2",
@@ -98,12 +100,6 @@
     "dmg": {
       "artifactName": "Rao-v${version}.dmg",
       "sign": true
-    },
-    "publish": [
-      {
-        "provider": "generic",
-        "url": "https://lotas-downloads.s3.amazonaws.com"
-      }
-    ]
+    }
   }
 }
