@@ -24,6 +24,7 @@ const installerOptions = {
   outputDirectory: outputDirectory,
   authors: 'Lotas',
   exe: 'rao.exe',
+  name: 'Rao', // Controls the nupkg filename
   iconUrl: 'https://lotas-downloads.s3.us-east-2.amazonaws.com/icon.ico',
   noMsi: true
 };
