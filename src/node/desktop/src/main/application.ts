@@ -53,6 +53,11 @@ import { LoggerCallback } from './logger-callback';
 import { Xdg } from '../core/xdg';
 import { ModalDialogTracker } from './modal-dialog-tracker';
 
+// Handle Squirrel.Windows startup events for auto-updates
+if (require('electron-squirrel-startup')) {
+  app.quit();
+}
+
 /**
  * The RStudio application
  */
