@@ -12,6 +12,7 @@
 :: AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
 ::
 @echo off
+setlocal
 
 if "%1" == "--help" goto :showhelp
 if "%1" == "-h" goto :showhelp
@@ -58,23 +59,77 @@ if not defined NOZIP (
     )
 )
 
-
+REM Generate Squirrel.Windows packages for auto-updates
+if not defined NOSQUIRREL (
+    echo Creating Squirrel.Windows packages for auto-updates...
+    
+    REM Find the Electron app directory (should be in the build output)
+    set "ELECTRON_APP_DIR=%BUILD_DIR%\out\Rao-win32-x64"
+    
+    if exist "%ELECTRON_APP_DIR%" (
+        echo Found Electron app at: %ELECTRON_APP_DIR%
+        
+        REM Use electron-winstaller to create Squirrel packages
+        pushd "%PACKAGE_DIR%\..\..\src\node\desktop"
+        
+        REM Install electron-winstaller if not present
+        if not exist "node_modules\electron-winstaller" (
+            echo Installing electron-winstaller...
+            call npm install electron-winstaller --save-dev
+        )
+        
+        REM Create Squirrel packages
+        node -e "
+        const electronWinstaller = require('electron-winstaller');
+        
+        electronWinstaller.createWindowsInstaller({
+          appDirectory: '%ELECTRON_APP_DIR%',
+          outputDirectory: '%BUILD_DIR%\\squirrel',
+          authors: 'Lotas',
+          exe: 'rao.exe',
+          iconUrl: 'https://lotas-downloads.s3.us-east-2.amazonaws.com/icon.ico',
+          setupIcon: '%ELECTRON_APP_DIR%\\resources\\app\\resources\\icons\\Rao.ico',
+          noMsi: true
+        }).then(() => {
+          console.log('Squirrel packages created successfully');
+        }).catch((e) => {
+          console.error('Squirrel package creation failed:', e);
+          process.exit(1);
+        });
+        "
+        
+        popd
+        
+        REM Move Squirrel files to build directory
+        if exist "%BUILD_DIR%\squirrel" (
+            echo Moving Squirrel packages to build directory...
+            move "%BUILD_DIR%\squirrel\*.nupkg" "%BUILD_DIR%\"
+            move "%BUILD_DIR%\squirrel\RELEASES" "%BUILD_DIR%\"
+            move "%BUILD_DIR%\squirrel\Setup.exe" "%BUILD_DIR%\RaoSetup-Squirrel.exe"
+            echo Squirrel auto-update files created successfully
+        )
+    ) else (
+        echo WARNING: Electron app directory not found at %ELECTRON_APP_DIR%
+        echo Skipping Squirrel package generation
+    )
+)
 
 popd
 
+endlocal
 goto :EOF
 
 :showhelp
 echo.
 echo make-dist-packages
 echo.
-echo. Produces the RStudio setup package and zip file (installerless) using already-built binaries.
+echo. Produces the RStudio setup package, zip file (installerless), and Squirrel.Windows 
+echo. auto-update packages using already-built binaries.
 echo.
 echo  Must be invoked from the "package\win32" folder (in the cloned RStudio repository).
+echo  Use "set NOSQUIRREL=1" to skip Squirrel.Windows package generation.
 echo.
 exit /b 0
-
-
 
 :error
 echo ERROR: Failed to package RStudio!

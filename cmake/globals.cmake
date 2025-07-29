@@ -51,7 +51,7 @@ if ("$ENV{RSTUDIO_VERSION_SUFFIX}" STREQUAL "" OR "$ENV{RSTUDIO_VERSION_SUFFIX}"
     set(CPACK_PACKAGE_VERSION_SUFFIX "")
   else()
     # If the environment variable is not defined at all, use default
-    set(CPACK_PACKAGE_VERSION_SUFFIX "")
+    set(CPACK_PACKAGE_VERSION_SUFFIX "-dev+999")
   endif()
 else()
   set(CPACK_PACKAGE_VERSION_SUFFIX $ENV{RSTUDIO_VERSION_SUFFIX})
