@@ -167,7 +167,7 @@ if defined RSTUDIO_VERSION_SUFFIX (
     )
 ) else (
     REM Variable is not defined, use default
-    set RSTUDIO_VERSION_SUFFIX=-dev+999
+    set RSTUDIO_VERSION_SUFFIX=
 )
 
 REM Clean suffix - if it's just a space or empty, make it truly empty
