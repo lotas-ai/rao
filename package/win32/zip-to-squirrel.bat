@@ -54,6 +54,13 @@ if errorlevel 1 (
 )
 
 REM Find the Electron app directory in extracted files
+REM First check if rao.exe is directly in the extracted root
+if exist "%TEMP_DIR%\rao.exe" (
+    set "ELECTRON_APP_DIR=%TEMP_DIR%"
+    goto :found_app
+)
+
+REM If not in root, check subdirectories
 for /d %%D in ("%TEMP_DIR%\*") do (
     if exist "%%D\rao.exe" (
         set "ELECTRON_APP_DIR=%%D"
