@@ -18,13 +18,17 @@ set "ZIP_FILE=%~1"
 set "OUTPUT_DIR=%~2"
 set "VERSION=%~3"
 
-REM Set defaults
+REM Set defaults and convert to absolute paths
 if "%ZIP_FILE%" == "" (
     echo ERROR: ZIP file path is required
     goto :showhelp
 )
 if "%OUTPUT_DIR%" == "" set "OUTPUT_DIR=%~dp0build"
 if "%VERSION%" == "" set "VERSION=0.2.9"
+
+REM Convert to absolute paths
+for %%i in ("%ZIP_FILE%") do set "ZIP_FILE=%%~fi"
+for %%i in ("%OUTPUT_DIR%") do set "OUTPUT_DIR=%%~fi"
 
 REM Validate inputs
 if not exist "%ZIP_FILE%" (
@@ -45,9 +49,9 @@ set "TEMP_DIR=%OUTPUT_DIR%\temp_extract"
 if exist "%TEMP_DIR%" rmdir /s /q "%TEMP_DIR%"
 mkdir "%TEMP_DIR%"
 
-REM Extract ZIP file
+REM Extract ZIP file using tar
 echo Extracting ZIP file...
-powershell -command "Expand-Archive -Path '%ZIP_FILE%' -DestinationPath '%TEMP_DIR%' -Force"
+tar -xf "%ZIP_FILE%" -C "%TEMP_DIR%"
 if errorlevel 1 (
     echo ERROR: Failed to extract ZIP file
     goto :cleanup
@@ -74,6 +78,14 @@ goto :cleanup
 :found_app
 echo Found Electron app at: %ELECTRON_APP_DIR%
 
+REM Verify the Electron app structure
+if not exist "%ELECTRON_APP_DIR%\resources\app\package.json" (
+    echo ERROR: Invalid Electron app structure - missing resources\app\package.json
+    goto :cleanup
+)
+
+echo Electron app structure verified
+
 REM Change to desktop directory for npm operations
 pushd "%~dp0..\..\src\node\desktop"
 
@@ -88,9 +100,9 @@ if not exist "node_modules\electron-installer-windows" (
     )
 )
 
-REM Create auto-update packages using electron-installer-windows
+REM Create auto-update packages using electron-installer-windows (no remote sync for first run)
 echo Creating auto-update packages...
-node -e "const installer = require('electron-installer-windows'); const path = require('path'); const options = { src: '%ELECTRON_APP_DIR%', dest: '%OUTPUT_DIR%', name: 'rao', productName: 'Rao', version: '%VERSION%', description: 'Rao', authors: ['Lotas'], exe: 'rao.exe', icon: path.join('%ELECTRON_APP_DIR%', 'resources', 'app', 'resources', 'icons', 'Rao.ico'), noMsi: true, remoteReleases: 'https://lotas-downloads.s3.us-east-2.amazonaws.com/win32/x64' }; console.log('Creating Windows installer with options:', JSON.stringify(options, null, 2)); installer(options).then(() => { console.log('Windows auto-update files created successfully'); }).catch((err) => { console.error('Windows auto-update creation failed:', err); process.exit(1); });"
+node -e "const installer = require('electron-installer-windows'); const options = { src: '%ELECTRON_APP_DIR%', dest: '%OUTPUT_DIR%', name: 'rao', productName: 'Rao', version: '%VERSION%', description: 'Rao', authors: ['Lotas'], exe: 'rao.exe', noMsi: true }; console.log('Creating Squirrel packages...'); installer(options).then(() => { console.log('SUCCESS: Squirrel packages created successfully'); }).catch((err) => { console.error('ERROR:', err.message); process.exit(1); });"
 
 if errorlevel 1 (
     echo ERROR: Failed to create auto-update files
@@ -104,7 +116,14 @@ popd
 REM Clean up temporary directory
 if exist "%TEMP_DIR%" rmdir /s /q "%TEMP_DIR%"
 
-echo Squirrel files created successfully in %OUTPUT_DIR%
+echo.
+echo SUCCESS: Squirrel files created successfully in %OUTPUT_DIR%
+echo Files created:
+echo   - rao-%VERSION%-full.nupkg
+echo   - rao-%VERSION%-setup.exe  
+echo   - RELEASES
+echo.
+echo NOTE: Upload these files to your release server before enabling auto-updates
 goto :EOF
 
 :showhelp
@@ -116,8 +135,8 @@ echo     OUTPUT_DIR   - Directory to output squirrel files (default: build)
 echo     VERSION      - Version string (default: 0.2.9)
 echo.
 echo Examples:
-echo     zip-to-squirrel "C:\rsbuild\Rao-0.2.9.zip"
-echo     zip-to-squirrel "C:\rsbuild\Rao-0.2.9.zip" "C:\Users\willnickols\rao\package\win32\build" "0.2.9"
+echo     zip-to-squirrel "build\Rao-0.2.9.zip"
+echo     zip-to-squirrel "build\Rao-0.2.9.zip" "build" "0.2.9"
 echo.
 exit /b 0
 
