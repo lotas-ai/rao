@@ -55,17 +55,32 @@ if errorlevel 1 (
 
 REM Find the Electron app directory in extracted files
 for /d %%D in ("%TEMP_DIR%\*") do (
+    REM Look for various possible executable names
     if exist "%%D\rao.exe" (
         set "ELECTRON_APP_DIR=%%D"
+        set "EXE_NAME=rao.exe"
+        goto :found_app
+    )
+    if exist "%%D\Rao-*.exe" (
+        set "ELECTRON_APP_DIR=%%D"
+        REM Find the actual exe name
+        for %%F in ("%%D\Rao-*.exe") do set "EXE_NAME=%%~nxF"
+        goto :found_app
+    )
+    if exist "%%D\RStudio.exe" (
+        set "ELECTRON_APP_DIR=%%D"
+        set "EXE_NAME=RStudio.exe"
         goto :found_app
     )
 )
 
-echo ERROR: Could not find rao.exe in extracted ZIP file
+echo ERROR: Could not find any recognizable executable (.exe) in extracted ZIP file
+echo Looking for: rao.exe, Rao-*.exe, or RStudio.exe
 goto :cleanup
 
 :found_app
 echo Found Electron app at: %ELECTRON_APP_DIR%
+echo Found executable: %EXE_NAME%
 
 REM Change to desktop directory for npm operations
 pushd "%~dp0..\..\src\node\desktop"
@@ -95,7 +110,7 @@ const options = {
   version: '%VERSION%',
   description: 'Rao',
   authors: ['Lotas'],
-  exe: 'rao.exe',
+  exe: '%EXE_NAME%',
   icon: path.join('%ELECTRON_APP_DIR%', 'resources', 'app', 'resources', 'icons', 'Rao.ico'),
   noMsi: true,
   remoteReleases: 'https://lotas-downloads.s3.us-east-2.amazonaws.com/win32/x64'
