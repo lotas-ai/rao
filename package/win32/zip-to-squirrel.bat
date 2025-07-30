@@ -37,10 +37,13 @@ echo DEBUG: ZIP_FILE=%ZIP_FILE%
 echo DEBUG: OUTPUT_DIR=%OUTPUT_DIR%
 echo DEBUG: VERSION=%VERSION%
 
+REM Store current working directory for absolute paths
+set "ORIGINAL_DIR=%CD%"
+
 REM Create output directory if it doesn't exist
 if not exist "%OUTPUT_DIR%" mkdir "%OUTPUT_DIR%"
 
-REM Create temporary extraction directory
+REM Create temporary extraction directory (using original relative path)
 set "TEMP_DIR=%OUTPUT_DIR%\temp_extract"
 if exist "%TEMP_DIR%" rmdir /s /q "%TEMP_DIR%"
 mkdir "%TEMP_DIR%"
@@ -101,6 +104,10 @@ goto :cleanup
 echo Found Electron app at: %ELECTRON_APP_DIR%
 echo Found executable: %EXE_NAME%
 
+REM Store absolute paths before changing directories
+set "ABS_ELECTRON_APP_DIR=%ORIGINAL_DIR%\%TEMP_DIR%"
+set "ABS_OUTPUT_DIR=%ORIGINAL_DIR%\%OUTPUT_DIR%"
+
 REM Change to desktop directory for npm operations
 pushd "%~dp0..\..\src\node\desktop"
 
@@ -117,7 +124,7 @@ if not exist "node_modules\electron-installer-windows" (
 
 REM Create auto-update packages using electron-installer-windows
 echo Creating auto-update packages...
-node -e "const installer = require('electron-installer-windows'); const path = require('path'); const fs = require('fs'); const srcPath = path.resolve('%ELECTRON_APP_DIR%'); const destPath = path.resolve('%OUTPUT_DIR%'); console.log('Checking paths:'); console.log('  src:', srcPath); console.log('  dest:', destPath); console.log('  exe exists:', fs.existsSync(path.join(srcPath, '%EXE_NAME%'))); console.log('  resources/app exists:', fs.existsSync(path.join(srcPath, 'resources', 'app'))); console.log('  package.json exists:', fs.existsSync(path.join(srcPath, 'resources', 'app', 'package.json'))); const options = { src: srcPath, dest: destPath, name: 'rao', productName: 'Rao', version: '%VERSION%', description: 'Rao', authors: ['Lotas'], exe: '%EXE_NAME%', noMsi: true, remoteReleases: 'https://lotas-downloads.s3.us-east-2.amazonaws.com/win32/x64' }; console.log('Creating Windows installer with options:', JSON.stringify(options, null, 2)); installer(options).then(() => { console.log('Windows auto-update files created successfully'); }).catch((err) => { console.error('Windows auto-update creation failed:', err.message); console.error('Full error:', err); process.exit(1); });"
+node -e "const installer = require('electron-installer-windows'); const path = require('path'); const fs = require('fs'); const srcPath = path.resolve('%ABS_ELECTRON_APP_DIR%'); const destPath = path.resolve('%ABS_OUTPUT_DIR%'); console.log('Checking paths:'); console.log('  src:', srcPath); console.log('  dest:', destPath); console.log('  exe exists:', fs.existsSync(path.join(srcPath, '%EXE_NAME%'))); console.log('  resources/app exists:', fs.existsSync(path.join(srcPath, 'resources', 'app'))); console.log('  package.json exists:', fs.existsSync(path.join(srcPath, 'resources', 'app', 'package.json'))); const options = { src: srcPath, dest: destPath, name: 'rao', productName: 'Rao', version: '%VERSION%', description: 'Rao', authors: ['Lotas'], exe: '%EXE_NAME%', noMsi: true, remoteReleases: 'https://lotas-downloads.s3.us-east-2.amazonaws.com/win32/x64' }; console.log('Creating Windows installer with options:', JSON.stringify(options, null, 2)); installer(options).then(() => { console.log('Windows auto-update files created successfully'); }).catch((err) => { console.error('Windows auto-update creation failed:', err.message); console.error('Full error:', err); process.exit(1); });"
 
 if errorlevel 1 (
     echo ERROR: Failed to create auto-update files
@@ -129,9 +136,9 @@ popd
 
 :cleanup
 REM Clean up temporary directory
-if exist "%TEMP_DIR%" rmdir /s /q "%TEMP_DIR%"
+if exist "%ORIGINAL_DIR%\%TEMP_DIR%" rmdir /s /q "%ORIGINAL_DIR%\%TEMP_DIR%"
 
-echo Squirrel files created successfully in %OUTPUT_DIR%
+echo Squirrel files created successfully in %ABS_OUTPUT_DIR%
 goto :EOF
 
 :showhelp
