@@ -54,8 +54,27 @@ if errorlevel 1 (
 )
 
 REM Find the Electron app directory in extracted files
+REM First check if exe is directly in the extracted root
+if exist "%TEMP_DIR%\rao.exe" (
+    set "ELECTRON_APP_DIR=%TEMP_DIR%"
+    set "EXE_NAME=rao.exe"
+    goto :found_app
+)
+if exist "%TEMP_DIR%\Rao-*.exe" (
+    set "ELECTRON_APP_DIR=%TEMP_DIR%"
+    REM Find the actual exe name
+    for %%F in ("%TEMP_DIR%\Rao-*.exe") do set "EXE_NAME=%%~nxF"
+    goto :found_app
+)
+if exist "%TEMP_DIR%\RStudio.exe" (
+    set "ELECTRON_APP_DIR=%TEMP_DIR%"
+    set "EXE_NAME=RStudio.exe"
+    goto :found_app
+)
+
+REM If not in root, check subdirectories
 for /d %%D in ("%TEMP_DIR%\*") do (
-    REM Look for various possible executable names
+    REM Look for various possible executable names in subdirectories
     if exist "%%D\rao.exe" (
         set "ELECTRON_APP_DIR=%%D"
         set "EXE_NAME=rao.exe"
@@ -75,7 +94,7 @@ for /d %%D in ("%TEMP_DIR%\*") do (
 )
 
 echo ERROR: Could not find any recognizable executable (.exe) in extracted ZIP file
-echo Looking for: rao.exe, Rao-*.exe, or RStudio.exe
+echo Looking for: rao.exe, Rao-*.exe, or RStudio.exe in root or subdirectories
 goto :cleanup
 
 :found_app
