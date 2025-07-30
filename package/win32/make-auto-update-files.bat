@@ -25,8 +25,10 @@ echo DEBUG: PACKAGE_DIR=%PACKAGE_DIR%
 echo DEBUG: BUILD_DIR=%BUILD_DIR%
 echo DEBUG: VERSION=%RSTUDIO_VERSION_FULL%
 
-REM Find the Electron app directory
-set "ELECTRON_APP_DIR=%BUILD_DIR%\out\Rao-win32-x64"
+REM Find the Electron app directory - use same logic as make-package.bat
+set "ELECTRON_SOURCE_DIR=%PACKAGE_DIR%\..\..\src\node\desktop"
+set "ELECTRON_BINARY_DIR=%ELECTRON_SOURCE_DIR%\..\desktop-build-AMD64"
+set "ELECTRON_APP_DIR=%ELECTRON_BINARY_DIR%\out\Rao-win32-x64"
 
 if not exist "%ELECTRON_APP_DIR%" (
     echo ERROR: Electron app directory not found at "%ELECTRON_APP_DIR%"
@@ -53,7 +55,7 @@ const path = require('path');
 
 const options = {
   src: '%ELECTRON_APP_DIR%',
-  dest: '%BUILD_DIR%',
+  dest: '%PACKAGE_DIR%\\%BUILD_DIR%',
   name: 'rao',
   productName: 'Rao', 
   version: '%RSTUDIO_VERSION_FULL%',
