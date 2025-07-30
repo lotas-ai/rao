@@ -102,7 +102,12 @@ if not exist "node_modules\electron-installer-windows" (
 
 REM Create auto-update packages using electron-installer-windows (no remote sync for first run)
 echo Creating auto-update packages...
-node -e "const installer = require('electron-installer-windows'); const options = { src: '%ELECTRON_APP_DIR%', dest: '%OUTPUT_DIR%', name: 'rao', productName: 'Rao', version: '%VERSION%', description: 'Rao', authors: ['Lotas'], exe: 'rao.exe', noMsi: true }; console.log('Creating Squirrel packages...'); installer(options).then(() => { console.log('SUCCESS: Squirrel packages created successfully'); }).catch((err) => { console.error('ERROR:', err.message); process.exit(1); });"
+
+REM Convert backslashes to forward slashes for JavaScript strings
+set "JS_ELECTRON_APP_DIR=%ELECTRON_APP_DIR:\=/%"
+set "JS_OUTPUT_DIR=%OUTPUT_DIR:\=/%"
+
+node -e "const installer = require('electron-installer-windows'); const options = { src: '%JS_ELECTRON_APP_DIR%', dest: '%JS_OUTPUT_DIR%', name: 'rao', productName: 'Rao', version: '%VERSION%', description: 'Rao', authors: ['Lotas'], exe: 'rao.exe', noMsi: true }; console.log('Creating Squirrel packages...'); installer(options).then(() => { console.log('SUCCESS: Squirrel packages created successfully'); }).catch((err) => { console.error('ERROR:', err.message); process.exit(1); });"
 
 if errorlevel 1 (
     echo ERROR: Failed to create auto-update files
