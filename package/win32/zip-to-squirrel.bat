@@ -90,33 +90,7 @@ if not exist "node_modules\electron-installer-windows" (
 
 REM Create auto-update packages using electron-installer-windows
 echo Creating auto-update packages...
-node -e "
-const installer = require('electron-installer-windows');
-const path = require('path');
-
-const options = {
-  src: '%ELECTRON_APP_DIR%',
-  dest: '%OUTPUT_DIR%',
-  name: 'rao',
-  productName: 'Rao', 
-  version: '%VERSION%',
-  description: 'Rao',
-  authors: ['Lotas'],
-  exe: 'rao.exe',
-  icon: path.join('%ELECTRON_APP_DIR%', 'resources', 'app', 'resources', 'icons', 'Rao.ico'),
-  noMsi: true,
-  remoteReleases: 'https://lotas-downloads.s3.us-east-2.amazonaws.com/win32/x64'
-};
-
-console.log('Creating Windows installer with options:', JSON.stringify(options, null, 2));
-
-installer(options).then(() => {
-  console.log('Windows auto-update files created successfully');
-}).catch((err) => {
-  console.error('Windows auto-update creation failed:', err);
-  process.exit(1);
-});
-"
+node -e "const installer = require('electron-installer-windows'); const path = require('path'); const options = { src: '%ELECTRON_APP_DIR%', dest: '%OUTPUT_DIR%', name: 'rao', productName: 'Rao', version: '%VERSION%', description: 'Rao', authors: ['Lotas'], exe: 'rao.exe', icon: path.join('%ELECTRON_APP_DIR%', 'resources', 'app', 'resources', 'icons', 'Rao.ico'), noMsi: true, remoteReleases: 'https://lotas-downloads.s3.us-east-2.amazonaws.com/win32/x64' }; console.log('Creating Windows installer with options:', JSON.stringify(options, null, 2)); installer(options).then(() => { console.log('Windows auto-update files created successfully'); }).catch((err) => { console.error('Windows auto-update creation failed:', err); process.exit(1); });"
 
 if errorlevel 1 (
     echo ERROR: Failed to create auto-update files
