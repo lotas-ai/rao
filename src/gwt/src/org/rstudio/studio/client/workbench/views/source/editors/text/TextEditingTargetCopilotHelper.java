@@ -40,7 +40,6 @@ import org.rstudio.studio.client.workbench.copilot.model.CopilotEvent.CopilotEve
 import org.rstudio.studio.client.workbench.copilot.model.CopilotResponseTypes.CopilotGenerateCompletionsResponse;
 import org.rstudio.studio.client.workbench.copilot.model.CopilotTypes.CopilotCompletion;
 import org.rstudio.studio.client.workbench.copilot.model.CopilotTypes.CopilotError;
-import org.rstudio.studio.client.workbench.copilot.model.CopilotTypes.CopilotRange;
 import org.rstudio.studio.client.workbench.copilot.server.CopilotServerOperations;
 import org.rstudio.studio.client.workbench.prefs.model.UserPrefs;
 import org.rstudio.studio.client.workbench.prefs.model.UserPrefsAccessor;
@@ -52,6 +51,7 @@ import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.dom.client.NativeEvent;
 import com.google.gwt.event.dom.client.KeyCodes;
 import com.google.gwt.event.dom.client.KeyDownEvent;
+import com.google.gwt.event.dom.client.KeyDownHandler;
 import com.google.gwt.user.client.Timer;
 import com.google.inject.Inject;
 
@@ -65,20 +65,44 @@ public class TextEditingTargetCopilotHelper
    {
    }
    
-   private interface EditorCommand
+   class Completion
    {
-      public void invoke(DocDisplay editor);
+      public Completion(CopilotCompletion originalCompletion, String displayText)
+      {
+         // Copilot includes trailing '```' for some reason in some cases,
+         // remove those if we're inserting in an R document.
+         this.insertText = postProcessCompletion(originalCompletion.insertText);
+         this.displayText = postProcessCompletion(displayText);
+
+         this.startLine = originalCompletion.range.start.line;
+         this.startCharacter = originalCompletion.range.start.character;
+         this.endLine = originalCompletion.range.end.line;
+         this.endCharacter = originalCompletion.range.end.character;
+
+         this.originalCompletion = originalCompletion;
+         this.partialAcceptedLength = 0;
+      }
+
+      public String insertText;
+      public String displayText;
+      public int startLine;
+      public int startCharacter;
+      public int endLine;
+      public int endCharacter;
+      public CopilotCompletion originalCompletion;
+      public int partialAcceptedLength;
    }
-   
+
    public TextEditingTargetCopilotHelper(TextEditingTarget target)
    {
       RStudioGinjector.INSTANCE.injectMembers(this);
       binder_.bind(commands_, this);
       
       target_ = target;
+      display_ = target.getDocDisplay();
+      
       registrations_ = new HandlerRegistrations();
       
-      srcEditor_ = target.getDocDisplay();
       completionTimer_ = new Timer()
       {
          @Override
@@ -87,10 +111,132 @@ public class TextEditingTargetCopilotHelper
             if (copilotDisabledInThisDocument_)
                return;
             
-            withActiveEditor((editor) ->
+            target_.withSavedDoc(() ->
             {
-               requestCompletions(editor, completionTriggeredByCommand_);
-               completionTriggeredByCommand_ = false;
+               requestId_ += 1;
+               final int requestId = requestId_;
+               final Position savedCursorPosition = display_.getCursorPosition();
+               
+               events_.fireEvent(
+                     new CopilotEvent(CopilotEventType.COMPLETION_REQUESTED));
+
+               String trigger = prefs_.copilotCompletionsTrigger().getGlobalValue();
+               boolean autoInvoked = trigger.equals(UserPrefsAccessor.COPILOT_COMPLETIONS_TRIGGER_AUTO);
+               if (completionTriggeredByCommand_)
+               {
+                  // users can trigger completions manually via command, even if set to auto
+                  autoInvoked = false;
+                  completionTriggeredByCommand_ = false;
+               }
+               
+               server_.copilotGenerateCompletions(
+                     target_.getId(),
+                     StringUtil.notNull(target_.getPath()),
+                     StringUtil.isNullOrEmpty(target_.getPath()),
+                     autoInvoked,
+                     display_.getCursorRow(),
+                     display_.getCursorColumn(),
+                     new ServerRequestCallback<CopilotGenerateCompletionsResponse>()
+                     {
+                        @Override
+                        public void onResponseReceived(CopilotGenerateCompletionsResponse response)
+                        {
+                           // Check for invalidated request.
+                           if (requestId_ != requestId)
+                              return;
+                           
+                           // Check for alternate cursor position.
+                           Position currentCursorPosition = display_.getCursorPosition();
+                           if (!currentCursorPosition.isEqualTo(savedCursorPosition))
+                              return;
+                           
+                           // Check for null completion results -- this may occur if the Copilot
+                           // agent couldn't be started for some reason.
+                           if (response == null)
+                              return;
+                           
+                           // Check whether completions are enabled in this document.
+                           if (Objects.equals(response.enabled, false))
+                           {
+                              copilotDisabledInThisDocument_ = true;
+                              events_.fireEvent(new CopilotEvent(CopilotEventType.COMPLETION_CANCELLED));
+                              return;
+                           }
+                           
+                           // Check for error.
+                           CopilotError error = response.error;
+                           if (error != null)
+                           {
+                              // Handle 'document could not be found' errors up-front. These errors
+                              // will normally self-resolve after the user starts editing the document,
+                              // so it should suffice just to indicate that no completions are available.
+                              int code = error.code;
+                              if (code == CopilotConstants.ErrorCodes.DOCUMENT_NOT_FOUND)
+                              {
+                                 events_.fireEvent(new CopilotEvent(CopilotEventType.COMPLETION_RECEIVED_NONE));
+                              }
+                              else
+                              {
+                                 String message = copilot_.messageForError(error);
+                                 events_.fireEvent(
+                                       new CopilotEvent(
+                                             CopilotEventType.COMPLETION_ERROR,
+                                             message));
+                                 return;
+                              }
+                           }
+                           
+                           // Check for null result. This might occur if the completion request
+                           // was cancelled by the copilot agent.
+                           Any result = response.result;
+                           if (result == null)
+                           {
+                              events_.fireEvent(new CopilotEvent(CopilotEventType.COMPLETION_CANCELLED));
+                              return;
+                           }
+                           
+                           // Check for a cancellation reason.
+                           Object reason = result.asPropertyMap().get("cancellationReason");
+                           if (reason != null)
+                           {
+                              events_.fireEvent(
+                                    new CopilotEvent(CopilotEventType.COMPLETION_CANCELLED));
+                              return;
+                           }
+                           
+                           // Otherwise, handle the response.
+                           JsArrayLike<CopilotCompletion> completions =
+                                 Js.cast(result.asPropertyMap().get("items"));
+                           
+                           
+                           events_.fireEvent(new CopilotEvent(
+                                 completions.getLength() == 0
+                                    ? CopilotEventType.COMPLETION_RECEIVED_NONE
+                                    : CopilotEventType.COMPLETION_RECEIVED_SOME));
+                           
+                           // TODO: If multiple completions are available we should provide a way for 
+                           // the user to view/select them. For now, use the last one.
+                           // https://github.com/rstudio/rstudio/issues/16055
+                           if (completions.getLength() > 0)
+                           {
+                              CopilotCompletion completion = completions.getAt(completions.getLength() - 1);
+
+                              // The completion data gets modified when doing partial (word-by-word)
+                              // completions, so we need to use a copy and preserve the original
+                              // (which we need to send back to the server as-is in some language-server methods).
+                              activeCompletion_ = new Completion(completion, computeGhostText(completion.insertText));
+
+                              display_.setGhostText(activeCompletion_.displayText);
+                              server_.copilotDidShowCompletion(completion, new VoidServerRequestCallback());
+                           }
+                        }
+
+                        @Override
+                        public void onError(ServerError error)
+                        {
+                           Debug.logError(error);
+                        }
+                     });
             });
          }
       };
@@ -112,151 +258,11 @@ public class TextEditingTargetCopilotHelper
       
    }
    
-   private void requestCompletions(DocDisplay editor, boolean triggeredByCommand)
-   {
-      target_.withSavedDoc(() ->
-      {
-         requestId_ += 1;
-         final int requestId = requestId_;
-         final Position cursorPosition = getSourceEditorCursorPosition();
-
-         events_.fireEvent(
-               new CopilotEvent(CopilotEventType.COMPLETION_REQUESTED));
-
-         String trigger = prefs_.copilotCompletionsTrigger().getGlobalValue();
-         boolean autoInvoked = trigger.equals(UserPrefsAccessor.COPILOT_COMPLETIONS_TRIGGER_AUTO);
-         if (triggeredByCommand)
-         {
-            // users can trigger completions manually via command, even if set to auto
-            autoInvoked = false;
-         }
-
-         server_.copilotGenerateCompletions(
-               target_.getId(),
-               StringUtil.notNull(target_.getPath()),
-               StringUtil.isNullOrEmpty(target_.getPath()),
-               autoInvoked, 
-               cursorPosition.getRow(),
-               cursorPosition.getColumn(),
-               new ServerRequestCallback<CopilotGenerateCompletionsResponse>()
-               {
-                  @Override
-                  public void onResponseReceived(CopilotGenerateCompletionsResponse response)
-                  {
-                     // Check for invalidated request.
-                     if (requestId_ != requestId)
-                        return;
-
-                     // Check for alternate cursor position.
-                     if (!cursorPosition.isEqualTo(getSourceEditorCursorPosition()))
-                        return;
-
-                     // Check for null completion results -- this may occur if the Copilot
-                     // agent couldn't be started for some reason.
-                     if (response == null)
-                        return;
-
-                     // Check whether completions are enabled in this document.
-                     if (Objects.equals(response.enabled, false))
-                     {
-                        copilotDisabledInThisDocument_ = true;
-                        events_.fireEvent(new CopilotEvent(CopilotEventType.COMPLETION_CANCELLED));
-                        return;
-                     }
-
-                     // Check for error.
-                     CopilotError error = response.error;
-                     if (error != null)
-                     {
-                        // Handle 'document could not be found' errors up-front. These errors
-                        // will normally self-resolve after the user starts editing the document,
-                        // so it should suffice just to indicate that no completions are available.
-                        int code = error.code;
-                        if (code == CopilotConstants.ErrorCodes.DOCUMENT_NOT_FOUND)
-                        {
-                           events_.fireEvent(new CopilotEvent(CopilotEventType.COMPLETION_RECEIVED_NONE));
-                        }
-                        else
-                        {
-                           String message = copilot_.messageForError(error);
-                           events_.fireEvent(
-                                 new CopilotEvent(
-                                       CopilotEventType.COMPLETION_ERROR,
-                                       message));
-                           return;
-                        }
-                     }
-
-                     // Check for null result. This might occur if the completion request
-                     // was cancelled by the copilot agent.
-                     Any result = response.result;
-                     if (result == null)
-                     {
-                        events_.fireEvent(new CopilotEvent(CopilotEventType.COMPLETION_CANCELLED));
-                        return;
-                     }
-
-                     // Check for a cancellation reason.
-                     Object reason = result.asPropertyMap().get("cancellationReason");
-                     if (reason != null)
-                     {
-                        events_.fireEvent(
-                              new CopilotEvent(CopilotEventType.COMPLETION_CANCELLED));
-                        return;
-                     }
-
-                     // Otherwise, handle the response.
-                     JsArrayLike<CopilotCompletion> completions =
-                           Js.cast(result.asPropertyMap().get("items"));
-
-
-                     events_.fireEvent(new CopilotEvent(
-                           completions.getLength() == 0
-                           ? CopilotEventType.COMPLETION_RECEIVED_NONE
-                              : CopilotEventType.COMPLETION_RECEIVED_SOME));
-
-                     for (int i = 0, n = completions.getLength(); i < n; i++)
-                     {
-                        CopilotCompletion completion = completions.getAt(i);
-
-                        server_.copilotDidShowCompletion(completion,
-                                                         new VoidServerRequestCallback());
-
-                        // fix up the copilot range; it's computed using the source document
-                        // cursor position, but we want to convert this to the position
-                        // used within the embedded Ace editor for visual mode
-                        if (target_.isVisualModeActivated())
-                        {
-                           int row = getActiveChunkRow();
-                           CopilotRange range = completion.range;
-                           range.start.line -= row;
-                           range.end.line -= row;
-                        }
-                        
-                        // Copilot includes trailing '```' for some reason in some cases,
-                        // remove those if we're inserting in an R document.
-                        completion.insertText = postProcessCompletion(completion.insertText);
-
-                        activeCompletion_ = completion;
-                        editor.setGhostText(activeCompletion_.insertText);
-                     }
-                  }
-
-                  @Override
-                  public void onError(ServerError error)
-                  {
-                     Debug.logError(error);
-                  }
-               });
-      });
-   }
-
-   
    private void manageHandlers()
    {
       if (!copilot_.isEnabled())
       {
-         srcEditor_.removeGhostText();
+         display_.removeGhostText();
          registrations_.removeHandler();
          requestId_ = 0;
          completionTimer_.cancel();
@@ -267,15 +273,101 @@ public class TextEditingTargetCopilotHelper
       {
          registrations_.addAll(
 
-               srcEditor_.addCursorChangedHandler((event) ->
+               display_.addCursorChangedHandler((event) ->
                {
-                  onCursorChanged(srcEditor_);
+                  // Check if we've been toggled off
+                  if (!automaticCodeSuggestionsEnabled_)
+                     return;
+                  
+                  // Check preference value
+                  String trigger = prefs_.copilotCompletionsTrigger().getGlobalValue();
+                  if (trigger != UserPrefsAccessor.COPILOT_COMPLETIONS_TRIGGER_AUTO)
+                     return;
+                           
+                  // Allow one-time suppression of cursor change handler
+                  if (suppressCursorChangeHandler_)
+                  {
+                     suppressCursorChangeHandler_ = false;
+                     return;
+                  }
+                  
+                  // Don't do anything if we have a selection.
+                  if (display_.hasSelection())
+                  {
+                     completionTimer_.cancel();
+                     completionTriggeredByCommand_ = false;
+                     return;
+                  }
+                  
+                  // Request completions on cursor navigation.
+                  int delayMs = MathUtil.clamp(prefs_.copilotCompletionsDelay().getValue(), 10, 5000);
+                  completionTimer_.schedule(delayMs);
+
+                  // Delay handler so we can handle a Tab keypress
+                  Timers.singleShot(0, () -> {
+                     activeCompletion_ = null;
+                     display_.removeGhostText();
+                  });
                }),
 
-               srcEditor_.addCapturingKeyDownHandler((event) ->
+               display_.addCapturingKeyDownHandler(new KeyDownHandler()
                {
-                  onKeyDown(srcEditor_, event);
+                  @Override
+                  public void onKeyDown(KeyDownEvent keyEvent)
+                  {
+                     // If ghost text is being displayed, accept it on a Tab key press.
+                     // TODO: Let user choose keybinding for accepting ghost text?
+                     if (activeCompletion_ == null)
+                        return;
+
+                     // TODO: If we have a completion popup, should that take precedence?
+                     if (display_.isPopupVisible())
+                        return;
+                     
+                     // Check if the user just inserted some text matching the current
+                     // ghost text. If so, we'll suppress the next cursor change handler,
+                     // so we can continue presenting the current ghost text.
+                     String key = EventProperty.key(keyEvent.getNativeEvent());
+                     if (activeCompletion_.displayText.startsWith(key))
+                     {
+                        updateCompletion(key);
+                        suppressCursorChangeHandler_ = true;
+                        return;
+                     }
+
+                     NativeEvent event = keyEvent.getNativeEvent();
+                     if (event.getKeyCode() == KeyCodes.KEY_TAB)
+                     {
+                        event.stopPropagation();
+                        event.preventDefault();
+
+                        Range aceRange = Range.create(
+                              activeCompletion_.startLine,
+                              activeCompletion_.startCharacter,
+                              activeCompletion_.endLine,
+                              activeCompletion_.endCharacter);
+                        display_.replaceRange(aceRange, activeCompletion_.insertText);
+                        server_.copilotDidAcceptCompletion(activeCompletion_.originalCompletion.command,
+                                                           new VoidServerRequestCallback());
+
+                        activeCompletion_ = null;
+                     }
+                     else if (event.getKeyCode() == KeyCodes.KEY_BACKSPACE)
+                     {
+                        display_.removeGhostText();
+                     }
+                     else if (event.getKeyCode() == KeyCodes.KEY_RIGHT &&
+                              (event.getCtrlKey() || event.getMetaKey()))
+                     {
+                        event.stopPropagation();
+                        event.preventDefault();
+
+                        commands_.copilotAcceptNextWord().execute();
+                     }
+                     
+                  }
                })
+
          );
 
       }
@@ -285,7 +377,7 @@ public class TextEditingTargetCopilotHelper
    @Handler
    public void onCopilotRequestCompletions()
    {
-      if (copilot_.isEnabled())
+      if (copilot_.isEnabled() && display_.isFocused())
       {
          completionTriggeredByCommand_ = true;
          completionTimer_.schedule(0);
@@ -295,22 +387,14 @@ public class TextEditingTargetCopilotHelper
    @Handler
    public void onCopilotAcceptNextWord()
    {
-      withActiveEditor((editor) ->
-      {
-         onCopilotAcceptNextWordImpl(editor);
-      });
-   }
-   
-   private void onCopilotAcceptNextWordImpl(DocDisplay editor)
-   {
-      if (!editor.isFocused())
+      if (!display_.isFocused())
          return;
          
-      boolean hasActiveSuggestion = editor.hasGhostText() && activeCompletion_ != null;
+      boolean hasActiveSuggestion = display_.hasGhostText() && activeCompletion_ != null;
       if (!hasActiveSuggestion)
          return;
       
-      String text = activeCompletion_.insertText;
+      String text = activeCompletion_.displayText;
       Pattern pattern = Pattern.create("(?:\\b|$)");
       Match match = pattern.match(text, 1);
       if (match == null)
@@ -320,15 +404,25 @@ public class TextEditingTargetCopilotHelper
       String leftoverText = StringUtil.substring(text, match.getIndex());
       
       int n = insertedWord.length();
+      
+      // From the docs: "Note that the acceptedLength includes everything from the start of
+      //                 insertText to the end of the accepted text. It is not the length of 
+      //                 the accepted text itself."
+      activeCompletion_.partialAcceptedLength += n;
+
+      activeCompletion_.displayText = leftoverText;
       activeCompletion_.insertText = leftoverText;
-      activeCompletion_.range.start.character += n;
-      activeCompletion_.range.end.character += n;
+      activeCompletion_.startCharacter += n;
+      activeCompletion_.endCharacter += n;
       
       Timers.singleShot(() ->
       {
          suppressCursorChangeHandler_ = true;
-         editor.insertCode(insertedWord, InsertionBehavior.EditorBehaviorsDisabled);
-         editor.setGhostText(activeCompletion_.insertText);
+         display_.insertCode(insertedWord, InsertionBehavior.EditorBehaviorsDisabled);
+         display_.setGhostText(activeCompletion_.displayText);
+         server_.copilotDidAcceptPartialCompletion(activeCompletion_.originalCompletion, 
+                                                   activeCompletion_.partialAcceptedLength,
+                                                   new VoidServerRequestCallback());
          
          // Work around issue with ghost text not appearing after inserting
          // a code suggestion containing a new line
@@ -336,7 +430,7 @@ public class TextEditingTargetCopilotHelper
          {
             Timers.singleShot(20, () ->
             {
-               editor.setGhostText(activeCompletion_.insertText);
+               display_.setGhostText(activeCompletion_.displayText);
             });
          }
       });
@@ -345,7 +439,7 @@ public class TextEditingTargetCopilotHelper
    @Handler
    public void onCopilotToggleAutomaticCompletions()
    {
-      if (srcEditor_.isFocused())
+      if (display_.isFocused())
       {
          automaticCodeSuggestionsEnabled_ = !automaticCodeSuggestionsEnabled_;
          
@@ -360,19 +454,20 @@ public class TextEditingTargetCopilotHelper
       }
    }
    
-   private void updateCompletion(DocDisplay editor, String key)
+   private void updateCompletion(String key)
    {
       int n = key.length();
+      activeCompletion_.displayText = StringUtil.substring(activeCompletion_.displayText, n);
       activeCompletion_.insertText = StringUtil.substring(activeCompletion_.insertText, n);
-      activeCompletion_.range.start.character += n;
-      activeCompletion_.range.end.character += n;
+      activeCompletion_.startCharacter += n;
+      activeCompletion_.endCharacter += n;
       
       // Ace's ghost text uses a custom token appended to the current line,
       // and lines are eagerly re-tokenized when new text is inserted. To
       // dodge this effect, we reset the ghost text at the end of the event loop.
       Timers.singleShot(() ->
       {
-         editor.setGhostText(activeCompletion_.insertText);
+         display_.setGhostText(activeCompletion_.displayText);
       });
    }
    
@@ -391,153 +486,26 @@ public class TextEditingTargetCopilotHelper
       copilotDisabledInThisDocument_ = false;
    }
    
-   private void withActiveEditor(EditorCommand command)
+   private String computeGhostText(String completionText)
    {
-      if (target_.isVisualModeActivated())
-      {
-         DocDisplay visEditor = target_.getVisualMode().getActiveEditor();
-         if (visEditor != null)
-         {
-            command.invoke(visEditor);
-         }
-      }
-      else
-      {
-         command.invoke(srcEditor_);
-      }
-   }
-   
-   private int getActiveChunkRow()
-   {
-      try
-      {
-         return target_.getVisualMode().getActiveEditorChunk().getScope().getPreamble().getRow();
-      }
-      catch (Exception e)
-      {
-         return -1;
-      }
-   }
-   
-   private Position getSourceEditorCursorPosition()
-   {
-      if (target_.isVisualModeActivated())
-      {
-         DocDisplay visEditor = target_.getVisualMode().getActiveEditor();
-         if (visEditor != null)
-         {
-            Position chunkPos =
-                  target_.getVisualMode().getActiveEditorChunk().getScope().getPreamble();
-            
-            Position visPos = visEditor.getCursorPosition();
-            
-            return Position.create(
-                  chunkPos.getRow() + visPos.getRow(),
-                  visPos.getColumn());
-         }
-         else
-         {
-            return null;
-         }
-      }
-      else
-      {
-         return srcEditor_.getCursorPosition();
-      }
-   }
-   
-   public void onCursorChanged(DocDisplay editor)
-   {
-      // Check if we've been toggled off
-      if (!automaticCodeSuggestionsEnabled_)
-         return;
+      // If the completion includes existing text (i.e. at the beginning of the completion) 
+      // remove that duplicated prefix from the ghost text.
+      String currentLine = display_.getLine(display_.getCursorRow());
+      String currentLineBeforeCursor = StringUtil.substring(currentLine, 0, display_.getCursorColumn());
 
-      // Check preference value
-      String trigger = prefs_.copilotCompletionsTrigger().getGlobalValue();
-      if (trigger != UserPrefsAccessor.COPILOT_COMPLETIONS_TRIGGER_AUTO)
-         return;
-
-      // Allow one-time suppression of cursor change handler
-      if (suppressCursorChangeHandler_)
+      // find the common prefix between the current line and the completion text
+      int commonPrefixLength = 0;
+      for (int i = 0; i < Math.min(currentLineBeforeCursor.length(), completionText.length()); i++)
       {
-         suppressCursorChangeHandler_ = false;
-         return;
+         if (currentLineBeforeCursor.charAt(i) != completionText.charAt(i))
+            break;
+         commonPrefixLength++;
       }
 
-      // Don't do anything if we have a selection.
-      if (editor.hasSelection())
-      {
-         completionTimer_.cancel();
-         completionTriggeredByCommand_ = false;
-         return;
-      }
-
-      // Request completions on cursor navigation.
-      int delayMs = MathUtil.clamp(prefs_.copilotCompletionsDelay().getValue(), 10, 5000);
-      completionTimer_.schedule(delayMs);
-
-      // Delay handler so we can handle a Tab keypress
-      Timers.singleShot(0, () -> {
-         activeCompletion_ = null;
-         editor.removeGhostText();
-      });
-   }
-   
-   public void onKeyDown(DocDisplay editor, KeyDownEvent keyEvent)
-   {
-      if (!editor.isFocused())
-         return;
-      
-      // If ghost text is being displayed, accept it on a Tab key press.
-      // TODO: Let user choose keybinding for accepting ghost text?
-      if (activeCompletion_ == null)
-         return;
-
-      // TODO: If we have a completion popup, should that take precedence?
-      if (editor.isPopupVisible())
-         return;
-
-      // Check if the user just inserted some text matching the current
-      // ghost text. If so, we'll suppress the next cursor change handler,
-      // so we can continue presenting the current ghost text.
-      String key = EventProperty.key(keyEvent.getNativeEvent());
-      if (activeCompletion_.insertText.startsWith(key))
-      {
-         updateCompletion(editor, key);
-         suppressCursorChangeHandler_ = true;
-         return;
-      }
-
-      NativeEvent event = keyEvent.getNativeEvent();
-      if (event.getKeyCode() == KeyCodes.KEY_TAB)
-      {
-         event.stopPropagation();
-         event.preventDefault();
-
-         Range aceRange = Range.create(
-               activeCompletion_.range.start.line,
-               activeCompletion_.range.start.character,
-               activeCompletion_.range.end.line,
-               activeCompletion_.range.end.character);
-         editor.replaceRange(aceRange, activeCompletion_.insertText);
-
-         activeCompletion_ = null;
-      }
-      else if (event.getKeyCode() == KeyCodes.KEY_BACKSPACE)
-      {
-         editor.removeGhostText();
-      }
-      else if (event.getKeyCode() == KeyCodes.KEY_RIGHT &&
-            (event.getCtrlKey() || event.getMetaKey()))
-      {
-         event.stopPropagation();
-         event.preventDefault();
-
-         commands_.copilotAcceptNextWord().execute();
-      }
+      // remove the common prefix from the completion text and return it as the ghost text
+      return completionText.substring(commonPrefixLength);
    }
 
-   
    @Inject
    private void initialize(Copilot copilot,
                            EventBus events,
@@ -555,7 +523,7 @@ public class TextEditingTargetCopilotHelper
    }
    
    private final TextEditingTarget target_;
-   private final DocDisplay srcEditor_;
+   private final DocDisplay display_;
    private final Timer completionTimer_;
    private boolean completionTriggeredByCommand_ = false;
    private final HandlerRegistrations registrations_;
@@ -564,7 +532,7 @@ public class TextEditingTargetCopilotHelper
    private boolean suppressCursorChangeHandler_;
    private boolean copilotDisabledInThisDocument_;
    
-   private CopilotCompletion activeCompletion_;
+   private Completion activeCompletion_;
    private boolean automaticCodeSuggestionsEnabled_ = true;
    
    

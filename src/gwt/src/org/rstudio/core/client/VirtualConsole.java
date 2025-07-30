@@ -26,7 +26,6 @@ import java.util.TreeSet;
 import org.rstudio.core.client.hyperlink.Hyperlink;
 import org.rstudio.core.client.regex.Match;
 import org.rstudio.core.client.regex.Pattern;
-import org.rstudio.core.client.virtualscroller.VirtualScrollerManager;
 import org.rstudio.studio.client.application.events.EventBus;
 import org.rstudio.studio.client.common.shell.ShellWidget.ErrorClass;
 import org.rstudio.studio.client.workbench.events.SessionInitEvent;
@@ -40,7 +39,6 @@ import org.rstudio.studio.client.workbench.views.source.editors.text.events.Edit
 import org.rstudio.studio.client.workbench.views.source.editors.text.themes.AceTheme;
 
 import com.google.gwt.core.client.GWT;
-import com.google.gwt.core.client.JsArrayString;
 import com.google.gwt.dom.client.Document;
 import com.google.gwt.dom.client.Element;
 import com.google.gwt.dom.client.Node;
@@ -66,7 +64,6 @@ public class VirtualConsole
       int truncateLongLinesInConsoleHistory();
       String consoleAnsiMode();
       boolean screenReaderEnabled();
-      boolean limitConsoleVisible();
    }
 
    public static class PreferencesImpl extends UserPrefsSubset
@@ -94,12 +91,6 @@ public class VirtualConsole
       public boolean screenReaderEnabled()
       {
          return getUserPrefs().enableScreenReader().getValue();
-      }
-
-      @Override
-      public boolean limitConsoleVisible()
-      {
-         return getUserPrefs().limitVisibleConsole().getValue();
       }
    }
    
@@ -158,7 +149,6 @@ public class VirtualConsole
       prefs_ = prefs;
       parent_ = parent;
       ansiColorMode_ = prefs.consoleAnsiMode();
-      VirtualScrollerManager.init();
    }
    
    @Inject
@@ -178,6 +168,16 @@ public class VirtualConsole
          public void onValueChange(ValueChangeEvent<String> event)
          {
             ansiColorMode_ = event.getValue();
+         }
+      });
+
+      maxLineLength_ = userPrefs_.consoleLineLengthLimit().getValue();
+      userPrefs_.consoleLineLengthLimit().addValueChangeHandler(new ValueChangeHandler<Integer>()
+      {
+         @Override
+         public void onValueChange(ValueChangeEvent<Integer> event)
+         {
+            maxLineLength_ = event.getValue();
          }
       });
       
@@ -243,38 +243,12 @@ public class VirtualConsole
 
    public void clear()
    {
-      if (isVirtualized())
-         clearVirtualScroller();
-      else
-         formfeed();
-   }
-
-   public boolean isLimitConsoleVisible()
-   {
-      return prefs_.limitConsoleVisible();
-   }
-
-   public void setVirtualizedDisableOverride(boolean override)
-   {
-      virtualizedDisableOverride_ = override;
+      formfeed();
    }
 
    public void setPreserveHTML(boolean preserveHTML)
    {
       preserveHTML_ = preserveHTML;
-   }
-
-   public boolean isVirtualized()
-   {
-      return !virtualizedDisableOverride_ && prefs_.limitConsoleVisible() && parent_ != null;
-   }
-
-   public void clearVirtualScroller()
-   {
-      if (isVirtualized())
-      {
-         VirtualScrollerManager.clear(parent_.getParentElement());
-      }
    }
 
    private void backspace()
@@ -294,15 +268,17 @@ public class VirtualConsole
       if (cursor_ == 0)
          return;
       
-      while (cursor_ > 0 && output_.charAt(cursor_ - 1) != '\n')
-         cursor_--;
+      cursor_ = output_.lastIndexOf("\n", cursor_) + 1;
    }
 
    private void newline(String clazz)
    {
       clearPartialAnsiCode();
-      while (cursor_ < output_.length() && output_.charAt(cursor_) != '\n')
-         cursor_++;
+
+      cursor_ = output_.indexOf("\n", cursor_);
+      if (cursor_ == -1)
+         cursor_ = output_.length();
+
       // Now we're either at the end of the buffer, or on top of a '\n'
       text("\n", clazz, false/*forceNewRange*/);
    }
@@ -343,36 +319,23 @@ public class VirtualConsole
    {
       Debug.logToConsole("Dumping " + name);
       if (map == null)
+      {
          Debug.logToConsole("null");
+      }
       else
+      {
          for (Map.Entry<Integer, ClassRange> entry : map.entrySet())
          {
             Debug.logToConsole(name + debugDumpClassEntry(entry));
          }
+      }
       Debug.logToConsole("Done dumping " + name);
    }
 
    @Override
    public String toString()
    {
-      String output = output_.toString();
-
-      int maxLength = prefs_.truncateLongLinesInConsoleHistory();
-      if (maxLength == 0)
-         return output;
-
-      JsArrayString splat = StringUtil.split(output, "\n");
-      for (int i = 0; i < splat.length(); i++)
-      {
-         String string = splat.get(i);
-         String trimmed = StringUtil.trimRight(string);
-         if (trimmed.length() > maxLength)
-            splat.set(i, StringUtil.substring(trimmed, 0, maxLength) + "... <truncated>");
-         else if (string.length() > maxLength)
-            splat.set(i, StringUtil.substring(string, 0, maxLength));
-      }
-
-      return splat.join("\n");
+      return StringUtil.truncateLines(output_.toString(), maxLineLength_);
    }
 
    public int getLength()
@@ -627,10 +590,7 @@ public class VirtualConsole
     */
    private void appendChild(Element element)
    {
-      if (isVirtualized())
-         VirtualScrollerManager.append(parent_.getParentElement(), element);
-      else
-         parent_.appendChild(element);
+      parent_.appendChild(element);
    }
 
    /**
@@ -642,6 +602,8 @@ public class VirtualConsole
     */
    private void text(String text, String clazz, boolean forceNewRange)
    {
+      text = StringUtil.truncateLines(text, maxLineLength_);
+
       if (newText_ != null)
          newText_.append(text);
 
@@ -704,10 +666,6 @@ public class VirtualConsole
     */
    public void submit(String data, String clazz, boolean forceNewRange, boolean ariaLiveAnnounce)
    {
-      boolean wasAtBottom = false;
-      if (isVirtualized())
-         wasAtBottom = VirtualScrollerManager.scrolledToBottom(parent_.getParentElement());
-
       // If we're submitting new console output, but the previous submit request
       // asked us to force a new range, respect that.
       forceNewRange = forceNewRange || forceNewRange_;
@@ -852,29 +810,48 @@ public class VirtualConsole
                   Match groupStartMatch = groupStartPattern.match(data.substring(head), 0);
                   if (groupStartMatch != null)
                   {
-                     // skip escapes if we're virtualized
-                     if (isVirtualized())
-                     {
-                        tail += groupStartMatch.getValue().length() - 1;
-                        break;
-                     }
-                     
                      String type = groupStartMatch.getGroup(1);
                      String groupClazz = groupTypeToClazz(type);
                      
                      // re-use the previous group if we're closing and re-opening
                      // a group of the same type
                      Node lastNode = parent_.getLastChild();
+                     Element lastNodeEl = null;
                      if (Element.is(lastNode))
                      {
-                        Element lastEl = Element.as(lastNode);
-                        if (lastEl.hasClassName(groupClazz))
+                        lastNodeEl = Element.as(lastNode);
+                        if (lastNodeEl.hasClassName(groupClazz))
                         {
-                           parent_ = lastEl;
+                           parent_ = lastNodeEl;
                            tail += groupStartMatch.getValue().length() - 1;
                            break;
                         }
                      }
+
+                     // if we're starting a group, but the cursor is not
+                     // located at the end of the output (e.g. a carriage
+                     // return or something similar moved the cursor), then
+                     // adjust output appropriately
+                     if (lastNodeEl != null)
+                     {
+                        int numCharsToRemove = output_.length() - cursor_;
+                        if (numCharsToRemove > 0)
+                        {
+                           String text = lastNodeEl.getInnerText();
+                           if (text.length() <= numCharsToRemove)
+                           {
+                              lastNodeEl.removeFromParent();
+                           }
+                           else
+                           {
+                              lastNodeEl.setInnerText(
+                                 text.substring(0, text.length() - numCharsToRemove));
+                           }
+                        }
+                     }
+
+                     text("", clazz, false);
+                     cursor_ = output_.length();
                      
                      // otherwise, create a new group span and use it
                      SpanElement spanEl = Document.get().createSpanElement();
@@ -893,13 +870,6 @@ public class VirtualConsole
                   Match groupEndMatch = groupEndPattern.match(data.substring(head), 0);
                   if (groupEndMatch != null)
                   {
-                     // skip escapes if we're virtualized
-                     if (isVirtualized())
-                     {
-                        tail += groupEndMatch.getValue().length() - 1;
-                        break;
-                     }
-                     
                      if (parent_.hasClassName(RES.styles().group()))
                      {
                         forceNewRange = forceNewRange_ = true;
@@ -996,19 +966,9 @@ public class VirtualConsole
          }
       }
 
-      Entry<Integer, ClassRange> last = class_.lastEntry();
-      if (last != null)
-      {
-         ClassRange range = last.getValue();
-         if (isVirtualized()) VirtualScrollerManager.prune(parent_.getParentElement(), range.element);
-      }
-
       // If there was any plain text after the last control character, add it
       if (tail < data.length())
          text(StringUtil.substring(data, tail), currentClazz, forceNewRange);
-         
-      if (wasAtBottom && isVirtualized())
-         VirtualScrollerManager.scrollToBottom(parent_.getParentElement());
    }
    
    private Match nextMatch(String data, int offset)
@@ -1038,13 +998,14 @@ public class VirtualConsole
    private void trimLeadingNewlines(Element childEl)
    {
       Node firstChildNode = childEl.getFirstChild();
+      if (firstChildNode == null)
+         return;
+      
       while (firstChildNode.getNodeType() != Node.TEXT_NODE)
       {
          firstChildNode = firstChildNode.getFirstChild();
          if (firstChildNode == null)
-         {
             return;
-         }
       }
  
       firstChildNode.setNodeValue(
@@ -1054,13 +1015,14 @@ public class VirtualConsole
    private void trimTrailingNewlines(Element childEl)
    {
       Node lastChildNode = childEl.getLastChild();
+      if (lastChildNode == null)
+         return;
+      
       while (lastChildNode.getNodeType() != Node.TEXT_NODE)
       {
          lastChildNode = lastChildNode.getLastChild();
          if (lastChildNode == null)
-         {
             return;
-         }
       }
  
       lastChildNode.setNodeValue(
@@ -1083,29 +1045,22 @@ public class VirtualConsole
 
    public void ensureStartingOnNewLine()
    {
-      if (isVirtualized())
-      {
-         VirtualScrollerManager.ensureStartingOnNewLine(parent_.getParentElement());
-      }
-      else
-      {
-         Node child = getParent().getLastChild();
-         if (child == null)
-            return;
-         
-         if (child.getNodeType() != Node.ELEMENT_NODE)
-            return;
-         
-         Element nodeEl = Element.as(child);
-         if (nodeEl.hasClassName(RES.styles().groupMessage()))
-            return;
-         
-         String text = nodeEl.getInnerText();
-         if (text.endsWith("\n"))
-            return;
-         
-         submit("\n");
-      }
+      Node child = getParent().getLastChild();
+      if (child == null)
+         return;
+      
+      if (child.getNodeType() != Node.ELEMENT_NODE)
+         return;
+      
+      Element nodeEl = Element.as(child);
+      if (nodeEl.hasClassName(RES.styles().groupMessage()))
+         return;
+      
+      String text = nodeEl.getInnerText();
+      if (text.endsWith("\n"))
+         return;
+      
+      submit("\n");
    }
 
    private String setCurrentClazz(String clazz)
@@ -1287,9 +1242,6 @@ public class VirtualConsole
    
    private static final Pattern CONTROL = Pattern.create("[\r\b\f\n]");
 
-   // only a select few panes should be virtualized. default it to off everywhere.
-   private boolean virtualizedDisableOverride_ = true;
-
    // allows &entity_name; entities like &amp;
    private boolean preserveHTML_ = false;
 
@@ -1353,6 +1305,8 @@ public class VirtualConsole
    private static final String GROUP_TYPE_ERROR   = "1";
    private static final String GROUP_TYPE_WARNING = "2";
    private static final String GROUP_TYPE_MESSAGE = "3";
+
+   private int maxLineLength_;
    
 
    // Injected ----

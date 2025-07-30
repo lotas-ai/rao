@@ -101,7 +101,7 @@ namespace rstudio {
 namespace server {
 namespace overlay {
 
-Error initialize();
+Error initialize(const boost::optional<system::User>& serverUser);
 Error startup();
 bool reloadConfiguration();
 void startShutdown();
@@ -282,8 +282,8 @@ void httpServerAddHandlers()
    // content handlers which might be accessed outside the context of the
    // workbench get secure + authentication when required
    uri_handlers::add("/help", secureAsyncHttpHandler(proxyContentRequest, true));
-   uri_handlers::add("/ai", secureAsyncHttpHandler(proxyContentRequest, true));
    uri_handlers::add("/files", secureAsyncHttpHandler(proxyContentRequest, true));
+   uri_handlers::add("/show", secureAsyncHttpHandler(proxyContentRequest, true));
    uri_handlers::add("/custom", secureAsyncHttpHandler(proxyContentRequest, true));
    uri_handlers::add("/session", secureAsyncHttpHandler(proxyContentRequest, true));
    uri_handlers::add("/docs", secureAsyncHttpHandler(secureAsyncFileHandler(), true));
@@ -946,7 +946,7 @@ int main(int argc, char * const argv[])
          return core::system::exitFailure(error, ERROR_LOCATION);
 
       // call overlay initialize
-      error = overlay::initialize();
+      error = overlay::initialize(serverUser);
       if (error)
          return core::system::exitFailure(error, ERROR_LOCATION);
 

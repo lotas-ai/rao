@@ -121,9 +121,6 @@ public class FilesList extends Composite
       // initialize sorting
       addColumnSortHandler();
 
-      // Set up drag and drop functionality for files
-      setupFileDragHandlers();
-
       // enclose in scroll panel
       layoutPanel_ = new ResizeLayoutPanel();
       initWidget(layoutPanel_);
@@ -210,7 +207,6 @@ public class FilesList extends Composite
          dataProvider_,
          new OperationWithInput<FileSystemItem>()
          {
-            @Override
             public void execute(FileSystemItem input)
             {
                observer_.onFileNavigation(input);
@@ -224,25 +220,6 @@ public class FilesList extends Composite
                   return "..";
                else
                   return item.getName();
-            }
-
-            @Override
-            public void render(com.google.gwt.cell.client.Cell.Context context, FileSystemItem value, SafeHtmlBuilder sb)
-            {
-               if (value != null && value != parentPath_)
-               {
-                  // Make the file name draggable
-                  sb.appendHtmlConstant("<div draggable='true' data-file-path='" + 
-                                      SafeHtmlUtils.htmlEscape(value.getPath()) + "' " +
-                                      "ondragstart='handleFileDragStart(event)' " +
-                                      "style='cursor: pointer;'>");
-                  super.render(context, value, sb);
-                  sb.appendHtmlConstant("</div>");
-               }
-               else
-               {
-                  super.render(context, value, sb);
-               }
             }
          };
       nameColumn.setSortable(true);
@@ -761,79 +738,5 @@ public class FilesList extends Composite
 
    private int state_ = STATE_UNKNOWN;
    private static final FilesConstants constants_ = GWT.create(FilesConstants.class);
-
-   /**
-    * Set up the global drag start handler for files
-    */
-   private void setupFileDragHandlers()
-   {
-      addFileDragStartHandler();
-   }
-
-   /**
-    * Add the global JavaScript function to handle file drag start
-    */
-   private native void addFileDragStartHandler() /*-{
-      if (!$wnd.handleFileDragStart) {
-         $wnd.handleFileDragStart = function(event) {
-            console.log("=== DRAG START DEBUG ===");
-            console.log("Drag start event:", event);
-            console.log("Event target:", event.target);
-            
-            try {
-               var filePath = event.target.getAttribute('data-file-path');
-               console.log("Initial file path from target:", filePath);
-               
-               if (!filePath) {
-                  // Try to find the path in parent elements
-                  var element = event.target.parentElement;
-                  while (element && !filePath) {
-                     filePath = element.getAttribute('data-file-path');
-                     console.log("Checking parent element for file path:", element, "path:", filePath);
-                     element = element.parentElement;
-                  }
-               }
-               
-               console.log("Final file path:", filePath);
-               
-               if (filePath) {
-                  // Set up the drag data transfer
-                  console.log("Setting up data transfer for file:", filePath);
-                  event.dataTransfer.setData('text/plain', filePath);
-                  event.dataTransfer.setData('application/x-rstudio-file', filePath);
-                  event.dataTransfer.effectAllowed = 'copy';
-                  
-                  console.log("Data transfer types after setup:", event.dataTransfer.types);
-                  console.log("Data transfer application/x-rstudio-file:", event.dataTransfer.getData('application/x-rstudio-file'));
-                  console.log("Data transfer text/plain:", event.dataTransfer.getData('text/plain'));
-                  
-                  // Also create a File object for compatibility with standard file drop handlers
-                  // This is a workaround to make our internal files look like external files
-                  try {
-                     // For modern browsers, we can use the File constructor
-                     var fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
-                     if (fileName.length === 0) {
-                        fileName = filePath.substring(filePath.lastIndexOf('\\') + 1);
-                     }
-                     
-                     console.log("File name extracted:", fileName);
-                     
-                     // Set the file path as a custom property
-                     event.dataTransfer.setData('Files', 'true');
-                     event.dataTransfer._rstudioFilePath = filePath;
-                     
-                     console.log("Set Files data type and custom property");
-                  } catch (e) {
-                     console.log('Could not create File object for drag operation:', e);
-                  }
-               } else {
-                  console.log("No file path found - drag start failed");
-               }
-            } catch (e) {
-               console.error('Error in handleFileDragStart:', e);
-            }
-         };
-      }
-   }-*/;
 
 }

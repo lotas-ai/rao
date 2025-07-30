@@ -45,7 +45,6 @@ const char * const kFileMru = "file_mru";
 const char * const kProjectMru = kProjectMruList;
 const char * const kProjectNameMru = kProjectNameMruList;
 const char * const kHelpHistory = "help_history_links";
-const char * const kAiHistory = "ai_history_links";
 const char * const kUserDictionary = "user_dictionary";
 const char * const kPlotPublishMru = "plot_publish_mru";
 const char * const kCommandPaletteMru = "command_palette_mru";
@@ -414,7 +413,6 @@ Error initialize()
    s_lists[kProjectMru] = 15; // legacy, kept in sync with kProjectNameMru
    s_lists[kProjectNameMru] = 15;
    s_lists[kHelpHistory] = 15;
-   s_lists[kAiHistory] = 15;
    s_lists[kPlotPublishMru] = 15;
    s_lists[kCommandPaletteMru] = 10;
    s_lists[kUserDictionary] = 10000;

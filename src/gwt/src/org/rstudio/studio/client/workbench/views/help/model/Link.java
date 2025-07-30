@@ -39,6 +39,11 @@ public class Link
    /**
     * If the URL has the same scheme, hostname, and port as the current page,
     * then drop them from the URL.
+    *
+    * For example,
+    *    http://posit.co/help/base/ls
+    * becomes
+    *    /help/base/ls
     */
    private String removeHost(String url)
    {

@@ -13,14 +13,15 @@ set PATH=%CD%\tools;%PATH%
 
 set BOOST_VERSION=1.87.0
 set GNUGREP_VERSION=3.0
+set GWT_VERSION=2.12.2
 set LIBCLANG_VERSION=13.0.1
 set MATHJAX_VERSION=2.7.9
 set MSVC_TOOLSET_VERSION=143
 set NSPROCESS_VERSION=1.6
 set OPENSSL_VERSION=3.1.4
 set PANDOC_VERSION=3.2
-set QUARTO_VERSION=1.7.31
-set COPILOT_VERSION=1.322.0
+set QUARTO_VERSION=1.7.32
+set COPILOT_VERSION=1.349.0
 set RIPGREP_VERSION=14.1.1
 set SUMATRA_VERSION=3.1.2
 set WINPTY_VERSION=0.4.3-msys2-2.7.0
@@ -53,13 +54,16 @@ set QUARTO_URL=https://github.com/quarto-dev/quarto-cli/releases/download/v%QUAR
 set QUARTO_FOLDER=quarto
 set QUARTO_OUTPUT=quarto
 
+
 set COPILOT_URL=copilot-language-server/%COPILOT_VERSION%/copilot-language-server-win32-x64-%COPILOT_VERSION%.zip
 set COPILOT_FOLDER=copilot-language-server
 set COPILOT_OUTPUT=copilot-language-server
 
+
 set GNUDIFF_URL=gnudiff.zip
 set GNUDIFF_FOLDER=gnudiff
 set GNUDIFF_OUTPUT=gnudiff
+
 
 set GNUGREP_URL=gnugrep-%GNUGREP_VERSION%.zip
 set GNUGREP_FOLDER=gnugrep\%GNUGREP_VERSION%
@@ -68,6 +72,11 @@ set GNUGREP_OUTPUT=gnugrep\%GNUGREP_VERSION%
 set RIPGREP_URL=https://github.com/BurntSushi/ripgrep/releases/download/%RIPGREP_VERSION%/ripgrep-%RIPGREP_VERSION%-x86_64-pc-windows-msvc.zip
 set RIPGREP_FOLDER=ripgrep\%RIPGREP_VERSION%
 set RIPGREP_OUTPUT=ripgrep\%RIPGREP_VERSION%
+
+set GWT_URL=gwt/gwt-%GWT_VERSION%.tar.gz
+set GWT_FOLDER=gwtproject\%GWT_VERSION%
+set GWT_OUTPUT=gwtproject
+
 
 set SUMATRA_URL=sumatrapdf/SumatraPDF-%SUMATRA_VERSION%-64.zip
 set SUMATRA_FOLDER=sumatra\%SUMATRA_VERSION%
@@ -141,10 +150,10 @@ set NODEBUILD_URL=%RSTUDIO_BUILDTOOLS%/node/v%NODEBUILD_VERSION%/%NODEBUILD_FILE
 set NODEBUILD_FOLDER=node\%NODEBUILD_VERSION%
 set NODEBUILD_OUTPUT=node
 
-
 :: Install dependencies within 'common' first.
 cd ..\common
 
+%RUN% install GWT
 %RUN% install DICTIONARIES
 %RUN% install MATHJAX
 %RUN% install LIBCLANG

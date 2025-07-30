@@ -41,7 +41,7 @@ public class ToolbarButton extends FocusWidget
    // button with no tooltip/accessibility text
    public static String NoTitle = null;
    
-   private class SimpleHasHandlers extends HandlerManager implements HasHandlers
+   private class SimpleHasHandlers extends HandlerManager
    {
       private SimpleHasHandlers()
       {
@@ -223,7 +223,6 @@ public class ToolbarButton extends FocusWidget
    
    public void click()
    {
-      System.out.println("DEBUG: ToolbarButton.click() called for button with title: " + getTitle());
       NativeEvent clickEvent = Document.get().createClickEvent(
             1,
             0,

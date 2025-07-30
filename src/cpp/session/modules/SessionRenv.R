@@ -141,10 +141,11 @@
    tryCatch(renv:::project(), error = function(e) NULL)
 })
 
-.rs.addFunction("renv.listPackages", function(project) {
-   
+.rs.addFunction("renv.listPackages", function(project)
+{
    # get list of packages
-   installedPackages <- .rs.listInstalledPackages()
+   installedPackagesList <- .rs.listInstalledPackages()
+   installedPackages <- .rs.rbindList(installedPackagesList)
    
    # try to read the lockfile (return plain library list if this fails)
    lockfilePackages <- .rs.tryCatch(.rs.renv.readLockfilePackages(project))
@@ -155,8 +156,9 @@
    names(lockfilePackages) <- c("name", "packrat.version", "packrat.source")
 
    # note which packages are in project library
+   projectLibrary <- renv:::renv_paths_library(project = project)
    installedPackages[["in.project.library"]] <-
-      installedPackages$library_absolute == renv:::renv_paths_library(project = project)
+      installedPackages[["library_absolute"]] == projectLibrary
 
    # merge together
    merge.data.frame(

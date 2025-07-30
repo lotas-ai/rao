@@ -109,7 +109,6 @@ public class ConsoleOutputWriter
          Roles.getDocumentRole().set(trailing); // https://github.com/rstudio/rstudio/issues/6884
          outEl.appendChild(trailing);
          virtualConsole_ = vcFactory_.create(trailing);
-         virtualConsole_.setVirtualizedDisableOverride(false);
       }
 
       // set the appendTarget to the VirtualConsole bucket if possible
@@ -133,15 +132,14 @@ public class ConsoleOutputWriter
          virtualConsole_.submit(text, className, isError, ariaLiveAnnounce);
       int newLineCount = DomUtils.countLines(appendTarget, true);
 
-      if (!virtualConsole_.isLimitConsoleVisible())
-         lines_ += newLineCount - oldLineCount;
+      lines_ += newLineCount - oldLineCount;
 
       return ignoreLineCount || !trimExcess();
    }
 
    public boolean trimExcess()
    {
-      if (maxLines_ <= 0 || virtualConsole_ != null && virtualConsole_.isLimitConsoleVisible())
+      if (maxLines_ <= 0)
          return false;  // No limit in effect
 
       int linesToTrim = lines_ - maxLines_;

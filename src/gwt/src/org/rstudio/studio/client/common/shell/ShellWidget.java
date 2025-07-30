@@ -21,6 +21,7 @@ import java.util.TreeMap;
 import org.rstudio.core.client.AnsiCode;
 import org.rstudio.core.client.ConsoleOutputWriter;
 import org.rstudio.core.client.ElementIds;
+import org.rstudio.core.client.JsVector;
 import org.rstudio.core.client.StringUtil;
 import org.rstudio.core.client.TimeBufferedCommand;
 import org.rstudio.core.client.VirtualConsole;
@@ -100,8 +101,7 @@ public class ShellWidget extends Composite implements ShellDisplay,
       prefs_ = prefs;
       ariaLive_ = ariaLive;
 
-      boolean scrollOnClick = prefs_ == null || !prefs_.limitVisibleConsole().getValue();
-      SelectInputClickHandler secondaryInputHandler = new SelectInputClickHandler(scrollOnClick);
+      SelectInputClickHandler secondaryInputHandler = new SelectInputClickHandler(true);
 
       output_ = new ConsoleOutputWriter(RStudioGinjector.INSTANCE.getVirtualConsoleFactory(), outputLabel);
       output_.getWidget().setStylePrimaryName(styles_.output());
@@ -260,10 +260,7 @@ public class ShellWidget extends Composite implements ShellDisplay,
       verticalPanel_.add(inputLine_);
       verticalPanel_.setWidth("100%");
 
-      // dont use the autoscroll timer if we're controlling the content externally
-      // prefs can be null in certain contexts so protect against that
-      boolean useTimer = prefs_ == null || !prefs_.limitVisibleConsole().getValue();
-      scrollPanel_ = new ClickableScrollPanel(useTimer);
+      scrollPanel_ = new ClickableScrollPanel(true);
       scrollPanel_.setWidget(verticalPanel_);
       scrollPanel_.addStyleName("ace_editor");
       scrollPanel_.addStyleName("ace_scroller");
@@ -491,29 +488,32 @@ public class ShellWidget extends Composite implements ShellDisplay,
    private void insertErrorWidgetElement(List<Element> errorEls,
                                          Element widgetEl)
    {
-      Element firstErrorEl = errorEls.get(0);
-      
       // If console groups are enabled, the error output might have been collected
       // into a single 'groupError' span element. Search the parent element, plus
       // all of that element's siblings.
-      Element parentEl = firstErrorEl.getParentElement();
-      for (Element el = parentEl.getParentElement().getFirstChildElement();
-           el != null;
-           el = el.getNextSiblingElement())
+      for (int i = 0, n = errorEls.size(); i < n; i++)
       {
-         if (el.hasClassName(VirtualConsole.RES.styles().groupError()))
+         Element errorEl = errorEls.get(n - i - 1);
+         Element parentEl = errorEl.getParentElement();
+         for (Element el = parentEl.getParentElement().getFirstChildElement();
+              el != null;
+              el = el.getNextSiblingElement())
          {
-            el.getParentElement().replaceChild(widgetEl, el);
-            return;
+            if (el.hasClassName(VirtualConsole.RES.styles().groupError()))
+            {
+               el.getParentElement().replaceChild(widgetEl, el);
+               return;
+            }
          }
       }
       
       // Otherwise, error output should be a sequence of DOM elements within
-      // some collection. Replace the first one with our error widget, and then
+      // some collection. Replace the last one with our error widget, and then
       // remove all the other error elements.
-      parentEl.replaceChild(widgetEl, firstErrorEl);
-      for (int i = 1; i < errorEls.size(); i++)
-         parentEl.removeChild(errorEls.get(i));
+      Element lastErrorEl = errorEls.get(errorEls.size() - 1);
+      lastErrorEl.getParentElement().replaceChild(widgetEl, lastErrorEl);
+      for (int i = 0, n = errorEls.size() - 1; i < n; i++)
+         errorEls.get(i).removeFromParent();
    }
 
    @Override
@@ -655,8 +655,36 @@ public class ShellWidget extends Composite implements ShellDisplay,
          return s + '\n';
    }
 
-   public void playbackActions(final RpcObjectList<ConsoleAction> actions)
+   public void playbackActions(final RpcObjectList<ConsoleAction> consoleActions)
    {
+      int n = consoleActions.length();
+      if (n == 0)
+         return;
+
+      // Console actions are stored on the session side in chunks. However, when
+      // we render these in the console, we may need to truncate long strings.
+      // To support this, we flatten the action list so that multiple chunks
+      // of the same type are joined into a single console action. This occurs
+      // most typically for very long strings.
+      JsVector<ConsoleAction> actions = JsVector.createVector();
+      StringBuffer buffer = new StringBuffer();
+
+      ConsoleAction lastAction = consoleActions.get(0);
+      buffer.append(lastAction.getData());
+      for (int i = 1; i < n; i++)
+      {
+         ConsoleAction currentAction = consoleActions.get(i);
+         if (currentAction.getType() != lastAction.getType())
+         {
+            actions.push(ConsoleAction.create(lastAction.getType(), buffer.toString()));
+            buffer.setLength(0);
+         }
+
+         buffer.append(currentAction.getData());
+         lastAction = currentAction;
+      }
+      actions.push(ConsoleAction.create(lastAction.getType(), buffer.toString()));
+
       // Server persists 1000 most recent ConsoleActions in a circular buffer.
       //
       // One ConsoleAction can generate multiple lines of output, and we want

@@ -2,7 +2,7 @@ project:
   type: posit-docs
 
 website:
-  title: "Rao User Guide"
+  title: "RStudio User Guide"
   twitter-card: true
   open-graph: true
   page-navigation: true
@@ -16,7 +16,7 @@ website:
   repo-actions: [edit, source]
   
   navbar:
-    title: "Rao User Guide<br>{{< var buildType >}} {{< var version >}}"
+    title: "RStudio User Guide<br>{{< var buildType >}} {{< var version >}}"
     collapse: false
     pinned: true
     search: true
@@ -28,12 +28,10 @@ website:
         url: "https://docs.posit.co/ide/news/#rstudio-{{< var version >}}" 
       - text: "Guides"
         menu:
-          - text: "Workbench Admin Guide"
+          - text: "Posit Workbench Documentation"
             url: 'https://docs.posit.co/ide/server-pro/{{< var version >}}'
-          - text: "Posit Workbench User Guide"
-            url: 'https://docs.posit.co/ide/server-pro/user/{{< var version >}}'
-          - text: Workbench Licenses
-            url: 'https://docs.posit.co/ide/licenses/{{< var version >}}'   
+          - text: Licenses
+            url: 'https://docs.posit.co/ide/server-pro/licenses/{{< var version >}}'   
       - icon: "list"
         aria-label: 'Drop-down menu for additional Posit resources'
         menu:
@@ -129,10 +127,8 @@ website:
     right:
       - icon: question-circle-fill
         href: https://support.posit.co/hc/en-us
-      - icon: lightbulb-fill
-        href: https://solutions.posit.co
-      - text: "<img src='/images/posit-guide-ltmd.svg' id='footer-right-logo'>"
-        href: https://docs.posit.co
+      - text: '<a href="#" id="open_preferences_center" title="Manage your cookie preferences"><i class="bi bi-cookie"></i></i></a>'
+        aria-label: 'Cookie Prefs'
       - text: "<img src='/images/posit-icon-fullcolor.svg' id='footer-right-posit-logo'>"
         href: "https://posit.co"
 

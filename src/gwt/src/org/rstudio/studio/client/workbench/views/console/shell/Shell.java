@@ -308,13 +308,6 @@ public class Shell implements ConsoleHistoryAddedEvent.Handler,
    @Handler
    void onFocusConsoleOutputEnd()
    {
-      if (prefs_.limitVisibleConsole().getValue())
-      {
-         ariaLive_.announce(AriaLiveService.INACCESSIBLE_FEATURE,
-            constants_.focusConsoleWarningMessage(prefs_.limitVisibleConsole().getTitle()),
-            Timing.IMMEDIATE, Severity.STATUS);
-         return;
-      }
       view_.getConsoleOutputWriter().focusEnd();
    }
 
@@ -875,7 +868,9 @@ public class Shell implements ConsoleHistoryAddedEvent.Handler,
    private void navigateHistory(int offset)
    {
       if (isBrowsePrompt())
+      {
          browseHistoryManager_.navigateHistory(offset);
+      }
       else
       {
          if (input_.isCursorAtEnd())

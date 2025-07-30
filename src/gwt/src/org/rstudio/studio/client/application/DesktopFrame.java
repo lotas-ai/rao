@@ -171,10 +171,14 @@ public interface DesktopFrame extends JavaScriptPassthrough
    void setBackgroundColor(JsArrayInteger rgbColor);
    void changeTitleBarColor(int r, int g, int b);
    void syncToEditorTheme(boolean isDark);
+   void setMousewheelZoomEnabled(boolean enabled);
+   void setMousewheelZoomDebounce(double debounceMs);
    
    void getEnableAccessibility(CommandWithArg<Boolean> callback);
    void setEnableAccessibility(boolean enable);
    void setDisableRendererAccessibility(boolean disable);
+   void getEnableSplashScreen(CommandWithArg<Boolean> callback);
+   void setEnableSplashScreen(boolean enable);
 
    void setAutohideMenubar(boolean enable);
 

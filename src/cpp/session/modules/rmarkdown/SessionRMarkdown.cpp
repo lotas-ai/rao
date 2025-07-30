@@ -1,9 +1,11 @@
 /*
  * SessionRMarkdown.cpp
  *
- * Copyright (C) 2025 by William Nickols
+ * Copyright (C) 2022 by Posit Software, PBC
  *
- * This program is licensed to you under the terms of version 3 of the
+ * Unless you have received this program directly from Posit Software pursuant
+ * to the terms of a commercial license agreement with Posit Software, then
+ * this program is licensed to you under the terms of version 3 of the
  * GNU Affero General Public License. This program is distributed WITHOUT
  * ANY EXPRESS OR IMPLIED WARRANTY, INCLUDING THOSE OF NON-INFRINGEMENT,
  * MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE. Please refer to the
@@ -1846,18 +1848,12 @@ std::string parsableRStudioVersion()
    version.append(".")
          .append(RSTUDIO_VERSION_MINOR)
          .append(".")
-         .append(RSTUDIO_VERSION_PATCH);
-   
-   // Only append suffix if it contains numeric characters after regex replacement
-   std::string numericSuffix = boost::regex_replace(
-         std::string(RSTUDIO_VERSION_SUFFIX),
-         boost::regex("[a-zA-Z\\-+]"),
-         "");
-   if (!numericSuffix.empty())
-   {
-      version.append(".").append(numericSuffix);
-   }
-   
+         .append(RSTUDIO_VERSION_PATCH)
+         .append(".")
+         .append(boost::regex_replace(
+               std::string(RSTUDIO_VERSION_SUFFIX),
+               boost::regex("[a-zA-Z\\-+]"),
+               ""));
    return version;
 }
 

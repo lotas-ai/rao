@@ -138,55 +138,7 @@ public abstract class RowTable<T> extends ScrollPanel
          @Override
          public void onDoubleClick(DoubleClickEvent event)
          {
-            // Get the target element
-            Element target = event.getNativeEvent().getEventTarget().cast();
-            
-            // Find the table cell element
-            Element cellEl = DomUtils.findParentElement(target, new ElementPredicate()
-            {
-               @Override
-               public boolean test(Element el)
-               {
-                  return el.getTagName().equalsIgnoreCase("td");
-               }
-            });
-            
-            // Find the table row element
-            Element rowEl = DomUtils.findParentElement(target, new ElementPredicate()
-            {
-               @Override
-               public boolean test(Element el)
-               {
-                  return el.hasClassName(RES.styles().row());
-               }
-            });
-            
-            // If we have a row element, process the double-click
-            if (rowEl != null)
-            {
-               // Get the row index
-               String rowAttr = rowEl.getAttribute("__row");
-               if (rowAttr != null && !rowAttr.isEmpty())
-               {
-                  try 
-                  {
-                     int rowIndex = Integer.parseInt(rowAttr);
-                     
-                     // Call our custom double-click handler
-                     if (cellEl != null)
-                     {
-                        onCellDoubleClick(cellEl.<com.google.gwt.dom.client.TableCellElement>cast(), rowIndex);
-                     }
-                     
-                     // Fire the standard selection commit event
-                     SelectionCommitEvent.fire(RowTable.this, data_.get(selectedRow_));
-                  }
-                  catch (NumberFormatException e)
-                  {
-                     Debug.logException(e);
-                  }
-               }
-            }
+            SelectionCommitEvent.fire(RowTable.this, data_.get(selectedRow_));
          }
       }, DoubleClickEvent.getType());
       
@@ -347,10 +299,19 @@ public abstract class RowTable<T> extends ScrollPanel
          selectRow(row, ScrollType.NONE);
       }
    }
-   
+
    public void draw(List<T> data)
    {
+      draw(data, false);
+   }
+   
+   public void draw(List<T> data, boolean clearExisting)
+   {
+      if (clearExisting)
+         clear();
+
       data_ = data;
+
       buffer_.setLength(0);
       bufferTimer_.cancel();
       
@@ -378,10 +339,21 @@ public abstract class RowTable<T> extends ScrollPanel
    private void drawRow(int index, TableRowElement rowEl)
    {
       T object = data_.get(index);
+
+      // set internal attributes used for tracking a row's index in the DOM
       rowEl.setAttribute("__row", String.valueOf(index));
-      rowEl.setAttribute("title", getKey(object));
       rowEl.setId(id_ + "_row_" + index);
+
+      // call back to implementing subclass to draw the row
       drawRowImpl(object, rowEl);
+
+      // set a default title for the element if none was set during draw
+      String title = rowEl.getTitle();
+      if (StringUtil.isNullOrEmpty(title))
+      {
+         title = getKey(object);
+         rowEl.setTitle(title);
+      }
    }
    
    private void drawColumnGroups()
@@ -460,6 +432,7 @@ public abstract class RowTable<T> extends ScrollPanel
    {
       data_.clear();
       table_.removeAllChildren();
+      SelectionEvent.fire(this, null);
       
       selectedRow_ = -1;
       selectedRowElement_ = null;
@@ -532,21 +505,10 @@ public abstract class RowTable<T> extends ScrollPanel
       }
    }
    
-   public void selectRow(Element rowEl)
+   private void selectRow(Element rowEl)
    {
-      String rowAttr = rowEl.getAttribute("__row");
-      if (rowAttr != null && !rowAttr.isEmpty())
-      {
-         try 
-         {
-            int index = Integer.parseInt(rowAttr);
-            selectRow(index);
-         }
-         catch (NumberFormatException e)
-         {
-            Debug.logException(e);
-         }
-      }
+      String row = rowEl.getAttribute("__row");
+      selectRow(Integer.valueOf(row));
    }
    
    /**

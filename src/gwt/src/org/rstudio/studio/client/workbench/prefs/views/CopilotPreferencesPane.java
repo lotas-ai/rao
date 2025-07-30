@@ -20,6 +20,7 @@ import java.util.List;
 import org.rstudio.core.client.Debug;
 import org.rstudio.core.client.DialogOptions;
 import org.rstudio.core.client.JSON;
+import org.rstudio.core.client.SingleShotTimer;
 import org.rstudio.core.client.StringUtil;
 import org.rstudio.core.client.prefs.RestartRequirement;
 import org.rstudio.core.client.resources.ImageResource2x;
@@ -41,6 +42,8 @@ import org.rstudio.studio.client.server.ServerRequestCallback;
 import org.rstudio.studio.client.workbench.commands.Commands;
 import org.rstudio.studio.client.workbench.copilot.Copilot;
 import org.rstudio.studio.client.workbench.copilot.model.CopilotConstants;
+import org.rstudio.studio.client.workbench.copilot.model.CopilotResponseTypes;
+import org.rstudio.studio.client.workbench.copilot.model.CopilotStatusChangedEvent;
 import org.rstudio.studio.client.workbench.copilot.model.CopilotResponseTypes.CopilotStatusResponse;
 import org.rstudio.studio.client.workbench.copilot.server.CopilotServerOperations;
 import org.rstudio.studio.client.workbench.model.Session;
@@ -60,6 +63,7 @@ import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.event.logical.shared.ValueChangeEvent;
 import com.google.gwt.event.logical.shared.ValueChangeHandler;
+import com.google.gwt.event.shared.HandlerRegistration;
 import com.google.gwt.resources.client.ClientBundle;
 import com.google.gwt.resources.client.CssResource;
 import com.google.gwt.resources.client.ImageResource;
@@ -84,6 +88,13 @@ public class CopilotPreferencesPane extends PreferencesPane
          requirement.setSessionRestartRequired(true);
       if (initialCopilotWorkspaceEnabled_ != prefs.copilotProjectWorkspace().getGlobalValue())
          requirement.setSessionRestartRequired(true); 
+      
+      // If project indexing is enabled and Copilot was started while the dialog was open, suggest
+      // a session restart to ensure that Copilot indexes the project files.
+      boolean projectOpened = session_.getSessionInfo().getActiveProjectFile() != null;
+      if (projectOpened && copilotStarted_ && prefs.copilotIndexingEnabled().getGlobalValue())
+         requirement.setSessionRestartRequired(true); 
+
       return requirement;
    }
    
@@ -189,6 +200,21 @@ public class CopilotPreferencesPane extends PreferencesPane
       
       lblCopilotTos_ = new Label(constants_.copilotTermsOfServiceLabel());
       lblCopilotTos_.addStyleName(RES.styles().copilotTosLabel());
+
+      copilotStatusHandler_ = events_.addHandler(CopilotStatusChangedEvent.TYPE, (event) -> {
+         copilotStarted_ = event.getStatus() == CopilotStatusChangedEvent.RUNNING;
+      });
+   }
+   
+   @Override
+   public void onUnload()
+   {
+      if (copilotStatusHandler_ != null)
+      {
+         copilotStatusHandler_.removeHandler();
+         copilotStatusHandler_ = null;
+      }
+      super.onUnload();
    }
    
    private void initDisplay()
@@ -243,9 +269,42 @@ public class CopilotPreferencesPane extends PreferencesPane
             
             if (enabled)
             {
+               server_.copilotVerifyInstalled(new ServerRequestCallback<Boolean>()
+               {
+                  @Override
+                  public void onResponseReceived(Boolean isInstalled)
+                  {
+                     if (isInstalled)
+                     {
+                        // Eagerly change the preference here, so that we can
+                        // respond to changes in the agent status.
+                        prefs_.copilotEnabled().setGlobalValue(true);
+                        prefs_.writeUserPrefs((completed) ->
+                        {
+                           refresh();
+                        });
+                     }
+                     else
+                     {
+                        // Copilot language server not found so revert the checkbox state.
+                        cbCopilotEnabled_.setValue(false);
+                     }
+                  }
+
+                  @Override
+                  public void onError(ServerError error)
+                  {
+                     // Error when verifying copilot language server installation, revert the checkbox state.
+                     Debug.logError(error);
+                     cbCopilotEnabled_.setValue(false);
+                  }
+               });
+            }
+            else
+            {
                // Eagerly change the preference here, so that we can
                // respond to changes in the agent status.
-               prefs_.copilotEnabled().setGlobalValue(true);
+               prefs_.copilotEnabled().setGlobalValue(false);
                prefs_.writeUserPrefs((completed) ->
                {
                   refresh();
@@ -379,7 +438,14 @@ public class CopilotPreferencesPane extends PreferencesPane
             }
             else if (response.result == null)
             {
-               if (response.error != null)
+               if (response.error != null && response.error.getCode() == CopilotConstants.ErrorCodes.AGENT_NOT_INITIALIZED)
+               {
+                  // Copilot still starting up, so wait a second and refresh again
+                  SingleShotTimer.fire(1000, () -> {
+                     refresh();
+                  });
+               }
+               else if (response.error != null && response.error.getCode() != CopilotConstants.ErrorCodes.AGENT_SHUT_DOWN)
                {
                   lblCopilotStatus_.setText(constants_.copilotStartupError());
                   if (!StringUtil.isNullOrEmpty(response.output))
@@ -387,6 +453,11 @@ public class CopilotPreferencesPane extends PreferencesPane
                      copilotStartupError_ = response.output;
                      showButtons(btnShowError_);
                   }
+               }
+               else if (CopilotResponseTypes.CopilotAgentNotRunningReason.isError(response.reason))
+               {
+                  int reason = (int) response.reason.valueOf();
+                  lblCopilotStatus_.setText(CopilotResponseTypes.CopilotAgentNotRunningReason.reasonToString(reason));
                }
                else if (projectOptions_ != null && projectOptions_.getCopilotOptions().copilot_enabled == RProjectConfig.NO_VALUE)
                {
@@ -529,6 +600,8 @@ public class CopilotPreferencesPane extends PreferencesPane
    private String copilotStartupError_;
    private boolean initialCopilotIndexingEnabled_;
    private boolean initialCopilotWorkspaceEnabled_;
+   private HandlerRegistration copilotStatusHandler_;
+   private boolean copilotStarted_ = false; // did Copilot get started while the dialog was open?
    private RProjectOptions projectOptions_;
  
    // UI

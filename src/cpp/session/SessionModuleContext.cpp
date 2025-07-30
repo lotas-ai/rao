@@ -315,6 +315,7 @@ SEXP rs_enqueClientEvent(SEXP nameSEXP, SEXP dataSEXP)
       else if (name == "request_document_close_for_revert")
          type = session::client_events::kRequestDocumentCloseForRevert;
 
+
       if (type != -1)
       {
          ClientEvent event(type, data);
@@ -393,17 +394,11 @@ SEXP rs_rstudioVersion()
    std::string numericVersion(RSTUDIO_VERSION_MAJOR);
    numericVersion.append(".")
       .append(RSTUDIO_VERSION_MINOR).append(".")
-      .append(RSTUDIO_VERSION_PATCH);
-   
-   // Only append suffix if it contains numeric characters after regex replacement
-   std::string numericSuffix = boost::regex_replace(
+      .append(RSTUDIO_VERSION_PATCH).append(".")
+      .append(boost::regex_replace(
          std::string(RSTUDIO_VERSION_SUFFIX),
          boost::regex("[a-zA-Z\\-+]"),
-         "");
-   if (!numericSuffix.empty())
-   {
-      numericVersion.append(".").append(numericSuffix);
-   }
+         ""));
 
    r::sexp::Protect rProtect;
    return r::sexp::create(numericVersion, &rProtect);
@@ -2064,8 +2059,8 @@ Error sourceModuleRFileWithResult(const std::string& rSourceFile,
       
 void enqueClientEvent(const ClientEvent& event)
 {
-            session::clientEventQueue().add(event);
-         }
+   session::clientEventQueue().add(event);
+}
 
 bool isDirectoryMonitored(const FilePath& directory)
 {
@@ -2306,20 +2301,24 @@ void showFile(const FilePath& filePath, const std::string& window)
 
 std::string createFileUrl(const core::FilePath& filePath)
 {
-    // determine url based on whether this is in ~ or not
-    std::string url;
-    if (isVisibleUserFile(filePath))
-    {
-       std::string relPath = filePath.getRelativePath(
-          module_context::userHomePath());
-       url = "files/" + relPath;
-    }
-    else
-    {
-       url = "file_show?path=" + core::http::util::urlEncode(
-          filePath.getAbsolutePath(), true);
-    }
-    return url;
+   // determine url based on whether this is in ~ or not
+   std::string url;
+   if (isVisibleUserFile(filePath))
+   {
+      auto home = module_context::userHomePath();
+      auto path = filePath.getRelativePath(home);
+      url = "files/" + path;
+   }
+   else if (isPathViewAllowed(filePath))
+   {
+      url = "show" + filePath.getAbsolutePath();
+   }
+   else
+   {
+      auto path = core::http::util::urlEncode(filePath.getAbsolutePath(), true);
+      url = "file_show?path=" + path;
+   }
+   return url;
 }
 
 
@@ -2650,22 +2649,22 @@ bool isPathViewAllowed(const FilePath& filePath)
 
    // Viewing content in R libraries is always allowed
    std::vector<FilePath> libPaths = getLibPaths();
-   for (const auto& dir: libPaths)
+   for (auto&& libPath : libPaths)
    {
-      if (filePath.isWithin(dir))
+      if (filePath.isWithin(libPath))
       {
          return true;
       }
    }
 
    // Check session option for explicitly allowed directories
-   std::string allowDirs = session::options().directoryViewAllowList();
-   if (!allowDirs.empty())
+   std::string allowDirsPref = session::options().directoryViewAllowList();
+   if (!allowDirsPref.empty())
    {
-      std::vector<std::string> dirs = core::algorithm::split(allowDirs, ":");
-      for (const auto& dir: dirs)
+      auto allowDirs = core::algorithm::split(allowDirsPref, ":");
+      for (auto&& allowDir : allowDirs)
       {
-         if (filePath.isWithin(FilePath(dir)))
+         if (filePath.isWithin(FilePath(allowDir)))
          {
             return true;
          }

@@ -99,6 +99,18 @@ environment(.rs.Env[[".rs.addFunction"]]) <- .rs.Env
    .rs.addFunction(fullName, FN, envir = envir)
 })
 
+# for functions which might act as error handlers
+.rs.addFunction("addErrorHandlerFunction", function(name, type, handler)
+{
+   attrs <- list(
+      rstudioErrorHandler = TRUE,
+      hideFromDebugger    = TRUE,
+      errorHandlerType    = type
+   )
+
+   .rs.addFunction(name, handler, attrs, envir = .rs.toolsEnv())
+})
+
 .rs.addFunction("setVar", function(name, var)
 { 
    envir <- .rs.toolsEnv()
@@ -1194,6 +1206,7 @@ environment(.rs.Env[[".rs.addFunction"]]) <- .rs.Env
 
 .rs.addFunction("rbindList", function(data)
 {
+   data <- Filter(length, data)
    result <- do.call(mapply, c(c, data, USE.NAMES = FALSE, SIMPLIFY = FALSE))
    names(result) <- names(data[[1]])
    as.data.frame(result, stringsAsFactors = FALSE)
@@ -1266,7 +1279,20 @@ environment(.rs.Env[[".rs.addFunction"]]) <- .rs.Env
       value    = hook,
       action   = "append"
    )
-      
+
+})
+
+.rs.addFunction("registerPackageAttachedHook", function(package, hook)
+{
+   searchPathName <- paste("package", package, sep = ":")
+   if (searchPathName %in% search())
+      return(hook())
+   
+   setHook(
+      hookName = packageEvent(package, "attach"),
+      value    = hook,
+      action   = "append"
+   )
 })
 
 .rs.addFunction("prependToPath", function(entry)
@@ -1534,6 +1560,16 @@ environment(.rs.Env[[".rs.addFunction"]]) <- .rs.Env
    }
 })
 
+.rs.addFunction("emptyCoalesce", function(...)
+{
+   for (i in seq_len(...length()))
+   {
+      value <- ...elt(i)
+      if (length(value))
+         return(value)
+   }
+})
+
 .rs.addFunction("restoreSearchPath", function(searchPathsFile,
                                               packagePathsFile,
                                               environmentDataDir)
@@ -1742,3 +1778,236 @@ environment(.rs.Env[[".rs.addFunction"]]) <- .rs.Env
    lapply(packages, getNamespaceInfo, "path")
 })
 
+.rs.addFunction("readNetrc", function(netrcPath = NULL)
+{
+   # Resolve the path to the .netrc file.
+   netrcPath <- .rs.nullCoalesce(netrcPath,
+   {
+      Sys.getenv("NETRC", unset = "~/.netrc")
+   })
+   
+   info <- file.info(netrcPath, extra_cols = FALSE)
+   if (is.na(info$mode))
+      return(NULL)
+   
+   # Read the contents of the file.
+   contents <- readLines(netrcPath, warn = FALSE)
+   
+   # Remove any 'macdef' entries within the file.
+   macdefLines <- rev(grep("^\\s*macdef\\b", contents, perl = TRUE))
+   if (length(macdefLines))
+   {
+      blankLines <- c(which(contents == ""), length(contents) + 1L)
+      for (macdefLine in macdefLines)
+      {
+         lhs <- macdefLine
+         rhs <- blankLines[blankLines > macdefLine][[1L]]
+         contents <- c(
+            head(contents, n = +(lhs - 1L)),
+            tail(contents, n = -(rhs - 1L))
+         )
+      }
+   }
+   
+   # Read the tokens within the file.
+   tokens <- scan(
+      text         = paste(contents, collapse = "\n"),
+      what         = character(),
+      quote        = "\"",
+      comment.char = "#",
+      quiet        = TRUE
+   )
+   
+   # Add some blank tokens at end, to support lookahead.
+   tokens <- c(tokens, "", "")
+   
+   # Make a simple token walker.
+   i <- 0L; n <- length(tokens)
+   pop <- function() {
+      i <<- i + 1L
+      tokens[[i]]
+   }
+   
+   # netrc can have machine, login, password, and account fields.
+   machine <- ""
+   
+   # Start parsing the .netrc entries within the file.
+   stack <- .rs.stack(mode = "list")
+   
+   token <- pop()
+   while (nzchar(token))
+   {
+      entry <- list()
+      
+      # Get the machine definition. Handle 'default' here as well.
+      entry[["machine"]] <- if (token == "default")
+         ""
+      else if (token == "machine")
+         pop()
+      else
+         stop("unexpected token '", token, "'; expected 'machine' or 'default'")
+      
+      # Handle the optional fields.
+      token <- pop()
+      while (token %in% c("login", "password", "account"))
+      {
+         entry[[token]] <- pop()
+         token <- pop()
+      }
+      
+      # Add it to the result stack.
+      stack$push(entry)
+   }
+   
+   # Return result as named list.
+   result <- stack$data()
+   names(result) <- .rs.mapChr(result, `[[`, "machine")
+   
+   result
+})
+
+.rs.addFunction("computeAuthorizationHeader", function(url)
+{
+   # Parse the URL into its component parts.
+   pattern <- paste0(
+      "^",
+      "(?:(?<scheme>[a-z][a-z0-9+\\-.]*)://)?",            # Scheme
+      "(?:(?<user>[^:@/?#]+)(?::(?<pass>[^@/?#]*))?@)?",   # User, Password
+      "(?<host>\\[[^\\]]+\\]|[^:/?#]+)",                   # Host (IPv6 in [])
+      "(?::(?<port>\\d+))?",                               # Port
+      "(?<path>/[^?#]*)?",                                 # Path
+      "(?:\\?(?<query>[^#]*))?",                           # Query
+      "(?:#(?<fragment>.*))?",                             # Fragment
+      "$"
+   )
+   
+   match <- regexec(pattern, url, perl = TRUE)
+   parts <- as.list(regmatches(url, match)[[1L]])
+   
+   # Read user's .netrc file (if any)
+   netrcEntries <- .rs.readNetrc()
+   if (is.null(netrcEntries))
+      return("")
+   
+   # Look for valid credentials for the provided URLs.
+   for (netrcEntry in netrcEntries)
+   {
+      if (.rs.startsWith(parts$host, netrcEntry$machine))
+      {
+         userPass <- paste(netrcEntry$login, netrcEntry$password, sep = ":")
+         result <- paste("Basic", .rs.base64encode(userPass))
+         return(result)
+      }
+   }
+   
+   ""
+})
+
+.rs.addFunction("recordPackageSource", function(pkgPaths, local = FALSE)
+{
+   # Request available packages.
+   avPkgs <- .rs.availablePackages()
+   db <- if (!local) as.data.frame(
+      .rs.nullCoalesce(avPkgs$value, available.packages()),
+      stringsAsFactors = FALSE
+   )
+   
+   # Record sources for each package.
+   for (pkgPath in pkgPaths)
+      .rs.recordPackageSourceImpl(pkgPath, db, local)
+})
+
+.rs.addFunction("recordPackageSourceImpl", function(pkgPath, db, local)
+{
+   # Infer package name from installed path.
+   pkgName <- basename(pkgPath)
+   
+   # Read the package's DESCRIPTION file.
+   pkgDesc <- packageDescription(pkgName, lib.loc = dirname(pkgPath))
+   
+   # If the package already has some remote fields recorded, then skip.
+   # Currently, this is relevant for packages installed from R-universe.
+   remotes <- grep("^Remote", names(pkgDesc), value = TRUE)
+   if (length(remotes))
+      return()
+   
+   remoteFields <- if (local)
+   {
+      c(
+         RemoteType   = "local",
+         RemotePkgRef = sprintf("local::%s", pkgPath),
+         RemoteUrl    = normalizePath(pkgPath, winslash = "/", mustWork = TRUE)
+      )
+   }
+   else
+   {
+      # Try to figure out post-hoc from where the package was retrieved.
+      pkgEntry <- subset(db, Package == pkgName)
+      if (nrow(pkgEntry) == 0L)
+         return()
+      
+      # Grab the package version.
+      pkgVersion <- pkgDesc[["Version"]]
+      
+      # Normalize the repository path, removing source / binary suffixes.
+      pkgSource <- gsub("/(src|bin)/.*", "", pkgEntry$Repository, perl = TRUE)
+      
+      # Also remove a potential binary component.
+      pkgSource <- sub("/__[^_]+__/[^/]+/", "", pkgSource)
+      
+      c(
+         RemoteType   = "standard",
+         RemotePkgRef = pkgName,
+         RemoteRef    = pkgName,
+         RemoteRepos  = pkgSource,
+         RemoteSha    = pkgVersion
+      )
+   }
+      
+   remoteText <- sprintf(
+      "%s: %s",
+      names(remoteFields),
+      unlist(remoteFields)
+   )
+   
+   # Update the DESCRIPTION file. We read and write the DESCRIPTION file
+   # just to avoid issues with potential trailing lines.
+   descPath <- file.path(pkgPath, "DESCRIPTION")
+   descContents <- readLines(descPath, warn = FALSE)
+   descContents <- descContents[nzchar(descContents)]
+   descContents <- c(descContents, remoteText)
+   writeLines(descContents, con = descPath, useBytes = TRUE)
+   
+   # Update `Meta/package.rds`.
+   metaPackagePath <- file.path(pkgPath, "Meta/package.rds")
+   if (file.exists(metaPackagePath))
+   {
+      metaPackageInfo <- readRDS(metaPackagePath)
+      metaPackageInfo[["DESCRIPTION"]][names(remoteFields)] <- remoteFields
+      saveRDS(metaPackageInfo, file = metaPackagePath)
+   }
+})
+
+.rs.addFunction("isReadingUserInput", function()
+{
+   for (i in seq_len(sys.nframe()))
+   {
+      fn <- sys.function(i)
+      if (identical(fn, base::readline))
+         return(TRUE)
+   }
+   
+   FALSE
+})
+
+.rs.addFunction("markScalars", function(object)
+{
+   if (is.recursive(object))
+      for (i in seq_along(object))
+         object[[i]] <- .rs.markScalars(object[[i]])
+   
+   if (is.atomic(object) && length(object) == 1L)
+      .rs.scalar(object)
+   else
+      object
+})

@@ -561,24 +561,17 @@ public class AppearancePreferencesPane extends PreferencesPane
             // It's possible the current theme was removed outside the context of
             // RStudio, so choose a default if it can't be found.
             AceTheme currentTheme = userState_.theme().getGlobalValue().cast();
-            
-            // Force switch to Textmate if current theme is dark or not available in filtered list
-            // This ensures AI pane compatibility by preventing dark themes
-            if (currentTheme.isDark() || !themeList_.containsKey(currentTheme.getName()))
+            if (!themeList_.containsKey(currentTheme.getName()))
             {
                StringBuilder warningMsg = new StringBuilder();
-               if (currentTheme.isDark()) {
-                  warningMsg.append("Dark themes have been disabled for AI pane compatibility. Switching to Textmate theme.");
-               } else {
-                  warningMsg.append(constants_.setThemeWarningMessage(currentTheme.getName(), currentTheme.isDark() ? constants_.themeWarningMessageDarkLabel() : constants_.themeWarningMessageLightLabel()));
-                  warningMsg.append("Textmate (default)\".");
-               }
+               warningMsg.append(constants_.setThemeWarningMessage(currentTheme.getName(), currentTheme.isDark() ? constants_.themeWarningMessageDarkLabel() : constants_.themeWarningMessageLightLabel()));
 
-               // Force to Textmate specifically for consistency
-               currentTheme = AceTheme.create("Textmate (default)", "theme/default/textmate.rstheme", false);
+               currentTheme = AceTheme.createDefault(currentTheme.isDark());
                userState_.theme().setGlobalValue(currentTheme);
                preview_.setTheme(currentTheme.getUrl());
 
+               warningMsg.append(currentTheme.getName())
+                  .append("\".");
                Debug.logWarning(warningMsg.toString());
             }
 

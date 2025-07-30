@@ -474,27 +474,6 @@ public class Toolbar extends ResizeComposite implements HasResizeHandlers
       return button;
    }
 
-   /**
-    * Gets the count of right widgets
-    * @return The number of widgets in the right panel
-    */
-   public int getRightWidgetCount()
-   {
-      return rightToolbarPanel_.getWidgetCount();
-   }
-   
-   /**
-    * Gets the widget at the specified index in the right panel
-    * @param index The index of the widget to retrieve
-    * @return The widget at the specified index
-    */
-   public Widget getRightWidgetAt(int index)
-   {
-      if (index >= 0 && index < rightToolbarPanel_.getWidgetCount())
-         return rightToolbarPanel_.getWidget(index);
-      return null;
-   }
-
    private HorizontalPanel horizontalPanel_;
    private HorizontalPanel leftToolbarPanel_;
    private HorizontalPanel rightToolbarPanel_;

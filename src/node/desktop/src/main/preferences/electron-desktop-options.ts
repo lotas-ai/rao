@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  *
  * electron-desktop-options.ts
@@ -15,13 +16,24 @@
  */
 
 import { BrowserWindow } from 'electron';
-import Store from 'electron-store';
+import ElectronStore from 'electron-store';
 import { statSync } from 'fs';
 import { basename, dirname, join } from 'path';
 import { properties } from '../../../../../cpp/session/resources/schema/user-state-schema.json';
 import { normalizeSeparatorsNative } from '../../ui/utils';
 import { logger } from '../../core/logger';
 import { RaoUserState } from '../../types/user-state-schema';
+
+// Workaround for TypeScript not recognizing ElectronStore methods in CommonJS project
+// See: https://github.com/sindresorhus/electron-store/issues/276
+interface ElectronStoreInterface<T extends Record<string, any>> {
+  get(key: string, defaultValue?: any): any;
+  set(key: string, value: any): void;
+  has(key: string): boolean;
+  delete(key: string): void;
+  clear(): void;
+  store: T;
+}
 
 import { generateSchema, legacyPreferenceManager } from './../preferences/preferences';
 import DesktopOptions from './desktop-options';
@@ -34,6 +46,7 @@ const kFixedWidthFont = 'font.fixedWidthFont';
 const kZoomLevel = 'view.zoomLevel';
 const kWindowBounds = 'view.windowBounds';
 const kAccessibility = 'view.accessibility';
+const kEnableSplashScreen = 'view.enableSplashScreen';
 const kDisableRendererAccessibility = 'view.disableRendererAccessibility';
 
 const kLastRemoteSessionUrl = 'session.lastRemoteSessionUrl';
@@ -46,6 +59,8 @@ const kRendererEngine = 'renderer.engine';
 const kRendererUseGpuExclusionList = 'renderer.useGpuExclusionList';
 const kRendererUseGpuDriverBugWorkarounds = 'renderer.useGpuDriverBugWorkarounds';
 
+const kUseDefault32BitR = 'platform.windows.useDefault32BitR';
+const kUseDefault64BitR = 'platform.windows.useDefault64BitR';
 const kRExecutablePath = 'platform.windows.rExecutablePath';
 const kPreferR64 = 'platform.windows.preferR64';
 
@@ -88,13 +103,18 @@ export function clearOptionsSingleton(): void {
  * for creating/getting a DesktopOptionsImpl instance
  */
 export class DesktopOptionsImpl implements DesktopOptions {
-  private config = new Store<RaoUserState>({ schema: userStateSchema });
+  private config = new ElectronStore<RaoUserState>({
+    schema: userStateSchema,
+  }) as unknown as ElectronStoreInterface<RaoUserState>;
   private legacyOptions = legacyPreferenceManager;
 
   // unit testing constructor to expose directory and DesktopOptions mock
   constructor(directory = '', legacyOptions?: DesktopOptions) {
     if (directory.length != 0) {
-      this.config = new Store<RaoUserState>({ cwd: directory, schema: userStateSchema });
+      this.config = new ElectronStore<RaoUserState>({
+        cwd: directory,
+        schema: userStateSchema,
+      }) as unknown as ElectronStoreInterface<RaoUserState>;
     }
     if (legacyOptions) {
       this.legacyOptions = legacyOptions;
@@ -187,6 +207,14 @@ export class DesktopOptionsImpl implements DesktopOptions {
 
   public accessibility(): boolean {
     return this.config.get(kAccessibility, properties.view.default.accessibility);
+  }
+
+  public setEnableSplashScreen(enabled: boolean): void {
+    this.config.set(kEnableSplashScreen, enabled);
+  }
+
+  public enableSplashScreen(): boolean {
+    return this.config.get(kEnableSplashScreen, properties.view.default.enableSplashScreen);
   }
 
   public setDisableRendererAccessibility(accessibility: boolean): void {
@@ -290,6 +318,24 @@ export class DesktopOptionsImpl implements DesktopOptions {
     }
 
     return rBinDir;
+  }
+
+  // Windows-only options
+  public useDefault32BitR(): boolean {
+    return this.config.get(kUseDefault32BitR, false);
+  }
+
+  public setUseDefault32BitR(useDefault: boolean) {
+    this.config.set(kUseDefault32BitR, useDefault);
+  }
+
+  // Windows-only option
+  public useDefault64BitR(): boolean {
+    return this.config.get(kUseDefault64BitR, false);
+  }
+
+  public setUseDefault64BitR(useDefault: boolean) {
+    this.config.set(kUseDefault64BitR, useDefault);
   }
 
   // Windows-only option

@@ -223,6 +223,7 @@ set(SESSION_SOURCE_FILES
    modules/SessionLists.cpp
    modules/SessionMarkers.cpp
    modules/SessionObjectExplorer.cpp
+   modules/SessionPPM.cpp
    modules/SessionPackageProvidedExtension.cpp
    modules/SessionPackages.cpp
    modules/SessionPackrat.cpp

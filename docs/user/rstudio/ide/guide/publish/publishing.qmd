@@ -1,6 +1,6 @@
 ---
 title: "Publishing"
-date-meta: 2022-12-12
+date-meta: 2025-04-09
 ---
 
 The following documentation is an overview of "Push-button Deployment" in RStudio. 
@@ -8,13 +8,12 @@ The following documentation is an overview of "Push-button Deployment" in RStudi
 For full documentation on options for specific platforms:  
 
 -   [Posit Connect User Guide](https://docs.posit.co/connect/user/connecting/)
--   [Posit Cloud User Guide](https://posit.cloud/learn/guide#intro-publish-app)
 -   [RPubs - Getting Started](https://rpubs.com/about/getting-started)
 -   [ShinyApps.io User Guide](https://docs.posit.co/shinyapps.io/)
 
 ## Push-button deployment
 
-The blue **publishing icon** in Rao indicates built-in support for publishing the currently selected type of content to server publishing platforms, cloud publishing platforms, Shinyapps.io, or RPubs.com.
+The blue **publishing icon** in RStudio indicates built-in support for publishing the currently selected type of content to Posit Connect, Shinyapps.io, or RPubs.com.
 
 ![The RStudio publishing icon](images/publishIcon_2x.png){fig-alt="The RStudio publishing icon"}
 
@@ -40,23 +39,34 @@ Click **Publish** after verifying the settings.
 
 ## Publishing documents
 
-You can publish R Markdown (`.Rmd`) and Quarto (`.qmd`) documents to server publishing platforms, cloud publishing platforms, or RPubs.com.
+You can publish R Markdown (`.Rmd`) and Quarto (`.qmd`) documents to Posit Connect or RPubs.com.
 
-![Publish to RPubs or publishing platforms](images/connecting-2.png){fig-alt="Publish to RPubs or Connect"}
+![Publish to RPubs or Posit Connect](images/connecting-2.png){fig-alt="Publish to RPubs or Connect"}
 
-[RPubs](http://rpubs.com/) is a service for easily sharing public R Markdown documents. RPubs is not related to server publishing platforms, and you should always choose server publishing platforms if you wish to publish your content to those platforms.
+[RPubs](http://rpubs.com/) is a service for easily sharing public R Markdown documents. RPubs is not related to Posit Connect, and you should always choose "Posit Connect" if you wish to publish your content to Posit Connect.
 
 ## Publishing Shiny apps
 
-You can publish Shiny apps to server publishing platforms, cloud publishing platforms, or shinyapps.io.
+You can publish Shiny apps to Posit Connect or shinyapps.io.
 
 ![](images/connect-account.png){fig-alt="Connect account in RStudio"}
+
+## Including secrets
+
+Posit Connect supports including secrets and other sensitive information as [Vars (Environment Variables)](https://docs.posit.co/connect/user/content-settings/index.html#content-vars). When developing content for Connect, you should never place secrets (keys, tokens, passwords, etc.) in the code itself.
+
+RStudio also supports the inclusion of environment variables defined in the user/project `.Renviron` file when publishing content to Posit Connect. 
+
+![](images/publish-env-vars.png){fig-alt="Screenshot of including environment variables when publishing from RStudio."}
+
+One or more environment variables can be selected for inclusion on Posit Connect. On publish, environment variables are sent over an encrypted connection and are not stored in the bundle. Environment variables are set prior to deployment so that your code can use them and the first deployment can still succeed. This means that if the deployment fails, the values will still be updated.
+
+Reference the Posit Connect User Guide section on [Vars (Environment Variables)](https://docs.posit.co/connect/user/content-settings/index.html#content-vars) for more information. The `rsconnect` R package can also include environment variables when publishing programatically. For more information, reference the `[rsconnect` documentation for envVars](https://rstudio.github.io/rsconnect/reference/deployApp.html#arg-envvars)
 
 ## Additional content
 
 For additional details or other content types, refer to the product-specific documentation:
 
 -   [Posit Connect User Guide](https://docs.posit.co/connect/user/connecting/)
--   [Posit Cloud User Guide](https://posit.cloud/learn/guide#intro-publish-app)
 -   [RPubs - Getting Started](https://rpubs.com/about/getting-started)
 -   [ShinyApps.io User Guide](https://docs.posit.co/shinyapps.io/)

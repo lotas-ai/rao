@@ -37,6 +37,7 @@ namespace prefs {
 #define kCranMirrorName "name"
 #define kCranMirrorHost "host"
 #define kCranMirrorUrl "url"
+#define kViewEnableSplashScreen "enableSplashScreen"
 #define kCranMirrorRepos "repos"
 #define kCranMirrorCountry "country"
 #define kCranMirrorSecondary "secondary"
@@ -166,7 +167,6 @@ namespace prefs {
 #define kAnsiConsoleModeOn "on"
 #define kAnsiConsoleModeStrip "strip"
 #define kAnsiConsoleModeOff "off"
-#define kLimitVisibleConsole "limit_visible_console"
 #define kShowInlineToolbarForRCodeChunks "show_inline_toolbar_for_r_code_chunks"
 #define kHighlightCodeChunks "highlight_code_chunks"
 #define kSaveFilesBeforeBuild "save_files_before_build"
@@ -174,6 +174,8 @@ namespace prefs {
 #define kFontSizePoints "font_size_points"
 #define kEditorLineHeight "editor_line_height"
 #define kHelpFontSizePoints "help_font_size_points"
+#define kEnableMousewheelZoom "enable_mousewheel_zoom"
+#define kMousewheelZoomDebounceMs "mousewheel_zoom_debounce_ms"
 #define kEditorTheme "editor_theme"
 #define kServerEditorFontEnabled "server_editor_font_enabled"
 #define kServerEditorFont "server_editor_font"
@@ -229,7 +231,6 @@ namespace prefs {
 #define kRmdViewerTypePane "pane"
 #define kRmdViewerTypeNone "none"
 #define kShowPublishDiagnostics "show_publish_diagnostics"
-#define kEnableCloudPublishUi "enable_cloud_publish_ui"
 #define kPublishCheckCertificates "publish_check_certificates"
 #define kUsePublishCaBundle "use_publish_ca_bundle"
 #define kPublishCaBundle "publish_ca_bundle"
@@ -332,6 +333,7 @@ namespace prefs {
 #define kRestoreProjectRVersion "restore_project_r_version"
 #define kClangVerbose "clang_verbose"
 #define kSubmitCrashReports "submit_crash_reports"
+#define kEnableSplashScreen "enable_splash_screen"
 #define kDefaultRVersion "default_r_version"
 #define kDefaultRVersionVersion "version"
 #define kDefaultRVersionRHome "r_home"
@@ -959,12 +961,6 @@ public:
    core::Error setAnsiConsoleMode(std::string val);
 
    /**
-    * Whether to only show a limited window of the total console output
-    */
-   bool limitVisibleConsole();
-   core::Error setLimitVisibleConsole(bool val);
-
-   /**
     * Whether to show a toolbar on code chunks in R Markdown documents.
     */
    bool showInlineToolbarForRCodeChunks();
@@ -1005,6 +1001,18 @@ public:
     */
    double helpFontSizePoints();
    core::Error setHelpFontSizePoints(double val);
+
+   /**
+    * Use Ctrl+Mouse Wheel (Cmd+Mouse Wheel on macOS) to zoom the interface in and out.
+    */
+   bool enableMousewheelZoom();
+   core::Error setEnableMousewheelZoom(bool val);
+
+   /**
+    * A delay in milliseconds to wait before applying the zoom level after a mouse wheel event.
+    */
+   int mousewheelZoomDebounceMs();
+   core::Error setMousewheelZoomDebounceMs(int val);
 
    /**
     * The name of the color theme to apply to the text editor in RStudio.
@@ -1227,12 +1235,6 @@ public:
     */
    bool showPublishDiagnostics();
    core::Error setShowPublishDiagnostics(bool val);
-
-   /**
-    * Whether to show UI for publishing content to Posit Cloud.
-    */
-   bool enableCloudPublishUi();
-   core::Error setEnableCloudPublishUi(bool val);
 
    /**
     * Whether to check remote server SSL certificates when publishing content.
@@ -1641,6 +1643,12 @@ public:
     */
    bool submitCrashReports();
    core::Error setSubmitCrashReports(bool val);
+
+   /**
+    * Whether to show the splash screen when RStudio is starting.
+    */
+   bool enableSplashScreen();
+   core::Error setEnableSplashScreen(bool val);
 
    /**
     * The R version to use by default.

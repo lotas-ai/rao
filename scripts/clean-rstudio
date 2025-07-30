@@ -41,9 +41,8 @@ if [ "${PLATFORM}" = "Darwin" ]; then
   rm -rf ~/Library/Application\ Support/RStudio
 
   # macOS desktop settings
-  defaults delete ai.lotas.rao > /dev/null 2>&1 || true
-defaults delete com.rstudio.desktop > /dev/null 2>&1 || true
-defaults delete com.RStudio.desktop > /dev/null 2>&1 || true
+  defaults delete com.rstudio.desktop > /dev/null 2>&1 || true
+  defaults delete com.RStudio.desktop > /dev/null 2>&1 || true
   defaults delete org.rstudio.RStudio > /dev/null 2>&1 || true
 
   # Posit-Connect publishing connections

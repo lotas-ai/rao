@@ -12,6 +12,7 @@
 :: AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
 ::
 @echo off
+setlocal
 
 if "%1" == "--help" goto :showhelp
 if "%1" == "-h" goto :showhelp
@@ -58,23 +59,21 @@ if not defined NOZIP (
     )
 )
 
-
-
 popd
 
+endlocal
 goto :EOF
 
 :showhelp
 echo.
 echo make-dist-packages
 echo.
-echo. Produces the RStudio setup package and zip file (installerless) using already-built binaries.
+echo. Produces the RStudio setup package and zip file (installerless) distributables using
+echo. already-built binaries.
 echo.
 echo  Must be invoked from the "package\win32" folder (in the cloned RStudio repository).
 echo.
 exit /b 0
-
-
 
 :error
 echo ERROR: Failed to package RStudio!

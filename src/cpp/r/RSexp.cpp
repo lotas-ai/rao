@@ -742,6 +742,12 @@ bool isUserDefinedDatabase(SEXP object)
    return OBJECT(object) && Rf_inherits(object, "UserDefinedDatabase");
 }
 
+bool isAltrep(SEXP object)
+{
+   r::sxpinfo& info = *reinterpret_cast<r::sxpinfo*>(object);
+   return info.alt;
+}
+
 bool isNumeric(SEXP object)
 {
    return Rf_isNumeric(object);
@@ -1647,46 +1653,6 @@ SEXP createList(const std::vector<std::string>& names, Protect* pProtect)
    return listSEXP;
 }
    
-PreservedSEXP::PreservedSEXP(SEXP sexp)
-   : sexp_(R_NilValue)
-{
-   set(sexp);
-}
-
-PreservedSEXP::PreservedSEXP(PreservedSEXP&& original)
-   : sexp_(original.sexp_)
-{
-   original.sexp_ = R_NilValue;
-}
-
-void PreservedSEXP::set(SEXP sexp)
-{
-   releaseNow();
-   sexp_ = sexp;
-   if (sexp_ != R_NilValue)
-      ::R_PreserveObject(sexp_);
-}
-
-PreservedSEXP::~PreservedSEXP()
-{
-   try
-   {
-      releaseNow();
-   }
-   catch(...)
-   {
-   }
-}
-
-void PreservedSEXP::releaseNow()
-{
-   if (sexp_ != R_NilValue)
-   {
-      ::R_ReleaseObject(sexp_);
-      sexp_ = R_NilValue;
-   }
-}
-
 SEXP SEXPPreserver::add(SEXP dataSEXP)
 {
    if (dataSEXP != R_NilValue)

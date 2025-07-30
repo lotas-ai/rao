@@ -13,11 +13,18 @@
  *
  */
 
-#include <yaml-cpp/yaml.h>
-
 #include <session/SessionRUtil.hpp>
 
+#include <string>
+#include <yaml-cpp/yaml.h>
+
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
+#include <boost/regex.hpp>
+#include <boost/url.hpp>
+
 #include <shared_core/Error.hpp>
+
 #include <core/Log.hpp>
 #include <core/Exec.hpp>
 #include <core/FileSerializer.hpp>
@@ -33,10 +40,7 @@
 #include <session/SessionModuleContext.hpp>
 #include <session/SessionSuspend.hpp>
 
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/ini_parser.hpp>
-#include <boost/regex.hpp>
-
+#include "core/http/URL.hpp"
 #include "shiny/SessionShiny.hpp"
 
 namespace rstudio {
@@ -347,6 +351,14 @@ SEXP rs_promiseCode(SEXP promiseSEXP)
          : R_NilValue;
 }
 
+SEXP rs_getSessionOverlayOption(SEXP keySEXP)
+{
+   std::string key = r::sexp::asString(keySEXP);
+   auto value = session::options().getOverlayOption(key);
+   r::sexp::Protect protect;
+   return r::sexp::create(value, &protect);
+}
+
 } // anonymous namespace
 
 Error initialize()
@@ -361,6 +373,7 @@ Error initialize()
    RS_REGISTER_CALL_METHOD(rs_systemToUtf8);
    RS_REGISTER_CALL_METHOD(rs_utf8ToSystem);
    RS_REGISTER_CALL_METHOD(rs_promiseCode);
+   RS_REGISTER_CALL_METHOD(rs_getSessionOverlayOption);
    
    using boost::bind;
    using namespace module_context;

@@ -1,5 +1,3 @@
 iterate*
-cmake-build-*
-CMakeCache.txt
-CMakeFiles/
+cmake*
 

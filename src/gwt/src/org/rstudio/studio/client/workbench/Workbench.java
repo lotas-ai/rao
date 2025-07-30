@@ -246,7 +246,6 @@ public class Workbench implements BusyEvent.Handler,
 
    public void onDeferredInitCompleted(DeferredInitCompletedEvent ev)
    {
-      checkForCrashHandlerPermission();
    }
 
    public void onBusy(BusyEvent event)
@@ -565,32 +564,6 @@ public class Workbench implements BusyEvent.Handler,
       }
    }
 
-   private void checkForCrashHandlerPermission()
-   {
-      boolean shouldPrompt = session_.getSessionInfo().getPromptForCrashHandlerPermission();
-      if (shouldPrompt)
-      {
-         String message = constants_.checkForCrashHandlerPermissionMessage();
-         globalDisplay_.showYesNoMessage(GlobalDisplay.MSG_QUESTION,
-               constants_.enableCrashReportingCaption(),
-               message,
-               false,
-               new Operation() {
-                  @Override
-                  public void execute() {
-                     server_.setUserCrashHandlerPrompted(true, new SimpleRequestCallback<>());
-                  }
-               },
-               new Operation() {
-                  @Override
-                  public void execute() {
-                     server_.setUserCrashHandlerPrompted(false, new SimpleRequestCallback<>());
-                  }
-               },
-               true);
-      }
-   }
-
    public void onUserPrompt(UserPromptEvent event)
    {
       // is cancel supported?
@@ -701,19 +674,6 @@ public class Workbench implements BusyEvent.Handler,
                label,
                fsContext_,
                initialFilePath,
-               false,
-               onSelected);
-      }
-      else if (type == OpenFileDialogEvent.TYPE_SELECT_FILE_OR_DIRECTORY)
-      {
-         // For "both files and directories", use openFile with canChooseDirectories=true
-         fileDialogs_.openFile(
-               caption,
-               label,
-               fsContext_,
-               initialFilePath,
-               filter,
-               true,  // canChooseDirectories=true to select both files and directories
                false,
                onSelected);
       }

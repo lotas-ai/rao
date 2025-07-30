@@ -224,6 +224,7 @@ const int kAiStreamData = 206;
 const int kAiOperation = 207;
 const int kRefreshDocumentContent = 208;
 const int kRequestDocumentCloseForRevert = 209;
+const int kCopilotStatusChanged = 210;
 
 }
 
@@ -628,6 +629,8 @@ std::string ClientEvent::typeName() const
          return "refresh_document_content";
       case client_events::kRequestDocumentCloseForRevert:
          return "request_document_close_for_revert";
+      case client_events::kCopilotStatusChanged:
+         return "copilot_status_changed";
       default:
          LOG_WARNING_MESSAGE("unexpected event type: " + 
                              safe_convert::numberToString(type_));

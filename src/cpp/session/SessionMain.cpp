@@ -223,6 +223,7 @@
 #include "modules/SessionFonts.hpp"
 #include "modules/SessionSystemResources.hpp"
 #include "modules/SessionSymbolIndex.hpp"
+#include "modules/SessionPPM.hpp"
 
 #include <session/SessionProjectTemplate.hpp>
 
@@ -679,6 +680,7 @@ Error rInit(const rstudio::r::session::RInitInfo& rInitInfo)
       (modules::preview::initialize)
       (modules::plots::initialize)
       (modules::packages::initialize)
+      (modules::ppm::initialize)
       (modules::cran_mirrors::initialize)
       (modules::profiler::initialize)
       (modules::viewer::initialize)
@@ -1065,9 +1067,9 @@ void rConsoleWrite(const std::string& output, int otype)
 
    // notify listeners
    auto type = (otype == 1)
-         ? module_context::ConsoleOutputNormal
-         : module_context::ConsoleOutputError;
-   module_context::events().onConsoleOutputReceived(type, output);
+         ? module_context::ConsoleOutputError
+         : module_context::ConsoleOutputNormal;
+   module_context::events().onConsoleOutput(type, output);
 
    // add to event queue
    int event;

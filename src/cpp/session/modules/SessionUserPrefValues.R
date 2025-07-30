@@ -785,15 +785,6 @@
    clear = function() { .rs.clearUserPref("ansi_console_mode") }
 )
 
-# Limit visible console output
-#
-# Whether to only show a limited window of the total console output
-.rs.uiPrefs$limitVisibleConsole <- list(
-   get = function() { .rs.getUserPref("limit_visible_console") },
-   set = function(value) { .rs.setUserPref("limit_visible_console", value) },
-   clear = function() { .rs.clearUserPref("limit_visible_console") }
-)
-
 # Show toolbar on R Markdown chunks
 #
 # Whether to show a toolbar on code chunks in R Markdown documents.
@@ -857,6 +848,26 @@
    get = function() { .rs.getUserPref("help_font_size_points") },
    set = function(value) { .rs.setUserPref("help_font_size_points", value) },
    clear = function() { .rs.clearUserPref("help_font_size_points") }
+)
+
+# Zoom with mouse wheel when holding Ctrl (Cmd on macOS)
+#
+# Use Ctrl+Mouse Wheel (Cmd+Mouse Wheel on macOS) to zoom the interface in and
+# out.
+.rs.uiPrefs$enableMousewheelZoom <- list(
+   get = function() { .rs.getUserPref("enable_mousewheel_zoom") },
+   set = function(value) { .rs.setUserPref("enable_mousewheel_zoom", value) },
+   clear = function() { .rs.clearUserPref("enable_mousewheel_zoom") }
+)
+
+# Mouse wheel zoom debounce delay (ms)
+#
+# A delay in milliseconds to wait before applying the zoom level after a mouse
+# wheel event.
+.rs.uiPrefs$mousewheelZoomDebounceMs <- list(
+   get = function() { .rs.getUserPref("mousewheel_zoom_debounce_ms") },
+   set = function(value) { .rs.setUserPref("mousewheel_zoom_debounce_ms", value) },
+   clear = function() { .rs.clearUserPref("mousewheel_zoom_debounce_ms") }
 )
 
 # Theme
@@ -1192,15 +1203,6 @@
    get = function() { .rs.getUserPref("show_publish_diagnostics") },
    set = function(value) { .rs.setUserPref("show_publish_diagnostics", value) },
    clear = function() { .rs.clearUserPref("show_publish_diagnostics") }
-)
-
-# 
-#
-# Whether to show UI for publishing content to Posit Cloud.
-.rs.uiPrefs$enableCloudPublishUi <- list(
-   get = function() { .rs.getUserPref("enable_cloud_publish_ui") },
-   set = function(value) { .rs.setUserPref("enable_cloud_publish_ui", value) },
-   clear = function() { .rs.clearUserPref("enable_cloud_publish_ui") }
 )
 
 # Check SSL certificates when publishing
@@ -1835,6 +1837,15 @@
    get = function() { .rs.getUserPref("submit_crash_reports") },
    set = function(value) { .rs.setUserPref("submit_crash_reports", value) },
    clear = function() { .rs.clearUserPref("submit_crash_reports") }
+)
+
+# Show splash screen when RStudio is starting
+#
+# Whether to show the splash screen when RStudio is starting.
+.rs.uiPrefs$enableSplashScreen <- list(
+   get = function() { .rs.getUserPref("enable_splash_screen") },
+   set = function(value) { .rs.setUserPref("enable_splash_screen", value) },
+   clear = function() { .rs.clearUserPref("enable_splash_screen") }
 )
 
 # 

@@ -184,11 +184,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String highlightSelectedLineDescription();
 
    /**
-    * Layout of panes in the RStudio workbench.
+    * Layout of panes in the Rao Server.
     */
    @DefaultStringValue("")
    String panesTitle();
-   @DefaultStringValue("Layout of panes in the RStudio workbench.")
+   @DefaultStringValue("Layout of panes in the Rao Server.")
    String panesDescription();
 
    /**
@@ -734,14 +734,6 @@ public interface UserPrefsAccessorConstants extends Constants {
    String ansiConsoleModeEnum_off();
 
    /**
-    * Whether to only show a limited window of the total console output
-    */
-   @DefaultStringValue("Limit visible console output")
-   String limitVisibleConsoleTitle();
-   @DefaultStringValue("Whether to only show a limited window of the total console output")
-   String limitVisibleConsoleDescription();
-
-   /**
     * Whether to show a toolbar on code chunks in R Markdown documents.
     */
    @DefaultStringValue("Show toolbar on R Markdown chunks")
@@ -798,6 +790,22 @@ public interface UserPrefsAccessorConstants extends Constants {
    String helpFontSizePointsDescription();
 
    /**
+    * Use Ctrl+Mouse Wheel (Cmd+Mouse Wheel on macOS) to zoom the interface in and out.
+    */
+   @DefaultStringValue("Zoom with mouse wheel when holding Ctrl (Cmd on macOS)")
+   String enableMousewheelZoomTitle();
+   @DefaultStringValue("Use Ctrl+Mouse Wheel (Cmd+Mouse Wheel on macOS) to zoom the interface in and out.")
+   String enableMousewheelZoomDescription();
+
+   /**
+    * A delay in milliseconds to wait before applying the zoom level after a mouse wheel event.
+    */
+   @DefaultStringValue("Mouse wheel zoom debounce delay (ms)")
+   String mousewheelZoomDebounceMsTitle();
+   @DefaultStringValue("A delay in milliseconds to wait before applying the zoom level after a mouse wheel event.")
+   String mousewheelZoomDebounceMsDescription();
+
+   /**
     * The name of the color theme to apply to the text editor in RStudio.
     */
    @DefaultStringValue("Theme")
@@ -830,11 +838,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String defaultEncodingDescription();
 
    /**
-    * Whether to show the toolbar at the top of the RStudio workbench.
+    * Whether to show the toolbar at the top of the Rao Server.
     */
    @DefaultStringValue("Show top toolbar")
    String toolbarVisibleTitle();
-   @DefaultStringValue("Whether to show the toolbar at the top of the RStudio workbench.")
+   @DefaultStringValue("Whether to show the toolbar at the top of the Rao Server.")
    String toolbarVisibleDescription();
 
    /**
@@ -1094,14 +1102,6 @@ public interface UserPrefsAccessorConstants extends Constants {
    String showPublishDiagnosticsDescription();
 
    /**
-    * Whether to show UI for publishing content to cloud service.
-    */
-   @DefaultStringValue("")
-   String enableCloudPublishUiTitle();
-   @DefaultStringValue("Whether to show UI for publishing content to cloud service.")
-   String enableCloudPublishUiDescription();
-
-   /**
     * Whether to check remote server SSL certificates when publishing content.
     */
    @DefaultStringValue("Check SSL certificates when publishing")
@@ -1324,19 +1324,19 @@ public interface UserPrefsAccessorConstants extends Constants {
    String jobsTabVisibilityDescription();
 
    /**
-    * Whether to show the Workbench Jobs tab in RStudio Pro and RStudio Workbench.
+    * Whether to show the Workbench Jobs tab in Rao and Rao Server.
     */
    @DefaultStringValue("")
    String showLauncherJobsTabTitle();
-   @DefaultStringValue("Whether to show the Workbench Jobs tab in RStudio Pro and RStudio Workbench.")
+   @DefaultStringValue("Whether to show the Workbench Jobs tab in Rao and Rao Server.")
    String showLauncherJobsTabDescription();
 
    /**
-    * How to sort jobs in the Workbench Jobs tab in RStudio Pro and RStudio Workbench.
+    * How to sort jobs in the Workbench Jobs tab in Rao and Rao Server.
     */
    @DefaultStringValue("")
    String launcherJobsSortTitle();
-   @DefaultStringValue("How to sort jobs in the Workbench Jobs tab in RStudio Pro and RStudio Workbench.")
+   @DefaultStringValue("How to sort jobs in the Workbench Jobs tab in Rao and Rao Server.")
    String launcherJobsSortDescription();
 
    /**
@@ -1632,11 +1632,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String latexShellEscapeDescription();
 
    /**
-    * Whether to restore the last version of R used by the project in RStudio Pro and RStudio Workbench.
+    * Whether to restore the last version of R used by the project in Rao and Rao Server.
     */
-   @DefaultStringValue("Restore project R version in Rao Pro and Rao Server")
+   @DefaultStringValue("Restore project R version in Rao and Rao Server")
    String restoreProjectRVersionTitle();
-   @DefaultStringValue("Whether to restore the last version of R used by the project in Rao Pro and Rao Server.")
+   @DefaultStringValue("Whether to restore the last version of R used by the project in Rao and Rao Server.")
    String restoreProjectRVersionDescription();
 
    /**
@@ -1654,6 +1654,14 @@ public interface UserPrefsAccessorConstants extends Constants {
    String submitCrashReportsTitle();
    @DefaultStringValue("Whether to automatically submit crash reports to Lotas Inc.")
    String submitCrashReportsDescription();
+
+   /**
+    * Whether to show the splash screen when RStudio is starting.
+    */
+   @DefaultStringValue("Show splash screen when RStudio is starting")
+   String enableSplashScreenTitle();
+   @DefaultStringValue("Whether to show the splash screen when RStudio is starting.")
+   String enableSplashScreenDescription();
 
    /**
     * The R version to use by default.

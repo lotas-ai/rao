@@ -15,6 +15,8 @@
 
 #include "SessionCopilot.hpp"
 
+#include <unordered_set>
+
 #include <boost/current_function.hpp>
 #include <boost/range/adaptors.hpp>
 #include <boost/range/algorithm/copy.hpp>
@@ -22,10 +24,12 @@
 #include <shared_core/Error.hpp>
 #include <shared_core/json/Json.hpp>
 
+#include <core/collection/Position.hpp>
 #include <core/Exec.hpp>
 #include <core/FileSerializer.hpp>
 #include <core/http/Header.hpp>
 #include <core/json/JsonRpc.hpp>
+#include <core/StringUtils.hpp>
 #include <core/system/Process.hpp>
 #include <core/system/System.hpp>
 #include <core/system/Xdg.hpp>
@@ -234,6 +238,7 @@ enum class CopilotAgentNotRunningReason {
    LaunchError,
 };
 
+// keep in sync with constants in CopilotStatusChangedEvent.java
 enum class CopilotAgentRuntimeStatus {
    Unknown,
    Preparing,
@@ -268,6 +273,20 @@ CopilotAgentNotRunningReason s_agentNotRunningReason = CopilotAgentNotRunningRea
 // The current runtime status of the Copilot agent process.
 CopilotAgentRuntimeStatus s_agentRuntimeStatus = CopilotAgentRuntimeStatus::Unknown;
 
+void setCopilotAgentRuntimeStatus(CopilotAgentRuntimeStatus status)
+{
+   if (s_agentRuntimeStatus != status)
+   {
+      s_agentRuntimeStatus = status;
+
+      // notify client of copilot status change
+      json::Object dataJson;
+      dataJson["status"] = static_cast<int>(status);
+      ClientEvent event(client_events::kCopilotStatusChanged, dataJson);
+      module_context::enqueClientEvent(event);
+   }
+}
+
 // Whether or not we've handled the Copilot 'initialized' notification.
 // Primarily done to allow proper sequencing of Copilot callbacks.
 bool s_agentInitialized = false;
@@ -281,6 +300,47 @@ std::map<std::string, CopilotContinuation> s_pendingContinuations;
 
 // A queue of pending responses, sent via the agent's stdout.
 std::queue<std::string> s_pendingResponses;
+
+// The language server protocol states:
+//
+// ...open notification must not be sent more than once without a corresponding close notification 
+// send before. This means open and close notification must be balanced and the max open count
+// for a particular textDocument is one.
+//
+// Track documents Copilot knows about via textDocument/didOpen. Remove them when
+// textDocument/didClose is sent (or the agent is stopped).
+//
+// Also tracks an incrementing version number for each document.
+//
+std::unordered_map<std::string, int> s_knownDocuments;
+
+// Set/update the version for a given URI. IMPORTANT: will increment the version number each time
+// it is called.
+int updateVersionForDocument(const std::string& uri)
+{
+   // If the document is already known, increment its version.
+   auto it = s_knownDocuments.find(uri);
+   if (it != s_knownDocuments.end())
+   {
+      it->second++;
+      return it->second;
+   }
+   
+   // Otherwise, add it with initial version
+   s_knownDocuments[uri] = kCopilotDefaultDocumentVersion;
+   return s_knownDocuments[uri];
+}
+
+int currentVersionForDocument(const std::string& uri)
+{
+   // If the document is known, return its version.
+   auto it = s_knownDocuments.find(uri);
+   if (it != s_knownDocuments.end())
+      return it->second;
+
+   // Otherwise, return the default version.
+   return kCopilotDefaultDocumentVersion;
+}
 
 // Whether we're about to shut down.
 bool s_isSessionShuttingDown = false;
@@ -402,6 +462,11 @@ FilePath copilotLanguageServerPath()
    return FilePath();
 }
 
+bool isCopilotAgentInstalled()
+{
+   return copilotLanguageServerPath().exists();
+}
+
 bool isCopilotEnabled()
 {
 #ifdef COPILOT_ENABLED
@@ -412,7 +477,14 @@ bool isCopilotEnabled()
       s_agentNotRunningReason = CopilotAgentNotRunningReason::DisabledByAdministrator;
       return false;
    }
-   
+
+   // Check whether the agent is where it should be
+   if (!isCopilotAgentInstalled())
+   {
+      s_agentNotRunningReason = CopilotAgentNotRunningReason::NotInstalled;
+      return false;
+   }
+
    // Check project option
    switch (s_copilotProjectOptions.copilotEnabled)
    {
@@ -721,7 +793,7 @@ void onStarted(ProcessOperations& operations)
    // Record the PID of the agent.
    DLOG("Copilot agent has started [PID = {}]", operations.getPid());
    s_agentPid = operations.getPid();
-   s_agentRuntimeStatus = CopilotAgentRuntimeStatus::Starting;
+   setCopilotAgentRuntimeStatus(CopilotAgentRuntimeStatus::Starting);
 }
 
 bool onContinue(ProcessOperations& operations)
@@ -856,7 +928,7 @@ void onStdout(ProcessOperations& operations, const std::string& stdOut)
    }
    
    // Note that the agent is now ready.
-   s_agentRuntimeStatus = CopilotAgentRuntimeStatus::Running;
+   setCopilotAgentRuntimeStatus(CopilotAgentRuntimeStatus::Running);
 }
 
 void onStderr(ProcessOperations& operations, const std::string& stdErr)
@@ -874,7 +946,7 @@ void onStderr(ProcessOperations& operations, const std::string& stdErr)
    case CopilotAgentRuntimeStatus::Stopping:
    {
       s_agentStartupError += stdErr;
-      s_agentRuntimeStatus = CopilotAgentRuntimeStatus::Stopping;
+      setCopilotAgentRuntimeStatus(CopilotAgentRuntimeStatus::Stopping);
       break;
    }
  
@@ -888,23 +960,25 @@ void onStderr(ProcessOperations& operations, const std::string& stdErr)
 void onError(ProcessOperations& operations, const Error& error)
 {
    s_agentPid = -1;
-   s_agentRuntimeStatus = CopilotAgentRuntimeStatus::Stopped;
+   setCopilotAgentRuntimeStatus(CopilotAgentRuntimeStatus::Stopped);
 }
 
 void onExit(int status)
 {
    s_agentPid = -1;
-   s_agentRuntimeStatus = CopilotAgentRuntimeStatus::Stopped;
+   setCopilotAgentRuntimeStatus(CopilotAgentRuntimeStatus::Stopped);
 }
 
 } // end namespace agent
 
+
 void stopAgent()
 {
+   s_knownDocuments.clear();
    if (s_agentPid == -1)
    {
       //DLOG("No agent running; nothing to do.");
-      s_agentRuntimeStatus = CopilotAgentRuntimeStatus::Stopped;
+      setCopilotAgentRuntimeStatus(CopilotAgentRuntimeStatus::Stopped);
       return;
    }
 
@@ -921,7 +995,7 @@ Error startAgent()
       return Success();
    }
 
-   s_agentRuntimeStatus = CopilotAgentRuntimeStatus::Preparing;
+   setCopilotAgentRuntimeStatus(CopilotAgentRuntimeStatus::Preparing);
 
    Error error;
 
@@ -993,7 +1067,7 @@ Error startAgent()
    
    if (error)
    {
-      s_agentRuntimeStatus = CopilotAgentRuntimeStatus::Unknown;
+      setCopilotAgentRuntimeStatus(CopilotAgentRuntimeStatus::Unknown);
       return error;
    }
    
@@ -1134,6 +1208,46 @@ std::string contentsFromDocument(boost::shared_ptr<source_database::SourceDocume
    return contents;
 }
 
+void docOpened(const std::string& uri,
+               const std::string& languageId,
+               const std::string& contents)
+{
+   if (s_knownDocuments.count(uri) > 0)
+   {
+      // already told Copilot about this document, so skip this
+      return;
+   }
+
+   json::Object textDocumentJson;
+   textDocumentJson["uri"] = uri;
+   textDocumentJson["languageId"] = languageId;
+   textDocumentJson["version"] = updateVersionForDocument(uri);
+   textDocumentJson["text"] = contents;
+
+   json::Object paramsJson;
+   paramsJson["textDocument"] = textDocumentJson;
+
+   sendNotification("textDocument/didOpen", paramsJson);
+}
+
+void docClosed(const std::string& uri)
+{
+   if (s_knownDocuments.count(uri) == 0)
+   {
+      WLOG("Tried to close unknown document '{}'.", uri);
+      return;
+   }
+
+   json::Object textDocumentJson;
+   textDocumentJson["uri"] = uri;
+
+   json::Object paramsJson;
+   paramsJson["textDocument"] = textDocumentJson;
+
+   s_knownDocuments.erase(uri);
+   sendNotification("textDocument/didClose", paramsJson);
+}
+
 void onDocAdded(boost::shared_ptr<source_database::SourceDocument> pDoc)
 {
    if (!ensureAgentRunning())
@@ -1142,16 +1256,52 @@ void onDocAdded(boost::shared_ptr<source_database::SourceDocument> pDoc)
    if (!isIndexableDocument(pDoc))
       return;
    
+   docOpened(uriFromDocument(pDoc),
+             languageIdFromDocument(pDoc),
+             contentsFromDocument(pDoc));
+}
+
+// Send a textDocument/didChange notification with diff
+void didChangeIncremental(const std::string& uri,
+                          const std::string& languageId,
+                          collection::Range range,
+                          const std::string& text)
+{
+   if (s_knownDocuments.count(uri) == 0)
+   {
+      DLOG("Ignoring diff for unknown document '{}'.", uri);
+      return;
+   }
+
    json::Object textDocumentJson;
-   textDocumentJson["uri"] = uriFromDocument(pDoc);
-   textDocumentJson["languageId"] = languageIdFromDocument(pDoc);
-   textDocumentJson["version"] = kCopilotDefaultDocumentVersion;
-   textDocumentJson["text"] = contentsFromDocument(pDoc);
+   textDocumentJson["uri"] = uri;
+   textDocumentJson["languageId"] = languageId;
+   textDocumentJson["version"] = updateVersionForDocument(uri);
 
    json::Object paramsJson;
    paramsJson["textDocument"] = textDocumentJson;
 
-   sendNotification("textDocument/didOpen", paramsJson);
+   json::Object startJson;
+   startJson["line"] = static_cast<uint64_t>(range.begin().row);
+   startJson["character"] = static_cast<uint64_t>(range.begin().column);
+
+   json::Object endJson;
+   endJson["line"] = static_cast<uint64_t>(range.end().row);
+   endJson["character"] = static_cast<uint64_t>(range.end().column);
+
+   json::Object rangeJson;
+   rangeJson["start"] = startJson;
+   rangeJson["end"] = endJson;
+
+   json::Object contentChangeJson;
+   contentChangeJson["range"] = rangeJson;
+   contentChangeJson["text"] = text;
+
+   json::Array contentChangesJsonArray;
+   contentChangesJsonArray.push_back(contentChangeJson);
+   paramsJson["contentChanges"] = contentChangesJsonArray;
+
+   sendNotification("textDocument/didChange", paramsJson);
 }
 
 namespace file_monitor {
@@ -1181,16 +1331,9 @@ void indexFile(const core::FileInfo& info)
    
    DLOG("Indexing document: {}", info.absolutePath());
    
-   json::Object textDocumentJson;
-   textDocumentJson["uri"] = uriFromDocumentPath(documentPath.getAbsolutePath());
-   textDocumentJson["languageId"] = languageId;
-   textDocumentJson["version"] = kCopilotDefaultDocumentVersion;
-   textDocumentJson["text"] = contents;
-
-   json::Object paramsJson;
-   paramsJson["textDocument"] = textDocumentJson;
-
-   sendNotification("textDocument/didOpen", paramsJson);
+   docOpened(uriFromDocumentPath(documentPath.getAbsolutePath()),
+             languageId,
+             contents);
 }
 
 } // end anonymous namespace
@@ -1222,18 +1365,13 @@ void onDocUpdated(boost::shared_ptr<source_database::SourceDocument> pDoc)
 
    if (!isIndexableDocument(pDoc))
       return;
-   
-   // Synchronize document contents with Copilot
-   json::Object textDocumentJson;
-   textDocumentJson["uri"] = uriFromDocument(pDoc);
-   textDocumentJson["languageId"] = languageIdFromDocument(pDoc);
-   textDocumentJson["version"] = kCopilotDefaultDocumentVersion;
-   textDocumentJson["text"] = contentsFromDocument(pDoc);
 
-   json::Object paramsJson;
-   paramsJson["textDocument"] = textDocumentJson;
-
-   sendNotification("textDocument/didOpen", paramsJson);
+   // We generally handle changes to the document via onSourceFileDiff(), but in the case 
+   // where a new document is created but not yet saved, we get this onDocUpdated() call
+   // and use it to tell Copilot about the new document.
+   docOpened(uriFromDocument(pDoc),
+             languageIdFromDocument(pDoc),
+             contentsFromDocument(pDoc));
 }
 
 void onDocRemoved(boost::shared_ptr<source_database::SourceDocument> pDoc)
@@ -1241,13 +1379,7 @@ void onDocRemoved(boost::shared_ptr<source_database::SourceDocument> pDoc)
    if (!ensureAgentRunning())
       return;
 
-   json::Object textDocumentJson;
-   textDocumentJson["uri"] = uriFromDocument(pDoc);
-
-   json::Object paramsJson;
-   paramsJson["textDocument"] = textDocumentJson;
-
-   sendNotification("textDocument/didClose", paramsJson);
+   docClosed(uriFromDocument(pDoc));
 }
 
 void onBackgroundProcessing(bool isIdle)
@@ -1376,10 +1508,10 @@ void onBackgroundProcessing(bool isIdle)
                if (kindJson.isString())
                   kind = kindJson.getString();
 
-                if (boost::iequals(kind, "Error"))
-                  ELOG("didChangeStatus: '{}'", message);
-                else if (boost::iequals(kind, "Warning") || boost::iequals(kind, "Inactive"))
-                  WLOG("didChangeStatus: '{}'", message);
+                // Log at debug level to avoid spamming the logs with things such as
+                // "You are not signed into GitHub."
+                // https://github.com/rstudio/rstudio/issues/15910
+                DLOG("didChangeStatus: '{}: {}'", kind, message);
             }
             continue;
          }
@@ -1525,6 +1657,32 @@ void onShutdown(bool)
    s_agentPid = -1;
 }
 
+void onSourceFileDiff(module_context::DocumentDiff diff)
+{
+   if (!ensureAgentRunning())
+      return;
+
+   // Resolve source document from id
+   auto pDoc = boost::make_shared<source_database::SourceDocument>();
+   Error error = source_database::get(diff.docId, pDoc);
+   if (error)
+   {
+      LOG_ERROR(error);
+      return;
+   }
+
+   // Convert from absolute location in the file to a line/column range.
+   collection::Range range(
+         core::string_utils::offsetToPosition(pDoc->contents(), diff.offset), 
+         core::string_utils::offsetToPosition(pDoc->contents(), diff.offset + diff.length));
+
+   // Notify Copilot of the change
+   didChangeIncremental(uriFromDocument(pDoc),
+                        languageIdFromDocument(pDoc),
+                        range,
+                        diff.replacement);
+}
+
 // Primarily intended for debugging / exploration.
 SEXP rs_copilotSendRequest(SEXP methodSEXP, SEXP paramsSEXP)
 {
@@ -1597,6 +1755,14 @@ SEXP rs_copilotStopAgent()
  
    // return status
    return Rf_ScalarLogical(stopped);
+}
+
+Error copilotVerifyInstalled(const json::JsonRpcRequest& request,
+                             json::JsonRpcResponse* pResponse)
+{
+   json::Object responseJson;
+   pResponse->setResult(isCopilotAgentInstalled());
+   return Success();
 }
 
 Error copilotDiagnostics(const json::JsonRpcRequest& request,
@@ -1679,8 +1845,9 @@ Error copilotGenerateCompletions(const json::JsonRpcRequest& request,
    positionJson["character"] = cursorColumn;
 
    json::Object docJson;
-   docJson["uri"] = uriFromDocument(pDoc);
-   docJson["version"] = kCopilotDefaultDocumentVersion;
+   auto uri = uriFromDocument(pDoc);
+   docJson["uri"] = uri;
+   docJson["version"] = currentVersionForDocument(uri);
 
    json::Object contextJson;
    contextJson["triggerKind"] = autoInvoked ? 
@@ -1836,6 +2003,73 @@ Error copilotDidShowCompletion(const json::JsonRpcRequest& request,
    return Success();
 }
 
+Error copilotDidAcceptCompletion(const json::JsonRpcRequest& request,
+                                 json::JsonRpcResponse* pResponse)
+{
+   // Make sure copilot is running
+   if (!ensureAgentRunning())
+   {
+      // nothing to do if we can't connect to the agent
+      return Success();
+   }
+
+   // Read params
+   json::Object completionCommandJson;
+   Error error = core::json::readParams(request.params, &completionCommandJson);
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+
+   sendNotification("workspace/executeCommand", completionCommandJson);
+   return Success();
+}
+
+Error copilotDidAcceptPartialCompletion(const json::JsonRpcRequest& request,
+                                        json::JsonRpcResponse* pResponse)
+{
+   // Make sure copilot is running
+   if (!ensureAgentRunning())
+   {
+      // nothing to do if we can't connect to the agent
+      return Success();
+   }
+
+   // Read params
+   json::Object partialCompletionJson;
+   int acceptedLength;
+   Error error = core::json::readParams(request.params, &partialCompletionJson, &acceptedLength);
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+
+   json::Object paramsJson;
+   paramsJson["item"] = partialCompletionJson;
+   paramsJson["acceptedLength"] = acceptedLength;
+   sendNotification("textDocument/didPartiallyAcceptCompletion", paramsJson);
+   return Success();
+}
+
+Error copilotRegisterOpenFiles(const json::JsonRpcRequest& request,
+                               json::JsonRpcResponse* pResponse)
+{
+   json::Array paths;
+   Error error = json::readParam(request.params, 0, &paths);
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+
+   for (const json::Value& val : paths)
+      s_indexQueue.push_back(FileInfo(FilePath(val.getString())));
+
+   return Success();
+}
+
 } // end anonymous namespace
 
 
@@ -1865,6 +2099,7 @@ Error initialize()
    events().onProjectOptionsUpdated.connect(onProjectOptionsUpdated);
    events().onDeferredInit.connect(onDeferredInit);
    events().onShutdown.connect(onShutdown);
+   events().onSourceFileDiff.connect(onSourceFileDiff);
 
    // TODO: Do we need this _and_ the preferences saved callback?
    // This one seems required so that we see preference changes while
@@ -1883,8 +2118,12 @@ Error initialize()
          (bind(registerAsyncRpcMethod, "copilot_sign_in", copilotSignIn))
          (bind(registerAsyncRpcMethod, "copilot_sign_out", copilotSignOut))
          (bind(registerAsyncRpcMethod, "copilot_status", copilotStatus))
+         (bind(registerRpcMethod, "copilot_verify_installed", copilotVerifyInstalled))
          (bind(registerRpcMethod, "copilot_doc_focused", copilotDocFocused))
          (bind(registerRpcMethod, "copilot_did_show_completion", copilotDidShowCompletion))
+         (bind(registerRpcMethod, "copilot_did_accept_completion", copilotDidAcceptCompletion))
+         (bind(registerRpcMethod, "copilot_did_accept_partial_completion", copilotDidAcceptPartialCompletion))
+         (bind(registerRpcMethod, "copilot_register_open_files", copilotRegisterOpenFiles))
          (bind(sourceModuleRFile, "SessionCopilot.R"))
          ;
    return initBlock.execute();

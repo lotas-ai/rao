@@ -125,3 +125,88 @@ withr::defer(.rs.automation.deleteRemote())
    expect_true(foundWarningSpan)
    
 })
+
+# https://github.com/rstudio/rstudio/issues/16031
+.rs.test("warnings are treated as errors when options(warn = 2)", {
+   
+   remote$console.executeExpr({
+      
+      options(warn = 2)
+      
+      x <- tryCatch(
+         as.numeric("oops"),
+         error = identity
+      )
+      
+      options(warn = 0)
+      inherits(x, "error")
+      
+   })
+   
+   output <- remote$console.getOutput(n = 1L)
+   expect_equal(output, "[1] TRUE")
+   
+})
+
+# https://github.com/rstudio/rstudio/issues/16038
+.rs.test("carriage returns don't break output annotation", {
+   
+   remote$console.clear()
+   remote$console.executeExpr({
+      message("M1"); cat("O1\r"); message("M2")
+   })
+   
+   spanOutputs <- list()
+   spanEls <- consoleOutputEl$querySelectorAll("span")
+   for (i in seq_len(spanEls$length))
+   {
+      spanEl <- spanEls[[i - 1L]]
+      spanOutputs[[spanEl$innerText]] <- TRUE
+   }
+   
+   spanOutputs <- names(spanOutputs)
+   
+   expect_true("M1" %in% spanOutputs)
+   expect_true("M2" %in% spanOutputs)
+   expect_false("O1" %in% spanOutputs)
+   
+   m1idx <- which(spanOutputs == "M1")
+   m2idx <- which(spanOutputs == "M2")
+   expect_equal(m2idx - m1idx, 1L)
+   
+   remote$console.executeExpr({
+      writeLines("This is some more output.")
+   })
+   
+   output <- remote$console.getOutput(n = 1L)
+   expect_equal(output, "This is some more output.")
+   
+   remote$console.clear()
+   remote$console.executeExpr({
+      message("M1", appendLF = FALSE); message("\b", appendLF = FALSE); message("2")
+   })
+   
+   output <- remote$console.getOutput(n = 1L)
+   expect_equal(output, "M2")
+   
+})
+
+.rs.test("text is truncated appropriately in console", {
+   
+   remote$console.executeExpr({
+      .rs.uiPrefs$consoleLineLengthLimit$set(10L)
+   })
+   
+   remote$console.executeExpr({
+      long <- paste(rep.int("a", 1E4), collapse = "")
+      cat(long, sep = "\n")
+   })
+   
+   output <- remote$console.getOutput(n = 1L)
+   expect_equal(output, "aaaaaaaaaa ... <truncated>")
+   
+   remote$console.executeExpr({
+      .rs.uiPrefs$consoleLineLengthLimit$set(2000L)
+   })
+   
+})

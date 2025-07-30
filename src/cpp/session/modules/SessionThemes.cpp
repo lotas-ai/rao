@@ -400,9 +400,30 @@ SEXP rs_getThemeColors()
  */
 FilePath getDefaultTheme(const http::Request& request)
 {
-   // Always return Textmate regardless of dark parameter to ensure AI pane compatibility
-   // Dark themes have been disabled to prevent styling conflicts
-   return getDefaultThemePath().completeChildPath("textmate.rstheme");
+   std::string value = request.queryParamValue("dark");
+   
+   bool isDark = false;
+   if (core::string_utils::hasTruthyValue(value))
+   {
+      isDark = true;
+   }
+   else if (core::string_utils::hasFalsyValue(value))
+   {
+      isDark = false;
+   }
+   else
+   {
+      LOG_WARNING_MESSAGE("\"dark\" parameter for request is missing or not a true or false value: " + value);
+   }
+
+   if (isDark)
+   {
+      return getDefaultThemePath().completeChildPath("tomorrow_night.rstheme");
+   }
+   else
+   {
+      return getDefaultThemePath().completeChildPath("textmate.rstheme");
+   }
 }
 
 /**

@@ -37,12 +37,7 @@ import { closeAllSatellites, MainWindow } from './main-window';
 import { ElectronDesktopOptions } from './preferences/electron-desktop-options';
 import { EXIT_FAILURE } from './program-status';
 import { waitForUrlWithTimeout } from './url-utils';
-import {
-  createStandaloneErrorDialog,
-  findRepoRoot,
-  getCurrentlyUniqueFolderName,
-  userLogPath,
-} from './utils';
+import { createStandaloneErrorDialog, findRepoRoot, getCurrentlyUniqueFolderName, userLogPath } from './utils';
 import path from 'path';
 import { createSplashScreen } from './splash-screen';
 
@@ -234,7 +229,12 @@ export class SessionLauncher {
 
     // show the window (but don't if we are doing a --run-diagnostics)
     if (!appState().runDiagnostics) {
-      this.mainWindow.window.once('ready-to-show', async () => {
+      // Originally used 'ready-to-show' here, but we've been getting reports of the
+      // splash screen never closing and the main window never showing, and issues such
+      // as https://github.com/electron/electron/issues/40273 indicate that `ready-to-show`
+      // may not be reliable, especially if the user switches focus between different
+      // windows/apps while starting up.
+      this.mainWindow.window.webContents.once('did-finish-load', async () => {
         if (appState().startupDelayMs > 0) {
           await setTimeoutPromise(appState().startupDelayMs);
         }
@@ -321,7 +321,6 @@ export class SessionLauncher {
     const gitCommit = info.RSTUDIO_GIT_COMMIT.substr(0, 8);
 
     // Create version string
-    // eslint-disable-next-line max-len
     const ss = `Rao ${info.RSTUDIO_VERSION} "${info.RSTUDIO_RELEASE_NAME} " (${gitCommit}, ${info.RSTUDIO_BUILD_DATE}) for ${info.RSTUDIO_PACKAGE_OS}`;
     vars.set('version', ss);
 
@@ -503,7 +502,7 @@ export class SessionLauncher {
     // must check showSplash before and after the timeout
     // before to determine if the timeout is required
     // after to determine if the main window is ready to show
-    if (this.splashDelay > 0 && this.showSplash) {
+    if (this.splashDelay > 0 && this.showSplash && ElectronDesktopOptions().enableSplashScreen()) {
       setTimeoutPromise(this.splashDelay)
         .then(() => {
           if (this.showSplash) {
@@ -642,7 +641,7 @@ export class SessionLauncher {
           try {
             rmSync(devSessionPath);
             return;
-          } catch (e: unknown) {
+          } catch (_e: unknown) {
             await sleepPromise(1);
           }
         }
@@ -724,7 +723,6 @@ export class SessionLauncher {
 
     // check for R version mismatch
     if (abendLogMessage.includes('arguments passed to .Internal')) {
-      // eslint-disable-next-line max-len
       errMsg =
         errMsg +
         '\n\n' +

@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+
+read -r -d '' DEFAULT_ASANFLAGS <<- EOF
+-fsanitize=address,undefined
+-fsanitize-recover=address,undefined
+-fno-sanitize=vptr
+-fno-omit-frame-pointer
+-fuse-ld=gold
+EOF
+DEFAULT_ASANFLAGS="$(echo "${DEFAULT_ASANFLAGS}" | tr '\n' ' ')"
+
+read -r -d '' DEFAULT_LDFLAGS <<- EOF
+-fsanitize=address,undefined
+EOF
+DEFAULT_LDFLAGS="$(echo "${DEFAULT_LDFLAGS}" | tr '\n' ' ')"
+
+: ${ASANFLAGS="${DEFAULT_ASANFLAGS}"}
+: ${LDFLAGS="${DEFAULT_LDFLAGS}"}
+: ${BUILD_DIR="gcc-ubsan-build"}
+: ${R_HOME="$(R RHOME)"}
+
+mkdir -p "${BUILD_DIR}"
+cd "${BUILD_DIR}"
+rm -f CMakeCache.txt
+cmake ../cpp                              \
+    -DCMAKE_BUILD_TYPE=Debug              \
+    -DLIBR_HOME="${R_HOME}"               \
+    -DCMAKE_C_FLAGS="${ASANFLAGS}"        \
+    -DCMAKE_CXX_FLAGS="${ASANFLAGS}"      \
+    -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS}" \
+    "$@"
+cd ..
+
+cmake --build "${BUILD_DIR}"

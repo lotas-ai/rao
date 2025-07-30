@@ -28,6 +28,7 @@ import com.google.gwt.event.shared.GwtEvent;
 import com.google.gwt.user.client.Command;
 import com.google.gwt.user.client.Timer;
 import com.google.gwt.user.client.ui.*;
+import com.google.gwt.user.client.ui.LayoutPanel;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
 
@@ -127,11 +128,18 @@ public class WorkbenchScreen extends Composite
       FontSizer.setNormalFontSize(Document.get(), fontSizeManager);
 
       paneManager_ = pPaneManager.get();
+      
+      // Create our own container to avoid HasWidgets issues with DI widgets
+      workbenchContainer_ = new LayoutPanel();
+      workbenchContainer_.setSize("100%", "100%");
+      workbenchContainer_.addStyleDependentName("Workbench");
+      Roles.getMainRole().set(workbenchContainer_.getElement());
+      Roles.getMainRole().setAriaLabelProperty(workbenchContainer_.getElement(), "Workbench");
+      
+      // Get the MainSplitPanel and add it to our container
       tabsPanel_ = paneManager_.getPanel();
       tabsPanel_.setSize("100%", "100%");
-      tabsPanel_.addStyleDependentName("Workbench");
-      Roles.getMainRole().set(tabsPanel_.getElement());
-      Roles.getMainRole().setAriaLabelProperty(tabsPanel_.getElement(), "Workbench");
+      workbenchContainer_.add(tabsPanel_);
 
       // Prevent doOnPaneSizesChanged() from being called more than once
       // every N milliseconds. Note that the act of sending the client metrics
@@ -179,7 +187,7 @@ public class WorkbenchScreen extends Composite
       });
 
       // init widget
-      initWidget(tabsPanel_);
+      initWidget(workbenchContainer_);
 
       commandBinder.bind(commands, this);
    }
@@ -514,5 +522,6 @@ public class WorkbenchScreen extends Composite
    private final org.rstudio.studio.client.workbench.ui.OptionsLoader.Shim optionsLoader_;
 
    private final MainSplitPanel tabsPanel_;
+   private final LayoutPanel workbenchContainer_;
    private final PaneManager paneManager_;
 }

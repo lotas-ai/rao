@@ -43,7 +43,7 @@ import { resolveTemplateVar } from '../core/template-filter';
 import desktop from '../native/desktop.node';
 import { ChooseRModalWindow } from '../ui/widgets/choose-r';
 import { appState } from './app-state';
-import { findRInstallationsWin32 } from './detect-r';
+import { findDefault32Bit, findDefault64Bit, findRInstallationsWin32 } from './detect-r';
 import { GwtWindow } from './gwt-window';
 import { MainWindow } from './main-window';
 import { openMinimalWindow } from './minimal-window';
@@ -452,7 +452,23 @@ export class GwtCallback extends EventEmitter {
     });
 
     ipcMain.handle('desktop_get_r_version', () => {
-      const rBinDir = ElectronDesktopOptions().rBinDir();
+      const options = ElectronDesktopOptions();
+
+      if (options.useDefault32BitR()) {
+        const rHomeDir = findDefault32Bit();
+        if (rHomeDir) {
+          return `[32-bit] ${rHomeDir} [Default]`;
+        }
+      }
+
+      if (options.useDefault64BitR()) {
+        const rHomeDir = findDefault64Bit();
+        if (rHomeDir) {
+          return `[64-bit] ${rHomeDir} [Default]`;
+        }
+      }
+
+      const rBinDir = options.rBinDir();
       return formatSelectedVersionForUi(rBinDir);
     });
 
@@ -465,7 +481,6 @@ export class GwtCallback extends EventEmitter {
 
       // ask the user what version of R they'd like to use
       const chooseRDialog = new ChooseRModalWindow(rInstalls, mainWindow.window);
-
       void handleLocaleCookies(chooseRDialog);
 
       const [data, error] = await chooseRDialog.showModal();
@@ -479,13 +494,15 @@ export class GwtCallback extends EventEmitter {
         return '';
       }
 
-      // we need to save the binary directory in the options, but
-      // return a formatted string for the client, so do that here
+      // save options from dialog result
+      const options = ElectronDesktopOptions();
       const path = data.binaryPath as string;
+      options.setUseDefault32BitR(data.useDefault32BitR || false);
+      options.setUseDefault64BitR(data.useDefault64BitR || false);
+      options.setRExecutablePath(path);
+
+      // return a formatted string for the client
       const rBinDir = dirname(path);
-
-      ElectronDesktopOptions().setRExecutablePath(path);
-
       logger().logDebug(`Using R: ${rBinDir}`);
       return formatSelectedVersionForUi(rBinDir);
     });
@@ -617,12 +634,16 @@ export class GwtCallback extends EventEmitter {
             type: this.convertMessageBoxType(type),
             message: caption,
             detail: message,
+            cancelId: _cancelButton,
+            defaultId: _defaultButton,
             buttons: this.convertButtons(buttons),
           };
         } else {
           openDialogOptions = {
             type: this.convertMessageBoxType(type),
             title: caption,
+            cancelId: _cancelButton,
+            defaultId: _defaultButton,
             message: message,
             buttons: this.convertButtons(buttons),
           };
@@ -765,12 +786,34 @@ export class GwtCallback extends EventEmitter {
       nativeTheme.themeSource = isDark ? 'dark' : 'light';
     });
 
+    ipcMain.on('desktop_set_mousewheel_zoom_enabled', (_event, enabled: boolean) => {
+      // Broadcast to all windows
+      for (const window of BrowserWindow.getAllWindows()) {
+        window.webContents.send('desktop_set_mousewheel_zoom_enabled', enabled);
+      }
+    });
+
+    ipcMain.on('desktop_set_mousewheel_zoom_debounce', (_event, zoomDebounceMs: number) => {
+      // Broadcast to all windows
+      for (const window of BrowserWindow.getAllWindows()) {
+        window.webContents.send('desktop_set_mousewheel_zoom_debounce', zoomDebounceMs);
+      }
+    });
+
     ipcMain.handle('desktop_get_enable_accessibility', () => {
       return ElectronDesktopOptions().accessibility();
     });
 
     ipcMain.on('desktop_set_enable_accessibility', (_event, enable) => {
       ElectronDesktopOptions().setAccessibility(enable);
+    });
+
+    ipcMain.handle('desktop_get_enable_splash_screen', () => {
+      return ElectronDesktopOptions().enableSplashScreen();
+    });
+
+    ipcMain.on('desktop_set_enable_splash_screen', (_event, enable) => {
+      ElectronDesktopOptions().setEnableSplashScreen(enable);
     });
 
     ipcMain.on('desktop_set_autohide_menubar', (_event, autohide: boolean) => {
@@ -918,6 +961,26 @@ export class GwtCallback extends EventEmitter {
 
     ipcMain.on('desktop_stop_main_thread', () => {
       process.crash();
+    });
+
+    // Define an interface for owners that have notifyAltMouseDown
+    interface AltMouseDownNotifiable {
+      notifyAltMouseDown: () => void;
+      window: BrowserWindow;
+    }
+
+    // Handle Alt+mouse down notification for Windows multi-cursor fix
+    ipcMain.on('desktop_alt_mouse_down', (event) => {
+      const window = BrowserWindow.fromWebContents(event.sender);
+      if (window) {
+        // Find the GwtWindow that owns this BrowserWindow
+        for (const owner of this.owners) {
+          if (owner.window === window && 'notifyAltMouseDown' in owner) {
+            (owner as AltMouseDownNotifiable).notifyAltMouseDown();
+            break;
+          }
+        }
+      }
     });
 
     ipcMain.handle('desktop_get_session_server', () => {
@@ -1147,7 +1210,7 @@ export class GwtCallback extends EventEmitter {
           if (win.window.webContents.mainFrame === frame) {
             return win;
           }
-        } catch (error: unknown) {
+        } catch (_error: unknown) {
           logger().logDebug('Window WebContents has been destroyed. Skipping this window.');
         }
       }

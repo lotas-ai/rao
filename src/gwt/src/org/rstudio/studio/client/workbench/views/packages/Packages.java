@@ -81,6 +81,7 @@ import org.rstudio.studio.client.workbench.views.packages.model.PackageLibraryUt
 import org.rstudio.studio.client.workbench.views.packages.model.PackageState;
 import org.rstudio.studio.client.workbench.views.packages.model.PackageStatus;
 import org.rstudio.studio.client.workbench.views.packages.model.PackageUpdate;
+import org.rstudio.studio.client.workbench.views.packages.model.PackageVulnerabilityTypes.RepositoryPackageVulnerabilityListMap;
 import org.rstudio.studio.client.workbench.views.packages.model.PackagesServerOperations;
 import org.rstudio.studio.client.workbench.views.packages.model.PackratActions;
 import org.rstudio.studio.client.workbench.views.packages.ui.CheckForUpdatesDialog;
@@ -104,7 +105,9 @@ public class Packages
    public interface Display extends WorkbenchView
    {
       void setPackageState(ProjectContext projectContext,
-                           List<PackageInfo> packagesDS);
+                           List<PackageInfo> packages,
+                           RepositoryPackageVulnerabilityListMap vulns,
+                           JsObject activeRepository);
 
       void installPackage(PackageInstallContext installContext,
                           PackageInstallOptions defaultInstallOptions,
@@ -354,7 +357,7 @@ public class Packages
 
                if (!usingDefaultLibrary)
                {
-                  command.append(", lib=\"");
+                  command.append(", lib = \"");
                   command.append(request.getOptions().getLibraryPath());
                   command.append("\"");
                }
@@ -479,13 +482,6 @@ public class Packages
          }
          if (libPathUpdates.size() > 1)
             command.append(")");
-
-         if (libPath != installContext.getDefaultLibraryPath())
-         {
-            command.append(", lib=\"");
-            command.append(libPath);
-            command.append("\"");
-         }
 
          command.append(")");
 
@@ -654,7 +650,7 @@ public class Packages
 
             final OperationWithInput<Void> operation = (Void input) -> {
 
-               String code = "renv::" + action.toLowerCase() + "(confirm = FALSE)";
+               String code = "renv::" + action.toLowerCase() + "(prompt = FALSE)";
                events_.fireEvent(new SendToConsoleEvent(code, true));
             };
 
@@ -725,7 +721,7 @@ public class Packages
                      command.append("\"");
                      if (!usingDefaultLibrary)
                      {
-                        command.append(", lib=\"");
+                        command.append(", lib = \"");
                         command.append(packageInfo.getLibrary());
                         command.append("\"");
                      }
@@ -824,10 +820,9 @@ public class Packages
       {
          PackageInfo packageInfo = allPackages_.get(i);
          if (packageInfo.getName() == status.getName() &&
-             packageInfo.getLibrary() == status.getLib())
+             packageInfo.getLibrary() == status.getLibrary())
          {
-            allPackages_.set(i, status.isLoaded() ? packageInfo.asLoaded() :
-                                                    packageInfo.asUnloaded());
+            packageInfo.setAttached(status.isAttached());
          }
       }
    }
@@ -877,7 +872,7 @@ public class Packages
          packages = allPackages_;
       }
 
-      view_.setPackageState(projectContext_, packages);
+      view_.setPackageState(projectContext_, packages, vulns_, activeRepository_);
    }
 
    private void checkPackageStatusOnNextConsolePrompt(
@@ -1012,6 +1007,13 @@ public class Packages
       events_.fireEvent(new SendToConsoleEvent(cmd, true));
    }
 
+   private void executePkgCommandNoEcho(String cmd)
+   {
+      SendToConsoleEvent event = new SendToConsoleEvent(cmd, true);
+      event.setShouldEcho(false);
+      events_.fireEvent(event);
+   }
+
    private void restartForInstallWithConfirmation(final String installCmd)
    {
       String msg = constants_.restartForInstallWithConfirmation();
@@ -1032,13 +1034,13 @@ public class Packages
             },
             () ->
             {
-               server_.ignoreNextLoadedPackageCheck(
-                                            new VoidServerRequestCallback() {
+               server_.ignoreNextLoadedPackageCheck(new VoidServerRequestCallback()
+               {
                   @Override
                   public void onSuccess()
                   {
                      if (haveInstallCmd)
-                        executePkgCommand(installCmd);
+                        executePkgCommandNoEcho(installCmd);
                   }
                });
             },
@@ -1207,9 +1209,13 @@ public class Packages
    {
       // sort the packages
       allPackages_ = new ArrayList<>();
+      activeRepository_ = newState.getActiveRepository();
+      vulns_ = newState.getVulnerabilityInfo();
+
       JsArray<PackageInfo> serverPackages = newState.getPackageList();
       for (int i = 0; i < serverPackages.length(); i++)
          allPackages_.add(serverPackages.get(i));
+
       Collections.sort(allPackages_, new Comparator<PackageInfo>() {
          public int compare(PackageInfo o1, PackageInfo o2)
          {
@@ -1225,7 +1231,7 @@ public class Packages
          }
       });
 
-      // Mark  which packages are first in their respective libraries (used
+      // Mark which packages are first in their respective libraries (used
       // later to render headers)
       PackageLibraryType libraryType = PackageLibraryType.None;
       for (PackageInfo pkgInfo: allPackages_)
@@ -1260,6 +1266,8 @@ public class Packages
    private final PackratServerOperations packratServer_;
    private final RenvServerOperations renvServer_;
    private ArrayList<PackageInfo> allPackages_ = new ArrayList<>();
+   private RepositoryPackageVulnerabilityListMap vulns_;
+   private JsObject activeRepository_;
    private ProjectContext projectContext_;
    private String packageFilter_ = new String();
    private HandlerRegistration consolePromptHandlerReg_ = null;

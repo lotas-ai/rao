@@ -1081,6 +1081,14 @@ Error FilePath::getFileOwner(uid_t& out_fileOwner) const
    return Success();
 }
 
+std::time_t FilePath::getFileChangeTime() const
+{
+   struct stat st;
+   if (::stat(getAbsolutePath().c_str(), &st) == -1)
+      return 0;
+   return st.st_ctime;
+}
+
 #endif
 
 std::string FilePath::getFilename() const
@@ -1538,6 +1546,7 @@ Error FilePath::openForRead(std::shared_ptr<std::istream>& out_stream) const
       if (!(*pResult))
       {
          delete pResult;
+         pResult = nullptr;
 
          Error error = systemError(boost::system::errc::no_such_file_or_directory, ERROR_LOCATION);
          error.addProperty("path", getAbsolutePath());
@@ -1548,6 +1557,7 @@ Error FilePath::openForRead(std::shared_ptr<std::istream>& out_stream) const
    catch(const std::exception& e)
    {
       delete pResult;
+      pResult = nullptr;
 
       Error error = systemError(boost::system::errc::io_error,
                                 ERROR_LOCATION);
@@ -1596,6 +1606,7 @@ Error FilePath::openForWrite(std::shared_ptr<std::ostream>& out_stream, bool in_
       if (!(*pResult))
       {
          delete pResult;
+         pResult = nullptr;
 
          Error error = systemError(boost::system::errc::no_such_file_or_directory, ERROR_LOCATION);
          error.addProperty("path", getAbsolutePath());
@@ -1607,6 +1618,7 @@ Error FilePath::openForWrite(std::shared_ptr<std::ostream>& out_stream, bool in_
    catch(const std::exception& e)
    {
       delete pResult;
+      pResult = nullptr;
       Error error = systemError(boost::system::errc::io_error,
                                 ERROR_LOCATION);
       error.addProperty("what", e.what());
@@ -1724,6 +1736,7 @@ Error FilePath::testWritePermissions() const
       if (!(*pStream))
       {
          delete pStream;
+         pStream = nullptr;
 
          Error error = systemError(boost::system::errc::no_such_file_or_directory, ERROR_LOCATION);
          error.addProperty("path", getAbsolutePath());
@@ -1733,6 +1746,7 @@ Error FilePath::testWritePermissions() const
    catch(const std::exception& e)
    {
       delete pStream;
+      pStream = nullptr;
 
       Error error = systemError(boost::system::errc::io_error,
                                 ERROR_LOCATION);

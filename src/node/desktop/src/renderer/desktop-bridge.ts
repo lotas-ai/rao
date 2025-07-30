@@ -31,7 +31,6 @@ function reportIpcError(name: string, error: Error) {
   logString('err', `IpcError: ${name}: ${error.message}`);
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-module-boundary-types
 export function getDesktopBridge() {
   return {
     writeStdout: (output: string) => {
@@ -495,6 +494,14 @@ export function getDesktopBridge() {
       ipcRenderer.send('desktop_sync_to_editor_theme', isDark);
     },
 
+    setMousewheelZoomEnabled: (enabled: boolean) => {
+      ipcRenderer.send('desktop_set_mousewheel_zoom_enabled', enabled);
+    },
+
+    setMousewheelZoomDebounce: (debounceMs: number) => {
+      ipcRenderer.send('desktop_set_mousewheel_zoom_debounce', debounceMs);
+    },
+
     getEnableAccessibility: (callback: VoidCallback<boolean>) => {
       ipcRenderer
         .invoke('desktop_get_enable_accessibility')
@@ -506,12 +513,27 @@ export function getDesktopBridge() {
       ipcRenderer.send('desktop_set_enable_accessibility', enable);
     },
 
+    getEnableSplashScreen: (callback: VoidCallback<boolean>) => {
+      ipcRenderer
+        .invoke('desktop_get_enable_splash_screen')
+        .then((enabled) => callback(enabled))
+        .catch((error) => reportIpcError('getEnableSplashScreen', error));
+    },
+
+    setEnableSplashScreen: (enable: boolean) => {
+      ipcRenderer.send('desktop_set_enable_splash_screen', enable);
+    },
+
     setAutohideMenubar: (enable: boolean) => {
       ipcRenderer.send('desktop_set_autohide_menubar', enable);
     },
 
     setDisableRendererAccessibility: (disable: boolean) => {
       ipcRenderer.send('desktop_set_disable_renderer_accessibility', disable);
+    },
+
+    notifyAltMouseDown: () => {
+      ipcRenderer.send('desktop_alt_mouse_down');
     },
 
     getIgnoreGpuExclusionList: (callback: VoidCallback<boolean>) => {
@@ -746,7 +768,7 @@ export function getDesktopBridge() {
     consoleLog: (output: string) => {
       ipcRenderer.send('desktop_console_log', output);
     },
-
+    
     getSecurityMode: (callback: VoidCallback<string>) => {
       ipcRenderer
         .invoke('desktop_get_security_mode')
@@ -754,7 +776,7 @@ export function getDesktopBridge() {
         .catch((error) => reportIpcError('getSecurityMode', error));
     },
 
-    getPathForFile: (file: any) => {
+    getPathForFile: (file: File) => {
       return webUtils.getPathForFile(file);
     },
 

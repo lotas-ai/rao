@@ -1,3 +1,4 @@
+/.cache
 /build/
 build_*/
 build-*/
@@ -54,3 +55,6 @@ rstudio-automation-results.xml
 
 venv/
 .venv/
+
+CLAUDE.md
+.claude/

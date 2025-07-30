@@ -46,6 +46,9 @@ public interface ThemeResources extends ClientBundle
 
    @Source("rstudio_small_2x.png")
    ImageResource rstudio_small2x();
+
+   @Source("helpSmall_2x.png")
+   ImageResource helpSmall2x();
    
    @Source("backgroundGradient.png")
    DataResource backgroundGradient();

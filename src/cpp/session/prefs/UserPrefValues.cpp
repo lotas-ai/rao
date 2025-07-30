@@ -1103,19 +1103,6 @@ core::Error UserPrefValues::setAnsiConsoleMode(std::string val)
 }
 
 /**
- * Whether to only show a limited window of the total console output
- */
-bool UserPrefValues::limitVisibleConsole()
-{
-   return readPref<bool>("limit_visible_console");
-}
-
-core::Error UserPrefValues::setLimitVisibleConsole(bool val)
-{
-   return writePref("limit_visible_console", val);
-}
-
-/**
  * Whether to show a toolbar on code chunks in R Markdown documents.
  */
 bool UserPrefValues::showInlineToolbarForRCodeChunks()
@@ -1204,6 +1191,32 @@ double UserPrefValues::helpFontSizePoints()
 core::Error UserPrefValues::setHelpFontSizePoints(double val)
 {
    return writePref("help_font_size_points", val);
+}
+
+/**
+ * Use Ctrl+Mouse Wheel (Cmd+Mouse Wheel on macOS) to zoom the interface in and out.
+ */
+bool UserPrefValues::enableMousewheelZoom()
+{
+   return readPref<bool>("enable_mousewheel_zoom");
+}
+
+core::Error UserPrefValues::setEnableMousewheelZoom(bool val)
+{
+   return writePref("enable_mousewheel_zoom", val);
+}
+
+/**
+ * A delay in milliseconds to wait before applying the zoom level after a mouse wheel event.
+ */
+int UserPrefValues::mousewheelZoomDebounceMs()
+{
+   return readPref<int>("mousewheel_zoom_debounce_ms");
+}
+
+core::Error UserPrefValues::setMousewheelZoomDebounceMs(int val)
+{
+   return writePref("mousewheel_zoom_debounce_ms", val);
 }
 
 /**
@@ -1685,19 +1698,6 @@ bool UserPrefValues::showPublishDiagnostics()
 core::Error UserPrefValues::setShowPublishDiagnostics(bool val)
 {
    return writePref("show_publish_diagnostics", val);
-}
-
-/**
- * Whether to show UI for publishing content to Posit Cloud.
- */
-bool UserPrefValues::enableCloudPublishUi()
-{
-   return readPref<bool>("enable_cloud_publish_ui");
-}
-
-core::Error UserPrefValues::setEnableCloudPublishUi(bool val)
-{
-   return writePref("enable_cloud_publish_ui", val);
 }
 
 /**
@@ -2582,6 +2582,19 @@ bool UserPrefValues::submitCrashReports()
 core::Error UserPrefValues::setSubmitCrashReports(bool val)
 {
    return writePref("submit_crash_reports", val);
+}
+
+/**
+ * Whether to show the splash screen when RStudio is starting.
+ */
+bool UserPrefValues::enableSplashScreen()
+{
+   return readPref<bool>("enable_splash_screen");
+}
+
+core::Error UserPrefValues::setEnableSplashScreen(bool val)
+{
+   return writePref("enable_splash_screen", val);
 }
 
 /**
@@ -3567,7 +3580,6 @@ std::vector<std::string> UserPrefValues::allKeys()
       kConsoleLineLengthLimit,
       kConsoleMaxLines,
       kAnsiConsoleMode,
-      kLimitVisibleConsole,
       kShowInlineToolbarForRCodeChunks,
       kHighlightCodeChunks,
       kSaveFilesBeforeBuild,
@@ -3575,6 +3587,8 @@ std::vector<std::string> UserPrefValues::allKeys()
       kFontSizePoints,
       kEditorLineHeight,
       kHelpFontSizePoints,
+      kEnableMousewheelZoom,
+      kMousewheelZoomDebounceMs,
       kEditorTheme,
       kServerEditorFontEnabled,
       kServerEditorFont,
@@ -3612,7 +3626,6 @@ std::vector<std::string> UserPrefValues::allKeys()
       kRmdPreferredTemplatePath,
       kRmdViewerType,
       kShowPublishDiagnostics,
-      kEnableCloudPublishUi,
       kPublishCheckCertificates,
       kUsePublishCaBundle,
       kPublishCaBundle,
@@ -3681,6 +3694,7 @@ std::vector<std::string> UserPrefValues::allKeys()
       kRestoreProjectRVersion,
       kClangVerbose,
       kSubmitCrashReports,
+      kEnableSplashScreen,
       kDefaultRVersion,
       kDataViewerMaxColumns,
       kDataViewerMaxCellSize,

@@ -474,7 +474,6 @@ void handleHttpdResult(SEXP httpdSEXP,
                  headers.end(),
                  boost::bind(&http::Response::setHeaderLine, pResponse, _1));
    
-   
    // fix up location header for redirects
    if (code == 302 && pResponse->containsHeader("Location"))
    {
@@ -1145,7 +1144,7 @@ Error initialize()
 {
    RS_REGISTER_CALL_METHOD(rs_previewRd, 1);
    RS_REGISTER_CALL_METHOD(rs_showPythonHelp, 1);
-   
+
    using boost::bind;
    using core::http::UriHandler;
    using namespace module_context;

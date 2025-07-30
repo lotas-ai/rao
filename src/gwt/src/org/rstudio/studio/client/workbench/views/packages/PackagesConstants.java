@@ -275,7 +275,16 @@ public interface PackagesConstants extends com.google.gwt.i18n.client.Messages {
      */
     @DefaultMessage("Browse package [{0}]")
     @Key("brosePackageLabel")
-    String brosePackageLabel(String browseUrl);
+    String browsePackageLabel(String browseUrl);
+
+    /**
+     * Translated "Browse package on {0} [{1}]"
+     * 
+     * @return translated "Browse package on {0} [{1}]"
+     */
+    @DefaultMessage("Browse package on {0} [{1}]")
+    @Key("browsePackageOn")
+    String browsePackageOn(String remoteType, String browseUrl);
 
     /**
      * Translated "Browse package on GitHub".
@@ -567,29 +576,29 @@ public interface PackagesConstants extends com.google.gwt.i18n.client.Messages {
     String noPackageSelectedCaption();
 
     /**
-     * Translated "You must specify the package to install.".
+     * Translated "You must specify one or more packages to install.".
      *
-     * @return translated "You must specify the package to install."
+     * @return translated "You must specify one or more packages to install."
      */
-    @DefaultMessage("You must specify the package to install.")
+    @DefaultMessage("You must specify one or more packages to install.")
     @Key("noPackageSelectedMessage")
     String noPackageSelectedMessage();
 
     /**
-     * Translated "Repository ({0})".
+     * Translated "Package Repository ({0})".
      *
-     * @return translated "Repository ({0})"
+     * @return translated "Package Repository ({0})"
      */
-    @DefaultMessage("Repository ({0})")
+    @DefaultMessage("Package Repository ({0})")
     @Key("repositoryLabel")
     String repositoryLabel(String repo);
 
     /**
-     * Translated "Repository (".
+     * Translated "Package Repository (".
      *
-     * @return translated "Repository ("
+     * @return translated "Package Repository ("
      */
-    @DefaultMessage("Repository (")
+    @DefaultMessage("Package Repository (")
     @Key("repositoryItemLabel")
     String repositoryItemLabel();
 

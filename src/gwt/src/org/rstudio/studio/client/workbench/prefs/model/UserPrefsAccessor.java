@@ -1227,7 +1227,7 @@ public class UserPrefsAccessor extends Prefs
          "console_line_length_limit",
          _constants.consoleLineLengthLimitTitle(), 
          _constants.consoleLineLengthLimitDescription(), 
-         1000);
+         2000);
    }
 
    /**
@@ -1239,7 +1239,7 @@ public class UserPrefsAccessor extends Prefs
          "console_max_lines",
          _constants.consoleMaxLinesTitle(), 
          _constants.consoleMaxLinesDescription(), 
-         1000);
+         10000);
    }
 
    /**
@@ -1267,18 +1267,6 @@ public class UserPrefsAccessor extends Prefs
    public final static String ANSI_CONSOLE_MODE_ON = "on";
    public final static String ANSI_CONSOLE_MODE_STRIP = "strip";
    public final static String ANSI_CONSOLE_MODE_OFF = "off";
-
-   /**
-    * Whether to only show a limited window of the total console output
-    */
-   public PrefValue<Boolean> limitVisibleConsole()
-   {
-      return bool(
-         "limit_visible_console",
-         _constants.limitVisibleConsoleTitle(), 
-         _constants.limitVisibleConsoleDescription(), 
-         false);
-   }
 
    /**
     * Whether to show a toolbar on code chunks in R Markdown documents.
@@ -1362,6 +1350,30 @@ public class UserPrefsAccessor extends Prefs
          _constants.helpFontSizePointsTitle(), 
          _constants.helpFontSizePointsDescription(), 
          10.0);
+   }
+
+   /**
+    * Use Ctrl+Mouse Wheel (Cmd+Mouse Wheel on macOS) to zoom the interface in and out.
+    */
+   public PrefValue<Boolean> enableMousewheelZoom()
+   {
+      return bool(
+         "enable_mousewheel_zoom",
+         _constants.enableMousewheelZoomTitle(), 
+         _constants.enableMousewheelZoomDescription(), 
+         false);
+   }
+
+   /**
+    * A delay in milliseconds to wait before applying the zoom level after a mouse wheel event.
+    */
+   public PrefValue<Integer> mousewheelZoomDebounceMs()
+   {
+      return integer(
+         "mousewheel_zoom_debounce_ms",
+         _constants.mousewheelZoomDebounceMsTitle(), 
+         _constants.mousewheelZoomDebounceMsDescription(), 
+         100);
    }
 
    /**
@@ -1854,18 +1866,6 @@ public class UserPrefsAccessor extends Prefs
          _constants.showPublishDiagnosticsTitle(), 
          _constants.showPublishDiagnosticsDescription(), 
          false);
-   }
-
-   /**
-    * Whether to show UI for publishing content to cloud service.
-    */
-   public PrefValue<Boolean> enableCloudPublishUi()
-   {
-      return bool(
-         "enable_cloud_publish_ui",
-         _constants.enableCloudPublishUiTitle(), 
-         _constants.enableCloudPublishUiDescription(), 
-         true);
    }
 
    /**
@@ -2797,6 +2797,18 @@ public class UserPrefsAccessor extends Prefs
          "submit_crash_reports",
          _constants.submitCrashReportsTitle(), 
          _constants.submitCrashReportsDescription(), 
+         true);
+   }
+
+   /**
+    * Whether to show the splash screen when RStudio is starting.
+    */
+   public PrefValue<Boolean> enableSplashScreen()
+   {
+      return bool(
+         "enable_splash_screen",
+         _constants.enableSplashScreenTitle(), 
+         _constants.enableSplashScreenDescription(), 
          true);
    }
 
@@ -3994,8 +4006,6 @@ public class UserPrefsAccessor extends Prefs
          consoleMaxLines().setValue(layer, source.getInteger("console_max_lines"));
       if (source.hasKey("ansi_console_mode"))
          ansiConsoleMode().setValue(layer, source.getString("ansi_console_mode"));
-      if (source.hasKey("limit_visible_console"))
-         limitVisibleConsole().setValue(layer, source.getBool("limit_visible_console"));
       if (source.hasKey("show_inline_toolbar_for_r_code_chunks"))
          showInlineToolbarForRCodeChunks().setValue(layer, source.getBool("show_inline_toolbar_for_r_code_chunks"));
       if (source.hasKey("highlight_code_chunks"))
@@ -4010,6 +4020,10 @@ public class UserPrefsAccessor extends Prefs
          editorLineHeight().setValue(layer, source.getDbl("editor_line_height"));
       if (source.hasKey("help_font_size_points"))
          helpFontSizePoints().setValue(layer, source.getDbl("help_font_size_points"));
+      if (source.hasKey("enable_mousewheel_zoom"))
+         enableMousewheelZoom().setValue(layer, source.getBool("enable_mousewheel_zoom"));
+      if (source.hasKey("mousewheel_zoom_debounce_ms"))
+         mousewheelZoomDebounceMs().setValue(layer, source.getInteger("mousewheel_zoom_debounce_ms"));
       if (source.hasKey("editor_theme"))
          editorTheme().setValue(layer, source.getString("editor_theme"));
       if (source.hasKey("server_editor_font_enabled"))
@@ -4084,8 +4098,6 @@ public class UserPrefsAccessor extends Prefs
          rmdViewerType().setValue(layer, source.getString("rmd_viewer_type"));
       if (source.hasKey("show_publish_diagnostics"))
          showPublishDiagnostics().setValue(layer, source.getBool("show_publish_diagnostics"));
-      if (source.hasKey("enable_cloud_publish_ui"))
-         enableCloudPublishUi().setValue(layer, source.getBool("enable_cloud_publish_ui"));
       if (source.hasKey("publish_check_certificates"))
          publishCheckCertificates().setValue(layer, source.getBool("publish_check_certificates"));
       if (source.hasKey("use_publish_ca_bundle"))
@@ -4222,6 +4234,8 @@ public class UserPrefsAccessor extends Prefs
          clangVerbose().setValue(layer, source.getInteger("clang_verbose"));
       if (source.hasKey("submit_crash_reports"))
          submitCrashReports().setValue(layer, source.getBool("submit_crash_reports"));
+      if (source.hasKey("enable_splash_screen"))
+         enableSplashScreen().setValue(layer, source.getBool("enable_splash_screen"));
       if (source.hasKey("default_r_version"))
          defaultRVersion().setValue(layer, source.getObject("default_r_version"));
       if (source.hasKey("data_viewer_max_columns"))
@@ -4447,7 +4461,6 @@ public class UserPrefsAccessor extends Prefs
       prefs.add(consoleLineLengthLimit());
       prefs.add(consoleMaxLines());
       prefs.add(ansiConsoleMode());
-      prefs.add(limitVisibleConsole());
       prefs.add(showInlineToolbarForRCodeChunks());
       prefs.add(highlightCodeChunks());
       prefs.add(saveFilesBeforeBuild());
@@ -4455,6 +4468,8 @@ public class UserPrefsAccessor extends Prefs
       prefs.add(fontSizePoints());
       prefs.add(editorLineHeight());
       prefs.add(helpFontSizePoints());
+      prefs.add(enableMousewheelZoom());
+      prefs.add(mousewheelZoomDebounceMs());
       prefs.add(editorTheme());
       prefs.add(serverEditorFontEnabled());
       prefs.add(serverEditorFont());
@@ -4492,7 +4507,6 @@ public class UserPrefsAccessor extends Prefs
       prefs.add(rmdPreferredTemplatePath());
       prefs.add(rmdViewerType());
       prefs.add(showPublishDiagnostics());
-      prefs.add(enableCloudPublishUi());
       prefs.add(publishCheckCertificates());
       prefs.add(usePublishCaBundle());
       prefs.add(publishCaBundle());
@@ -4561,6 +4575,7 @@ public class UserPrefsAccessor extends Prefs
       prefs.add(restoreProjectRVersion());
       prefs.add(clangVerbose());
       prefs.add(submitCrashReports());
+      prefs.add(enableSplashScreen());
       prefs.add(defaultRVersion());
       prefs.add(dataViewerMaxColumns());
       prefs.add(dataViewerMaxCellSize());

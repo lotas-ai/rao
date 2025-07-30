@@ -644,8 +644,7 @@ void ConsoleProcess::enqueOutputEvent(const std::string &output)
    // truncate it to the amount that the client can show. Too much
    // output can overwhelm the client, making it unresponsive.
    std::string trimmedOutput = output;
-   if (!prefs::userPrefs().limitVisibleConsole())
-      string_utils::trimLeadingLines(procInfo_->getMaxOutputLines(), &trimmedOutput);
+   string_utils::trimLeadingLines(procInfo_->getMaxOutputLines(), &trimmedOutput);
 
    if (procInfo_->getChannelMode() == Websocket)
    {
@@ -1020,12 +1019,6 @@ ConsoleProcessPtr ConsoleProcess::createTerminalProcess(
 
    // Use websocket as preferred communication channel; it can fail
    // here if unable to establish the server-side of things, in which case
-   // fallback to using Rpc.
-   //
-   // It can also fail later when client tries to connect; fallback for that
-   // happens from the client-side via RPC call procUseRpc.
-   //
-   // It can also fail here if unable to establish the server-side of things, in which case
    // fallback to using Rpc.
    //
    // It can also fail later when client tries to connect; fallback for that

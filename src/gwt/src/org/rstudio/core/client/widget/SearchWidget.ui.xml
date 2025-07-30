@@ -9,16 +9,16 @@
          <div class="{res.themeStyles.left}"/>
          <div class="{res.themeStyles.rstheme_center}">
             <f:DecorativeImage ui:field='icon_'
-                      resource='{res.smallMagGlassIcon2x}'
-                      styleName='{res.themeStyles.searchMagGlass}' />
-             <div class="{res.themeStyles.searchBoxContainer}">
-                <label ui:field='hiddenLabel_' class="{res.themeStyles.visuallyHidden}"/>
-                <f:SearchWidget.FocusSuggestBox ui:field='suggestBox_'
-                           styleName='{res.themeStyles.searchBox}'/>
-             </div>
-             <f:ImageButton ui:field='clearFilter_'
-                            resource='{res.clearSearch2x}'
-                            addStyleNames='{res.themeStyles.clearSearch}'/>
+                     resource='{res.smallMagGlassIcon2x}'
+                     styleName='{res.themeStyles.searchMagGlass}' />
+            <div class="{res.themeStyles.searchBoxContainer}">
+               <label ui:field='hiddenLabel_' class="{res.themeStyles.visuallyHidden}"/>
+               <f:SearchWidget.FocusSuggestBox ui:field='suggestBox_'
+                          styleName='{res.themeStyles.searchBox}'/>
+            </div>
+            <f:ImageButton ui:field='clearFilter_'
+                           resource='{res.clearSearch2x}'
+                           addStyleNames='{res.themeStyles.clearSearch}'/>
          </div>
          <div class="{res.themeStyles.right}"/>
       </div>

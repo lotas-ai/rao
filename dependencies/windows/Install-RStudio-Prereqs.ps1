@@ -85,29 +85,19 @@ Invoke-DownloadFile https://aka.ms/vs/17/release/vs_buildtools.exe vs_buildtools
 
 # Install Build Tools. For whatever reason, this fails when we try to install
 # into C:/Program Files (x86), so just use the "regular" C:/Program Files.
-# 1. Download the VS Build Tools bootstrapper
-$installerUrl  = 'https://aka.ms/vs/17/release/vs_BuildTools.exe'
-$installerPath = Join-Path $env:TEMP 'vs_BuildTools.exe'
-Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath
+RUN start /w vs_buildtools.exe --quiet --wait --norestart --nocache `
+    --installPath "C:/Program Files/Microsoft Visual Studio/2022/BuildTools" `
+    --add Microsoft.VisualStudio.Workload.CoreEditor `
+    --add Microsoft.VisualStudio.Workload.NativeDesktop `
+    --add Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core `
+    --add Microsoft.VisualStudio.Component.VC.CoreIde `
+    --add Microsoft.VisualStudio.Component.VC.Redist.14.Latest `
+    --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+    --add Microsoft.VisualStudio.Component.Windows10SDK `
+    --add Microsoft.VisualStudio.Component.Windows10SDK.20348
 
-# 2. Install with all the same workloads/components
-Start-Process -FilePath $installerPath -ArgumentList @(
-    '--norestart',
-   '--passive’,
-    '--nocache',
-    '--installPath','"C:\Program Files\Microsoft Visual Studio\2022\BuildTools"',
-    '--add','Microsoft.VisualStudio.Workload.CoreEditor',
-    '--add','Microsoft.VisualStudio.Workload.NativeDesktop',
-    '--add','Microsoft.VisualStudio.ComponentGroup.NativeDesktop.Core',
-    '--add','Microsoft.VisualStudio.Component.VC.CoreIde',
-    '--add','Microsoft.VisualStudio.Component.VC.Redist.14.Latest',
-    '--add','Microsoft.VisualStudio.Component.VC.Tools.x86.x64',
-    '--add','Microsoft.VisualStudio.Component.Windows10SDK',
-    '--add','Microsoft.VisualStudio.Component.Windows10SDK.20348'
-) -NoNewWindow -Wait
-
-# 3. (Optional) Clean up
-Remove-Item $installerPath
+# Clean up.
+Remove-Item vs_buildtools.exe
 
 # install R
 if (-Not (Test-Path -Path "C:\R")) {
@@ -133,7 +123,7 @@ refreshenv
 # install some deps via chocolatey
 choco install -y cmake --installargs 'ADD_CMAKE_TO_PATH=""System""' --fail-on-error-output
 refreshenv
-choco install -y temurin11
+choco install -y temurin17
 choco install -y -i ant
 choco install -y 7zip
 choco install -y ninja

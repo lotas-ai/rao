@@ -45,13 +45,14 @@ set(CMAKE_WARN_DEPRECATED FALSE)
 function(dependency)
 
    set(_NAME "${ARGV0}")
-   cmake_parse_arguments(PARSE_ARGV 1 "" "" "COMMENT;CUSTOM;VERSION;REPOSITORY;REVISION" "PLATFORMS")
+   cmake_parse_arguments(PARSE_ARGV 1 "" "" "COMMENT;CUSTOM;VERSION;REPOSITORY;REVISION;CXXFLAGS" "PLATFORMS")
 
    set(${_NAME}_VERSION    "${_VERSION}"    CACHE INTERNAL "")
    set(${_NAME}_REPOSITORY "${_REPOSITORY}" CACHE INTERNAL "")
    set(${_NAME}_REVISION   "${_REVISION}"   CACHE INTERNAL "")
    set(${_NAME}_CUSTOM     "${_CUSTOM}"     CACHE INTERNAL "")
    set(${_NAME}_PLATFORMS  "${_PLATFORMS}"  CACHE INTERNAL "")
+   set(${_NAME}_CXXFLAGS   "${_CXXFLAGS}"   CACHE INTERNAL "")
 
    if(_PLATFORMS)
       foreach(_PLATFORM IN LISTS _PLATFORMS)
@@ -83,8 +84,8 @@ function(dependency)
 endfunction()
 
 
-# expected
-dependency(EXPECTED
+# tl-expected
+dependency(TL_EXPECTED
    COMMENT    "Single header implementation of std::expected with functional-style extensions."
    VERSION    "1.1.0"
    REPOSITORY "https://github.com/TartanLlama/expected"
@@ -151,6 +152,12 @@ dependency(YAML_CPP
    REVISION   "f7320141120f720aecc4c32be25586e7da9eb978" # pragma: allowlist secret
 )
 
+# help yaml-cpp 0.8.0 find <cstdint> during compilation
+if(NOT MSVC)
+   file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/yaml-cpp.h" "#include <cstdint>")
+   set(YAML_CPP_CXXFLAGS "-include ${CMAKE_CURRENT_BINARY_DIR}/yaml-cpp.h")
+endif()
+
 
 # zlib
 dependency(ZLIB
@@ -160,7 +167,6 @@ dependency(ZLIB
    REVISION   "51b7f2abdade71cd9bb0e7a373ef2610ec6f9daf" # pragma: allowlist secret
    PLATFORMS  WIN32
 )
-
 
 function(fetch)
 
@@ -182,9 +188,14 @@ function(fetch)
 
       if(${_PREFIX}_ENABLED)
          if(RSTUDIO_USE_SYSTEM_DEPENDENCIES OR RSTUDIO_USE_SYSTEM_${_PREFIX})
-            find_package("${_NAME}" "${${_PREFIX}_VERSION}" REQUIRED)
+            if(CMAKE_VERSION VERSION_GREATER "3.24")
+               find_package("${_NAME}" "${${_PREFIX}_VERSION}" REQUIRED GLOBAL)
+            else()
+               find_package("${_NAME}" "${${_PREFIX}_VERSION}" REQUIRED)
+            endif()
          else()
             set(${_PREFIX}_FETCHED TRUE)
+
             FetchContent_Declare("${_NAME}"
                GIT_REPOSITORY "${${_PREFIX}_REPOSITORY}"
                GIT_TAG        "${${_PREFIX}_REVISION}"
@@ -208,7 +219,10 @@ function(fetch)
 
       if(${_PREFIX}_FETCHED)
          message(STATUS "Fetching dependency ${_NAME} ${${_PREFIX}_VERSION}")
+         set(_CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+         set(CMAKE_CXX_FLAGS "${${_PREFIX}_CXXFLAGS} ${CMAKE_CXX_FLAGS}")
          FetchContent_MakeAvailable("${_NAME}")
+         set(CMAKE_CXX_FLAGS "${_CMAKE_CXX_FLAGS}")
          message(STATUS "Fetching dependency ${_NAME} ${${_PREFIX}_VERSION} - success")
          set("${_PREFIX}_SOURCE_DIR" "${CMAKE_BINARY_DIR}/_deps/${_NAME}-src" CACHE INTERNAL "")
          set("${_PREFIX}_BINARY_DIR" "${CMAKE_BINARY_DIR}/_deps/${_NAME}-build" CACHE INTERNAL "")
@@ -220,11 +234,11 @@ endfunction()
 
 
 fetch(
-   expected     EXPECTED
    fmt          FMT
    gsl-lite     GSL_LITE
    hunspell     HUNSPELL
    rapidjson    RAPIDJSON
+   tl-expected  TL_EXPECTED
    websocketpp  WEBSOCKETPP
    yaml-cpp     YAML_CPP
    zlib         ZLIB)

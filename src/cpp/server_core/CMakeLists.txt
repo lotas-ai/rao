@@ -29,7 +29,11 @@ set (SERVER_CORE_SOURCE_FILES
 )
 
 if (RSTUDIO_HAS_SOCI)
-   list(APPEND SERVER_CORE_SOURCE_FILES ServerDatabase.cpp)
+   list(APPEND SERVER_CORE_SOURCE_FILES
+      DatabaseUtils.cpp
+      DatabaseUtilsOverlay.cpp
+      ServerDatabase.cpp
+      ServerDatabaseOverlay.cpp)
 endif()
 
 if (RSTUDIO_USE_PAM)

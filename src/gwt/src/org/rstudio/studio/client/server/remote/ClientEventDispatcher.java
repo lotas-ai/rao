@@ -124,6 +124,7 @@ import org.rstudio.studio.client.tests.model.TestsResult;
 import org.rstudio.studio.client.workbench.addins.Addins.RAddins;
 import org.rstudio.studio.client.workbench.addins.events.AddinRegistryUpdatedEvent;
 import org.rstudio.studio.client.workbench.codesearch.model.SearchPathFunctionDefinition;
+import org.rstudio.studio.client.workbench.copilot.model.CopilotStatusChangedEvent;
 import org.rstudio.studio.client.workbench.events.ActivatePaneEvent;
 import org.rstudio.studio.client.workbench.events.AdminNotificationEvent;
 import org.rstudio.studio.client.workbench.events.BrowseUrlEvent;
@@ -255,6 +256,7 @@ import org.rstudio.studio.client.workbench.views.ai.events.UpdateThinkingMessage
 import org.rstudio.studio.client.workbench.views.ai.events.AiStartConversationEvent;
 import org.rstudio.studio.client.workbench.views.ai.events.AiLoadConversationEvent;
 import org.rstudio.core.client.Debug;
+
 import com.google.gwt.core.client.GWT;
 import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.JsArray;
@@ -1361,6 +1363,11 @@ public class ClientEventDispatcher
          {
             RequestDocumentCloseForRevertEvent.Data data = event.getData();
             eventBus_.dispatchEvent(new RequestDocumentCloseForRevertEvent(data));
+         }
+         else if (type == ClientEvent.CopilotStatusChanged)
+         {
+            CopilotStatusChangedEvent.Data data = event.getData();
+            eventBus_.dispatchEvent(new CopilotStatusChangedEvent(data.getStatus()));
          }
          else
          {
