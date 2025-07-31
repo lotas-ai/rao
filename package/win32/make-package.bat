@@ -98,29 +98,6 @@ if defined CLEANBUILD (
     if exist CMakeCache.txt del CMakeCache.txt
 )
 
-REM Function to set package.json version
-:set-version
-if not defined PACKAGE_VERSION_SET (
-    pushd "%ELECTRON_SOURCE_DIR%"
-    copy package.json package.json.orig
-    %NPX% json -I -f package.json -e "this.version=\"%~1\""
-    set PACKAGE_VERSION_SET=1
-    popd
-)
-goto :eof
-
-REM Function to restore package.json
-:restore-package-version
-if defined PACKAGE_VERSION_SET (
-    pushd "%ELECTRON_SOURCE_DIR%"
-    if exist package.json.orig (
-        move package.json.orig package.json
-    )
-    set PACKAGE_VERSION_SET=
-    popd
-)
-goto :eof
-
 REM Check for required programs on the PATH.
 for %%F in (ant cmake) do (
     where /q %%F
@@ -186,9 +163,6 @@ if not defined RSTUDIO_VERSION_PATCH set RSTUDIO_VERSION_PATCH=9
 if not defined RSTUDIO_VERSION_SUFFIX set RSTUDIO_VERSION_SUFFIX=
 set RSTUDIO_VERSION_FULL=%RSTUDIO_VERSION_MAJOR%.%RSTUDIO_VERSION_MINOR%.%RSTUDIO_VERSION_PATCH%%RSTUDIO_VERSION_SUFFIX%
 
-REM Set package.json version
-call :set-version "%RSTUDIO_VERSION_FULL%"
-
 REM Set default CMake build type.
 if "%CMAKE_BUILD_TYPE%" == "" set CMAKE_BUILD_TYPE=RelWithDebInfo
 
@@ -232,14 +206,22 @@ cmake -G Ninja ^
     -DGWT_BUILD=%BUILD_GWT% ^
     %RSTUDIO_PROJECT_ROOT% || (
         echo.!! ERROR: configure failed
-        call :restore-package-version
         exit /b 1
     )
+
+REM Update package.json version for Electron builds
+if "%RSTUDIO_TARGET%" == "Electron" (
+    pushd %ELECTRON_SOURCE_DIR%
+    REM Save original package.json
+    copy package.json package.json.orig
+    REM Update version in package.json
+    %NPX% json -I -f package.json -e "this.version=\"%RSTUDIO_VERSION_FULL%\""
+    popd
+)
 
 REM Perform the build.
 cmake --build . --config %CMAKE_BUILD_TYPE% -- %MAKEFLAGS% || (
     echo.!! ERROR: build failed
-    call :restore-package-version
     exit /b 1
 )
 
@@ -271,7 +253,6 @@ REM Perform 32-bit build and install it into the 64-bit tree.
 if "%MULTIARCH%" == "1" (
     call make-install-win32.bat "%BUILD_DIR%\src\cpp\session" %* || (
         echo.!! ERROR: 32-bit session components build failed
-        call :restore-package-version
         exit /b 1
     )
 )
@@ -292,13 +273,18 @@ REM Generate a package if configured to do so.
 if defined _MAKE_PACKAGE (
     call make-dist-packages.bat || (
         echo.!! ERROR: package creation failed
-        call :restore-package-version
         exit /b 1
     )
 )
 
-REM Restore package.json
-call :restore-package-version
+REM Restore original package.json for Electron builds
+if "%RSTUDIO_TARGET%" == "Electron" (
+    pushd %ELECTRON_SOURCE_DIR%
+    if exist package.json.orig (
+        move /Y package.json.orig package.json
+    )
+    popd
+)
 
 echo Rao was built successfully.
 goto :eof
