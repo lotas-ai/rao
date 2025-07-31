@@ -169,7 +169,11 @@ set NPM_INSTALLED=0
 REM Function to install npm packages
 :install-npm-packages
 if "%NPM_INSTALLED%" == "0" (
-    call %NPM% ci
+    if exist package-lock.json (
+        call %NPM% ci
+    ) else (
+        call %NPM% install
+    )
     set NPM_INSTALLED=1
 )
 goto :eof
