@@ -168,10 +168,11 @@ Error initialize()
    using boost::bind;
    using namespace module_context;
 
+   // RStudio-based update checking disabled - use Electron auto-updater instead
    ExecBlock initBlock;
-   initBlock.addFunctions()
-      (bind(registerAsyncRpcMethod, "check_for_updates", checkForUpdates))
-   ;
+   // initBlock.addFunctions()
+   //    (bind(registerAsyncRpcMethod, "check_for_updates", checkForUpdates))
+   // ;
    return initBlock.execute();
 }
 
