@@ -780,6 +780,11 @@ export function getDesktopBridge() {
       return webUtils.getPathForFile(file);
     },
 
+    // Manual update check function for testing
+    checkForUpdatesManually: () => {
+      ipcRenderer.send('desktop_check_for_updates_manually');
+    },
+
     // Important: be sure last item above has a trailing commma since the pro
     // branch will add additional items below.
     // pro-only start
