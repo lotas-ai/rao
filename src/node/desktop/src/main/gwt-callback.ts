@@ -55,7 +55,6 @@ import { safeError } from '../core/err';
 import { userHomePathString } from '../core/user';
 import { detectRosetta } from './detect-rosetta';
 import { showPersistentSplashScreen } from './splash-screen';
-import { checkForUpdatesManually } from './manual-updater';
 
 export enum PendingQuit {
   PendingQuitNone,
@@ -171,15 +170,6 @@ export class GwtCallback extends EventEmitter {
         desktop.openExternal(path);
       } else {
         void shell.openExternal(url);
-      }
-    });
-
-    ipcMain.on('desktop_check_for_updates_manually', async (event) => {
-      logger().logInfo('Manual update check triggered from console');
-      try {
-        await checkForUpdatesManually();
-      } catch (error) {
-        logger().logError(`Manual update check error: ${error}`);
       }
     });
 
