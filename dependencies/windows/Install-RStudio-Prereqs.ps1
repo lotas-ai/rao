@@ -85,7 +85,7 @@ Invoke-DownloadFile https://aka.ms/vs/17/release/vs_buildtools.exe vs_buildtools
 
 # Install Build Tools. For whatever reason, this fails when we try to install
 # into C:/Program Files (x86), so just use the "regular" C:/Program Files.
-RUN start /w vs_buildtools.exe --quiet --wait --norestart --nocache `
+start /w vs_buildtools.exe --quiet --wait --norestart --nocache `
     --installPath "C:/Program Files/Microsoft Visual Studio/2022/BuildTools" `
     --add Microsoft.VisualStudio.Workload.CoreEditor `
     --add Microsoft.VisualStudio.Workload.NativeDesktop `
