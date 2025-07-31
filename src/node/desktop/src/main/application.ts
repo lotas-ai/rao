@@ -89,6 +89,20 @@ export class Application implements AppState {
    * Startup code run before app 'ready' event.
    */
   async beforeAppReady(): Promise<ProgramStatus> {
+    console.log('=== BEFORE APP READY - VERY FIRST LOG ===');
+    console.log(`Process platform: ${process.platform}`);
+    console.log(`Process version: ${process.version}`);
+    console.log(`App version: ${app.getVersion()}`);
+    
+    // Also try logger in case console doesn't work
+    try {
+      logger().logInfo('=== BEFORE APP READY - LOGGER TEST ===');
+      logger().logInfo(`Process platform: ${process.platform}`);
+      logger().logInfo(`App version: ${app.getVersion()}`);
+    } catch (error) {
+      console.log(`Logger failed: ${error}`);
+    }
+    
     const status = this.argsManager.initCommandLine(this);
 
     if (status.exit) {
@@ -278,6 +292,12 @@ export class Application implements AppState {
    * Invoked when Electron app is 'ready'
    */
   async run(): Promise<ProgramStatus> {
+    logger().logInfo('=== APPLICATION RUN METHOD START ===');
+    logger().logInfo(`Platform: ${process.platform}`);
+    logger().logInfo(`App version: ${app.getVersion()}`);
+    logger().logInfo(`App is packaged: ${app.isPackaged}`);
+    logger().logInfo(`Process argv: ${JSON.stringify(process.argv)}`);
+    
     if (!this.shouldInstanceOpen()) {
       return exitSuccess();
     }
@@ -401,6 +421,11 @@ export class Application implements AppState {
     this.sessionLauncher.launchFirstSession(installPath, !app.isPackaged);
 
     this.setDockMenu();
+    
+    logger().logInfo('=== CHECKING AUTO-UPDATE CONDITIONS ===');
+    logger().logInfo(`Platform check: ${process.platform} (should be darwin or win32)`);
+    logger().logInfo(`Packaged check: ${app.isPackaged} (should be true)`);
+    logger().logInfo(`Condition result: ${(process.platform === 'darwin' || process.platform === 'win32') && app.isPackaged}`);
     
     // Auto-updates for macOS and Windows using S3 with enhanced logic
     if ((process.platform === 'darwin' || process.platform === 'win32') && app.isPackaged) {
