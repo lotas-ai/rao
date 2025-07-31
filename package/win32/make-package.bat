@@ -98,6 +98,29 @@ if defined CLEANBUILD (
     if exist CMakeCache.txt del CMakeCache.txt
 )
 
+REM Function to set package.json version
+:set-version
+if not defined PACKAGE_VERSION_SET (
+    pushd "%ELECTRON_SOURCE_DIR%"
+    copy package.json package.json.orig
+    %NPX% json -I -f package.json -e "this.version=\"%~1\""
+    set PACKAGE_VERSION_SET=1
+    popd
+)
+goto :eof
+
+REM Function to restore package.json
+:restore-package-version
+if defined PACKAGE_VERSION_SET (
+    pushd "%ELECTRON_SOURCE_DIR%"
+    if exist package.json.orig (
+        move package.json.orig package.json
+    )
+    set PACKAGE_VERSION_SET=
+    popd
+)
+goto :eof
+
 REM Check for required programs on the PATH.
 for %%F in (ant cmake) do (
     where /q %%F
@@ -163,8 +186,8 @@ if not defined RSTUDIO_VERSION_PATCH set RSTUDIO_VERSION_PATCH=9
 if not defined RSTUDIO_VERSION_SUFFIX set RSTUDIO_VERSION_SUFFIX=
 set RSTUDIO_VERSION_FULL=%RSTUDIO_VERSION_MAJOR%.%RSTUDIO_VERSION_MINOR%.%RSTUDIO_VERSION_PATCH%%RSTUDIO_VERSION_SUFFIX%
 
-REM Update Electron package.json with build version
-call :UpdatePackageVersion "%RSTUDIO_VERSION_FULL%"
+REM Set package.json version
+call :set-version "%RSTUDIO_VERSION_FULL%"
 
 REM Set default CMake build type.
 if "%CMAKE_BUILD_TYPE%" == "" set CMAKE_BUILD_TYPE=RelWithDebInfo
@@ -209,14 +232,14 @@ cmake -G Ninja ^
     -DGWT_BUILD=%BUILD_GWT% ^
     %RSTUDIO_PROJECT_ROOT% || (
         echo.!! ERROR: configure failed
-        call :RestorePackageVersion
+        call :restore-package-version
         exit /b 1
     )
 
 REM Perform the build.
 cmake --build . --config %CMAKE_BUILD_TYPE% -- %MAKEFLAGS% || (
     echo.!! ERROR: build failed
-    call :RestorePackageVersion
+    call :restore-package-version
     exit /b 1
 )
 
@@ -248,7 +271,7 @@ REM Perform 32-bit build and install it into the 64-bit tree.
 if "%MULTIARCH%" == "1" (
     call make-install-win32.bat "%BUILD_DIR%\src\cpp\session" %* || (
         echo.!! ERROR: 32-bit session components build failed
-        call :RestorePackageVersion
+        call :restore-package-version
         exit /b 1
     )
 )
@@ -269,102 +292,15 @@ REM Generate a package if configured to do so.
 if defined _MAKE_PACKAGE (
     call make-dist-packages.bat || (
         echo.!! ERROR: package creation failed
-        call :RestorePackageVersion
+        call :restore-package-version
         exit /b 1
     )
 )
+
+REM Restore package.json
+call :restore-package-version
 
 echo Rao was built successfully.
-call :RestorePackageVersion
-goto :eof
-
-REM ========================================================================
-REM Package.json version management functions
-REM ========================================================================
-
-:UpdatePackageVersion
-if "%RSTUDIO_TARGET%" == "Electron" (
-    echo Updating Electron package.json version to %~1
-    
-    REM Validate ELECTRON_SOURCE_DIR exists
-    if not exist "%ELECTRON_SOURCE_DIR%" (
-        echo ERROR: Electron source directory not found: %ELECTRON_SOURCE_DIR%
-        exit /b 1
-    )
-    
-    pushd "%ELECTRON_SOURCE_DIR%" || (
-        echo ERROR: Failed to enter Electron source directory
-        exit /b 1
-    )
-    
-    REM Install npm dependencies and json package
-    echo Installing npm dependencies...
-    "%NPM%" ci || (
-        echo ERROR: npm ci failed
-        popd
-        exit /b 1
-    )
-    
-    REM Verify json package is available
-    "%NPX%" json --version >nul 2>&1 || (
-        echo Installing json package...
-        "%NPM%" install json || (
-            echo ERROR: Failed to install json package
-            popd
-            exit /b 1
-        )
-    )
-    
-    REM Backup original package.json
-    if not exist package.json (
-        echo ERROR: package.json not found in %ELECTRON_SOURCE_DIR%
-        popd
-        exit /b 1
-    )
-    
-    copy package.json package.json.bak >nul || (
-        echo ERROR: Failed to backup package.json
-        popd
-        exit /b 1
-    )
-    
-    set PACKAGE_VERSION_SET=1
-    
-    REM Update version in package.json (using safe parameter passing)
-    "%NPX%" json -I -f package.json -e "this.version=\"%~1\"" || (
-        echo ERROR: Failed to update package.json version
-        call :RestorePackageVersion
-        popd
-        exit /b 1
-    )
-    
-    echo Updated package.json version to %~1
-    popd
-) else (
-    echo Skipping package.json update for non-Electron target
-)
-goto :eof
-
-:RestorePackageVersion
-if defined PACKAGE_VERSION_SET (
-    echo Restoring original package.json
-    if exist "%ELECTRON_SOURCE_DIR%" (
-        pushd "%ELECTRON_SOURCE_DIR%"
-        if exist package.json.bak (
-            move package.json.bak package.json >nul 2>&1 && (
-                echo Restored original package.json
-            ) || (
-                echo WARNING: Failed to restore package.json from backup
-            )
-        ) else (
-            echo WARNING: package.json.bak not found - cannot restore
-        )
-        popd
-    ) else (
-        echo WARNING: Electron source directory not found during restore
-    )
-    set PACKAGE_VERSION_SET=
-)
 goto :eof
 
 :showhelp
@@ -381,7 +317,6 @@ echo     nosquirrel: skip creation of Squirrel.Windows auto-update packages
 echo     quick:      skip creation of setup package
 echo.
 echo     Environment variables specify the product's build version (default is 99.9.9).
-echo     The version will be automatically updated in Electron's package.json during build.
 echo.
 echo     Example:
 echo.
