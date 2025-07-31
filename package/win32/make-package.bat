@@ -163,6 +163,17 @@ if not defined RSTUDIO_VERSION_PATCH set RSTUDIO_VERSION_PATCH=9
 if not defined RSTUDIO_VERSION_SUFFIX set RSTUDIO_VERSION_SUFFIX=
 set RSTUDIO_VERSION_FULL=%RSTUDIO_VERSION_MAJOR%.%RSTUDIO_VERSION_MINOR%
 
+REM Track npm installation status
+set NPM_INSTALLED=0
+
+REM Function to install npm packages
+:install-npm-packages
+if "%NPM_INSTALLED%" == "0" (
+    call %NPM% ci
+    set NPM_INSTALLED=1
+)
+goto :eof
+
 REM Set default CMake build type.
 if "%CMAKE_BUILD_TYPE%" == "" set CMAKE_BUILD_TYPE=RelWithDebInfo
 
@@ -212,6 +223,8 @@ cmake -G Ninja ^
 REM Update package.json version for Electron builds
 if "%RSTUDIO_TARGET%" == "Electron" (
     pushd %ELECTRON_SOURCE_DIR%
+    REM Install npm packages if needed
+    call :install-npm-packages
     REM Save original package.json
     copy package.json package.json.orig
     REM Update version in package.json
