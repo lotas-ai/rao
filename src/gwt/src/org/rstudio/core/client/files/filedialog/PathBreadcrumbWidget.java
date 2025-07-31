@@ -114,7 +114,7 @@ public class PathBreadcrumbWidget
       {
          ImageButton projIcon = new ImageButton(constants_.projectIconDesc(), new ImageResource2x(RES.projectImage2x()));
 
-         projIcon.addClickHandler(event -> SelectionCommitEvent.fire(PathBreadcrumbWidget.this, projDir));
+         projIcon.addClickHandler(event -> context_.cd(projDir.getPath()));
          projIcon.getImage().addStyleName(RES.styles().project());
          projIcon.setTitle(constants_.projectIconDesc());
 
@@ -187,7 +187,7 @@ public class PathBreadcrumbWidget
       if (browseable || isHome)
       {
          HyperlinkLabel anchor = new HyperlinkLabel(
-               text, () -> SelectionCommitEvent.fire(PathBreadcrumbWidget.this, item));
+               text, () -> context_.cd(item.getPath()));
          anchor.addStyleName(ThemeResources.INSTANCE.themeStyles().handCursor());
          link = anchor;
       }
