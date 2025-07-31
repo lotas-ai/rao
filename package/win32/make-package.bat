@@ -216,9 +216,15 @@ if "%RSTUDIO_TARGET%" == "Electron" (
     copy package.json package.json.orig
     REM Update version in package.json
     %NPX% json -I -f package.json -e "this.version=\"%RSTUDIO_VERSION_FULL%\""
+    if ERRORLEVEL 1 (
+        echo.!! ERROR: Failed to update package.json version
+        popd
+        exit /b 1
+    )
     popd
 )
 
+echo Starting build...
 REM Perform the build.
 cmake --build . --config %CMAKE_BUILD_TYPE% -- %MAKEFLAGS% || (
     echo.!! ERROR: build failed
