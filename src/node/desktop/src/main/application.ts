@@ -404,26 +404,33 @@ export class Application implements AppState {
     
     // Auto-updates for macOS and Windows using S3 with enhanced logic
     if ((process.platform === 'darwin' || process.platform === 'win32') && app.isPackaged) {
+      logger().logInfo(`=== AUTO-UPDATE INITIALIZATION START ===`);
+      logger().logInfo(`Platform: ${process.platform}`);
+      logger().logInfo(`App is packaged: ${app.isPackaged}`);
+      logger().logInfo(`App version: ${app.getVersion()}`);
+      
       let updateDownloaded = false;
       let installedOnStartup = false;
       
       // Add event listeners to the global autoUpdater before calling updateElectronApp
       autoUpdater.on('checking-for-update', () => {
-        logger().logInfo('Auto-updater: checking-for-update');
+        logger().logInfo('Auto-updater: checking-for-update - Starting update check...');
       });
       
       autoUpdater.on('update-available', () => {
-        logger().logInfo('Auto-updater: update-available');
+        logger().logInfo('Auto-updater: update-available - Update found and will be downloaded');
       });
       
       autoUpdater.on('update-not-available', () => {
-        logger().logInfo('Auto-updater: update-not-available');
+        logger().logInfo('Auto-updater: update-not-available - No updates found');
       });
       
       autoUpdater.on('update-downloaded', (event, releaseNotes, releaseName, releaseDate, updateURL) => {
         updateDownloaded = true;
         logger().logInfo('Auto-updater: update-downloaded - showing notification now');
         logger().logInfo(`Update details: ${releaseName} (${releaseDate})`);
+        logger().logInfo(`Update URL: ${updateURL}`);
+        logger().logInfo(`Release notes: ${releaseNotes}`);
         
         // Show notification with "Later" option
         const options = {
@@ -437,36 +444,53 @@ export class Application implements AppState {
         };
         
         dialog.showMessageBox(options).then(result => {
+          logger().logInfo(`User update choice: ${result.response === 0 ? 'Restart Now' : 'Later'}`);
           if (result.response === 0) {
             // User chose "Restart Now"
             autoUpdater.quitAndInstall();
           }
           // If "Later", we'll install on app quit (handled below)
+        }).catch(error => {
+          logger().logError(`Error showing update dialog: ${error}`);
         });
       });
       
       autoUpdater.on('error', (error: Error) => {
-        logger().logError(`Auto-updater error: ${error.message}`);
+        logger().logError(`=== AUTO-UPDATER ERROR ===`);
+        logger().logError(`Error message: ${error?.message || 'No message'}`);
+        logger().logError(`Error name: ${error?.name || 'No name'}`);
+        logger().logError(`Error stack: ${error?.stack || 'No stack'}`);
+        logger().logError(`Full error object: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`);
+        logger().logError(`=== END AUTO-UPDATER ERROR ===`);
       });
 
       // Start auto-updater
       const platform = process.platform === 'darwin' ? 'darwin' : 'win32';
       const baseUrl = `https://lotas-downloads.s3.us-east-2.amazonaws.com/${platform}/x64`;
       
-      updateElectronApp({
-        updateSource: {
-          type: UpdateSourceType.StaticStorage,
-          baseUrl: baseUrl
-        },
-        updateInterval: '5 minutes',
-        notifyUser: false, // We handle notifications manually
-        logger: {
-          info: (message: string) => logger().logInfo(`UEA: ${message}`),
-          warn: (message: string) => logger().logWarning(`UEA: ${message}`),
-          error: (message: string) => logger().logError(`UEA: ${message}`),
-          log: (message: string) => logger().logInfo(`UEA: ${message}`)
-        }
-      });
+      logger().logInfo(`Auto-updater base URL: ${baseUrl}`);
+      logger().logInfo(`Update interval: 5 minutes`);
+      
+      try {
+        logger().logInfo('Calling updateElectronApp...');
+        updateElectronApp({
+          updateSource: {
+            type: UpdateSourceType.StaticStorage,
+            baseUrl: baseUrl
+          },
+          updateInterval: '5 minutes',
+          notifyUser: false, // We handle notifications manually
+          logger: {
+            info: (message: string) => logger().logInfo(`UEA-INFO: ${message}`),
+            warn: (message: string) => logger().logWarning(`UEA-WARN: ${message}`),
+            error: (message: string) => logger().logError(`UEA-ERROR: ${message}`),
+            log: (message: string) => logger().logInfo(`UEA-LOG: ${message}`)
+          }
+        });
+        logger().logInfo('updateElectronApp call completed successfully');
+      } catch (error) {
+        logger().logError(`Failed to initialize updateElectronApp: ${error}`);
+      }
 
       // Install on app quit if update was downloaded but user chose "Later"
       app.on('before-quit', (event) => {
@@ -475,6 +499,10 @@ export class Application implements AppState {
           autoUpdater.quitAndInstall();
         }
       });
+      
+      logger().logInfo(`=== AUTO-UPDATE INITIALIZATION COMPLETE ===`);
+    } else {
+      logger().logInfo(`Auto-updates disabled. Platform: ${process.platform}, Packaged: ${app.isPackaged}`);
     }
     
     // Manual update check for Linux only (Mac and Windows use auto-updater)
