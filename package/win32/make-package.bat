@@ -215,7 +215,7 @@ if "%RSTUDIO_TARGET%" == "Electron" (
     REM Save original package.json
     copy package.json package.json.orig
     REM Update version in package.json
-    %NPX% json -I -f package.json -e "this.version=\"%RSTUDIO_VERSION_FULL%\""
+    call %NPX% json -I -f package.json -e "this.version=\"%RSTUDIO_VERSION_FULL%\""
     if ERRORLEVEL 1 (
         echo.!! ERROR: Failed to update package.json version
         popd
