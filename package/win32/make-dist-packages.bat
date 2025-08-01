@@ -242,365 +242,96 @@ if exist "%TEMP_INSTALL_DIR%" (
 )
 mkdir "%TEMP_INSTALL_DIR%"
 
-echo Installing components using cmake to temporary directory...
+echo Installing components using cmake...
 pushd "%BUILD_DIR_ARG%"
-cmake --install . --config "%CMAKE_BUILD_TYPE%" --prefix "%TEMP_INSTALL_DIR%"
+cmake --install . --config "%CMAKE_BUILD_TYPE%" --prefix "%TEMP_INSTALL_DIR%" >nul 2>nul
 if ERRORLEVEL 1 (
     echo ERROR: cmake --install failed
     popd
     goto :error
 )
 popd
-
-echo Copying installed components to Electron app...
 REM Copy everything from temp install to Electron app structure
 if exist "%TEMP_INSTALL_DIR%" (
-    xcopy /E /I /Y "%TEMP_INSTALL_DIR%\*" "%ELECTRON_DIR%\resources\app\"
+    xcopy /E /I /Y "%TEMP_INSTALL_DIR%\*" "%ELECTRON_DIR%\resources\app\" >nul
     if ERRORLEVEL 1 (
         echo ERROR: Failed to copy installed components
         goto :error
     )
 )
 
-REM Still need to manually copy executables to bin (cmake may not put them where Electron expects)
-echo Copying executables to bin directory...
-if not exist "%ELECTRON_DIR%\resources\app\bin" (
-    mkdir "%ELECTRON_DIR%\resources\app\bin"
+REM Copy core R files (not installed by cmake on Windows due to RSTUDIO_SESSION_WIN32 exclusion)
+set "SOURCE_R_DIR=%PROJECT_ROOT%\src\cpp\r\R"
+if exist "%SOURCE_R_DIR%" (
+    if not exist "%ELECTRON_DIR%\resources\app\R" (
+        mkdir "%ELECTRON_DIR%\resources\app\R"
+    )
+    xcopy /E /I /Y "%SOURCE_R_DIR%\*" "%ELECTRON_DIR%\resources\app\R\" >nul
     if ERRORLEVEL 1 (
-        echo ERROR: Failed to create bin directory
+        echo ERROR: Failed to copy core R files
         goto :error
     )
-)
-
-if not exist "%ELECTRON_DIR%\resources\app\bin\rsession.exe" (
-    copy "%BUILD_DIR_ARG%\src\cpp\session\rsession.exe" "%ELECTRON_DIR%\resources\app\bin\rsession.exe"
-    if ERRORLEVEL 1 (
-        echo ERROR: Failed to copy rsession.exe
-        goto :error
-    )
-)
-
-if exist "%BUILD_DIR_ARG%\src\cpp\server\rserver.exe" (
-    copy "%BUILD_DIR_ARG%\src\cpp\server\rserver.exe" "%ELECTRON_DIR%\resources\app\bin\rserver.exe"
-    if ERRORLEVEL 1 (
-        echo ERROR: Failed to copy rserver.exe
-        goto :error
-    )
-)
-
-if exist "%BUILD_DIR_ARG%\src\cpp\diagnostics\diagnostics.exe" (
-    copy "%BUILD_DIR_ARG%\src\cpp\diagnostics\diagnostics.exe" "%ELECTRON_DIR%\resources\app\bin\diagnostics.exe"
-    if ERRORLEVEL 1 (
-        echo ERROR: Failed to copy diagnostics.exe
-        goto :error
-    )
+) else (
+    echo ERROR: Core R files not found at %SOURCE_R_DIR%
+    goto :error
 )
 
 REM R files, session modules, and session resources are now handled by cmake --install above
 
 REM Dictionaries, MathJax, and R packages are now handled by cmake --install above
 
-REM Copy external tools to bin directory (Windows-specific behavior)
-echo Copying external tools to bin directory...
-
-REM Copy Quarto to bin (Windows behavior - goes to bin/ not resources/)
-set "QUARTO_BIN_DIR=%RSTUDIO_DEPENDENCIES%\common\quarto"
-if exist "%QUARTO_BIN_DIR%" (
-    echo   Copying Quarto to bin from %QUARTO_BIN_DIR%
-    xcopy /E /I /Y "%QUARTO_BIN_DIR%" "%ELECTRON_DIR%\resources\app\bin\quarto\"
-    if ERRORLEVEL 1 (
-        echo ERROR: Failed to copy Quarto to bin
-        goto :error
+REM Add file type icons to Rao.exe (like make-package.bat does)
+if exist "%ELECTRON_DIR%\rao.exe" (
+    if defined REZH (
+        echo Adding file type icons...
+        "%REZH%" -open "%ELECTRON_DIR%\rao.exe" -save "%ELECTRON_DIR%\rao.exe" -action addoverwrite -resource "%ELECTRON_SOURCE_DIR%\resources\icons\RProject.ico" -mask ICONGROUP,2,1033 >nul
+        "%REZH%" -open "%ELECTRON_DIR%\rao.exe" -save "%ELECTRON_DIR%\rao.exe" -action addoverwrite -resource "%ELECTRON_SOURCE_DIR%\resources\icons\RSource.ico" -mask ICONGROUP,3,1033 >nul
+        "%REZH%" -open "%ELECTRON_DIR%\rao.exe" -save "%ELECTRON_DIR%\rao.exe" -action addoverwrite -resource "%ELECTRON_SOURCE_DIR%\resources\icons\CSS.ico" -mask ICONGROUP,4,1033 >nul
+        "%REZH%" -open "%ELECTRON_DIR%\rao.exe" -save "%ELECTRON_DIR%\rao.exe" -action addoverwrite -resource "%ELECTRON_SOURCE_DIR%\resources\icons\HTML.ico" -mask ICONGROUP,5,1033 >nul
+        "%REZH%" -open "%ELECTRON_DIR%\rao.exe" -save "%ELECTRON_DIR%\rao.exe" -action addoverwrite -resource "%ELECTRON_SOURCE_DIR%\resources\icons\JS.ico" -mask ICONGROUP,6,1033 >nul
+        "%REZH%" -open "%ELECTRON_DIR%\rao.exe" -save "%ELECTRON_DIR%\rao.exe" -action addoverwrite -resource "%ELECTRON_SOURCE_DIR%\resources\icons\Markdown.ico" -mask ICONGROUP,7,1033 >nul
+        "%REZH%" -open "%ELECTRON_DIR%\rao.exe" -save "%ELECTRON_DIR%\rao.exe" -action addoverwrite -resource "%ELECTRON_SOURCE_DIR%\resources\icons\QuartoMarkdown.ico" -mask ICONGROUP,8,1033 >nul
+        "%REZH%" -open "%ELECTRON_DIR%\rao.exe" -save "%ELECTRON_DIR%\rao.exe" -action addoverwrite -resource "%ELECTRON_SOURCE_DIR%\resources\icons\RData.ico" -mask ICONGROUP,9,1033 >nul
+        "%REZH%" -open "%ELECTRON_DIR%\rao.exe" -save "%ELECTRON_DIR%\rao.exe" -action addoverwrite -resource "%ELECTRON_SOURCE_DIR%\resources\icons\RDoc.ico" -mask ICONGROUP,10,1033 >nul
+        "%REZH%" -open "%ELECTRON_DIR%\rao.exe" -save "%ELECTRON_DIR%\rao.exe" -action addoverwrite -resource "%ELECTRON_SOURCE_DIR%\resources\icons\RHTML.ico" -mask ICONGROUP,11,1033 >nul
+        "%REZH%" -open "%ELECTRON_DIR%\rao.exe" -save "%ELECTRON_DIR%\rao.exe" -action addoverwrite -resource "%ELECTRON_SOURCE_DIR%\resources\icons\RMarkdown.ico" -mask ICONGROUP,12,1033 >nul
+        "%REZH%" -open "%ELECTRON_DIR%\rao.exe" -save "%ELECTRON_DIR%\rao.exe" -action addoverwrite -resource "%ELECTRON_SOURCE_DIR%\resources\icons\RPresentation.ico" -mask ICONGROUP,13,1033 >nul
+        "%REZH%" -open "%ELECTRON_DIR%\rao.exe" -save "%ELECTRON_DIR%\rao.exe" -action addoverwrite -resource "%ELECTRON_SOURCE_DIR%\resources\icons\RSweave.ico" -mask ICONGROUP,14,1033 >nul
+        "%REZH%" -open "%ELECTRON_DIR%\rao.exe" -save "%ELECTRON_DIR%\rao.exe" -action addoverwrite -resource "%ELECTRON_SOURCE_DIR%\resources\icons\RTex.ico" -mask ICONGROUP,15,1033 >nul
+    ) else (
+        echo WARNING: REZH not found, skipping icon embedding
     )
-) else (
-    echo   WARNING: Quarto bin directory not found at %QUARTO_BIN_DIR%
 )
 
-REM Copy Copilot Language Server to bin
-set "COPILOT_DIR=%RSTUDIO_DEPENDENCIES%\common\copilot-language-server"
-if exist "%COPILOT_DIR%" (
-    echo   Copying Copilot Language Server to bin from %COPILOT_DIR%
-    xcopy /E /I /Y "%COPILOT_DIR%" "%ELECTRON_DIR%\resources\app\bin\copilot-language-server\"
-    if ERRORLEVEL 1 (
-        echo ERROR: Failed to copy Copilot Language Server
-        goto :error
-    )
-) else (
-    echo   WARNING: Copilot Language Server not found at %COPILOT_DIR%
-)
 
-REM Copy Ripgrep to bin
-set "RIPGREP_DIR=%RSTUDIO_DEPENDENCIES%\common\ripgrep"
-if exist "%RIPGREP_DIR%" (
-    echo   Copying Ripgrep to bin from %RIPGREP_DIR%
-    xcopy /E /I /Y "%RIPGREP_DIR%\*" "%ELECTRON_DIR%\resources\app\bin\ripgrep\"
-    if ERRORLEVEL 1 (
-        echo ERROR: Failed to copy Ripgrep
-        goto :error
-    )
-) else (
-    echo   WARNING: Ripgrep not found at %RIPGREP_DIR%
-)
-
-REM Copy libclang
-set "LIBCLANG_DIR=%RSTUDIO_DEPENDENCIES%\common\libclang"
-if exist "%LIBCLANG_DIR%" (
-    echo   Copying libclang from %LIBCLANG_DIR%
-    if exist "%LIBCLANG_DIR%\x86" (
-        xcopy /E /I /Y "%LIBCLANG_DIR%\x86\*" "%ELECTRON_DIR%\resources\app\bin\rsclang\x86\"
-        if ERRORLEVEL 1 (
-            echo ERROR: Failed to copy libclang x86
-            goto :error
-        )
-    )
-    if exist "%LIBCLANG_DIR%\x86_64" (
-        xcopy /E /I /Y "%LIBCLANG_DIR%\x86_64\*" "%ELECTRON_DIR%\resources\app\bin\rsclang\x86_64\"
-        if ERRORLEVEL 1 (
-            echo ERROR: Failed to copy libclang x86_64
-            goto :error
-        )
-    )
-) else (
-    echo   WARNING: libclang not found at %LIBCLANG_DIR%
-)
-
-REM Copy postback tools
-if exist "%BUILD_DIR_ARG%\src\cpp\session\postback\rpostback.exe" (
-    echo   Copying rpostback.exe
-    copy "%BUILD_DIR_ARG%\src\cpp\session\postback\rpostback.exe" "%ELECTRON_DIR%\resources\app\bin\rpostback.exe"
-    if ERRORLEVEL 1 (
-        echo ERROR: Failed to copy rpostback.exe
-        goto :error
-    )
-) else (
-    echo   WARNING: rpostback.exe not found
-)
-
-REM Copy winpty DLLs (Windows terminal support)
-set "WINPTY_DIR=%RSTUDIO_DEPENDENCIES%\common\winpty"
-if exist "%WINPTY_DIR%" (
-    echo   Copying winpty DLLs from %WINPTY_DIR%
-    if exist "%WINPTY_DIR%\x64\winpty.dll" (
-        copy "%WINPTY_DIR%\x64\winpty.dll" "%ELECTRON_DIR%\resources\app\bin\winpty.dll"
-        if ERRORLEVEL 1 (
-            echo ERROR: Failed to copy winpty.dll
-            goto :error
-        )
-    )
-    if exist "%WINPTY_DIR%\x64\winpty-agent.exe" (
-        copy "%WINPTY_DIR%\x64\winpty-agent.exe" "%ELECTRON_DIR%\resources\app\bin\winpty-agent.exe"
-        if ERRORLEVEL 1 (
-            echo ERROR: Failed to copy winpty-agent.exe
-            goto :error
-        )
-    )
-) else (
-    echo   WARNING: winpty directory not found at %WINPTY_DIR%
-)
-
-REM Copy Windows-specific GNU tools (essential for R functionality)
-echo Copying Windows GNU tools...
-
-set "WIN_DEPS_DIR=%RSTUDIO_DEPENDENCIES%\windows"
-if not exist "%WIN_DEPS_DIR%" (
-    set "WIN_DEPS_DIR=%RSTUDIO_DEPENDENCIES%\common\windows"
-)
-
-REM Copy gnudiff
-if exist "%WIN_DEPS_DIR%\gnudiff" (
-    echo   Copying gnudiff from %WIN_DEPS_DIR%\gnudiff
-    xcopy /E /I /Y "%WIN_DEPS_DIR%\gnudiff" "%ELECTRON_DIR%\resources\app\bin\gnudiff\"
-    if ERRORLEVEL 1 (
-        echo ERROR: Failed to copy gnudiff
-        goto :error
-    )
-) else (
-    echo   WARNING: gnudiff not found at %WIN_DEPS_DIR%\gnudiff
-)
-
-REM Copy gnugrep
-if exist "%WIN_DEPS_DIR%\gnugrep" (
-    echo   Copying gnugrep from %WIN_DEPS_DIR%\gnugrep
-    xcopy /E /I /Y "%WIN_DEPS_DIR%\gnugrep\3.0" "%ELECTRON_DIR%\resources\app\bin\gnugrep\"
-    if ERRORLEVEL 1 (
-        echo ERROR: Failed to copy gnugrep
-        goto :error
-    )
-) else (
-    echo   WARNING: gnugrep not found at %WIN_DEPS_DIR%\gnugrep
-)
-
-REM Copy SumatraPDF
-if exist "%WIN_DEPS_DIR%\sumatra\3.1.2\SumatraPDF.exe" (
-    echo   Copying SumatraPDF from %WIN_DEPS_DIR%\sumatra
-    if not exist "%ELECTRON_DIR%\resources\app\bin\sumatra" (
-        mkdir "%ELECTRON_DIR%\resources\app\bin\sumatra"
-    )
-    copy "%WIN_DEPS_DIR%\sumatra\3.1.2\SumatraPDF.exe" "%ELECTRON_DIR%\resources\app\bin\sumatra\SumatraPDF.exe"
-    if ERRORLEVEL 1 (
-        echo ERROR: Failed to copy SumatraPDF.exe
-        goto :error
-    )
-    
-    REM Copy SumatraPDF config
-    if exist "%SESSION_RESOURCES_DIR%\sumatrapdfrestrict.ini" (
-        copy "%SESSION_RESOURCES_DIR%\sumatrapdfrestrict.ini" "%ELECTRON_DIR%\resources\app\bin\sumatra\sumatrapdfrestrict.ini"
-    )
-) else (
-    echo   WARNING: SumatraPDF not found at %WIN_DEPS_DIR%\sumatra\3.1.2\SumatraPDF.exe
-)
-
-REM Copy winutils
-if exist "%WIN_DEPS_DIR%\winutils\1.0" (
-    echo   Copying winutils from %WIN_DEPS_DIR%\winutils
-    if not exist "%ELECTRON_DIR%\resources\app\bin\winutils" (
-        mkdir "%ELECTRON_DIR%\resources\app\bin\winutils"
-    )
-    if exist "%WIN_DEPS_DIR%\winutils\1.0\winutils.exe" (
-        copy "%WIN_DEPS_DIR%\winutils\1.0\winutils.exe" "%ELECTRON_DIR%\resources\app\bin\winutils\winutils.exe"
-    )
-    if exist "%WIN_DEPS_DIR%\winutils\1.0\x64\winutils.exe" (
-        if not exist "%ELECTRON_DIR%\resources\app\bin\winutils\x64" (
-            mkdir "%ELECTRON_DIR%\resources\app\bin\winutils\x64"
-        )
-        copy "%WIN_DEPS_DIR%\winutils\1.0\x64\winutils.exe" "%ELECTRON_DIR%\resources\app\bin\winutils\x64\winutils.exe"
-    )
-) else (
-    echo   WARNING: winutils not found at %WIN_DEPS_DIR%\winutils\1.0
-)
-
-REM Copy CITATION file (built during CMake configure)
-if exist "%BUILD_DIR_ARG%\src\cpp\session\CITATION" (
-    echo   Copying CITATION file
-    copy "%BUILD_DIR_ARG%\src\cpp\session\CITATION" "%ELECTRON_DIR%\resources\app\resources\CITATION"
-    if ERRORLEVEL 1 (
-        echo ERROR: Failed to copy CITATION file
-        goto :error
-    )
-) else (
-    echo   WARNING: CITATION file not found
-)
-
-REM Copy Crashpad tools (crash reporting - also skipped on Windows builds)
-set "CRASHPAD_DIR=%RSTUDIO_DEPENDENCIES%\common\crashpad"
-if exist "%CRASHPAD_DIR%" (
-    echo   Copying Crashpad tools from %CRASHPAD_DIR%
-    if exist "%CRASHPAD_DIR%\crashpad_handler.exe" (
-        copy "%CRASHPAD_DIR%\crashpad_handler.exe" "%ELECTRON_DIR%\resources\app\bin\crashpad_handler.exe"
-    )
-    if exist "%CRASHPAD_DIR%\crashpad_handler.com" (
-        copy "%CRASHPAD_DIR%\crashpad_handler.com" "%ELECTRON_DIR%\resources\app\bin\crashpad_handler.com"
-    )
-    if exist "%CRASHPAD_DIR%\crashpad_http_upload.exe" (
-        copy "%CRASHPAD_DIR%\crashpad_http_upload.exe" "%ELECTRON_DIR%\resources\app\bin\crashpad_http_upload.exe"
-    )
-) else (
-    echo   WARNING: Crashpad tools not found at %CRASHPAD_DIR%
-)
-
-REM Copy consoleio binary (if it exists and is needed)
-if exist "%BUILD_DIR_ARG%\src\cpp\session\consoleio\consoleio.exe" (
-    echo   Copying consoleio.exe
-    copy "%BUILD_DIR_ARG%\src\cpp\session\consoleio\consoleio.exe" "%ELECTRON_DIR%\resources\app\bin\consoleio.exe"
-) else (
-    echo   INFO: consoleio.exe not found (may not be built)
-)
-
-echo Successfully copied Windows GNU tools and additional resources
-echo Successfully copied external tools
 
 REM Clean up temporary install directory
 if exist "%TEMP_INSTALL_DIR%" (
     rmdir /s /q "%TEMP_INSTALL_DIR%"
 )
 
-REM Final verification of Electron app directory contents
-echo.
-echo DEBUG: Final verification of Electron app directory
-echo DEBUG: Checking contents of %ELECTRON_DIR%\resources\app\
-dir "%ELECTRON_DIR%\resources\app\"
-echo.
+REM Final verification of key components
 if exist "%ELECTRON_DIR%\resources\app\R" (
-    echo DEBUG: R directory exists, contents:
-    dir "%ELECTRON_DIR%\resources\app\R\"
-    if exist "%ELECTRON_DIR%\resources\app\R\Tools.R" (
-        echo SUCCESS: Tools.R confirmed present before packaging
-    ) else (
-        echo WARNING: Tools.R not found - may indicate cmake --install issue
+    if not exist "%ELECTRON_DIR%\resources\app\R\Tools.R" (
+        echo ERROR: Tools.R not found - cmake --install failed to copy R files
+        goto :error
     )
     
-    if exist "%ELECTRON_DIR%\resources\app\resources" (
-        echo SUCCESS: Resources directory confirmed present
-    ) else (
-        echo WARNING: Resources directory not found - may indicate cmake --install issue
+    if not exist "%ELECTRON_DIR%\resources\app\resources" (
+        echo ERROR: Resources directory not found - cmake --install failed
+        goto :error
     )
     
-    if exist "%ELECTRON_DIR%\resources\app\www" (
-        echo SUCCESS: WWW directory confirmed present (GWT web interface)
-    ) else (
-        echo WARNING: WWW directory not found - may indicate GWT build or cmake --install issue
+    if not exist "%ELECTRON_DIR%\resources\app\www" (
+        echo ERROR: WWW directory not found - GWT build or cmake --install failed
+        goto :error
     )
     
-    REM Check for external tools in bin directory
-    if exist "%ELECTRON_DIR%\resources\app\bin\quarto" (
-        echo SUCCESS: Quarto confirmed present in bin
-    ) else (
-        echo WARNING: Quarto not found in bin (optional)
-    )
-    
-    if exist "%ELECTRON_DIR%\resources\app\bin\ripgrep" (
-        echo SUCCESS: Ripgrep confirmed present in bin
-    ) else (
-        echo WARNING: Ripgrep not found in bin (optional)
-    )
-    
-    if exist "%ELECTRON_DIR%\resources\app\bin\rsclang" (
-        echo SUCCESS: libclang confirmed present in bin
-    ) else (
-        echo WARNING: libclang not found in bin (optional)
-    )
-    
-    if exist "%ELECTRON_DIR%\resources\app\bin\rpostback.exe" (
-        echo SUCCESS: rpostback.exe confirmed present in bin
-    ) else (
-        echo WARNING: rpostback.exe not found in bin (optional)
-    )
-    
-    if exist "%ELECTRON_DIR%\resources\app\bin\winpty.dll" (
-        echo SUCCESS: winpty.dll confirmed present in bin
-    ) else (
-        echo WARNING: winpty.dll not found in bin (optional)
-    )
-    
-    REM Check for Windows GNU tools
-    if exist "%ELECTRON_DIR%\resources\app\bin\gnudiff" (
-        echo SUCCESS: gnudiff confirmed present in bin
-    ) else (
-        echo WARNING: gnudiff not found in bin (optional)
-    )
-    
-    if exist "%ELECTRON_DIR%\resources\app\bin\gnugrep" (
-        echo SUCCESS: gnugrep confirmed present in bin
-    ) else (
-        echo WARNING: gnugrep not found in bin (optional)
-    )
-    
-    if exist "%ELECTRON_DIR%\resources\app\bin\sumatra\SumatraPDF.exe" (
-        echo SUCCESS: SumatraPDF confirmed present in bin
-    ) else (
-        echo WARNING: SumatraPDF not found in bin (optional)
-    )
-    
-    if exist "%ELECTRON_DIR%\resources\app\bin\winutils" (
-        echo SUCCESS: winutils confirmed present in bin
-    ) else (
-        echo WARNING: winutils not found in bin (optional)
-    )
+
 ) else (
     echo ERROR: R directory missing before packaging
     goto :error
 )
-echo.
 
 goto :eof
 
