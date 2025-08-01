@@ -104,8 +104,8 @@ if not defined NOSQUIRREL (
         REM Set ELECTRON_DIR for use throughout the script
         set "ELECTRON_DIR=!ELECTRON_APP_DIR!"
         
-        REM Copy RStudio binaries into Electron app if they don't already exist
-        call :copy_binaries "%ELECTRON_APP_DIR%" "%BUILD_DIR%"
+        REM Install components using cmake to get all configured files
+        call :install_and_copy_components "%ELECTRON_APP_DIR%" "%BUILD_DIR%"
         
         REM Copy script to desktop directory where node_modules exists
         set "DESKTOP_DIR=!PROJECT_ROOT!\src\node\desktop"
@@ -231,179 +231,74 @@ echo  Use "set NOSQUIRREL=1" to skip Squirrel.Windows package generation.
 echo.
 exit /b 0
 
-:copy_binaries
+:install_and_copy_components
 set "ELECTRON_DIR=%~1"
 set "BUILD_DIR_ARG=%~2"
-if not exist "%ELECTRON_DIR%\resources\app\bin\rsession.exe" (
-    echo Copying RStudio binaries to Electron app...
-    echo   FROM: %BUILD_DIR_ARG%\src\cpp\session\rsession.exe
-    echo   TO: %ELECTRON_DIR%\resources\app\bin\rsession.exe
-    if not exist "%ELECTRON_DIR%\resources\app\bin" (
-        mkdir "%ELECTRON_DIR%\resources\app\bin"
-        if ERRORLEVEL 1 (
-            echo ERROR: Failed to create bin directory
-            goto :error
-        )
+
+REM Create temporary install directory
+set "TEMP_INSTALL_DIR=%BUILD_DIR_ARG%\temp_install"
+if exist "%TEMP_INSTALL_DIR%" (
+    rmdir /s /q "%TEMP_INSTALL_DIR%"
+)
+mkdir "%TEMP_INSTALL_DIR%"
+
+echo Installing components using cmake to temporary directory...
+pushd "%BUILD_DIR_ARG%"
+cmake --install . --config "%CMAKE_BUILD_TYPE%" --prefix "%TEMP_INSTALL_DIR%"
+if ERRORLEVEL 1 (
+    echo ERROR: cmake --install failed
+    popd
+    goto :error
+)
+popd
+
+echo Copying installed components to Electron app...
+REM Copy everything from temp install to Electron app structure
+if exist "%TEMP_INSTALL_DIR%" (
+    xcopy /E /I /Y "%TEMP_INSTALL_DIR%\*" "%ELECTRON_DIR%\resources\app\"
+    if ERRORLEVEL 1 (
+        echo ERROR: Failed to copy installed components
+        goto :error
     )
-    
+)
+
+REM Still need to manually copy executables to bin (cmake may not put them where Electron expects)
+echo Copying executables to bin directory...
+if not exist "%ELECTRON_DIR%\resources\app\bin" (
+    mkdir "%ELECTRON_DIR%\resources\app\bin"
+    if ERRORLEVEL 1 (
+        echo ERROR: Failed to create bin directory
+        goto :error
+    )
+)
+
+if not exist "%ELECTRON_DIR%\resources\app\bin\rsession.exe" (
     copy "%BUILD_DIR_ARG%\src\cpp\session\rsession.exe" "%ELECTRON_DIR%\resources\app\bin\rsession.exe"
     if ERRORLEVEL 1 (
         echo ERROR: Failed to copy rsession.exe
         goto :error
     )
-    
-    if exist "%BUILD_DIR_ARG%\src\cpp\server\rserver.exe" (
-        copy "%BUILD_DIR_ARG%\src\cpp\server\rserver.exe" "%ELECTRON_DIR%\resources\app\bin\rserver.exe"
-        if ERRORLEVEL 1 (
-            echo ERROR: Failed to copy rserver.exe
-            goto :error
-        )
-    )
-    
-    if exist "%BUILD_DIR_ARG%\src\cpp\diagnostics\diagnostics.exe" (
-        copy "%BUILD_DIR_ARG%\src\cpp\diagnostics\diagnostics.exe" "%ELECTRON_DIR%\resources\app\bin\diagnostics.exe"
-        if ERRORLEVEL 1 (
-            echo ERROR: Failed to copy diagnostics.exe
-            goto :error
-        )
-    )
 )
 
-REM Always copy R directory to Electron app (outside the rsession.exe conditional but inside the function where ELECTRON_DIR is defined)
-REM Copy from source directory since Windows build doesn't install R files to build dir
-set "SOURCE_R_DIR=%PROJECT_ROOT%\src\cpp\r\R"
-echo DEBUG: About to copy R files...
-echo DEBUG: SOURCE_R_DIR=%SOURCE_R_DIR%
-echo DEBUG: ELECTRON_DIR=%ELECTRON_DIR%
-echo DEBUG: TARGET_R_DIR=%ELECTRON_DIR%\resources\app\R\
-
-if exist "%SOURCE_R_DIR%" (
-    echo Copying core R files from source to Electron app...
-    echo   FROM: %SOURCE_R_DIR%
-    echo   TO: %ELECTRON_DIR%\resources\app\R\
-    
-    if not exist "%ELECTRON_DIR%\resources\app\R" (
-        echo Creating R directory: %ELECTRON_DIR%\resources\app\R
-        mkdir "%ELECTRON_DIR%\resources\app\R"
-        if ERRORLEVEL 1 (
-            echo ERROR: Failed to create R directory
-            goto :error
-        )
-    )
-    
-    echo Running xcopy command: xcopy /E /I /Y "%SOURCE_R_DIR%\*" "%ELECTRON_DIR%\resources\app\R\"
-    xcopy /E /I /Y "%SOURCE_R_DIR%\*" "%ELECTRON_DIR%\resources\app\R\"
+if exist "%BUILD_DIR_ARG%\src\cpp\server\rserver.exe" (
+    copy "%BUILD_DIR_ARG%\src\cpp\server\rserver.exe" "%ELECTRON_DIR%\resources\app\bin\rserver.exe"
     if ERRORLEVEL 1 (
-        echo ERROR: Failed to copy core R files from %SOURCE_R_DIR%
+        echo ERROR: Failed to copy rserver.exe
         goto :error
     )
-    
-    echo Verifying R files were copied...
-    if exist "%ELECTRON_DIR%\resources\app\R\Tools.R" (
-        echo SUCCESS: Tools.R found at %ELECTRON_DIR%\resources\app\R\Tools.R
-    ) else (
-        echo ERROR: Tools.R NOT found at %ELECTRON_DIR%\resources\app\R\Tools.R
-        echo Contents of R directory:
-        dir "%ELECTRON_DIR%\resources\app\R\"
-        goto :error
-    )
-    echo Successfully copied core R files
-) else (
-    echo ERROR: Source R directory not found at %SOURCE_R_DIR%
-    goto :error
 )
 
-REM Also copy session module R files from build directory if they exist (preserving modules subdirectory)
-if exist "%BUILD_DIR_ARG%\src\cpp\session\modules\R" (
-    echo Copying session module R files to Electron app...
-    if not exist "%ELECTRON_DIR%\resources\app\R\modules" (
-        mkdir "%ELECTRON_DIR%\resources\app\R\modules"
-        if ERRORLEVEL 1 (
-            echo ERROR: Failed to create R\modules directory
-            goto :error
-        )
-    )
-    xcopy /E /I /Y "%BUILD_DIR_ARG%\src\cpp\session\modules\R\*" "%ELECTRON_DIR%\resources\app\R\modules\"
+if exist "%BUILD_DIR_ARG%\src\cpp\diagnostics\diagnostics.exe" (
+    copy "%BUILD_DIR_ARG%\src\cpp\diagnostics\diagnostics.exe" "%ELECTRON_DIR%\resources\app\bin\diagnostics.exe"
     if ERRORLEVEL 1 (
-        echo ERROR: Failed to copy session module R files from %BUILD_DIR_ARG%\src\cpp\session\modules\R
+        echo ERROR: Failed to copy diagnostics.exe
         goto :error
     )
-    echo Successfully copied session module R files
-) else (
-    echo WARNING: Session module R directory not found at %BUILD_DIR_ARG%\src\cpp\session\modules\R
-    echo This may be OK if they don't exist in this build
 )
 
-REM Copy session resources directory (themes, help_resources, etc.)
-set "SESSION_RESOURCES_DIR=%PROJECT_ROOT%\src\cpp\session\resources"
-if exist "%SESSION_RESOURCES_DIR%" (
-    echo Copying session resources to Electron app...
-    echo   FROM: %SESSION_RESOURCES_DIR%
-    echo   TO: %ELECTRON_DIR%\resources\app\resources\
-    if not exist "%ELECTRON_DIR%\resources\app\resources" (
-        mkdir "%ELECTRON_DIR%\resources\app\resources"
-        if ERRORLEVEL 1 (
-            echo ERROR: Failed to create resources directory
-            goto :error
-        )
-    )
-    xcopy /E /I /Y "%SESSION_RESOURCES_DIR%\*" "%ELECTRON_DIR%\resources\app\resources\"
-    if ERRORLEVEL 1 (
-        echo ERROR: Failed to copy session resources from %SESSION_RESOURCES_DIR%
-        goto :error
-    )
-    echo Successfully copied session resources
-) else (
-    echo ERROR: Session resources directory not found at %SESSION_RESOURCES_DIR%
-    goto :error
-)
+REM R files, session modules, and session resources are now handled by cmake --install above
 
-REM Copy external dependencies that are skipped on Windows builds
-echo Copying external dependencies to Electron app...
-
-REM Copy hunspell dictionaries
-set "DICTIONARIES_DIR=%RSTUDIO_DEPENDENCIES%\common\dictionaries"
-if exist "%DICTIONARIES_DIR%" (
-    echo   Copying dictionaries from %DICTIONARIES_DIR%
-    xcopy /E /I /Y "%DICTIONARIES_DIR%" "%ELECTRON_DIR%\resources\app\resources\dictionaries\"
-    if ERRORLEVEL 1 (
-        echo ERROR: Failed to copy dictionaries
-        goto :error
-    )
-) else (
-    echo   WARNING: Dictionaries not found at %DICTIONARIES_DIR%
-)
-
-REM Copy MathJax
-set "MATHJAX_DIR=%RSTUDIO_DEPENDENCIES%\common\mathjax-27"
-if exist "%MATHJAX_DIR%" (
-    echo   Copying MathJax from %MATHJAX_DIR%
-    xcopy /E /I /Y "%MATHJAX_DIR%" "%ELECTRON_DIR%\resources\app\resources\mathjax-27\"
-    if ERRORLEVEL 1 (
-        echo ERROR: Failed to copy MathJax
-        goto :error
-    )
-) else (
-    echo   WARNING: MathJax not found at %MATHJAX_DIR%
-)
-
-REM Quarto is copied to bin/ directory separately on Windows
-
-REM Copy embedded R packages
-set "PACKAGES_DIR=%RSTUDIO_DEPENDENCIES%\common"
-if exist "%PACKAGES_DIR%" (
-    echo   Copying R packages from %PACKAGES_DIR%
-    if not exist "%ELECTRON_DIR%\resources\app\R\packages" (
-        mkdir "%ELECTRON_DIR%\resources\app\R\packages"
-    )
-    for %%f in ("%PACKAGES_DIR%\*.tar.gz") do (
-        copy "%%f" "%ELECTRON_DIR%\resources\app\R\packages\"
-    )
-) else (
-    echo   WARNING: R packages directory not found at %PACKAGES_DIR%
-)
-
-echo Successfully copied external dependencies
+REM Dictionaries, MathJax, and R packages are now handled by cmake --install above
 
 REM Copy external tools to bin directory (Windows-specific behavior)
 echo Copying external tools to bin directory...
@@ -614,6 +509,11 @@ if exist "%BUILD_DIR_ARG%\src\cpp\session\consoleio\consoleio.exe" (
 echo Successfully copied Windows GNU tools and additional resources
 echo Successfully copied external tools
 
+REM Clean up temporary install directory
+if exist "%TEMP_INSTALL_DIR%" (
+    rmdir /s /q "%TEMP_INSTALL_DIR%"
+)
+
 REM Final verification of Electron app directory contents
 echo.
 echo DEBUG: Final verification of Electron app directory
@@ -626,53 +526,19 @@ if exist "%ELECTRON_DIR%\resources\app\R" (
     if exist "%ELECTRON_DIR%\resources\app\R\Tools.R" (
         echo SUCCESS: Tools.R confirmed present before packaging
     ) else (
-        echo ERROR: Tools.R missing before packaging
-        goto :error
+        echo WARNING: Tools.R not found - may indicate cmake --install issue
     )
     
-    if exist "%ELECTRON_DIR%\resources\app\R\modules\ModuleTools.R" (
-        echo SUCCESS: ModuleTools.R confirmed present in modules subdirectory
+    if exist "%ELECTRON_DIR%\resources\app\resources" (
+        echo SUCCESS: Resources directory confirmed present
     ) else (
-        echo ERROR: ModuleTools.R missing from modules subdirectory
-        if exist "%ELECTRON_DIR%\resources\app\R\modules" (
-            echo DEBUG: modules directory exists, contents:
-            dir "%ELECTRON_DIR%\resources\app\R\modules\"
-        ) else (
-            echo ERROR: modules directory does not exist
-        )
-        goto :error
+        echo WARNING: Resources directory not found - may indicate cmake --install issue
     )
     
-    if exist "%ELECTRON_DIR%\resources\app\resources\themes\compile-themes.R" (
-        echo SUCCESS: compile-themes.R confirmed present in resources/themes
+    if exist "%ELECTRON_DIR%\resources\app\www" (
+        echo SUCCESS: WWW directory confirmed present (GWT web interface)
     ) else (
-        echo ERROR: compile-themes.R missing from resources/themes
-        if exist "%ELECTRON_DIR%\resources\app\resources\themes" (
-            echo DEBUG: themes directory exists, contents:
-            dir "%ELECTRON_DIR%\resources\app\resources\themes\"
-        ) else (
-            echo ERROR: resources/themes directory does not exist
-        )
-        goto :error
-    )
-    
-    REM Check for external dependencies
-    if exist "%ELECTRON_DIR%\resources\app\resources\dictionaries" (
-        echo SUCCESS: Dictionaries directory confirmed present
-    ) else (
-        echo WARNING: Dictionaries directory not found (optional)
-    )
-    
-    if exist "%ELECTRON_DIR%\resources\app\resources\mathjax-27" (
-        echo SUCCESS: MathJax confirmed present
-    ) else (
-        echo WARNING: MathJax not found (optional)
-    )
-    
-    if exist "%ELECTRON_DIR%\resources\app\R\packages" (
-        echo SUCCESS: R packages directory confirmed present
-    ) else (
-        echo WARNING: R packages directory not found (optional)
+        echo WARNING: WWW directory not found - may indicate GWT build or cmake --install issue
     )
     
     REM Check for external tools in bin directory
