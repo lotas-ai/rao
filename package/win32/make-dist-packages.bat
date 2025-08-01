@@ -63,61 +63,13 @@ REM Generate Squirrel.Windows packages for auto-updates
 if not defined NOSQUIRREL (
     echo Creating Squirrel.Windows packages for auto-updates...
     
-    REM Find the Electron app directory (should be in the build output)
+    REM Find the Electron app directory
+    REM We need to go up 2 levels and then down to src\node\desktop\out\Rao-win32-x64
+    
+    set "ELECTRON_APP_DIR=%PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64"
+    
     echo DEBUG: PACKAGE_DIR = %PACKAGE_DIR%
-    echo DEBUG: Current directory before navigation: %CD%
-    
-    REM Build the desktop path manually
-    set "DESKTOP_PATH=%PACKAGE_DIR%\..\..\src\node\desktop"
-    echo DEBUG: Trying to navigate to: %DESKTOP_PATH%
-    
-    REM Test if the path exists before trying to navigate
-    if exist "%DESKTOP_PATH%" (
-        echo DEBUG: Desktop path exists, attempting navigation
-        pushd "%DESKTOP_PATH%"
-        echo DEBUG: Desktop base directory after pushd: %CD%
-        
-        REM Check if out directory exists using relative path
-        if exist "out" (
-            echo DEBUG: Out directory exists
-            if exist "out\Rao-win32-x64" (
-                set "ELECTRON_APP_DIR=%CD%\out\Rao-win32-x64"
-                echo DEBUG: Found Electron app at: %ELECTRON_APP_DIR%
-            ) else (
-                echo DEBUG: Out directory exists but Rao-win32-x64 not found
-                echo DEBUG: Contents of out directory:
-                dir /b "out"
-                set "ELECTRON_APP_DIR="
-            )
-        ) else (
-            echo DEBUG: Out directory does not exist
-            set "ELECTRON_APP_DIR="
-        )
-        
-        popd
-    ) else (
-        echo DEBUG: Desktop path does not exist: %DESKTOP_PATH%
-        echo DEBUG: Let's check what exists step by step...
-        if exist "%PACKAGE_DIR%\..\.." (
-            echo DEBUG: rao root exists
-            if exist "%PACKAGE_DIR%\..\..\src" (
-                echo DEBUG: src exists
-                if exist "%PACKAGE_DIR%\..\..\src\node" (
-                    echo DEBUG: node exists  
-                    dir /b "%PACKAGE_DIR%\..\..\src\node"
-                ) else (
-                    echo DEBUG: node does not exist
-                )
-            ) else (
-                echo DEBUG: src does not exist
-            )
-        ) else (
-            echo DEBUG: rao root does not exist
-        )
-        set "ELECTRON_APP_DIR="
-    )
-    
-    echo DEBUG: Final ELECTRON_APP_DIR = %ELECTRON_APP_DIR%
+    echo DEBUG: ELECTRON_APP_DIR = %ELECTRON_APP_DIR%
     if exist "%ELECTRON_APP_DIR%" (
         echo Found Electron app at: %ELECTRON_APP_DIR%
         
