@@ -105,11 +105,9 @@ if not defined NOSQUIRREL (
         REM Verify we're in the right directory
         echo Current directory: %CD%
         
-        REM Use absolute path for BUILD_DIR since we changed directories
-        set "ABS_BUILD_DIR=%PACKAGE_DIR%%BUILD_DIR%"
-        
+        REM BUILD_DIR is already absolute, just use it directly
         REM Run the script from the desktop directory
-        "%NODE%" create-squirrel-packages-temp.js "%ABS_BUILD_DIR%"
+        "%NODE%" create-squirrel-packages-temp.js "%BUILD_DIR%"
         if ERRORLEVEL 1 (
             REM Clean up temporary file
             del create-squirrel-packages-temp.js
