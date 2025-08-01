@@ -244,7 +244,7 @@ mkdir "%TEMP_INSTALL_DIR%"
 
 echo Installing components using cmake...
 pushd "%BUILD_DIR_ARG%"
-cmake --install . --config "%CMAKE_BUILD_TYPE%" --prefix "%TEMP_INSTALL_DIR%" >nul 2>nul
+cmake --install . --config "%CMAKE_BUILD_TYPE%" --prefix "%TEMP_INSTALL_DIR%"
 if ERRORLEVEL 1 (
     echo ERROR: cmake --install failed
     popd
@@ -323,7 +323,7 @@ if exist "%ELECTRON_DIR%\resources\app\R" (
     )
     
     if not exist "%ELECTRON_DIR%\resources\app\www" (
-        echo ERROR: WWW directory not found - GWT build or cmake --install failed
+        echo ERROR: WWW directory not found - GWT web interface missing
         goto :error
     )
     
