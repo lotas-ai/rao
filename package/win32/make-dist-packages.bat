@@ -12,7 +12,7 @@
 :: AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
 ::
 @echo off
-setlocal enabledelayedexpansion
+setlocal
 
 if "%1" == "--help" goto :showhelp
 if "%1" == "-h" goto :showhelp
@@ -24,6 +24,7 @@ if "%BUILD_DIR%" == "" set BUILD_DIR=build
 if "%CMAKE_BUILD_TYPE%" == "" set CMAKE_BUILD_TYPE=RelWithDebInfo
 if "%CMAKE_BUILD_TYPE%" == "Debug" set BUILD_DIR=build-debug
 if "%PKG_TEMP_DIR%" == "" set PKG_TEMP_DIR=C:/rsbuild
+set "PROJECT_ROOT=%PACKAGE_DIR%..\.."
 
 REM Set up dependencies path if not already set
 if not defined RSTUDIO_DEPENDENCIES (
@@ -87,22 +88,13 @@ REM Generate Squirrel.Windows packages for auto-updates
 if not defined NOSQUIRREL (
     echo Creating Squirrel.Windows packages for auto-updates...
     
-    REM Find the Electron app directory - use absolute path to match Node.js script
-    set "ELECTRON_APP_DIR=%PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64"
-    if exist "!ELECTRON_APP_DIR!\rao.exe" (
-        echo Found Electron app at: !ELECTRON_APP_DIR!
+    REM Find the Electron app directory
+    set "ELECTRON_APP_DIR=%PROJECT_ROOT%\src\node\desktop\out\Rao-win32-x64"
+    if exist "%ELECTRON_APP_DIR%\rao.exe" (
+        echo Found Electron app at: %ELECTRON_APP_DIR%
         
         REM Copy RStudio binaries into Electron app if they don't already exist
-        echo DEBUG: About to call copy_binaries with ELECTRON_APP_DIR=!ELECTRON_APP_DIR!
-        echo DEBUG: BUILD_DIR=%BUILD_DIR%
         call :copy_binaries "%ELECTRON_APP_DIR%" "%BUILD_DIR%"
-        echo DEBUG: copy_binaries completed, checking if R directory exists...
-        if exist "!ELECTRON_APP_DIR!\resources\app\R" (
-            echo DEBUG: R directory exists in Electron app at: !ELECTRON_APP_DIR!\resources\app\R
-            dir "!ELECTRON_APP_DIR!\resources\app\R\Tools.R" 2>nul && echo DEBUG: Tools.R found || echo DEBUG: Tools.R NOT found
-        ) else (
-            echo DEBUG: R directory does NOT exist in Electron app at: !ELECTRON_APP_DIR!\resources\app\R
-        )
         
         REM Copy script to desktop directory where node_modules exists
         set "DESKTOP_DIR=%PACKAGE_DIR%..\..\src\node\desktop"
@@ -122,13 +114,6 @@ if not defined NOSQUIRREL (
         
         REM BUILD_DIR is already absolute, just use it directly
         REM Run the script from the desktop directory
-        echo DEBUG: Checking R directory right before Node.js script...
-        echo DEBUG: ELECTRON_APP_DIR before Node.js: !ELECTRON_APP_DIR!
-        if exist "!ELECTRON_APP_DIR!\resources\app\R" (
-            echo DEBUG: R directory still exists before Node.js script at: !ELECTRON_APP_DIR!\resources\app\R
-        ) else (
-            echo DEBUG: R directory MISSING before Node.js script at: !ELECTRON_APP_DIR!\resources\app\R
-        )
         echo DEBUG: About to run Node.js script...
         echo DEBUG: NODE=%NODE%
         echo DEBUG: Current directory: %CD%
@@ -238,17 +223,10 @@ exit /b 0
 :copy_binaries
 set "ELECTRON_DIR=%~1"
 set "BUILD_DIR_ARG=%~2"
-
-REM Convert relative paths to absolute paths
-pushd "%ELECTRON_DIR%"
-set "ELECTRON_DIR=%CD%"
-popd
-
-pushd "%BUILD_DIR_ARG%"
-set "BUILD_DIR_ARG=%CD%"
-popd
 if not exist "%ELECTRON_DIR%\resources\app\bin\rsession.exe" (
     echo Copying RStudio binaries to Electron app...
+    echo   FROM: %BUILD_DIR_ARG%\src\cpp\session\rsession.exe
+    echo   TO: %ELECTRON_DIR%\resources\app\bin\rsession.exe
     if not exist "%ELECTRON_DIR%\resources\app\bin" (
         mkdir "%ELECTRON_DIR%\resources\app\bin"
         if ERRORLEVEL 1 (
@@ -283,11 +261,11 @@ if not exist "%ELECTRON_DIR%\resources\app\bin\rsession.exe" (
 
 REM Always copy R directory to Electron app (outside the rsession.exe conditional)
 REM Copy from source directory since Windows build doesn't install R files to build dir
-pushd "%~dp0..\..\src\cpp\r\R"
-set "SOURCE_R_DIR=%CD%"
-popd
+set "SOURCE_R_DIR=%PROJECT_ROOT%\src\cpp\r\R"
 if exist "%SOURCE_R_DIR%" (
     echo Copying core R files from source to Electron app...
+    echo   FROM: %SOURCE_R_DIR%
+    echo   TO: %ELECTRON_DIR%\resources\app\R\
     if not exist "%ELECTRON_DIR%\resources\app\R" (
         mkdir "%ELECTRON_DIR%\resources\app\R"
         if ERRORLEVEL 1 (
