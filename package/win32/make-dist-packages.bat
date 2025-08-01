@@ -64,27 +64,11 @@ if not defined NOSQUIRREL (
     echo Creating Squirrel.Windows packages for auto-updates...
     
     REM Find the Electron app directory
-    echo DEBUG: Building path
-    
-    REM Get the script directory without trailing backslash
-    set "SCRIPT_DIR=%~dp0"
-    REM Remove trailing backslash if present
-    if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
-    
-    REM Build the path to Electron app
-    set "ELECTRON_APP_DIR=%SCRIPT_DIR%\..\..\src\node\desktop\out\Rao-win32-x64"
-    
-    echo DEBUG: SCRIPT_DIR: [%SCRIPT_DIR%]
-    echo DEBUG: ELECTRON_APP_DIR: [%ELECTRON_APP_DIR%]
-    
-    REM Test each path component
-    echo DEBUG: Testing path components:
-    if exist "%SCRIPT_DIR%\.." (echo DEBUG:   %SCRIPT_DIR%\.. EXISTS) else (echo DEBUG:   %SCRIPT_DIR%\.. MISSING)
-    if exist "%SCRIPT_DIR%\..\.." (echo DEBUG:   %SCRIPT_DIR%\..\.. EXISTS) else (echo DEBUG:   %SCRIPT_DIR%\..\.. MISSING)
-    if exist "%SCRIPT_DIR%\..\..\src" (echo DEBUG:   %SCRIPT_DIR%\..\..\src EXISTS) else (echo DEBUG:   %SCRIPT_DIR%\..\..\src MISSING)
-    if exist "%SCRIPT_DIR%\..\..\src\node\desktop\out" (echo DEBUG:   %SCRIPT_DIR%\..\..\src\node\desktop\out EXISTS) else (echo DEBUG:   %SCRIPT_DIR%\..\..\src\node\desktop\out MISSING)
-    
-    if exist "%ELECTRON_APP_DIR%" (
+    REM Build path to Electron app using pushd/popd to get absolute path
+    pushd %PACKAGE_DIR%..\..\src\node\desktop\out
+    if exist "Rao-win32-x64" (
+        set "ELECTRON_APP_DIR=%CD%\Rao-win32-x64"
+        popd
         echo Found Electron app at: %ELECTRON_APP_DIR%
         
         REM Use existing create-squirrel-packages.js script
@@ -99,10 +83,13 @@ if not defined NOSQUIRREL (
             echo Squirrel auto-update files created successfully
         )
     ) else (
-        echo WARNING: Electron app directory not found at %ELECTRON_APP_DIR%
+        popd
+        echo WARNING: Electron app directory not found at %PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64
         echo Skipping Squirrel package generation
     )
 )
+
+:skip_squirrel
 
 popd
 
