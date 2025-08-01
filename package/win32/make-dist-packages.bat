@@ -95,8 +95,11 @@ if not defined NOSQUIRREL (
         popd
         echo Found Electron app at: %ELECTRON_APP_DIR%
         
-        REM Change to desktop directory where node_modules exists
+        REM Copy script to desktop directory where node_modules exists
         set "DESKTOP_DIR=%PACKAGE_DIR%..\..\src\node\desktop"
+        copy "%PACKAGE_DIR%create-squirrel-packages.js" "%DESKTOP_DIR%\create-squirrel-packages-temp.js" >nul
+        
+        REM Change to desktop directory
         pushd "%DESKTOP_DIR%"
         
         REM Verify we're in the right directory
@@ -105,10 +108,20 @@ if not defined NOSQUIRREL (
         REM Use absolute path for BUILD_DIR since we changed directories
         set "ABS_BUILD_DIR=%PACKAGE_DIR%%BUILD_DIR%"
         
-        REM Use existing create-squirrel-packages.js script
-        "%NODE%" "%PACKAGE_DIR%create-squirrel-packages.js" "%ABS_BUILD_DIR%"
+        REM Run the script from the desktop directory
+        "%NODE%" create-squirrel-packages-temp.js "%ABS_BUILD_DIR%"
+        set SQUIRREL_RESULT=%ERRORLEVEL%
+        
+        REM Clean up temporary file
+        del create-squirrel-packages-temp.js
         
         popd
+        
+        REM Check if squirrel creation succeeded
+        if not "%SQUIRREL_RESULT%" == "0" (
+            echo ERROR: Squirrel package creation failed
+            goto :error
+        )
         
         REM Move Squirrel files to build directory
         if exist "%BUILD_DIR%\squirrel" (
