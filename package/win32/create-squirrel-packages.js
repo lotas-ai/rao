@@ -23,6 +23,17 @@ if (!fs.existsSync(electronAppDir)) {
   process.exit(1);
 }
 
+// Debug: Check if bin directory exists in the app
+const binDir = path.join(electronAppDir, 'resources', 'app', 'bin');
+console.log('Checking for bin directory at:', binDir);
+if (fs.existsSync(binDir)) {
+  console.log('✓ bin directory exists');
+  const binFiles = fs.readdirSync(binDir);
+  console.log('Files in bin directory:', binFiles);
+} else {
+  console.error('✗ bin directory NOT found!');
+}
+
 electronWinstaller.createWindowsInstaller({
   appDirectory: electronAppDir,
   outputDirectory: outputDir,
