@@ -69,12 +69,13 @@ if not defined NOSQUIRREL (
     echo DEBUG: PACKAGE_DIR = %PACKAGE_DIR%
     echo DEBUG: Current working directory = %CD%
     
-    REM Save current directory and navigate to find the actual path
-    pushd "%PACKAGE_DIR%"
-    echo DEBUG: After pushd to PACKAGE_DIR = %CD%
+    REM We are in build directory, need to navigate to package dir first
+    popd
+    echo DEBUG: After popd from build dir = %CD%
     
+    REM Now navigate step by step
     cd ..\..
-    echo DEBUG: After cd up two levels = %CD%
+    echo DEBUG: After cd up two levels to rao root = %CD%
     set "RAO_ROOT=%CD%"
     
     cd src
@@ -106,7 +107,8 @@ if not defined NOSQUIRREL (
         set "ELECTRON_APP_DIR="
     )
     
-    popd
+    REM Return to build directory to maintain script structure
+    pushd "%BUILD_DIR%"
     echo DEBUG: Final ELECTRON_APP_DIR = %ELECTRON_APP_DIR%
     if exist "%ELECTRON_APP_DIR%" (
         echo Found Electron app at: %ELECTRON_APP_DIR%
