@@ -66,6 +66,10 @@ if not defined NOSQUIRREL (
     REM Find the Electron app directory (should be in the build output)
     set "ELECTRON_APP_DIR=%PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64"
     
+    echo DEBUG: PACKAGE_DIR = %PACKAGE_DIR%
+    echo DEBUG: Raw path = %PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64
+    echo DEBUG: ELECTRON_APP_DIR = %ELECTRON_APP_DIR%
+    echo DEBUG: Checking if directory exists: "%ELECTRON_APP_DIR%"
     if exist "%ELECTRON_APP_DIR%" (
         echo Found Electron app at: %ELECTRON_APP_DIR%
         
