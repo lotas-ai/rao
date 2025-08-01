@@ -183,6 +183,13 @@ if not exist "%ELECTRON_DIR%\resources\app\bin\rsession.exe" (
     if exist "%BUILD_DIR_ARG%\src\cpp\diagnostics\diagnostics.exe" (
         copy "%BUILD_DIR_ARG%\src\cpp\diagnostics\diagnostics.exe" "%ELECTRON_DIR%\resources\app\bin\diagnostics.exe"
     )
+    
+    REM Copy R directory to Electron app
+    if exist "%BUILD_DIR_ARG%\src\cpp\r\R" (
+        echo Copying R directory to Electron app...
+        if not exist "%ELECTRON_DIR%\resources\app\R" mkdir "%ELECTRON_DIR%\resources\app\R"
+        xcopy /E /I /Y "%BUILD_DIR_ARG%\src\cpp\r\R\*" "%ELECTRON_DIR%\resources\app\R\"
+    )
 )
 goto :eof
 
