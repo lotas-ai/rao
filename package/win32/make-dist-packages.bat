@@ -91,7 +91,9 @@ if not defined NOSQUIRREL (
     echo Creating Squirrel.Windows packages for auto-updates...
     
     REM Find the Electron app directory
+    echo DEBUG: PROJECT_ROOT before setting ELECTRON_APP_DIR: %PROJECT_ROOT%
     set "ELECTRON_APP_DIR=%PROJECT_ROOT%\src\node\desktop\out\Rao-win32-x64"
+    echo DEBUG: ELECTRON_APP_DIR after setting: %ELECTRON_APP_DIR%
     echo DEBUG: Looking for Electron app at: %ELECTRON_APP_DIR%
     if exist "%ELECTRON_APP_DIR%\rao.exe" (
         echo Found Electron app at: %ELECTRON_APP_DIR%
