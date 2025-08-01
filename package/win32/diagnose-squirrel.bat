@@ -67,18 +67,30 @@ if exist "%DESKTOP_DIR%" (
 echo.
 echo Checking build directories:
 echo ---------------------------
-set BUILD_DIR=%PACKAGE_DIR%..\..\build
+set BUILD_DIR=%PACKAGE_DIR%build
 if exist "%BUILD_DIR%" (
     echo [✓] Build directory exists at %BUILD_DIR%
     pushd "%BUILD_DIR%"
     
     echo.
-    echo Checking for desktop-build directories:
-    dir /B /AD | findstr "desktop"
+    echo Contents of build directory:
+    dir /B
+    
+    if exist "squirrel" (
+        echo.
+        echo [✓] Squirrel directory exists
+        dir /B "squirrel" 2>nul
+    )
     
     popd
 ) else (
     echo [✗] Build directory NOT FOUND at %BUILD_DIR%
+    
+    echo.
+    echo Checking for build-debug:
+    if exist "%PACKAGE_DIR%build-debug" (
+        echo [✓] build-debug directory exists
+    )
 )
 
 echo.
