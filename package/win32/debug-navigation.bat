@@ -82,50 +82,27 @@ echo ================================================
 
 echo Testing NOSQUIRREL environment variable...
 if not defined NOSQUIRREL (
-    echo ✓ NOSQUIRREL is not defined - will proceed with Squirrel package generation
+    echo NOSQUIRREL is not defined - will proceed with Squirrel package generation
     
     echo Creating Squirrel.Windows packages for auto-updates...
     
-    REM Find the Electron app directory (should be in the build output)
+    REM Find the Electron app directory exactly like original script
     set "ELECTRON_APP_DIR=%PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64"
     
-    echo Testing ELECTRON_APP_DIR variable assignment...
-    echo   Raw assignment: set "ELECTRON_APP_DIR=%%PACKAGE_DIR%%..\..\src\node\desktop\out\Rao-win32-x64"
-    echo   PACKAGE_DIR value: %PACKAGE_DIR%
-    echo   Resolved ELECTRON_APP_DIR: %ELECTRON_APP_DIR%
-    echo   Expected path from Step 2: %ELECTRON_APP_DIR_TEST%
-    
-    echo.
-    echo Comparing paths:
-    if defined ELECTRON_APP_DIR (
-        if defined ELECTRON_APP_DIR_TEST (
-            if "%ELECTRON_APP_DIR%"=="%ELECTRON_APP_DIR_TEST%" (
-                echo ✓ Paths match - variable assignment is working correctly
-            ) else (
-                echo ✗ Paths don't match - there's a variable assignment issue
-                echo   Squirrel section path: [%ELECTRON_APP_DIR%]
-                echo   Working test path:     [%ELECTRON_APP_DIR_TEST%]
-            )
-        ) else (
-            echo ✗ ELECTRON_APP_DIR_TEST is not defined
-        )
-    ) else (
-        echo ✗ ELECTRON_APP_DIR is not defined
-    )
+    echo ELECTRON_APP_DIR is set to: %ELECTRON_APP_DIR%
+    echo Comparing with working path: %ELECTRON_APP_DIR_TEST%
     
     if exist "%ELECTRON_APP_DIR%" (
-        echo ✓ Found Electron app at: %ELECTRON_APP_DIR%
-        echo ✓ The Squirrel.Windows section logic appears to be working correctly
+        echo Found Electron app at: %ELECTRON_APP_DIR%
+        echo The Squirrel section logic appears to be working correctly
         
     ) else (
-        echo ✗ WARNING: Electron app directory not found at %ELECTRON_APP_DIR%
-        echo ✗ Skipping Squirrel package generation
-        echo This matches the warning condition in the original script
+        echo WARNING: Electron app directory not found at %ELECTRON_APP_DIR%
+        echo Skipping Squirrel package generation
     )
     
 ) else (
-    echo ✓ NOSQUIRREL is defined - Squirrel package generation will be skipped
-    echo   (This is normal if NOSQUIRREL environment variable is set)
+    echo NOSQUIRREL is defined - Squirrel package generation will be skipped
 )
 
 echo.

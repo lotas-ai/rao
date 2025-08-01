@@ -19,7 +19,12 @@ if "%1" == "-h" goto :showhelp
 if "%1" == "help" goto :showhelp
 if "%1" == "/?" goto :showhelp
 
-if "%PACKAGE_DIR%" == "" set PACKAGE_DIR=%~dp0
+if "%PACKAGE_DIR%" == "" (
+    set PACKAGE_DIR=%~dp0
+    pushd "%PACKAGE_DIR%"
+    set "PACKAGE_DIR=%CD%\"
+    popd
+)
 if "%BUILD_DIR%" == "" set BUILD_DIR=build
 if "%CMAKE_BUILD_TYPE%" == "" set CMAKE_BUILD_TYPE=RelWithDebInfo
 if "%CMAKE_BUILD_TYPE%" == "Debug" set BUILD_DIR=build-debug
