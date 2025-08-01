@@ -99,7 +99,7 @@ if not defined NOSQUIRREL (
         
         REM Copy script to desktop directory where node_modules exists
         set "DESKTOP_DIR=%PACKAGE_DIR%..\..\src\node\desktop"
-        copy "%PACKAGE_DIR%create-squirrel-packages.js" "%DESKTOP_DIR%\create-squirrel-packages-temp.js" >nul
+        copy "%PACKAGE_DIR%create-squirrel-packages.js" "%DESKTOP_DIR%\create-squirrel-packages.js" >nul
         
         REM Change to desktop directory
         pushd "%DESKTOP_DIR%"
@@ -109,17 +109,17 @@ if not defined NOSQUIRREL (
         
         REM BUILD_DIR is already absolute, just use it directly
         REM Run the script from the desktop directory
-        "%NODE%" create-squirrel-packages-temp.js "%BUILD_DIR%"
+        "%NODE%" create-squirrel-packages.js "%BUILD_DIR%"
         if ERRORLEVEL 1 (
             REM Clean up temporary file
-            del create-squirrel-packages-temp.js
+            del create-squirrel-packages.js
             popd
             echo ERROR: Squirrel package creation failed
             goto :error
         )
         
         REM Clean up temporary file
-        del create-squirrel-packages-temp.js
+        del create-squirrel-packages.js
         
         REM Copy the squirrel output from desktop build to package build
         if exist "build\squirrel" (
