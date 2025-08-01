@@ -78,25 +78,26 @@ if not defined NOSQUIRREL (
             call npm install electron-winstaller --save-dev
         )
         
-        REM Create Squirrel packages
-        node -e "
-        const electronWinstaller = require('electron-winstaller');
+        REM Create Squirrel packages using separate script file
+        echo const electronWinstaller = require('electron-winstaller'); > squirrel-build.js
+        echo. >> squirrel-build.js
+        echo electronWinstaller.createWindowsInstaller({ >> squirrel-build.js
+        echo   appDirectory: '%ELECTRON_APP_DIR%', >> squirrel-build.js
+        echo   outputDirectory: '%BUILD_DIR%\\squirrel', >> squirrel-build.js
+        echo   authors: 'Lotas', >> squirrel-build.js
+        echo   exe: 'rao.exe', >> squirrel-build.js
+        echo   iconUrl: 'https://lotas-downloads.s3.us-east-2.amazonaws.com/icon.ico', >> squirrel-build.js
+        echo   setupIcon: '%ELECTRON_APP_DIR%\\resources\\app\\resources\\icons\\Rao.ico', >> squirrel-build.js
+        echo   noMsi: true >> squirrel-build.js
+        echo ^}).then(^(^) =^> { >> squirrel-build.js
+        echo   console.log('Squirrel packages created successfully'^); >> squirrel-build.js
+        echo ^}^).catch(^(e^) =^> { >> squirrel-build.js
+        echo   console.error('Squirrel package creation failed:', e^); >> squirrel-build.js
+        echo   process.exit(1^); >> squirrel-build.js
+        echo ^}^); >> squirrel-build.js
         
-        electronWinstaller.createWindowsInstaller({
-          appDirectory: '%ELECTRON_APP_DIR%',
-          outputDirectory: '%BUILD_DIR%\\squirrel',
-          authors: 'Lotas',
-          exe: 'rao.exe',
-          iconUrl: 'https://lotas-downloads.s3.us-east-2.amazonaws.com/icon.ico',
-          setupIcon: '%ELECTRON_APP_DIR%\\resources\\app\\resources\\icons\\Rao.ico',
-          noMsi: true
-        }).then(() => {
-          console.log('Squirrel packages created successfully');
-        }).catch((e) => {
-          console.error('Squirrel package creation failed:', e);
-          process.exit(1);
-        });
-        "
+        node squirrel-build.js
+        del squirrel-build.js
         
         popd
         
