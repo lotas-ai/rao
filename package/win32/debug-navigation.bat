@@ -97,12 +97,20 @@ if not defined NOSQUIRREL (
     
     echo.
     echo Comparing paths:
-    if "%ELECTRON_APP_DIR%" == "%ELECTRON_APP_DIR_TEST%" (
-        echo ✓ Paths match - variable assignment is working correctly
+    if defined ELECTRON_APP_DIR (
+        if defined ELECTRON_APP_DIR_TEST (
+            if "%ELECTRON_APP_DIR%"=="%ELECTRON_APP_DIR_TEST%" (
+                echo ✓ Paths match - variable assignment is working correctly
+            ) else (
+                echo ✗ Paths don't match - there's a variable assignment issue
+                echo   Squirrel section path: [%ELECTRON_APP_DIR%]
+                echo   Working test path:     [%ELECTRON_APP_DIR_TEST%]
+            )
+        ) else (
+            echo ✗ ELECTRON_APP_DIR_TEST is not defined
+        )
     ) else (
-        echo ✗ Paths don't match - there's a variable assignment issue
-        echo   Squirrel section path: [%ELECTRON_APP_DIR%]
-        echo   Working test path:     [%ELECTRON_APP_DIR_TEST%]
+        echo ✗ ELECTRON_APP_DIR is not defined
     )
     
     if exist "%ELECTRON_APP_DIR%" (
