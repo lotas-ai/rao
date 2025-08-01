@@ -87,24 +87,20 @@ REM Generate Squirrel.Windows packages for auto-updates
 if not defined NOSQUIRREL (
     echo Creating Squirrel.Windows packages for auto-updates...
     
-    REM Find the Electron app directory
-    pushd %PACKAGE_DIR%..\..\src\node\desktop\out
-    if exist "Rao-win32-x64\rao.exe" (
-        set "ELECTRON_APP_DIR=%CD%\Rao-win32-x64"
-        popd
+    REM Find the Electron app directory using absolute path
+    set "ELECTRON_APP_DIR=%PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64"
+    if exist "%ELECTRON_APP_DIR%\rao.exe" (
         echo Found Electron app at: %ELECTRON_APP_DIR%
         
-        REM Copy RStudio binaries into Electron app if they don't already exist
-        if not exist "%ELECTRON_APP_DIR%\resources\app\bin\rsession.exe" (
-            echo Copying RStudio binaries to Electron app...
-            if not exist "%ELECTRON_APP_DIR%\resources\app\bin" mkdir "%ELECTRON_APP_DIR%\resources\app\bin"
-            copy "%BUILD_DIR%\src\cpp\session\rsession.exe" "%ELECTRON_APP_DIR%\resources\app\bin\rsession.exe"
-            if exist "%BUILD_DIR%\src\cpp\server\rserver.exe" (
-                copy "%BUILD_DIR%\src\cpp\server\rserver.exe" "%ELECTRON_APP_DIR%\resources\app\bin\rserver.exe"
-            )
-            if exist "%BUILD_DIR%\src\cpp\diagnostics\diagnostics.exe" (
-                copy "%BUILD_DIR%\src\cpp\diagnostics\diagnostics.exe" "%ELECTRON_APP_DIR%\resources\app\bin\diagnostics.exe"
-            )
+        REM Always copy RStudio binaries into Electron app (create directory structure)
+        echo Copying RStudio binaries to Electron app...
+        if not exist "%ELECTRON_APP_DIR%\resources\app\bin" mkdir "%ELECTRON_APP_DIR%\resources\app\bin"
+        copy "%BUILD_DIR%\src\cpp\session\rsession.exe" "%ELECTRON_APP_DIR%\resources\app\bin\rsession.exe"
+        if exist "%BUILD_DIR%\src\cpp\server\rserver.exe" (
+            copy "%BUILD_DIR%\src\cpp\server\rserver.exe" "%ELECTRON_APP_DIR%\resources\app\bin\rserver.exe"
+        )
+        if exist "%BUILD_DIR%\src\cpp\diagnostics\diagnostics.exe" (
+            copy "%BUILD_DIR%\src\cpp\diagnostics\diagnostics.exe" "%ELECTRON_APP_DIR%\resources\app\bin\diagnostics.exe"
         )
         
         REM Copy script to desktop directory where node_modules exists
