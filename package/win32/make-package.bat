@@ -166,18 +166,6 @@ set RSTUDIO_VERSION_FULL=%RSTUDIO_VERSION_MAJOR%.%RSTUDIO_VERSION_MINOR%
 REM Track npm installation status
 set NPM_INSTALLED=0
 
-REM Function to install npm packages
-:install-npm-packages
-if "%NPM_INSTALLED%" == "0" (
-    if exist package-lock.json (
-        call %NPM% ci
-    ) else (
-        call %NPM% install
-    )
-    set NPM_INSTALLED=1
-)
-goto :eof
-
 REM Set default CMake build type.
 if "%CMAKE_BUILD_TYPE%" == "" set CMAKE_BUILD_TYPE=RelWithDebInfo
 
@@ -228,7 +216,14 @@ REM Update package.json version for Electron builds
 if "%RSTUDIO_TARGET%" == "Electron" (
     pushd %ELECTRON_SOURCE_DIR%
     REM Install npm packages if needed
-    call :install-npm-packages
+    if "%NPM_INSTALLED%" == "0" (
+        if exist package-lock.json (
+            call %NPM% ci
+        ) else (
+            call %NPM% install
+        )
+        set NPM_INSTALLED=1
+    )
     REM Save original package.json
     copy package.json package.json.orig
     REM Update version in package.json
