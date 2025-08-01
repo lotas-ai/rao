@@ -140,6 +140,12 @@ if not defined NOSQUIRREL (
             echo DEBUG: Destination: %BUILD_DIR%\squirrel
             dir "build\squirrel"
             xcopy /E /I /Y "build\squirrel" "%BUILD_DIR%\squirrel"
+            if ERRORLEVEL 1 (
+                echo ERROR: Failed to copy squirrel packages from build\squirrel to %BUILD_DIR%\squirrel
+                del create-squirrel-packages.js
+                popd
+                goto :error
+            )
             echo DEBUG: Copy result: %ERRORLEVEL%
         ) else (
             echo DEBUG: build\squirrel directory does not exist
@@ -153,12 +159,34 @@ if not defined NOSQUIRREL (
             echo Moving Squirrel packages to build directory...
             echo DEBUG: Contents of %BUILD_DIR%\squirrel before move:
             dir "%BUILD_DIR%\squirrel"
+            
             move "%BUILD_DIR%\squirrel\*.nupkg" "%BUILD_DIR%\"
+            if ERRORLEVEL 1 (
+                echo ERROR: Failed to move .nupkg files
+                goto :error
+            )
+            
             move "%BUILD_DIR%\squirrel\RELEASES" "%BUILD_DIR%\"
+            if ERRORLEVEL 1 (
+                echo ERROR: Failed to move RELEASES file
+                goto :error
+            )
+            
             if exist "%BUILD_DIR%\squirrel\RaoSetup.exe" (
                 move "%BUILD_DIR%\squirrel\RaoSetup.exe" "%BUILD_DIR%\RaoSetup-Squirrel.exe"
+                if ERRORLEVEL 1 (
+                    echo ERROR: Failed to move RaoSetup.exe
+                    goto :error
+                )
             ) else if exist "%BUILD_DIR%\squirrel\Setup.exe" (
                 move "%BUILD_DIR%\squirrel\Setup.exe" "%BUILD_DIR%\RaoSetup-Squirrel.exe"
+                if ERRORLEVEL 1 (
+                    echo ERROR: Failed to move Setup.exe
+                    goto :error
+                )
+            ) else (
+                echo ERROR: Neither RaoSetup.exe nor Setup.exe found in squirrel directory
+                goto :error
             )
             echo DEBUG: Final contents of %BUILD_DIR%:
             dir "%BUILD_DIR%\*.nupkg" "%BUILD_DIR%\RELEASES" "%BUILD_DIR%\RaoSetup-Squirrel.exe" 2>nul
@@ -198,21 +226,74 @@ set "ELECTRON_DIR=%~1"
 set "BUILD_DIR_ARG=%~2"
 if not exist "%ELECTRON_DIR%\resources\app\bin\rsession.exe" (
     echo Copying RStudio binaries to Electron app...
-    if not exist "%ELECTRON_DIR%\resources\app\bin" mkdir "%ELECTRON_DIR%\resources\app\bin"
-    copy "%BUILD_DIR_ARG%\src\cpp\session\rsession.exe" "%ELECTRON_DIR%\resources\app\bin\rsession.exe"
-    if exist "%BUILD_DIR_ARG%\src\cpp\server\rserver.exe" (
-        copy "%BUILD_DIR_ARG%\src\cpp\server\rserver.exe" "%ELECTRON_DIR%\resources\app\bin\rserver.exe"
-    )
-    if exist "%BUILD_DIR_ARG%\src\cpp\diagnostics\diagnostics.exe" (
-        copy "%BUILD_DIR_ARG%\src\cpp\diagnostics\diagnostics.exe" "%ELECTRON_DIR%\resources\app\bin\diagnostics.exe"
+    if not exist "%ELECTRON_DIR%\resources\app\bin" (
+        mkdir "%ELECTRON_DIR%\resources\app\bin"
+        if ERRORLEVEL 1 (
+            echo ERROR: Failed to create bin directory
+            goto :error
+        )
     )
     
-    REM Copy R directory to Electron app
-    if exist "%BUILD_DIR_ARG%\src\cpp\r\R" (
-        echo Copying R directory to Electron app...
-        if not exist "%ELECTRON_DIR%\resources\app\R" mkdir "%ELECTRON_DIR%\resources\app\R"
-        xcopy /E /I /Y "%BUILD_DIR_ARG%\src\cpp\r\R\*" "%ELECTRON_DIR%\resources\app\R\"
+    copy "%BUILD_DIR_ARG%\src\cpp\session\rsession.exe" "%ELECTRON_DIR%\resources\app\bin\rsession.exe"
+    if ERRORLEVEL 1 (
+        echo ERROR: Failed to copy rsession.exe
+        goto :error
     )
+    
+    if exist "%BUILD_DIR_ARG%\src\cpp\server\rserver.exe" (
+        copy "%BUILD_DIR_ARG%\src\cpp\server\rserver.exe" "%ELECTRON_DIR%\resources\app\bin\rserver.exe"
+        if ERRORLEVEL 1 (
+            echo ERROR: Failed to copy rserver.exe
+            goto :error
+        )
+    )
+    
+    if exist "%BUILD_DIR_ARG%\src\cpp\diagnostics\diagnostics.exe" (
+        copy "%BUILD_DIR_ARG%\src\cpp\diagnostics\diagnostics.exe" "%ELECTRON_DIR%\resources\app\bin\diagnostics.exe"
+        if ERRORLEVEL 1 (
+            echo ERROR: Failed to copy diagnostics.exe
+            goto :error
+        )
+    )
+    
+)
+
+REM Always copy R directory to Electron app (outside the rsession.exe conditional)
+REM Copy from source directory since Windows build doesn't install R files to build dir
+set "SOURCE_R_DIR=%~dp0..\..\src\cpp\r\R"
+if exist "%SOURCE_R_DIR%" (
+    echo Copying core R files from source to Electron app...
+    if not exist "%ELECTRON_DIR%\resources\app\R" (
+        mkdir "%ELECTRON_DIR%\resources\app\R"
+        if ERRORLEVEL 1 (
+            echo ERROR: Failed to create R directory
+            goto :error
+        )
+    )
+    
+    xcopy /E /I /Y "%SOURCE_R_DIR%\*" "%ELECTRON_DIR%\resources\app\R\"
+    if ERRORLEVEL 1 (
+        echo ERROR: Failed to copy core R files from %SOURCE_R_DIR%
+        goto :error
+    )
+    echo Successfully copied core R files
+) else (
+    echo ERROR: Source R directory not found at %SOURCE_R_DIR%
+    goto :error
+)
+
+REM Also copy session module R files from build directory if they exist
+if exist "%BUILD_DIR_ARG%\src\cpp\session\modules\R" (
+    echo Copying session module R files to Electron app...
+    xcopy /E /I /Y "%BUILD_DIR_ARG%\src\cpp\session\modules\R\*" "%ELECTRON_DIR%\resources\app\R\"
+    if ERRORLEVEL 1 (
+        echo ERROR: Failed to copy session module R files from %BUILD_DIR_ARG%\src\cpp\session\modules\R
+        goto :error
+    )
+    echo Successfully copied session module R files
+) else (
+    echo WARNING: Session module R directory not found at %BUILD_DIR_ARG%\src\cpp\session\modules\R
+    echo This may be OK if they don't exist in this build
 )
 goto :eof
 
