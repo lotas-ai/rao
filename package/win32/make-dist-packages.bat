@@ -64,52 +64,10 @@ if not defined NOSQUIRREL (
     echo Creating Squirrel.Windows packages for auto-updates...
     
     REM Find the Electron app directory
-    REM We need to go up 2 levels and then down to src\node\desktop\out\Rao-win32-x64
+    REM Use %~dp0 to get the directory of this batch file, then navigate relatively
+    set "ELECTRON_APP_DIR=%~dp0..\..\src\node\desktop\out\Rao-win32-x64"
     
-    echo DEBUG: PACKAGE_DIR = %PACKAGE_DIR%
-    echo DEBUG: Current working directory = %CD%
-    
-    REM We are in build directory, need to navigate to package dir first
-    popd
-    echo DEBUG: After popd from build dir = %CD%
-    
-    REM Now navigate step by step
-    cd ..\..
-    echo DEBUG: After cd up two levels to rao root = %CD%
-    set "RAO_ROOT=%CD%"
-    
-    cd src
-    echo DEBUG: After cd into src = %CD%
-    
-    cd node
-    echo DEBUG: After cd into node = %CD%
-    
-    cd desktop
-    echo DEBUG: After cd into desktop = %CD%
-    set "DESKTOP_DIR=%CD%"
-    
-    if exist "out" (
-        echo DEBUG: Out directory exists
-        cd out
-        echo DEBUG: After cd into out = %CD%
-        
-        if exist "Rao-win32-x64" (
-            echo DEBUG: Rao-win32-x64 directory exists
-            set "ELECTRON_APP_DIR=%CD%\Rao-win32-x64"
-        ) else (
-            echo DEBUG: Rao-win32-x64 directory missing, contents of out:
-            dir /b
-            set "ELECTRON_APP_DIR="
-        )
-    ) else (
-        echo DEBUG: Out directory missing, contents of desktop:
-        dir /b
-        set "ELECTRON_APP_DIR="
-    )
-    
-    REM Return to build directory to maintain script structure
-    pushd "%BUILD_DIR%"
-    echo DEBUG: Final ELECTRON_APP_DIR = %ELECTRON_APP_DIR%
+    echo DEBUG: ELECTRON_APP_DIR = %ELECTRON_APP_DIR%
     if exist "%ELECTRON_APP_DIR%" (
         echo Found Electron app at: %ELECTRON_APP_DIR%
         
