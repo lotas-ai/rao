@@ -110,18 +110,18 @@ if not defined NOSQUIRREL (
         
         REM Run the script from the desktop directory
         "%NODE%" create-squirrel-packages-temp.js "%ABS_BUILD_DIR%"
-        set SQUIRREL_RESULT=%ERRORLEVEL%
+        if ERRORLEVEL 1 (
+            REM Clean up temporary file
+            del create-squirrel-packages-temp.js
+            popd
+            echo ERROR: Squirrel package creation failed
+            goto :error
+        )
         
         REM Clean up temporary file
         del create-squirrel-packages-temp.js
         
         popd
-        
-        REM Check if squirrel creation succeeded
-        if not "%SQUIRREL_RESULT%" == "0" (
-            echo ERROR: Squirrel package creation failed
-            goto :error
-        )
         
         REM Move Squirrel files to build directory
         if exist "%BUILD_DIR%\squirrel" (
@@ -130,6 +130,9 @@ if not defined NOSQUIRREL (
             move "%BUILD_DIR%\squirrel\RELEASES" "%BUILD_DIR%\"
             move "%BUILD_DIR%\squirrel\Setup.exe" "%BUILD_DIR%\RaoSetup-Squirrel.exe"
             echo Squirrel auto-update files created successfully
+        ) else (
+            echo ERROR: Squirrel directory was not created at %BUILD_DIR%\squirrel
+            goto :error
         )
     ) else (
         popd
