@@ -24,12 +24,13 @@ if "%BUILD_DIR%" == "" set BUILD_DIR=build
 if "%CMAKE_BUILD_TYPE%" == "" set CMAKE_BUILD_TYPE=RelWithDebInfo
 if "%CMAKE_BUILD_TYPE%" == "Debug" set BUILD_DIR=build-debug
 if "%PKG_TEMP_DIR%" == "" set PKG_TEMP_DIR=C:/rsbuild
-set "PROJECT_ROOT=%PACKAGE_DIR%..\.."
+REM Extract project root from PACKAGE_DIR (remove \package\win32\ suffix)  
+set "PROJECT_ROOT=%PACKAGE_DIR:~0,-15%"
 
 REM Set up dependencies path if not already set
 if not defined RSTUDIO_DEPENDENCIES (
     if not exist c:\rstudio-tools\dependencies (
-        set RSTUDIO_DEPENDENCIES=%PACKAGE_DIR%..\..\dependencies
+        set RSTUDIO_DEPENDENCIES=%PROJECT_ROOT%\dependencies
     ) else (
         set RSTUDIO_DEPENDENCIES=c:\rstudio-tools\dependencies
     )
@@ -52,6 +53,7 @@ echo Using node: %NODE%
 
 echo DEBUG: make-dist-packages.bat using following values:
 echo DEBUG:     PACKAGE_DIR=%PACKAGE_DIR%
+echo DEBUG:     PROJECT_ROOT=%PROJECT_ROOT%
 echo DEBUG:     BUILD_DIR=%BUILD_DIR%
 echo DEBUG:     CMAKE_BUILD_TYPE=%CMAKE_BUILD_TYPE%
 echo DEBUG:     PKG_TEMP_DIR=%PKG_TEMP_DIR%
@@ -90,6 +92,7 @@ if not defined NOSQUIRREL (
     
     REM Find the Electron app directory
     set "ELECTRON_APP_DIR=%PROJECT_ROOT%\src\node\desktop\out\Rao-win32-x64"
+    echo DEBUG: Looking for Electron app at: %ELECTRON_APP_DIR%
     if exist "%ELECTRON_APP_DIR%\rao.exe" (
         echo Found Electron app at: %ELECTRON_APP_DIR%
         
@@ -97,7 +100,7 @@ if not defined NOSQUIRREL (
         call :copy_binaries "%ELECTRON_APP_DIR%" "%BUILD_DIR%"
         
         REM Copy script to desktop directory where node_modules exists
-        set "DESKTOP_DIR=%PACKAGE_DIR%..\..\src\node\desktop"
+        set "DESKTOP_DIR=%PROJECT_ROOT%\src\node\desktop"
         copy "%PACKAGE_DIR%create-squirrel-packages.js" "%DESKTOP_DIR%\create-squirrel-packages.js" >nul
         
         REM Change to desktop directory
@@ -196,7 +199,7 @@ if not defined NOSQUIRREL (
         )
     ) else (
         popd
-        echo WARNING: Electron app directory not found at %PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64
+        echo WARNING: Electron app directory not found at %ELECTRON_APP_DIR%
         echo Skipping Squirrel package generation
     )
 )
