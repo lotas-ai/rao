@@ -63,22 +63,20 @@ REM Generate Squirrel.Windows packages for auto-updates
 if not defined NOSQUIRREL (
     echo Creating Squirrel.Windows packages for auto-updates...
     
-    REM Find the Electron app directory - BUILD PATH STEP BY STEP LIKE DEBUG SCRIPT
-    echo DEBUG: Building path step by step like debug script
+    REM Find the Electron app directory
+    echo DEBUG: Building path step by step
     echo DEBUG: PACKAGE_DIR is: [%PACKAGE_DIR%]
     
-    set "PATH_COMPONENT_6=%PACKAGE_DIR%..\..\src\node\desktop\out"
-    echo DEBUG: PATH_COMPONENT_6 is: [%PATH_COMPONENT_6%]
+    REM Use %~dp0 which doesn't include trailing backslash, then build path properly
+    set "ELECTRON_APP_DIR=%~dp0..\..\src\node\desktop\out\Rao-win32-x64"
+    echo DEBUG: ELECTRON_APP_DIR: [%ELECTRON_APP_DIR%]
     
-    set "ELECTRON_APP_DIR=%PATH_COMPONENT_6%\Rao-win32-x64"
-    echo DEBUG: ELECTRON_APP_DIR built from components: [%ELECTRON_APP_DIR%]
-    
-    REM Test each path component like debug script
+    REM Test each path component
     echo DEBUG: Testing path components:
-    if exist "%PACKAGE_DIR%.." (echo DEBUG:   %PACKAGE_DIR%.. EXISTS) else (echo DEBUG:   %PACKAGE_DIR%.. MISSING)
-    if exist "%PACKAGE_DIR%..\.." (echo DEBUG:   %PACKAGE_DIR%..\.. EXISTS) else (echo DEBUG:   %PACKAGE_DIR%..\.. MISSING)
-    if exist "%PACKAGE_DIR%..\..\src" (echo DEBUG:   %PACKAGE_DIR%..\..\src EXISTS) else (echo DEBUG:   %PACKAGE_DIR%..\..\src MISSING)
-    if exist "%PACKAGE_DIR%..\..\src\node\desktop\out" (echo DEBUG:   %PACKAGE_DIR%..\..\src\node\desktop\out EXISTS) else (echo DEBUG:   %PACKAGE_DIR%..\..\src\node\desktop\out MISSING)
+    if exist "%~dp0.." (echo DEBUG:   %~dp0.. EXISTS) else (echo DEBUG:   %~dp0.. MISSING)
+    if exist "%~dp0..\.." (echo DEBUG:   %~dp0..\.. EXISTS) else (echo DEBUG:   %~dp0..\.. MISSING)
+    if exist "%~dp0..\..\src" (echo DEBUG:   %~dp0..\..\src EXISTS) else (echo DEBUG:   %~dp0..\..\src MISSING)
+    if exist "%~dp0..\..\src\node\desktop\out" (echo DEBUG:   %~dp0..\..\src\node\desktop\out EXISTS) else (echo DEBUG:   %~dp0..\..\src\node\desktop\out MISSING)
     
     if exist "%ELECTRON_APP_DIR%" (
         echo Found Electron app at: %ELECTRON_APP_DIR%
