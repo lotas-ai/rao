@@ -63,15 +63,17 @@ REM Generate Squirrel.Windows packages for auto-updates
 if not defined NOSQUIRREL (
     echo Creating Squirrel.Windows packages for auto-updates...
     
-    REM Find the Electron app directory (should be in the build output)
-    REM Use pushd to resolve the path properly
-    pushd "%~dp0..\..\src\node\desktop\out" 2>nul
-    if not errorlevel 1 (
-        set "ELECTRON_APP_DIR=%CD%\Rao-win32-x64"
-        popd
-    ) else (
-        set "ELECTRON_APP_DIR=%~dp0..\..\src\node\desktop\out\Rao-win32-x64"
-    )
+    REM Find the Electron app directory - EXACT SAME APPROACH AS DEBUG SCRIPT
+    echo DEBUG: PACKAGE_DIR before path construction: [%PACKAGE_DIR%]
+    set "ELECTRON_APP_DIR=%PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64"
+    echo DEBUG: ELECTRON_APP_DIR after construction: [%ELECTRON_APP_DIR%]
+    
+    REM Test each path component like debug script
+    echo DEBUG: Testing path components:
+    if exist "%PACKAGE_DIR%.." (echo DEBUG:   %PACKAGE_DIR%.. EXISTS) else (echo DEBUG:   %PACKAGE_DIR%.. MISSING)
+    if exist "%PACKAGE_DIR%..\.." (echo DEBUG:   %PACKAGE_DIR%..\.. EXISTS) else (echo DEBUG:   %PACKAGE_DIR%..\.. MISSING)
+    if exist "%PACKAGE_DIR%..\..\src" (echo DEBUG:   %PACKAGE_DIR%..\..\src EXISTS) else (echo DEBUG:   %PACKAGE_DIR%..\..\src MISSING)
+    if exist "%PACKAGE_DIR%..\..\src\node\desktop\out" (echo DEBUG:   %PACKAGE_DIR%..\..\src\node\desktop\out EXISTS) else (echo DEBUG:   %PACKAGE_DIR%..\..\src\node\desktop\out MISSING)
     
     if exist "%ELECTRON_APP_DIR%" (
         echo Found Electron app at: %ELECTRON_APP_DIR%

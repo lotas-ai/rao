@@ -77,28 +77,41 @@ echo Final path: %ELECTRON_APP_DIR_TEST%
 if exist "%ELECTRON_APP_DIR_TEST%" (echo   ✓ EXISTS) else (echo   ✗ MISSING)
 echo.
 
-echo STEP 3: Testing Squirrel.Windows Section Logic
-echo ================================================
+echo STEP 3: EXACT REPLICATION OF MAKE-DIST-PACKAGES.BAT SQUIRREL SECTION
+echo ====================================================================
 
 echo Testing NOSQUIRREL environment variable...
 if not defined NOSQUIRREL (
-    echo NOSQUIRREL is not defined - will proceed with Squirrel package generation
-    
     echo Creating Squirrel.Windows packages for auto-updates...
     
-    REM Find the Electron app directory exactly like original script
+    REM Find the Electron app directory - EXACT SAME APPROACH AS MAKE-DIST-PACKAGES
+    echo DEBUG: PACKAGE_DIR before path construction: [%PACKAGE_DIR%]
     set "ELECTRON_APP_DIR=%PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64"
+    echo DEBUG: ELECTRON_APP_DIR after construction: [%ELECTRON_APP_DIR%]
     
-    echo ELECTRON_APP_DIR is set to: %ELECTRON_APP_DIR%
-    echo Comparing with working path: %ELECTRON_APP_DIR_TEST%
+    REM Test each path component like make-dist-packages
+    echo DEBUG: Testing path components:
+    if exist "%PACKAGE_DIR%.." (echo DEBUG:   %PACKAGE_DIR%.. EXISTS) else (echo DEBUG:   %PACKAGE_DIR%.. MISSING)
+    if exist "%PACKAGE_DIR%..\.." (echo DEBUG:   %PACKAGE_DIR%..\.. EXISTS) else (echo DEBUG:   %PACKAGE_DIR%..\.. MISSING)
+    if exist "%PACKAGE_DIR%..\..\src" (echo DEBUG:   %PACKAGE_DIR%..\..\src EXISTS) else (echo DEBUG:   %PACKAGE_DIR%..\..\src MISSING)
+    if exist "%PACKAGE_DIR%..\..\src\node\desktop\out" (echo DEBUG:   %PACKAGE_DIR%..\..\src\node\desktop\out EXISTS) else (echo DEBUG:   %PACKAGE_DIR%..\..\src\node\desktop\out MISSING)
     
     if exist "%ELECTRON_APP_DIR%" (
         echo Found Electron app at: %ELECTRON_APP_DIR%
-        echo The Squirrel section logic appears to be working correctly
-        
+        echo SUCCESS: Squirrel section working correctly
     ) else (
         echo WARNING: Electron app directory not found at %ELECTRON_APP_DIR%
-        echo Skipping Squirrel package generation
+        echo FAILURE: Squirrel section failing
+        
+        echo.
+        echo COMPARISON WITH WORKING APPROACH:
+        echo   make-dist-packages path: [%ELECTRON_APP_DIR%]
+        echo   debug working path:      [%ELECTRON_APP_DIR_TEST%]
+        if "%ELECTRON_APP_DIR%" == "%ELECTRON_APP_DIR_TEST%" (
+            echo   Paths are IDENTICAL but directory check is failing
+        ) else (
+            echo   Paths are DIFFERENT - this is the root cause
+        )
     )
     
 ) else (
