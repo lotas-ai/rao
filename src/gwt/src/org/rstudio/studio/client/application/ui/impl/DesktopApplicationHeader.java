@@ -148,14 +148,16 @@ public class DesktopApplicationHeader implements ApplicationHeader,
                Desktop.getFrame().onWorkbenchInitialized(
                      StringUtil.notNull(sessionInfo.getScratchDir()));
 
-               if (sessionInfo.getDisableCheckForUpdates())
-                  commands.checkForUpdates().remove();
+               // Always keep "Check for Updates" menu for manual updates via Electron
+               // if (sessionInfo.getDisableCheckForUpdates())
+               //    commands.checkForUpdates().remove();
 
-               if (!sessionInfo.getDisableCheckForUpdates() &&
-                   pUIPrefs_.get().checkForUpdates().getValue())
-               {
-                  checkForUpdates(false);
-               }
+               // Automatic update checks disabled - Electron auto-updater handles this
+               // if (!sessionInfo.getDisableCheckForUpdates() &&
+               //     pUIPrefs_.get().checkForUpdates().getValue())
+               // {
+               //    checkForUpdates(false);
+               // }
             }
          });
       });

@@ -76,7 +76,7 @@
    <property name="test.dir" value="./test"/>      <!-- Java sources for tests -->
    <property name="www.dir" value="./www"/>        <!-- output folder for www artifacts (HTML, etc.) -->
    <property name="build.dir" value="./bin"/>      <!-- output folder for compiled classes -->
-   <property name="lib.dir" value="./lib"/>        <!-- libraries (GWT, GIN, etc.) -->
+   <!-- <property name="lib.dir" value="./lib"/> -->        <!-- libraries (GWT, GIN, etc.) - commented out to allow auto-detection of dependencies/common/gwtproject -->
    <property name="tools.dir" value="./tools"/>    <!-- other tools -->
    <property name="extras.dir" value="./extras"/>  <!-- extras: symbol maps, etc. -->
    <property name="gwt.xmx" value="-Xmx1536M"/>    <!-- set maximum Java heap size -->

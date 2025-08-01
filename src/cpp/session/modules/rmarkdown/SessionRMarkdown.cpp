@@ -1848,12 +1848,18 @@ std::string parsableRStudioVersion()
    version.append(".")
          .append(RSTUDIO_VERSION_MINOR)
          .append(".")
-         .append(RSTUDIO_VERSION_PATCH)
-         .append(".")
-         .append(boost::regex_replace(
-               std::string(RSTUDIO_VERSION_SUFFIX),
-               boost::regex("[a-zA-Z\\-+]"),
-               ""));
+         .append(RSTUDIO_VERSION_PATCH);
+   
+   // Only append suffix if it contains numeric characters after stripping
+   std::string numericSuffix = boost::regex_replace(
+         std::string(RSTUDIO_VERSION_SUFFIX),
+         boost::regex("[a-zA-Z\\-+]"),
+         "");
+   if (!numericSuffix.empty())
+   {
+      version.append(".").append(numericSuffix);
+   }
+   
    return version;
 }
 

@@ -3,8 +3,8 @@
 # shared cpack variables
 set(CPACK_PACKAGE_NAME "Rao")
 set(CPACK_PACKAGE_DESCRIPTION "Rao")
-set(CPACK_PACKAGE_VENDOR "Posit Software")
-set(CPACK_PACKAGE_CONTACT "Rao <willanickols@gmail.com>")
+set(CPACK_PACKAGE_VENDOR "Lotas Inc.")
+set(CPACK_PACKAGE_CONTACT "Rao <will@lotas.ai>")
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "Rao")
 
 if(WIN32)

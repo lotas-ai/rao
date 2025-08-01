@@ -90,7 +90,14 @@ async function fetchLatestVersionInfo(): Promise<UpdateInfo | null> {
     
     return updateInfo;
   } catch (error) {
-    logger().logError(`Error fetching update info: ${error}`);
+    // Log specific error details instead of generic message
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    logger().logError(`Error fetching update info: ${errorMessage}`);
+    if (errorStack) {
+      logger().logDebug(`Fetch update info error stack: ${errorStack}`);
+    }
     return null;
   }
 }
@@ -216,14 +223,21 @@ export async function checkForUpdates(showNoUpdateDialog = true): Promise<boolea
     
     return false;
   } catch (error) {
-    logger().logError(`Error checking for updates: ${error}`);
+    // Log the raw error with more details
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    logger().logError(`Error checking for updates: ${errorMessage}`);
+    if (errorStack) {
+      logger().logDebug(`Update check error stack: ${errorStack}`);
+    }
     
     if (showNoUpdateDialog) {
       await dialog.showMessageBox({
         type: 'error',
         title: 'Update Check Failed',
         message: 'Failed to check for updates.',
-        detail: `Error: ${error}`,
+        detail: `Error: ${errorMessage}`,
         buttons: ['OK']
       });
     }

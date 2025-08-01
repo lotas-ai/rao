@@ -677,6 +677,19 @@ public class Workbench implements BusyEvent.Handler,
                false,
                onSelected);
       }
+      else if (type == OpenFileDialogEvent.TYPE_SELECT_FILE_OR_DIRECTORY)
+      {
+         // For "both files and directories", use openFile with canChooseDirectories=true
+         fileDialogs_.openFile(
+               caption,
+               label,
+               fsContext_,
+               initialFilePath,
+               filter,
+               true,  // canChooseDirectories=true to select both files and directories
+               false,
+               onSelected);
+      }
       else
       {
          assert false: "unexpected file dialog type '" + type + "'";

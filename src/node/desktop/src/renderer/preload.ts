@@ -13,6 +13,7 @@
  *
  */
 import { contextBridge, ipcRenderer } from 'electron';
+import posthog from 'posthog-js';
 
 import { removeDups } from '../core/string-utils';
 
