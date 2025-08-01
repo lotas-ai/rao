@@ -12,7 +12,7 @@
 :: AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
 ::
 @echo off
-setlocal
+setlocal enabledelayedexpansion
 
 if "%1" == "--help" goto :showhelp
 if "%1" == "-h" goto :showhelp
@@ -89,21 +89,23 @@ if not defined NOSQUIRREL (
     
     REM Find the Electron app directory
     pushd %PACKAGE_DIR%..\..\src\node\desktop\out
+    echo DEBUG: Looking for Electron app in: %CD%
     if exist "Rao-win32-x64\rao.exe" (
         set "ELECTRON_APP_DIR=%CD%\Rao-win32-x64"
         popd
-        echo Found Electron app at: %ELECTRON_APP_DIR%
+        echo Found Electron app at: !ELECTRON_APP_DIR!
+        echo DEBUG: ELECTRON_APP_DIR full path: !ELECTRON_APP_DIR!
         
         REM Copy RStudio binaries into Electron app if they don't already exist
-        echo DEBUG: About to call copy_binaries with ELECTRON_APP_DIR=%ELECTRON_APP_DIR%
+        echo DEBUG: About to call copy_binaries with ELECTRON_APP_DIR=!ELECTRON_APP_DIR!
         echo DEBUG: BUILD_DIR=%BUILD_DIR%
         call :copy_binaries "%ELECTRON_APP_DIR%" "%BUILD_DIR%"
         echo DEBUG: copy_binaries completed, checking if R directory exists...
-        if exist "%ELECTRON_APP_DIR%\resources\app\R" (
-            echo DEBUG: R directory exists in Electron app
-            dir "%ELECTRON_APP_DIR%\resources\app\R\Tools.R" 2>nul && echo DEBUG: Tools.R found || echo DEBUG: Tools.R NOT found
+        if exist "!ELECTRON_APP_DIR!\resources\app\R" (
+            echo DEBUG: R directory exists in Electron app at: !ELECTRON_APP_DIR!\resources\app\R
+            dir "!ELECTRON_APP_DIR!\resources\app\R\Tools.R" 2>nul && echo DEBUG: Tools.R found || echo DEBUG: Tools.R NOT found
         ) else (
-            echo DEBUG: R directory does NOT exist in Electron app
+            echo DEBUG: R directory does NOT exist in Electron app at: !ELECTRON_APP_DIR!\resources\app\R
         )
         
         REM Copy script to desktop directory where node_modules exists
@@ -125,10 +127,11 @@ if not defined NOSQUIRREL (
         REM BUILD_DIR is already absolute, just use it directly
         REM Run the script from the desktop directory
         echo DEBUG: Checking R directory right before Node.js script...
-        if exist "%ELECTRON_APP_DIR%\resources\app\R" (
-            echo DEBUG: R directory still exists before Node.js script
+        echo DEBUG: ELECTRON_APP_DIR before Node.js: !ELECTRON_APP_DIR!
+        if exist "!ELECTRON_APP_DIR!\resources\app\R" (
+            echo DEBUG: R directory still exists before Node.js script at: !ELECTRON_APP_DIR!\resources\app\R
         ) else (
-            echo DEBUG: R directory MISSING before Node.js script - something removed it!
+            echo DEBUG: R directory MISSING before Node.js script at: !ELECTRON_APP_DIR!\resources\app\R
         )
         echo DEBUG: About to run Node.js script...
         echo DEBUG: NODE=%NODE%
