@@ -12,7 +12,7 @@
 :: AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
 ::
 @echo off
-setlocal
+setlocal enabledelayedexpansion
 
 if "%1" == "--help" goto :showhelp
 if "%1" == "-h" goto :showhelp
@@ -33,7 +33,7 @@ popd
 REM Set up dependencies path if not already set
 if not defined RSTUDIO_DEPENDENCIES (
     if not exist c:\rstudio-tools\dependencies (
-        set RSTUDIO_DEPENDENCIES=%PROJECT_ROOT%\dependencies
+        set RSTUDIO_DEPENDENCIES=!PROJECT_ROOT!\dependencies
     ) else (
         set RSTUDIO_DEPENDENCIES=c:\rstudio-tools\dependencies
     )
@@ -94,18 +94,18 @@ if not defined NOSQUIRREL (
     echo Creating Squirrel.Windows packages for auto-updates...
     
     REM Find the Electron app directory
-    echo DEBUG: PROJECT_ROOT before setting ELECTRON_APP_DIR: %PROJECT_ROOT%
-    set "ELECTRON_APP_DIR=%PROJECT_ROOT%\src\node\desktop\out\Rao-win32-x64"
-    echo DEBUG: ELECTRON_APP_DIR after setting: %ELECTRON_APP_DIR%
-    echo DEBUG: Looking for Electron app at: %ELECTRON_APP_DIR%
-    if exist "%ELECTRON_APP_DIR%\rao.exe" (
-        echo Found Electron app at: %ELECTRON_APP_DIR%
+    echo DEBUG: PROJECT_ROOT before setting ELECTRON_APP_DIR: !PROJECT_ROOT!
+    set "ELECTRON_APP_DIR=!PROJECT_ROOT!\src\node\desktop\out\Rao-win32-x64"
+    echo DEBUG: ELECTRON_APP_DIR after setting: !ELECTRON_APP_DIR!
+    echo DEBUG: Looking for Electron app at: !ELECTRON_APP_DIR!
+    if exist "!ELECTRON_APP_DIR!\rao.exe" (
+        echo Found Electron app at: !ELECTRON_APP_DIR!
         
         REM Copy RStudio binaries into Electron app if they don't already exist
         call :copy_binaries "%ELECTRON_APP_DIR%" "%BUILD_DIR%"
         
         REM Copy script to desktop directory where node_modules exists
-        set "DESKTOP_DIR=%PROJECT_ROOT%\src\node\desktop"
+        set "DESKTOP_DIR=!PROJECT_ROOT!\src\node\desktop"
         copy "%PACKAGE_DIR%create-squirrel-packages.js" "%DESKTOP_DIR%\create-squirrel-packages.js" >nul
         
         REM Change to desktop directory
@@ -204,7 +204,7 @@ if not defined NOSQUIRREL (
         )
     ) else (
         popd
-        echo WARNING: Electron app directory not found at %ELECTRON_APP_DIR%
+        echo WARNING: Electron app directory not found at !ELECTRON_APP_DIR!
         echo Skipping Squirrel package generation
     )
 )
@@ -269,7 +269,7 @@ if not exist "%ELECTRON_DIR%\resources\app\bin\rsession.exe" (
 
 REM Always copy R directory to Electron app (outside the rsession.exe conditional)
 REM Copy from source directory since Windows build doesn't install R files to build dir
-set "SOURCE_R_DIR=%PROJECT_ROOT%\src\cpp\r\R"
+set "SOURCE_R_DIR=!PROJECT_ROOT!\src\cpp\r\R"
 if exist "%SOURCE_R_DIR%" (
     echo Copying core R files from source to Electron app...
     echo   FROM: %SOURCE_R_DIR%
