@@ -64,19 +64,25 @@ if not defined NOSQUIRREL (
     echo Creating Squirrel.Windows packages for auto-updates...
     
     REM Find the Electron app directory
-    echo DEBUG: Building path step by step
-    echo DEBUG: PACKAGE_DIR is: [%PACKAGE_DIR%]
+    echo DEBUG: Building path
     
-    REM Use %~dp0 which doesn't include trailing backslash, then build path properly
-    set "ELECTRON_APP_DIR=%~dp0..\..\src\node\desktop\out\Rao-win32-x64"
+    REM Get the script directory without trailing backslash
+    set "SCRIPT_DIR=%~dp0"
+    REM Remove trailing backslash if present
+    if "%SCRIPT_DIR:~-1%"=="\" set "SCRIPT_DIR=%SCRIPT_DIR:~0,-1%"
+    
+    REM Build the path to Electron app
+    set "ELECTRON_APP_DIR=%SCRIPT_DIR%\..\..\src\node\desktop\out\Rao-win32-x64"
+    
+    echo DEBUG: SCRIPT_DIR: [%SCRIPT_DIR%]
     echo DEBUG: ELECTRON_APP_DIR: [%ELECTRON_APP_DIR%]
     
     REM Test each path component
     echo DEBUG: Testing path components:
-    if exist "%~dp0.." (echo DEBUG:   %~dp0.. EXISTS) else (echo DEBUG:   %~dp0.. MISSING)
-    if exist "%~dp0..\.." (echo DEBUG:   %~dp0..\.. EXISTS) else (echo DEBUG:   %~dp0..\.. MISSING)
-    if exist "%~dp0..\..\src" (echo DEBUG:   %~dp0..\..\src EXISTS) else (echo DEBUG:   %~dp0..\..\src MISSING)
-    if exist "%~dp0..\..\src\node\desktop\out" (echo DEBUG:   %~dp0..\..\src\node\desktop\out EXISTS) else (echo DEBUG:   %~dp0..\..\src\node\desktop\out MISSING)
+    if exist "%SCRIPT_DIR%\.." (echo DEBUG:   %SCRIPT_DIR%\.. EXISTS) else (echo DEBUG:   %SCRIPT_DIR%\.. MISSING)
+    if exist "%SCRIPT_DIR%\..\.." (echo DEBUG:   %SCRIPT_DIR%\..\.. EXISTS) else (echo DEBUG:   %SCRIPT_DIR%\..\.. MISSING)
+    if exist "%SCRIPT_DIR%\..\..\src" (echo DEBUG:   %SCRIPT_DIR%\..\..\src EXISTS) else (echo DEBUG:   %SCRIPT_DIR%\..\..\src MISSING)
+    if exist "%SCRIPT_DIR%\..\..\src\node\desktop\out" (echo DEBUG:   %SCRIPT_DIR%\..\..\src\node\desktop\out EXISTS) else (echo DEBUG:   %SCRIPT_DIR%\..\..\src\node\desktop\out MISSING)
     
     if exist "%ELECTRON_APP_DIR%" (
         echo Found Electron app at: %ELECTRON_APP_DIR%
