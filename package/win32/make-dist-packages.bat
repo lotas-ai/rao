@@ -238,6 +238,15 @@ exit /b 0
 :copy_binaries
 set "ELECTRON_DIR=%~1"
 set "BUILD_DIR_ARG=%~2"
+
+REM Convert relative paths to absolute paths
+pushd "%ELECTRON_DIR%"
+set "ELECTRON_DIR=%CD%"
+popd
+
+pushd "%BUILD_DIR_ARG%"
+set "BUILD_DIR_ARG=%CD%"
+popd
 if not exist "%ELECTRON_DIR%\resources\app\bin\rsession.exe" (
     echo Copying RStudio binaries to Electron app...
     if not exist "%ELECTRON_DIR%\resources\app\bin" (
@@ -274,7 +283,9 @@ if not exist "%ELECTRON_DIR%\resources\app\bin\rsession.exe" (
 
 REM Always copy R directory to Electron app (outside the rsession.exe conditional)
 REM Copy from source directory since Windows build doesn't install R files to build dir
-set "SOURCE_R_DIR=%~dp0..\..\src\cpp\r\R"
+pushd "%~dp0..\..\src\cpp\r\R"
+set "SOURCE_R_DIR=%CD%"
+popd
 if exist "%SOURCE_R_DIR%" (
     echo Copying core R files from source to Electron app...
     if not exist "%ELECTRON_DIR%\resources\app\R" (
