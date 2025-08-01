@@ -245,6 +245,13 @@ cmake --build . --config %CMAKE_BUILD_TYPE% -- %MAKEFLAGS% || (
     exit /b 1
 )
 
+echo Installing components...
+REM Install the built components to their proper locations
+cmake --install . --config %CMAKE_BUILD_TYPE% || (
+    echo.!! ERROR: install failed
+    exit /b 1
+)
+
 REM Add icons for supported file types.
 if "%RSTUDIO_TARGET%" == "Electron" (
     pushd %ELECTRON_BINARY_DIR%
