@@ -132,7 +132,11 @@ if not defined NOSQUIRREL (
             echo Moving Squirrel packages to build directory...
             move "%BUILD_DIR%\squirrel\*.nupkg" "%BUILD_DIR%\"
             move "%BUILD_DIR%\squirrel\RELEASES" "%BUILD_DIR%\"
-            move "%BUILD_DIR%\squirrel\Setup.exe" "%BUILD_DIR%\RaoSetup-Squirrel.exe"
+            if exist "%BUILD_DIR%\squirrel\RaoSetup.exe" (
+                move "%BUILD_DIR%\squirrel\RaoSetup.exe" "%BUILD_DIR%\RaoSetup-Squirrel.exe"
+            ) else if exist "%BUILD_DIR%\squirrel\Setup.exe" (
+                move "%BUILD_DIR%\squirrel\Setup.exe" "%BUILD_DIR%\RaoSetup-Squirrel.exe"
+            )
             echo Squirrel auto-update files created successfully
         ) else (
             echo ERROR: Squirrel directory was not created at %BUILD_DIR%\squirrel
