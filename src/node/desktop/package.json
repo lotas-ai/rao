@@ -28,6 +28,7 @@
   },
   "devDependencies": {
     "@electron-forge/cli": "7.7.0",
+    "@electron-forge/maker-squirrel": "7.7.0",
     "@electron-forge/plugin-webpack": "7.7.0",
     "@electron/packager": "18.3.6",
     "@types/chai": "4.3.19",
@@ -72,6 +73,7 @@
   "dependencies": {
     "@electron/fuses": "1.8.0",
     "@vueuse/core": "10.11.0",
+    "electron-squirrel-startup": "^1.0.1",
     "crc": "4.3.2",
     "electron-store": "8.2.0",
     "i18next": "23.16.5",

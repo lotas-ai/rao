@@ -313,17 +313,17 @@ public class AiSettingsWidget extends Composite
          buttonPanel.getElement().getStyle().setProperty("gap", "8px");
          
          // Sign In button
-         signInButton_ = new Button("Sign in");
+         signInButton_ = new Button("Single click sign-in");
          signInButton_.addStyleName(styles_.settingButton());
          signInButton_.addStyleName(styles_.primaryButton());
-         addNativeClickHandler(signInButton_.getElement(), "Sign in");
+         addNativeClickHandler(signInButton_.getElement(), "Single click sign-in");
          
          // Options button (...)
-         optionsButton_ = new Button("...");
+         optionsButton_ = new Button("Use API key");
          optionsButton_.addStyleName(styles_.settingButton());
          optionsButton_.addStyleName(styles_.primaryButton());
          optionsButton_.getElement().getStyle().setProperty("flexShrink", "0");
-         addNativeClickHandler(optionsButton_.getElement(), "Options");
+         addNativeClickHandler(optionsButton_.getElement(), "Use API key");
          
          buttonPanel.add(signInButton_);
          buttonPanel.add(optionsButton_);
@@ -1938,9 +1938,9 @@ public class AiSettingsWidget extends Composite
          if (event.target === element || element.contains(event.target)) {
             if (buttonText === 'Save API Key') {
                self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleSaveApiKey()();
-            } else if (buttonText === 'Sign in') {
+            } else if (buttonText === 'Single click sign-in') {
                self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleSignIn()();
-            } else if (buttonText === 'Options') {
+            } else if (buttonText === 'Use API key') {
                self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleOptionsClick()();
             } else if (buttonText === 'Sign out') {
                self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleDeleteApiKey()();

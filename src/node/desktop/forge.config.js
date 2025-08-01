@@ -1,6 +1,20 @@
 const process = require("process");
 
 const config = {
+  makers: [
+    {
+      name: '@electron-forge/maker-squirrel',
+      config: {
+        authors: 'Lotas',
+        description: 'Rao AI Assistant',
+        exe: 'rao.exe',
+        iconUrl: 'https://lotas-downloads.s3.us-east-2.amazonaws.com/icon.ico',
+        setupIcon: './resources/icons/Rao.ico',
+        noMsi: true,
+        name: 'Rao'
+      }
+    }
+  ],
   plugins: [
     {
       name: '@electron-forge/plugin-webpack',

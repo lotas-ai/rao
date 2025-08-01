@@ -15,6 +15,7 @@
 
 import { app } from 'electron';
 import i18next from 'i18next';
+import * as squirrelStartup from 'electron-squirrel-startup';
 import { safeError } from '../core/err';
 import { logLevel, logger } from '../core/logger';
 import { setApplication } from './app-state';
@@ -32,6 +33,17 @@ import path from 'path';
  */
 class RStudioMain {
   async main(): Promise<void> {
+    // Handle Squirrel.Windows startup events (install, uninstall, update, etc.)
+    if (squirrelStartup) {
+      app.quit();
+      return;
+    }
+
+    // Set App User Model ID for Squirrel.Windows
+    if (process.platform === 'win32') {
+      app.setAppUserModelId('ai.lotas.rao.Rao');
+    }
+
     try {
       await this.startup();
     } catch (error: unknown) {
