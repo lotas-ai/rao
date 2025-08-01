@@ -63,26 +63,14 @@ REM Generate Squirrel.Windows packages for auto-updates
 if not defined NOSQUIRREL (
     echo Creating Squirrel.Windows packages for auto-updates...
     
-    REM Find the Electron app directory (Windows builds directly in desktop folder)
-    set "ELECTRON_SOURCE_DIR=%PACKAGE_DIR%\..\..\src\node\desktop"
-    set "ELECTRON_APP_DIR=%ELECTRON_SOURCE_DIR%\out\Rao-win32-x64"
+    REM Find the Electron app directory (should be in the build output)
+    set "ELECTRON_APP_DIR=%PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64"
     
     if exist "%ELECTRON_APP_DIR%" (
         echo Found Electron app at: %ELECTRON_APP_DIR%
         
-        REM Use electron-winstaller to create Squirrel packages
-        pushd "%PACKAGE_DIR%\..\..\src\node\desktop"
-        
-        REM Install electron-winstaller if not present
-        if not exist "node_modules\electron-winstaller" (
-            echo Installing electron-winstaller...
-            call npm install electron-winstaller --save-dev
-        )
-        
-        REM Create Squirrel packages using the clean JavaScript file
+        REM Use existing create-squirrel-packages.js script
         node "%PACKAGE_DIR%create-squirrel-packages.js" "%BUILD_DIR%"
-        
-        popd
         
         REM Move Squirrel files to build directory
         if exist "%BUILD_DIR%\squirrel" (
