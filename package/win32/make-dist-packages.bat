@@ -358,6 +358,262 @@ if exist "%SESSION_RESOURCES_DIR%" (
     goto :error
 )
 
+REM Copy external dependencies that are skipped on Windows builds
+echo Copying external dependencies to Electron app...
+
+REM Copy hunspell dictionaries
+set "DICTIONARIES_DIR=%RSTUDIO_DEPENDENCIES%\common\dictionaries"
+if exist "%DICTIONARIES_DIR%" (
+    echo   Copying dictionaries from %DICTIONARIES_DIR%
+    xcopy /E /I /Y "%DICTIONARIES_DIR%" "%ELECTRON_DIR%\resources\app\resources\dictionaries\"
+    if ERRORLEVEL 1 (
+        echo ERROR: Failed to copy dictionaries
+        goto :error
+    )
+) else (
+    echo   WARNING: Dictionaries not found at %DICTIONARIES_DIR%
+)
+
+REM Copy MathJax
+set "MATHJAX_DIR=%RSTUDIO_DEPENDENCIES%\common\mathjax-27"
+if exist "%MATHJAX_DIR%" (
+    echo   Copying MathJax from %MATHJAX_DIR%
+    xcopy /E /I /Y "%MATHJAX_DIR%" "%ELECTRON_DIR%\resources\app\resources\mathjax-27\"
+    if ERRORLEVEL 1 (
+        echo ERROR: Failed to copy MathJax
+        goto :error
+    )
+) else (
+    echo   WARNING: MathJax not found at %MATHJAX_DIR%
+)
+
+REM Quarto is copied to bin/ directory separately on Windows
+
+REM Copy embedded R packages
+set "PACKAGES_DIR=%RSTUDIO_DEPENDENCIES%\common"
+if exist "%PACKAGES_DIR%" (
+    echo   Copying R packages from %PACKAGES_DIR%
+    if not exist "%ELECTRON_DIR%\resources\app\R\packages" (
+        mkdir "%ELECTRON_DIR%\resources\app\R\packages"
+    )
+    for %%f in ("%PACKAGES_DIR%\*.tar.gz") do (
+        copy "%%f" "%ELECTRON_DIR%\resources\app\R\packages\"
+    )
+) else (
+    echo   WARNING: R packages directory not found at %PACKAGES_DIR%
+)
+
+echo Successfully copied external dependencies
+
+REM Copy external tools to bin directory (Windows-specific behavior)
+echo Copying external tools to bin directory...
+
+REM Copy Quarto to bin (Windows behavior - goes to bin/ not resources/)
+set "QUARTO_BIN_DIR=%RSTUDIO_DEPENDENCIES%\common\quarto"
+if exist "%QUARTO_BIN_DIR%" (
+    echo   Copying Quarto to bin from %QUARTO_BIN_DIR%
+    xcopy /E /I /Y "%QUARTO_BIN_DIR%" "%ELECTRON_DIR%\resources\app\bin\quarto\"
+    if ERRORLEVEL 1 (
+        echo ERROR: Failed to copy Quarto to bin
+        goto :error
+    )
+) else (
+    echo   WARNING: Quarto bin directory not found at %QUARTO_BIN_DIR%
+)
+
+REM Copy Copilot Language Server to bin
+set "COPILOT_DIR=%RSTUDIO_DEPENDENCIES%\common\copilot-language-server"
+if exist "%COPILOT_DIR%" (
+    echo   Copying Copilot Language Server to bin from %COPILOT_DIR%
+    xcopy /E /I /Y "%COPILOT_DIR%" "%ELECTRON_DIR%\resources\app\bin\copilot-language-server\"
+    if ERRORLEVEL 1 (
+        echo ERROR: Failed to copy Copilot Language Server
+        goto :error
+    )
+) else (
+    echo   WARNING: Copilot Language Server not found at %COPILOT_DIR%
+)
+
+REM Copy Ripgrep to bin
+set "RIPGREP_DIR=%RSTUDIO_DEPENDENCIES%\common\ripgrep"
+if exist "%RIPGREP_DIR%" (
+    echo   Copying Ripgrep to bin from %RIPGREP_DIR%
+    xcopy /E /I /Y "%RIPGREP_DIR%\*" "%ELECTRON_DIR%\resources\app\bin\ripgrep\"
+    if ERRORLEVEL 1 (
+        echo ERROR: Failed to copy Ripgrep
+        goto :error
+    )
+) else (
+    echo   WARNING: Ripgrep not found at %RIPGREP_DIR%
+)
+
+REM Copy libclang
+set "LIBCLANG_DIR=%RSTUDIO_DEPENDENCIES%\common\libclang"
+if exist "%LIBCLANG_DIR%" (
+    echo   Copying libclang from %LIBCLANG_DIR%
+    if exist "%LIBCLANG_DIR%\x86" (
+        xcopy /E /I /Y "%LIBCLANG_DIR%\x86\*" "%ELECTRON_DIR%\resources\app\bin\rsclang\x86\"
+        if ERRORLEVEL 1 (
+            echo ERROR: Failed to copy libclang x86
+            goto :error
+        )
+    )
+    if exist "%LIBCLANG_DIR%\x86_64" (
+        xcopy /E /I /Y "%LIBCLANG_DIR%\x86_64\*" "%ELECTRON_DIR%\resources\app\bin\rsclang\x86_64\"
+        if ERRORLEVEL 1 (
+            echo ERROR: Failed to copy libclang x86_64
+            goto :error
+        )
+    )
+) else (
+    echo   WARNING: libclang not found at %LIBCLANG_DIR%
+)
+
+REM Copy postback tools
+if exist "%BUILD_DIR_ARG%\src\cpp\session\postback\rpostback.exe" (
+    echo   Copying rpostback.exe
+    copy "%BUILD_DIR_ARG%\src\cpp\session\postback\rpostback.exe" "%ELECTRON_DIR%\resources\app\bin\rpostback.exe"
+    if ERRORLEVEL 1 (
+        echo ERROR: Failed to copy rpostback.exe
+        goto :error
+    )
+) else (
+    echo   WARNING: rpostback.exe not found
+)
+
+REM Copy winpty DLLs (Windows terminal support)
+set "WINPTY_DIR=%RSTUDIO_DEPENDENCIES%\common\winpty"
+if exist "%WINPTY_DIR%" (
+    echo   Copying winpty DLLs from %WINPTY_DIR%
+    if exist "%WINPTY_DIR%\x64\winpty.dll" (
+        copy "%WINPTY_DIR%\x64\winpty.dll" "%ELECTRON_DIR%\resources\app\bin\winpty.dll"
+        if ERRORLEVEL 1 (
+            echo ERROR: Failed to copy winpty.dll
+            goto :error
+        )
+    )
+    if exist "%WINPTY_DIR%\x64\winpty-agent.exe" (
+        copy "%WINPTY_DIR%\x64\winpty-agent.exe" "%ELECTRON_DIR%\resources\app\bin\winpty-agent.exe"
+        if ERRORLEVEL 1 (
+            echo ERROR: Failed to copy winpty-agent.exe
+            goto :error
+        )
+    )
+) else (
+    echo   WARNING: winpty directory not found at %WINPTY_DIR%
+)
+
+REM Copy Windows-specific GNU tools (essential for R functionality)
+echo Copying Windows GNU tools...
+
+set "WIN_DEPS_DIR=%RSTUDIO_DEPENDENCIES%\windows"
+if not exist "%WIN_DEPS_DIR%" (
+    set "WIN_DEPS_DIR=%RSTUDIO_DEPENDENCIES%\common\windows"
+)
+
+REM Copy gnudiff
+if exist "%WIN_DEPS_DIR%\gnudiff" (
+    echo   Copying gnudiff from %WIN_DEPS_DIR%\gnudiff
+    xcopy /E /I /Y "%WIN_DEPS_DIR%\gnudiff" "%ELECTRON_DIR%\resources\app\bin\gnudiff\"
+    if ERRORLEVEL 1 (
+        echo ERROR: Failed to copy gnudiff
+        goto :error
+    )
+) else (
+    echo   WARNING: gnudiff not found at %WIN_DEPS_DIR%\gnudiff
+)
+
+REM Copy gnugrep
+if exist "%WIN_DEPS_DIR%\gnugrep" (
+    echo   Copying gnugrep from %WIN_DEPS_DIR%\gnugrep
+    xcopy /E /I /Y "%WIN_DEPS_DIR%\gnugrep\3.0" "%ELECTRON_DIR%\resources\app\bin\gnugrep\"
+    if ERRORLEVEL 1 (
+        echo ERROR: Failed to copy gnugrep
+        goto :error
+    )
+) else (
+    echo   WARNING: gnugrep not found at %WIN_DEPS_DIR%\gnugrep
+)
+
+REM Copy SumatraPDF
+if exist "%WIN_DEPS_DIR%\sumatra\3.1.2\SumatraPDF.exe" (
+    echo   Copying SumatraPDF from %WIN_DEPS_DIR%\sumatra
+    if not exist "%ELECTRON_DIR%\resources\app\bin\sumatra" (
+        mkdir "%ELECTRON_DIR%\resources\app\bin\sumatra"
+    )
+    copy "%WIN_DEPS_DIR%\sumatra\3.1.2\SumatraPDF.exe" "%ELECTRON_DIR%\resources\app\bin\sumatra\SumatraPDF.exe"
+    if ERRORLEVEL 1 (
+        echo ERROR: Failed to copy SumatraPDF.exe
+        goto :error
+    )
+    
+    REM Copy SumatraPDF config
+    if exist "%SESSION_RESOURCES_DIR%\sumatrapdfrestrict.ini" (
+        copy "%SESSION_RESOURCES_DIR%\sumatrapdfrestrict.ini" "%ELECTRON_DIR%\resources\app\bin\sumatra\sumatrapdfrestrict.ini"
+    )
+) else (
+    echo   WARNING: SumatraPDF not found at %WIN_DEPS_DIR%\sumatra\3.1.2\SumatraPDF.exe
+)
+
+REM Copy winutils
+if exist "%WIN_DEPS_DIR%\winutils\1.0" (
+    echo   Copying winutils from %WIN_DEPS_DIR%\winutils
+    if not exist "%ELECTRON_DIR%\resources\app\bin\winutils" (
+        mkdir "%ELECTRON_DIR%\resources\app\bin\winutils"
+    )
+    if exist "%WIN_DEPS_DIR%\winutils\1.0\winutils.exe" (
+        copy "%WIN_DEPS_DIR%\winutils\1.0\winutils.exe" "%ELECTRON_DIR%\resources\app\bin\winutils\winutils.exe"
+    )
+    if exist "%WIN_DEPS_DIR%\winutils\1.0\x64\winutils.exe" (
+        if not exist "%ELECTRON_DIR%\resources\app\bin\winutils\x64" (
+            mkdir "%ELECTRON_DIR%\resources\app\bin\winutils\x64"
+        )
+        copy "%WIN_DEPS_DIR%\winutils\1.0\x64\winutils.exe" "%ELECTRON_DIR%\resources\app\bin\winutils\x64\winutils.exe"
+    )
+) else (
+    echo   WARNING: winutils not found at %WIN_DEPS_DIR%\winutils\1.0
+)
+
+REM Copy CITATION file (built during CMake configure)
+if exist "%BUILD_DIR_ARG%\src\cpp\session\CITATION" (
+    echo   Copying CITATION file
+    copy "%BUILD_DIR_ARG%\src\cpp\session\CITATION" "%ELECTRON_DIR%\resources\app\resources\CITATION"
+    if ERRORLEVEL 1 (
+        echo ERROR: Failed to copy CITATION file
+        goto :error
+    )
+) else (
+    echo   WARNING: CITATION file not found
+)
+
+REM Copy Crashpad tools (crash reporting - also skipped on Windows builds)
+set "CRASHPAD_DIR=%RSTUDIO_DEPENDENCIES%\common\crashpad"
+if exist "%CRASHPAD_DIR%" (
+    echo   Copying Crashpad tools from %CRASHPAD_DIR%
+    if exist "%CRASHPAD_DIR%\crashpad_handler.exe" (
+        copy "%CRASHPAD_DIR%\crashpad_handler.exe" "%ELECTRON_DIR%\resources\app\bin\crashpad_handler.exe"
+    )
+    if exist "%CRASHPAD_DIR%\crashpad_handler.com" (
+        copy "%CRASHPAD_DIR%\crashpad_handler.com" "%ELECTRON_DIR%\resources\app\bin\crashpad_handler.com"
+    )
+    if exist "%CRASHPAD_DIR%\crashpad_http_upload.exe" (
+        copy "%CRASHPAD_DIR%\crashpad_http_upload.exe" "%ELECTRON_DIR%\resources\app\bin\crashpad_http_upload.exe"
+    )
+) else (
+    echo   WARNING: Crashpad tools not found at %CRASHPAD_DIR%
+)
+
+REM Copy consoleio binary (if it exists and is needed)
+if exist "%BUILD_DIR_ARG%\src\cpp\session\consoleio\consoleio.exe" (
+    echo   Copying consoleio.exe
+    copy "%BUILD_DIR_ARG%\src\cpp\session\consoleio\consoleio.exe" "%ELECTRON_DIR%\resources\app\bin\consoleio.exe"
+) else (
+    echo   INFO: consoleio.exe not found (may not be built)
+)
+
+echo Successfully copied Windows GNU tools and additional resources
+echo Successfully copied external tools
+
 REM Final verification of Electron app directory contents
 echo.
 echo DEBUG: Final verification of Electron app directory
@@ -398,6 +654,81 @@ if exist "%ELECTRON_DIR%\resources\app\R" (
             echo ERROR: resources/themes directory does not exist
         )
         goto :error
+    )
+    
+    REM Check for external dependencies
+    if exist "%ELECTRON_DIR%\resources\app\resources\dictionaries" (
+        echo SUCCESS: Dictionaries directory confirmed present
+    ) else (
+        echo WARNING: Dictionaries directory not found (optional)
+    )
+    
+    if exist "%ELECTRON_DIR%\resources\app\resources\mathjax-27" (
+        echo SUCCESS: MathJax confirmed present
+    ) else (
+        echo WARNING: MathJax not found (optional)
+    )
+    
+    if exist "%ELECTRON_DIR%\resources\app\R\packages" (
+        echo SUCCESS: R packages directory confirmed present
+    ) else (
+        echo WARNING: R packages directory not found (optional)
+    )
+    
+    REM Check for external tools in bin directory
+    if exist "%ELECTRON_DIR%\resources\app\bin\quarto" (
+        echo SUCCESS: Quarto confirmed present in bin
+    ) else (
+        echo WARNING: Quarto not found in bin (optional)
+    )
+    
+    if exist "%ELECTRON_DIR%\resources\app\bin\ripgrep" (
+        echo SUCCESS: Ripgrep confirmed present in bin
+    ) else (
+        echo WARNING: Ripgrep not found in bin (optional)
+    )
+    
+    if exist "%ELECTRON_DIR%\resources\app\bin\rsclang" (
+        echo SUCCESS: libclang confirmed present in bin
+    ) else (
+        echo WARNING: libclang not found in bin (optional)
+    )
+    
+    if exist "%ELECTRON_DIR%\resources\app\bin\rpostback.exe" (
+        echo SUCCESS: rpostback.exe confirmed present in bin
+    ) else (
+        echo WARNING: rpostback.exe not found in bin (optional)
+    )
+    
+    if exist "%ELECTRON_DIR%\resources\app\bin\winpty.dll" (
+        echo SUCCESS: winpty.dll confirmed present in bin
+    ) else (
+        echo WARNING: winpty.dll not found in bin (optional)
+    )
+    
+    REM Check for Windows GNU tools
+    if exist "%ELECTRON_DIR%\resources\app\bin\gnudiff" (
+        echo SUCCESS: gnudiff confirmed present in bin
+    ) else (
+        echo WARNING: gnudiff not found in bin (optional)
+    )
+    
+    if exist "%ELECTRON_DIR%\resources\app\bin\gnugrep" (
+        echo SUCCESS: gnugrep confirmed present in bin
+    ) else (
+        echo WARNING: gnugrep not found in bin (optional)
+    )
+    
+    if exist "%ELECTRON_DIR%\resources\app\bin\sumatra\SumatraPDF.exe" (
+        echo SUCCESS: SumatraPDF confirmed present in bin
+    ) else (
+        echo WARNING: SumatraPDF not found in bin (optional)
+    )
+    
+    if exist "%ELECTRON_DIR%\resources\app\bin\winutils" (
+        echo SUCCESS: winutils confirmed present in bin
+    ) else (
+        echo WARNING: winutils not found in bin (optional)
     )
 ) else (
     echo ERROR: R directory missing before packaging
