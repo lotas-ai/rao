@@ -63,11 +63,9 @@ REM Generate Squirrel.Windows packages for auto-updates
 if not defined NOSQUIRREL (
     echo Creating Squirrel.Windows packages for auto-updates...
     
-    REM Find the Electron app directory
-    REM Use %~dp0 to get the directory of this batch file, then navigate relatively
-    set "ELECTRON_APP_DIR=%~dp0..\..\src\node\desktop\out\Rao-win32-x64"
+    REM Find the Electron app directory (should be in the build output)
+    set "ELECTRON_APP_DIR=%PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64"
     
-    echo DEBUG: ELECTRON_APP_DIR = %ELECTRON_APP_DIR%
     if exist "%ELECTRON_APP_DIR%" (
         echo Found Electron app at: %ELECTRON_APP_DIR%
         
