@@ -26,6 +26,9 @@ if "%CMAKE_BUILD_TYPE%" == "Debug" set BUILD_DIR=build-debug
 if "%PKG_TEMP_DIR%" == "" set PKG_TEMP_DIR=C:/rsbuild
 REM Extract project root from PACKAGE_DIR (remove \package\win32\ suffix)  
 set "PROJECT_ROOT=%PACKAGE_DIR:~0,-15%"
+echo DEBUG: PACKAGE_DIR length calculation:
+echo DEBUG: PACKAGE_DIR=%PACKAGE_DIR%
+echo DEBUG: PROJECT_ROOT=%PROJECT_ROOT%
 
 REM Set up dependencies path if not already set
 if not defined RSTUDIO_DEPENDENCIES (
