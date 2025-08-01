@@ -67,50 +67,46 @@ if not defined NOSQUIRREL (
     REM We need to go up 2 levels and then down to src\node\desktop\out\Rao-win32-x64
     
     echo DEBUG: PACKAGE_DIR = %PACKAGE_DIR%
-    echo DEBUG: Testing path construction step by step
+    echo DEBUG: Current working directory = %CD%
     
-    REM Test each step of path construction
-    set "STEP1=%PACKAGE_DIR%..\.."
-    echo DEBUG: Step 1 two levels up = %STEP1%
-    if exist "%STEP1%" (
-        echo DEBUG: Step 1 exists
+    REM Save current directory and navigate to find the actual path
+    pushd "%PACKAGE_DIR%"
+    echo DEBUG: After pushd to PACKAGE_DIR = %CD%
+    
+    cd ..\..
+    echo DEBUG: After cd up two levels = %CD%
+    set "RAO_ROOT=%CD%"
+    
+    cd src
+    echo DEBUG: After cd into src = %CD%
+    
+    cd node
+    echo DEBUG: After cd into node = %CD%
+    
+    cd desktop
+    echo DEBUG: After cd into desktop = %CD%
+    set "DESKTOP_DIR=%CD%"
+    
+    if exist "out" (
+        echo DEBUG: Out directory exists
+        cd out
+        echo DEBUG: After cd into out = %CD%
+        
+        if exist "Rao-win32-x64" (
+            echo DEBUG: Rao-win32-x64 directory exists
+            set "ELECTRON_APP_DIR=%CD%\Rao-win32-x64"
+        ) else (
+            echo DEBUG: Rao-win32-x64 directory missing, contents of out:
+            dir /b
+            set "ELECTRON_APP_DIR="
+        )
     ) else (
-        echo DEBUG: Step 1 missing
+        echo DEBUG: Out directory missing, contents of desktop:
+        dir /b
+        set "ELECTRON_APP_DIR="
     )
     
-    set "STEP2=%PACKAGE_DIR%..\..\src"
-    echo DEBUG: Step 2 into src = %STEP2%
-    if exist "%STEP2%" (
-        echo DEBUG: Step 2 exists
-    ) else (
-        echo DEBUG: Step 2 missing
-    )
-    
-    set "STEP3=%PACKAGE_DIR%..\..\src\node"
-    echo DEBUG: Step 3 into node = %STEP3%
-    if exist "%STEP3%" (
-        echo DEBUG: Step 3 exists
-    ) else (
-        echo DEBUG: Step 3 missing
-    )
-    
-    set "STEP4=%PACKAGE_DIR%..\..\src\node\desktop"
-    echo DEBUG: Step 4 into desktop = %STEP4%
-    if exist "%STEP4%" (
-        echo DEBUG: Step 4 exists
-    ) else (
-        echo DEBUG: Step 4 missing
-    )
-    
-    set "STEP5=%PACKAGE_DIR%..\..\src\node\desktop\out"
-    echo DEBUG: Step 5 into out = %STEP5%
-    if exist "%STEP5%" (
-        echo DEBUG: Step 5 exists
-    ) else (
-        echo DEBUG: Step 5 missing
-    )
-    
-    set "ELECTRON_APP_DIR=%PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64"
+    popd
     echo DEBUG: Final ELECTRON_APP_DIR = %ELECTRON_APP_DIR%
     if exist "%ELECTRON_APP_DIR%" (
         echo Found Electron app at: %ELECTRON_APP_DIR%
