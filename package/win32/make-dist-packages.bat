@@ -87,21 +87,15 @@ REM Generate Squirrel.Windows packages for auto-updates
 if not defined NOSQUIRREL (
     echo Creating Squirrel.Windows packages for auto-updates...
     
-    REM Find the Electron app directory using absolute path
-    set "ELECTRON_APP_DIR=%PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64"
-    if exist "%ELECTRON_APP_DIR%\rao.exe" (
+    REM Find the Electron app directory
+    pushd %PACKAGE_DIR%..\..\src\node\desktop\out
+    if exist "Rao-win32-x64\rao.exe" (
+        set "ELECTRON_APP_DIR=%CD%\Rao-win32-x64"
+        popd
         echo Found Electron app at: %ELECTRON_APP_DIR%
         
-        REM Always copy RStudio binaries into Electron app (create directory structure)
-        echo Copying RStudio binaries to Electron app...
-        if not exist "%ELECTRON_APP_DIR%\resources\app\bin" mkdir "%ELECTRON_APP_DIR%\resources\app\bin"
-        copy "%BUILD_DIR%\src\cpp\session\rsession.exe" "%ELECTRON_APP_DIR%\resources\app\bin\rsession.exe"
-        if exist "%BUILD_DIR%\src\cpp\server\rserver.exe" (
-            copy "%BUILD_DIR%\src\cpp\server\rserver.exe" "%ELECTRON_APP_DIR%\resources\app\bin\rserver.exe"
-        )
-        if exist "%BUILD_DIR%\src\cpp\diagnostics\diagnostics.exe" (
-            copy "%BUILD_DIR%\src\cpp\diagnostics\diagnostics.exe" "%ELECTRON_APP_DIR%\resources\app\bin\diagnostics.exe"
-        )
+        REM Copy RStudio binaries into Electron app if they don't already exist
+        call :copy_binaries "%ELECTRON_APP_DIR%" "%BUILD_DIR%"
         
         REM Copy script to desktop directory where node_modules exists
         set "DESKTOP_DIR=%PACKAGE_DIR%..\..\src\node\desktop"
@@ -175,6 +169,22 @@ echo  Must be invoked from the "package\win32" folder (in the cloned RStudio rep
 echo  Use "set NOSQUIRREL=1" to skip Squirrel.Windows package generation.
 echo.
 exit /b 0
+
+:copy_binaries
+set "ELECTRON_DIR=%~1"
+set "BUILD_DIR_ARG=%~2"
+if not exist "%ELECTRON_DIR%\resources\app\bin\rsession.exe" (
+    echo Copying RStudio binaries to Electron app...
+    if not exist "%ELECTRON_DIR%\resources\app\bin" mkdir "%ELECTRON_DIR%\resources\app\bin"
+    copy "%BUILD_DIR_ARG%\src\cpp\session\rsession.exe" "%ELECTRON_DIR%\resources\app\bin\rsession.exe"
+    if exist "%BUILD_DIR_ARG%\src\cpp\server\rserver.exe" (
+        copy "%BUILD_DIR_ARG%\src\cpp\server\rserver.exe" "%ELECTRON_DIR%\resources\app\bin\rserver.exe"
+    )
+    if exist "%BUILD_DIR_ARG%\src\cpp\diagnostics\diagnostics.exe" (
+        copy "%BUILD_DIR_ARG%\src\cpp\diagnostics\diagnostics.exe" "%ELECTRON_DIR%\resources\app\bin\diagnostics.exe"
+    )
+)
+goto :eof
 
 :error
 echo ERROR: Failed to package RStudio!
