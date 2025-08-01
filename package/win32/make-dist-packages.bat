@@ -67,32 +67,56 @@ if not defined NOSQUIRREL (
     REM We need to go up 2 levels and then down to src\node\desktop\out\Rao-win32-x64
     
     echo DEBUG: PACKAGE_DIR = %PACKAGE_DIR%
-    echo DEBUG: Testing path construction step by step:
+    echo DEBUG: Testing path construction step by step
     
     REM Test each step of path construction
     set "STEP1=%PACKAGE_DIR%.."
-    echo DEBUG: Step 1 (up one level): %STEP1%
-    if exist "%STEP1%" (echo DEBUG: Step 1 exists) else (echo DEBUG: Step 1 does NOT exist)
+    echo DEBUG: Step 1 up one level = %STEP1%
+    if exist "%STEP1%" (
+        echo DEBUG: Step 1 exists
+    ) else (
+        echo DEBUG: Step 1 missing
+    )
     
     set "STEP2=%PACKAGE_DIR%..\.."
-    echo DEBUG: Step 2 (up two levels): %STEP2%
-    if exist "%STEP2%" (echo DEBUG: Step 2 exists) else (echo DEBUG: Step 2 does NOT exist)
+    echo DEBUG: Step 2 up two levels = %STEP2%
+    if exist "%STEP2%" (
+        echo DEBUG: Step 2 exists
+    ) else (
+        echo DEBUG: Step 2 missing
+    )
     
     set "STEP3=%PACKAGE_DIR%..\..\src"
-    echo DEBUG: Step 3 (into src): %STEP3%
-    if exist "%STEP3%" (echo DEBUG: Step 3 exists) else (echo DEBUG: Step 3 does NOT exist)
+    echo DEBUG: Step 3 into src = %STEP3%
+    if exist "%STEP3%" (
+        echo DEBUG: Step 3 exists
+    ) else (
+        echo DEBUG: Step 3 missing
+    )
     
     set "STEP4=%PACKAGE_DIR%..\..\src\node"
-    echo DEBUG: Step 4 (into node): %STEP4%
-    if exist "%STEP4%" (echo DEBUG: Step 4 exists) else (echo DEBUG: Step 4 does NOT exist)
+    echo DEBUG: Step 4 into node = %STEP4%
+    if exist "%STEP4%" (
+        echo DEBUG: Step 4 exists
+    ) else (
+        echo DEBUG: Step 4 missing
+    )
     
     set "STEP5=%PACKAGE_DIR%..\..\src\node\desktop"
-    echo DEBUG: Step 5 (into desktop): %STEP5%
-    if exist "%STEP5%" (echo DEBUG: Step 5 exists) else (echo DEBUG: Step 5 does NOT exist)
+    echo DEBUG: Step 5 into desktop = %STEP5%
+    if exist "%STEP5%" (
+        echo DEBUG: Step 5 exists
+    ) else (
+        echo DEBUG: Step 5 missing
+    )
     
     set "STEP6=%PACKAGE_DIR%..\..\src\node\desktop\out"
-    echo DEBUG: Step 6 (into out): %STEP6%
-    if exist "%STEP6%" (echo DEBUG: Step 6 exists) else (echo DEBUG: Step 6 does NOT exist)
+    echo DEBUG: Step 6 into out = %STEP6%
+    if exist "%STEP6%" (
+        echo DEBUG: Step 6 exists
+    ) else (
+        echo DEBUG: Step 6 missing
+    )
     
     set "ELECTRON_APP_DIR=%PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64"
     echo DEBUG: Final ELECTRON_APP_DIR = %ELECTRON_APP_DIR%
