@@ -101,6 +101,9 @@ if not defined NOSQUIRREL (
     if exist "!ELECTRON_APP_DIR!\rao.exe" (
         echo Found Electron app at: !ELECTRON_APP_DIR!
         
+        REM Set ELECTRON_DIR for use throughout the script
+        set "ELECTRON_DIR=!ELECTRON_APP_DIR!"
+        
         REM Copy RStudio binaries into Electron app if they don't already exist
         call :copy_binaries "%ELECTRON_APP_DIR%" "%BUILD_DIR%"
         
@@ -270,33 +273,51 @@ if not exist "%ELECTRON_DIR%\resources\app\bin\rsession.exe" (
 REM Always copy R directory to Electron app (outside the rsession.exe conditional)
 REM Copy from source directory since Windows build doesn't install R files to build dir
 set "SOURCE_R_DIR=!PROJECT_ROOT!\src\cpp\r\R"
-if exist "%SOURCE_R_DIR%" (
+echo DEBUG: About to copy R files...
+echo DEBUG: SOURCE_R_DIR=!SOURCE_R_DIR!
+echo DEBUG: ELECTRON_DIR=!ELECTRON_DIR!
+echo DEBUG: TARGET_R_DIR=!ELECTRON_DIR!\resources\app\R\
+
+if exist "!SOURCE_R_DIR!" (
     echo Copying core R files from source to Electron app...
-    echo   FROM: %SOURCE_R_DIR%
-    echo   TO: %ELECTRON_DIR%\resources\app\R\
-    if not exist "%ELECTRON_DIR%\resources\app\R" (
-        mkdir "%ELECTRON_DIR%\resources\app\R"
+    echo   FROM: !SOURCE_R_DIR!
+    echo   TO: !ELECTRON_DIR!\resources\app\R\
+    
+    if not exist "!ELECTRON_DIR!\resources\app\R" (
+        echo Creating R directory: !ELECTRON_DIR!\resources\app\R
+        mkdir "!ELECTRON_DIR!\resources\app\R"
         if ERRORLEVEL 1 (
             echo ERROR: Failed to create R directory
             goto :error
         )
     )
     
-    xcopy /E /I /Y "%SOURCE_R_DIR%\*" "%ELECTRON_DIR%\resources\app\R\"
+    echo Running xcopy command: xcopy /E /I /Y "!SOURCE_R_DIR!\*" "!ELECTRON_DIR!\resources\app\R\"
+    xcopy /E /I /Y "!SOURCE_R_DIR!\*" "!ELECTRON_DIR!\resources\app\R\"
     if ERRORLEVEL 1 (
-        echo ERROR: Failed to copy core R files from %SOURCE_R_DIR%
+        echo ERROR: Failed to copy core R files from !SOURCE_R_DIR!
+        goto :error
+    )
+    
+    echo Verifying R files were copied...
+    if exist "!ELECTRON_DIR!\resources\app\R\Tools.R" (
+        echo SUCCESS: Tools.R found at !ELECTRON_DIR!\resources\app\R\Tools.R
+    ) else (
+        echo ERROR: Tools.R NOT found at !ELECTRON_DIR!\resources\app\R\Tools.R
+        echo Contents of R directory:
+        dir "!ELECTRON_DIR!\resources\app\R\"
         goto :error
     )
     echo Successfully copied core R files
 ) else (
-    echo ERROR: Source R directory not found at %SOURCE_R_DIR%
+    echo ERROR: Source R directory not found at !SOURCE_R_DIR!
     goto :error
 )
 
 REM Also copy session module R files from build directory if they exist
 if exist "%BUILD_DIR_ARG%\src\cpp\session\modules\R" (
     echo Copying session module R files to Electron app...
-    xcopy /E /I /Y "%BUILD_DIR_ARG%\src\cpp\session\modules\R\*" "%ELECTRON_DIR%\resources\app\R\"
+    xcopy /E /I /Y "%BUILD_DIR_ARG%\src\cpp\session\modules\R\*" "!ELECTRON_DIR!\resources\app\R\"
     if ERRORLEVEL 1 (
         echo ERROR: Failed to copy session module R files from %BUILD_DIR_ARG%\src\cpp\session\modules\R
         goto :error
@@ -306,6 +327,28 @@ if exist "%BUILD_DIR_ARG%\src\cpp\session\modules\R" (
     echo WARNING: Session module R directory not found at %BUILD_DIR_ARG%\src\cpp\session\modules\R
     echo This may be OK if they don't exist in this build
 )
+
+REM Final verification of Electron app directory contents
+echo.
+echo DEBUG: Final verification of Electron app directory
+echo DEBUG: Checking contents of !ELECTRON_DIR!\resources\app\
+dir "!ELECTRON_DIR!\resources\app\"
+echo.
+if exist "!ELECTRON_DIR!\resources\app\R" (
+    echo DEBUG: R directory exists, contents:
+    dir "!ELECTRON_DIR!\resources\app\R\"
+    if exist "!ELECTRON_DIR!\resources\app\R\Tools.R" (
+        echo SUCCESS: Tools.R confirmed present before packaging
+    ) else (
+        echo ERROR: Tools.R missing before packaging
+        goto :error
+    )
+) else (
+    echo ERROR: R directory missing before packaging
+    goto :error
+)
+echo.
+
 goto :eof
 
 :error
