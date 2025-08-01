@@ -1,24 +1,28 @@
 const electronWinstaller = require('electron-winstaller');
 const path = require('path');
+const fs = require('fs');
 
 // Get paths from command line arguments or use defaults
 const buildDir = process.argv[2] || 'build';
-// Calculate correct Electron app directory path (Windows builds directly in desktop folder)
-const packageDir = path.dirname(path.dirname(__dirname)); // rao/package/win32 -> rao/package -> rao
-const electronSourceDir = path.join(packageDir, 'src', 'node', 'desktop');
-const electronAppDir = path.join(electronSourceDir, 'out', 'Rao-win32-x64');
+
+// When run from desktop directory, the Electron app is in ./out/Rao-win32-x64
+const electronAppDir = path.join(__dirname, 'out', 'Rao-win32-x64');
 
 console.log('Creating Squirrel.Windows packages...');
 console.log('Build directory:', buildDir);
 console.log('Electron app directory:', electronAppDir);
+
+// Check if the app directory exists
+if (!fs.existsSync(electronAppDir)) {
+  console.error('ERROR: Electron app directory not found at:', electronAppDir);
+  process.exit(1);
+}
 
 electronWinstaller.createWindowsInstaller({
   appDirectory: electronAppDir,
   outputDirectory: path.join(buildDir, 'squirrel'),
   authors: 'Lotas',
   exe: 'rao.exe',
-  iconUrl: 'https://lotas-downloads.s3.us-east-2.amazonaws.com/icon.ico',
-  setupIcon: path.join(electronAppDir, 'resources', 'app', 'resources', 'icons', 'Rao.ico'),
   noMsi: true
 }).then(function() {
   console.log('Squirrel packages created successfully');
