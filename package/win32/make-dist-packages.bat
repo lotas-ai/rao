@@ -124,7 +124,14 @@ if not defined NOSQUIRREL (
         REM Copy the squirrel output from desktop build to package build
         if exist "build\squirrel" (
             echo Copying squirrel packages to package build directory...
+            echo DEBUG: Source: build\squirrel
+            echo DEBUG: Destination: %BUILD_DIR%\squirrel
+            dir "build\squirrel"
             xcopy /E /I /Y "build\squirrel" "%BUILD_DIR%\squirrel"
+            echo DEBUG: Copy result: %ERRORLEVEL%
+        ) else (
+            echo DEBUG: build\squirrel directory does not exist
+            dir build
         )
         
         popd
@@ -132,6 +139,8 @@ if not defined NOSQUIRREL (
         REM Move Squirrel files to build directory
         if exist "%BUILD_DIR%\squirrel" (
             echo Moving Squirrel packages to build directory...
+            echo DEBUG: Contents of %BUILD_DIR%\squirrel before move:
+            dir "%BUILD_DIR%\squirrel"
             move "%BUILD_DIR%\squirrel\*.nupkg" "%BUILD_DIR%\"
             move "%BUILD_DIR%\squirrel\RELEASES" "%BUILD_DIR%\"
             if exist "%BUILD_DIR%\squirrel\RaoSetup.exe" (
@@ -139,6 +148,8 @@ if not defined NOSQUIRREL (
             ) else if exist "%BUILD_DIR%\squirrel\Setup.exe" (
                 move "%BUILD_DIR%\squirrel\Setup.exe" "%BUILD_DIR%\RaoSetup-Squirrel.exe"
             )
+            echo DEBUG: Final contents of %BUILD_DIR%:
+            dir "%BUILD_DIR%\*.nupkg" "%BUILD_DIR%\RELEASES" "%BUILD_DIR%\RaoSetup-Squirrel.exe" 2>nul
             echo Squirrel auto-update files created successfully
         ) else (
             echo ERROR: Squirrel directory was not created at %BUILD_DIR%\squirrel
