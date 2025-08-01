@@ -87,14 +87,10 @@ REM Generate Squirrel.Windows packages for auto-updates
 if not defined NOSQUIRREL (
     echo Creating Squirrel.Windows packages for auto-updates...
     
-    REM Find the Electron app directory
-    pushd %PACKAGE_DIR%..\..\src\node\desktop\out
-    echo DEBUG: Looking for Electron app in: %CD%
-    if exist "Rao-win32-x64\rao.exe" (
-        set "ELECTRON_APP_DIR=%CD%\Rao-win32-x64"
-        popd
+    REM Find the Electron app directory - use absolute path to match Node.js script
+    set "ELECTRON_APP_DIR=%PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64"
+    if exist "!ELECTRON_APP_DIR!\rao.exe" (
         echo Found Electron app at: !ELECTRON_APP_DIR!
-        echo DEBUG: ELECTRON_APP_DIR full path: !ELECTRON_APP_DIR!
         
         REM Copy RStudio binaries into Electron app if they don't already exist
         echo DEBUG: About to call copy_binaries with ELECTRON_APP_DIR=!ELECTRON_APP_DIR!
