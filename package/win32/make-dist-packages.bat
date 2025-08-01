@@ -334,6 +334,30 @@ if exist "%BUILD_DIR_ARG%\src\cpp\session\modules\R" (
     echo This may be OK if they don't exist in this build
 )
 
+REM Copy session resources directory (themes, help_resources, etc.)
+set "SESSION_RESOURCES_DIR=%PROJECT_ROOT%\src\cpp\session\resources"
+if exist "%SESSION_RESOURCES_DIR%" (
+    echo Copying session resources to Electron app...
+    echo   FROM: %SESSION_RESOURCES_DIR%
+    echo   TO: %ELECTRON_DIR%\resources\app\resources\
+    if not exist "%ELECTRON_DIR%\resources\app\resources" (
+        mkdir "%ELECTRON_DIR%\resources\app\resources"
+        if ERRORLEVEL 1 (
+            echo ERROR: Failed to create resources directory
+            goto :error
+        )
+    )
+    xcopy /E /I /Y "%SESSION_RESOURCES_DIR%\*" "%ELECTRON_DIR%\resources\app\resources\"
+    if ERRORLEVEL 1 (
+        echo ERROR: Failed to copy session resources from %SESSION_RESOURCES_DIR%
+        goto :error
+    )
+    echo Successfully copied session resources
+) else (
+    echo ERROR: Session resources directory not found at %SESSION_RESOURCES_DIR%
+    goto :error
+)
+
 REM Final verification of Electron app directory contents
 echo.
 echo DEBUG: Final verification of Electron app directory
@@ -359,6 +383,19 @@ if exist "%ELECTRON_DIR%\resources\app\R" (
             dir "%ELECTRON_DIR%\resources\app\R\modules\"
         ) else (
             echo ERROR: modules directory does not exist
+        )
+        goto :error
+    )
+    
+    if exist "%ELECTRON_DIR%\resources\app\resources\themes\compile-themes.R" (
+        echo SUCCESS: compile-themes.R confirmed present in resources/themes
+    ) else (
+        echo ERROR: compile-themes.R missing from resources/themes
+        if exist "%ELECTRON_DIR%\resources\app\resources\themes" (
+            echo DEBUG: themes directory exists, contents:
+            dir "%ELECTRON_DIR%\resources\app\resources\themes\"
+        ) else (
+            echo ERROR: resources/themes directory does not exist
         )
         goto :error
     )
