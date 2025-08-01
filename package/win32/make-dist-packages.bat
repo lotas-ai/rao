@@ -119,6 +119,12 @@ if not defined NOSQUIRREL (
         REM Clean up temporary file
         del create-squirrel-packages-temp.js
         
+        REM Copy the squirrel output from desktop build to package build
+        if exist "build\squirrel" (
+            echo Copying squirrel packages to package build directory...
+            xcopy /E /I /Y "build\squirrel" "%BUILD_DIR%\squirrel"
+        )
+        
         popd
         
         REM Move Squirrel files to build directory
