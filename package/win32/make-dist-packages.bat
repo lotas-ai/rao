@@ -107,9 +107,21 @@ if not defined NOSQUIRREL (
         REM Verify we're in the right directory
         echo Current directory: %CD%
         
+        REM Clean up any existing squirrel build to force regeneration
+        if exist "build\squirrel" (
+            echo DEBUG: Removing existing squirrel directory to force regeneration...
+            rmdir /s /q "build\squirrel"
+        )
+        
         REM BUILD_DIR is already absolute, just use it directly
         REM Run the script from the desktop directory
+        echo DEBUG: About to run Node.js script...
+        echo DEBUG: NODE=%NODE%
+        echo DEBUG: Current directory: %CD%
+        echo DEBUG: BUILD_DIR=%BUILD_DIR%
+        echo DEBUG: Command: "%NODE%" create-squirrel-packages.js "%BUILD_DIR%"
         "%NODE%" create-squirrel-packages.js "%BUILD_DIR%"
+        echo DEBUG: Node.js script exit code: %ERRORLEVEL%
         if ERRORLEVEL 1 (
             REM Clean up temporary file
             del create-squirrel-packages.js
