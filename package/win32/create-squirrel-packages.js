@@ -6,7 +6,29 @@ const fs = require('fs');
 const buildDir = process.argv[2] || 'build';
 
 // When run from desktop directory, the Electron app is in ./out/Rao-win32-x64
-const electronAppDir = path.join(__dirname, 'out', 'Rao-win32-x64');
+// BUT we need to use the same path that the batch script uses for copying files
+let electronAppDir = path.join(__dirname, 'out', 'Rao-win32-x64');
+
+// Check if there are multiple possible locations
+const defaultAppDir = path.join(__dirname, 'out', 'Rao-win32-x64');
+const buildAppDir = path.resolve(__dirname, '..', '..', 'package', 'win32', 'build', 'src', 'node', 'desktop', 'out', 'Rao-win32-x64');
+
+console.log('DEBUG: Checking multiple possible Electron app locations...');
+console.log('DEBUG: Default app dir:', defaultAppDir);
+console.log('DEBUG: Build app dir:', buildAppDir);
+console.log('DEBUG: Default exists:', fs.existsSync(defaultAppDir));
+console.log('DEBUG: Build exists:', fs.existsSync(buildAppDir));
+
+// Use the one that exists and has rao.exe
+if (fs.existsSync(defaultAppDir) && fs.existsSync(path.join(defaultAppDir, 'rao.exe'))) {
+  electronAppDir = defaultAppDir;
+  console.log('DEBUG: Using default app directory');
+} else if (fs.existsSync(buildAppDir) && fs.existsSync(path.join(buildAppDir, 'rao.exe'))) {
+  electronAppDir = buildAppDir;
+  console.log('DEBUG: Using build app directory');
+} else {
+  console.log('DEBUG: Neither location has rao.exe, using default anyway');
+}
 
 // Ensure buildDir is absolute
 const absoluteBuildDir = path.isAbsolute(buildDir) ? buildDir : path.resolve(buildDir);
