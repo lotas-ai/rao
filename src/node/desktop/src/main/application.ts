@@ -404,21 +404,21 @@ export class Application implements AppState {
       
       // Add event listeners to the global autoUpdater before calling updateElectronApp
       autoUpdater.on('checking-for-update', () => {
-        logger().logInfo('Auto-updater: checking-for-update');
+        console.log('Auto-updater: checking-for-update');
       });
       
       autoUpdater.on('update-available', () => {
-        logger().logInfo('Auto-updater: update-available');
+        console.log('Auto-updater: update-available');
       });
       
       autoUpdater.on('update-not-available', () => {
-        logger().logInfo('Auto-updater: update-not-available');
+        console.log('Auto-updater: update-not-available');
       });
       
       autoUpdater.on('update-downloaded', (event, releaseNotes, releaseName, releaseDate, updateURL) => {
         updateDownloaded = true;
-        logger().logInfo('Auto-updater: update-downloaded - showing notification now');
-        logger().logInfo(`Update details: ${releaseName} (${releaseDate})`);
+        console.log('Auto-updater: update-downloaded - showing notification now');
+        console.log(`Update details: ${releaseName} (${releaseDate})`);
         
         // Show notification with "Later" option
         const options = {
@@ -441,39 +441,65 @@ export class Application implements AppState {
       });
       
       autoUpdater.on('error', (error: Error) => {
-        logger().logError(`Auto-updater error: ${error.message}`);
+        console.error(`=== AUTO-UPDATER ERROR ===`);
+        console.error(`Error message: ${error?.message || 'No message'}`);
+        console.error(`Error name: ${error?.name || 'No name'}`);
+        console.error(`Error stack: ${error?.stack || 'No stack'}`);
+        console.error(`Full error object: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`);
+        console.error(`=== END AUTO-UPDATER ERROR ===`);
       });
 
       // Start auto-updater
       const platform = process.platform === 'darwin' ? 'darwin' : 'win32';
       const baseUrl = `https://lotas-downloads.s3.us-east-2.amazonaws.com/${platform}/x64`;
       
-      updateElectronApp({
-        updateSource: {
-          type: UpdateSourceType.StaticStorage,
-          baseUrl: baseUrl
-        },
-        updateInterval: '5 minutes',
-        notifyUser: false, // We handle notifications manually
-        logger: {
-          info: (message: string) => logger().logInfo(`UEA: ${message}`),
-          warn: (message: string) => logger().logWarning(`UEA: ${message}`),
-          error: (message: string) => logger().logError(`UEA: ${message}`),
-          log: (message: string) => logger().logInfo(`UEA: ${message}`)
-        }
-      });
+      console.log(`=== AUTO-UPDATE INITIALIZATION START ===`);
+      console.log(`Platform: ${platform}`);
+      console.log(`App is packaged: ${app.isPackaged}`);
+      console.log(`App version: ${app.getVersion()}`);
+      console.log(`Base URL: ${baseUrl}`);
+      
+      try {
+        console.log('Calling updateElectronApp...');
+        updateElectronApp({
+          updateSource: {
+            type: UpdateSourceType.StaticStorage,
+            baseUrl: baseUrl
+          },
+          updateInterval: '5 minutes',
+          notifyUser: false, // We handle notifications manually
+          logger: {
+            info: (message: string) => console.log(`UEA-INFO: ${message}`),
+            warn: (message: string) => console.warn(`UEA-WARN: ${message}`),
+            error: (message: string) => console.error(`UEA-ERROR: ${message}`),
+            log: (message: string) => console.log(`UEA-LOG: ${message}`)
+          }
+        });
+        console.log('updateElectronApp call completed successfully');
+      } catch (error) {
+        console.error(`Failed to initialize updateElectronApp: ${error}`);
+      }
+      
+      console.log(`=== AUTO-UPDATE INITIALIZATION COMPLETE ===`);
 
       // Install on app quit if update was downloaded but user chose "Later"
       app.on('before-quit', (event) => {
         if (updateDownloaded && !installedOnStartup) {
-          logger().logInfo('Installing update on quit...');
+          console.log('Installing update on quit...');
           autoUpdater.quitAndInstall();
         }
       });
+      
+      // DEBUGGING: Add manual trigger for testing auto-updater
+      if (!app.isPackaged) {
+        console.log('DEBUGGING: Auto-updater available for manual testing. Use app.autoUpdater.checkForUpdates() in DevTools console.');
+        // Expose autoUpdater globally for debugging
+        (global as any).debugAutoUpdater = autoUpdater;
+      }
     }
     
-    // Manual update check for Linux and Windows (Mac uses auto-updater)
-    if (process.platform === 'linux' || process.platform === 'win32') {
+    // Manual update check for Linux only (Mac and Windows use auto-updater)
+    if (process.platform === 'linux') {
       checkForUpdatesOnStartup();
     }
 

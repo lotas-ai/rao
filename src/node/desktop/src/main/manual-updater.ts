@@ -47,7 +47,7 @@ async function fetchLatestVersionInfo(): Promise<UpdateInfo | null> {
     const platform = process.platform;
     let metadataUrl: string;
     
-    logger().logInfo(`Update check: platform detected as ${platform}`);
+    console.log(`Update check: platform detected as ${platform}`);
     
     if (platform === 'darwin') {
       metadataUrl = `${S3_BASE_URL}/latest-mac.json`;
@@ -56,19 +56,19 @@ async function fetchLatestVersionInfo(): Promise<UpdateInfo | null> {
     } else if (platform === 'linux') {
       metadataUrl = `${S3_BASE_URL}/latest-linux.json`;
     } else {
-      logger().logDebug('Unsupported platform for updates');
+      console.log('Unsupported platform for updates');
       return null;
     }
     
-    logger().logInfo(`Update check: fetching metadata from ${metadataUrl}`);
+    console.log(`Update check: fetching metadata from ${metadataUrl}`);
     
     // Fetch the metadata
     const metadata = await fetchJson(metadataUrl);
     
-    logger().logDebug(`Update check: received metadata: ${JSON.stringify(metadata)}`);
+    console.log(`Update check: received metadata: ${JSON.stringify(metadata)}`);
     
     if (!metadata || !metadata.version) {
-      logger().logError('Invalid metadata format');
+      console.error('Invalid metadata format');
       return null;
     }
     
@@ -86,7 +86,7 @@ async function fetchLatestVersionInfo(): Promise<UpdateInfo | null> {
       downloadUrl: downloadUrl
     };
     
-    logger().logInfo(`Update check: found version ${updateInfo.version}`);
+    console.log(`Update check: found version ${updateInfo.version}`);
     
     return updateInfo;
   } catch (error) {
@@ -94,9 +94,9 @@ async function fetchLatestVersionInfo(): Promise<UpdateInfo | null> {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
     
-    logger().logError(`Error fetching update info: ${errorMessage}`);
+    console.error(`Error fetching update info: ${errorMessage}`);
     if (errorStack) {
-      logger().logDebug(`Fetch update info error stack: ${errorStack}`);
+      console.log(`Fetch update info error stack: ${errorStack}`);
     }
     return null;
   }
@@ -107,14 +107,14 @@ async function fetchLatestVersionInfo(): Promise<UpdateInfo | null> {
  */
 function fetchJson(url: string): Promise<any> {
   return new Promise((resolve, reject) => {
-    logger().logDebug(`Update check: starting HTTPS request to ${url}`);
+    console.log(`Update check: starting HTTPS request to ${url}`);
     
     const request = https.get(url, (res) => {
-      logger().logDebug(`Update check: received response with status ${res.statusCode}`);
+      console.log(`Update check: received response with status ${res.statusCode}`);
       
       if (res.statusCode !== 200) {
         const error = new Error(`Failed to fetch ${url}: ${res.statusCode}`);
-        logger().logError(`Update check: HTTP error: ${error.message}`);
+        console.error(`Update check: HTTP error: ${error.message}`);
         reject(error);
         return;
       }
@@ -122,28 +122,28 @@ function fetchJson(url: string): Promise<any> {
       let data = '';
       res.on('data', (chunk) => {
         data += chunk;
-        logger().logDebug(`Update check: received ${chunk.length} bytes, total: ${data.length}`);
+        console.log(`Update check: received ${chunk.length} bytes, total: ${data.length}`);
       });
       res.on('end', () => {
-        logger().logDebug(`Update check: response complete, parsing JSON data of length ${data.length}`);
+        console.log(`Update check: response complete, parsing JSON data of length ${data.length}`);
         try {
           const parsed = JSON.parse(data);
-          logger().logDebug(`Update check: successfully parsed JSON: ${JSON.stringify(parsed)}`);
+          console.log(`Update check: successfully parsed JSON: ${JSON.stringify(parsed)}`);
           resolve(parsed);
         } catch (error) {
-          logger().logError(`Update check: JSON parse error: ${error}`);
+          console.error(`Update check: JSON parse error: ${error}`);
           reject(error);
         }
       });
     });
     
     request.on('error', (error) => {
-      logger().logError(`Update check: HTTPS request error: ${error.message}`);
+      console.error(`Update check: HTTPS request error: ${error.message}`);
       reject(error);
     });
     
     request.setTimeout(10000, () => {
-      logger().logError('Update check: request timeout after 10 seconds');
+      console.error('Update check: request timeout after 10 seconds');
       request.destroy();
       reject(new Error('Request timeout'));
     });
@@ -154,16 +154,16 @@ function fetchJson(url: string): Promise<any> {
  * Check if an update is available
  */
 export async function checkForUpdates(showNoUpdateDialog = true): Promise<boolean> {
-  logger().logInfo(`Update check: starting check (showNoUpdateDialog: ${showNoUpdateDialog})`);
+  console.log(`Update check: starting check (showNoUpdateDialog: ${showNoUpdateDialog})`);
   
   try {
     const currentVersion = app.getVersion();
-    logger().logInfo(`Update check: current version is ${currentVersion}`);
+    console.log(`Update check: current version is ${currentVersion}`);
     
     const updateInfo = await fetchLatestVersionInfo();
     
     if (!updateInfo) {
-      logger().logError('Update check: failed to get update info');
+      console.error('Update check: failed to get update info');
       if (showNoUpdateDialog) {
         await dialog.showMessageBox({
           type: 'info',
@@ -175,15 +175,15 @@ export async function checkForUpdates(showNoUpdateDialog = true): Promise<boolea
       return false;
     }
     
-    logger().logInfo(`Update check: comparing versions - current: ${currentVersion}, available: ${updateInfo.version}`);
+    console.log(`Update check: comparing versions - current: ${currentVersion}, available: ${updateInfo.version}`);
     
     // Compare versions
     const hasUpdate = semver.gt(updateInfo.version, currentVersion);
     
-    logger().logInfo(`Update check: version comparison result: hasUpdate = ${hasUpdate}`);
+    console.log(`Update check: version comparison result: hasUpdate = ${hasUpdate}`);
     
     if (hasUpdate) {
-      logger().logInfo(`Update check: update available from ${currentVersion} to ${updateInfo.version}`);
+      console.log(`Update check: update available from ${currentVersion} to ${updateInfo.version}`);
       
       // Format release notes for better display
       const formattedNotes = updateInfo.notes || 'No release notes available.';
@@ -200,17 +200,17 @@ export async function checkForUpdates(showNoUpdateDialog = true): Promise<boolea
         noLink: true
       });
       
-      logger().logDebug(`Update check: user response: ${result.response === 0 ? 'Download' : 'Later'}`);
+      console.log(`Update check: user response: ${result.response === 0 ? 'Download' : 'Later'}`);
       
       if (result.response === 0) {
-        logger().logInfo(`Update check: opening download URL: ${updateInfo.downloadUrl}`);
+        console.log(`Update check: opening download URL: ${updateInfo.downloadUrl}`);
         // Open download URL in browser
         shell.openExternal(updateInfo.downloadUrl);
       }
       
       return true;
     } else {
-      logger().logInfo('Update check: no update available');
+      console.log('Update check: no update available');
       if (showNoUpdateDialog) {
         await dialog.showMessageBox({
           type: 'info',
@@ -227,9 +227,9 @@ export async function checkForUpdates(showNoUpdateDialog = true): Promise<boolea
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
     
-    logger().logError(`Error checking for updates: ${errorMessage}`);
+    console.error(`Error checking for updates: ${errorMessage}`);
     if (errorStack) {
-      logger().logDebug(`Update check error stack: ${errorStack}`);
+      console.log(`Update check error stack: ${errorStack}`);
     }
     
     if (showNoUpdateDialog) {
@@ -257,11 +257,11 @@ export function checkForUpdatesManually(): Promise<boolean> {
  * Silent check for updates on startup (no dialogs if no update available)
  */
 export function checkForUpdatesOnStartup(): void {
-  logger().logInfo('Update check: scheduling startup update check in 2 seconds');
+  console.log('Update check: scheduling startup update check in 2 seconds');
   
   // Small delay to let app finish startup
   setTimeout(() => {
-    logger().logInfo('Update check: starting silent startup update check');
+    console.log('Update check: starting silent startup update check');
     void checkForUpdates(false);
   }, 2000);
 } 
