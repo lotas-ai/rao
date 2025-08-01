@@ -63,10 +63,21 @@ REM Generate Squirrel.Windows packages for auto-updates
 if not defined NOSQUIRREL (
     echo Creating Squirrel.Windows packages for auto-updates...
     
-    REM Find the Electron app directory - EXACT SAME APPROACH AS DEBUG SCRIPT
-    echo DEBUG: PACKAGE_DIR before path construction: [%PACKAGE_DIR%]
-    set "ELECTRON_APP_DIR=%PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64"
-    echo DEBUG: ELECTRON_APP_DIR after construction: [%ELECTRON_APP_DIR%]
+    REM Find the Electron app directory - NAVIGATE DIRECTLY TO WORKING PATH
+    echo DEBUG: Navigating to directory to get absolute path
+    
+    pushd "%~dp0" 2>nul
+    if exist "..\..\src\node\desktop\out\Rao-win32-x64" (
+        pushd "..\..\src\node\desktop\out\Rao-win32-x64" 2>nul
+        set "ELECTRON_APP_DIR=%CD%"
+        popd
+        echo DEBUG: Found and resolved ELECTRON_APP_DIR to: [%ELECTRON_APP_DIR%]
+    ) else (
+        echo DEBUG: Directory not found via navigation, using fallback
+        set "ELECTRON_APP_DIR=%~dp0..\..\src\node\desktop\out\Rao-win32-x64"
+        echo DEBUG: Fallback ELECTRON_APP_DIR: [%ELECTRON_APP_DIR%]
+    )
+    popd
     
     REM Test each path component like debug script
     echo DEBUG: Testing path components:
