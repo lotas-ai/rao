@@ -267,14 +267,15 @@ if not exist "%ELECTRON_DIR%\resources\app\bin\rsession.exe" (
             goto :error
         )
     )
-    
-    REM Always copy R directory to Electron app (now inside the binary copying function where ELECTRON_DIR is defined)
-    REM Copy from source directory since Windows build doesn't install R files to build dir
-    set "SOURCE_R_DIR=%PROJECT_ROOT%\src\cpp\r\R"
-    echo DEBUG: About to copy R files...
-    echo DEBUG: SOURCE_R_DIR=%SOURCE_R_DIR%
-    echo DEBUG: ELECTRON_DIR=%ELECTRON_DIR%
-    echo DEBUG: TARGET_R_DIR=%ELECTRON_DIR%\resources\app\R\
+)
+
+REM Always copy R directory to Electron app (outside the rsession.exe conditional but inside the function where ELECTRON_DIR is defined)
+REM Copy from source directory since Windows build doesn't install R files to build dir
+set "SOURCE_R_DIR=%PROJECT_ROOT%\src\cpp\r\R"
+echo DEBUG: About to copy R files...
+echo DEBUG: SOURCE_R_DIR=%SOURCE_R_DIR%
+echo DEBUG: ELECTRON_DIR=%ELECTRON_DIR%
+echo DEBUG: TARGET_R_DIR=%ELECTRON_DIR%\resources\app\R\
 
 if exist "%SOURCE_R_DIR%" (
     echo Copying core R files from source to Electron app...
