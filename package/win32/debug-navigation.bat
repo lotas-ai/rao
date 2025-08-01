@@ -89,7 +89,21 @@ if not defined NOSQUIRREL (
     REM Find the Electron app directory (should be in the build output)
     set "ELECTRON_APP_DIR=%PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64"
     
-    echo Testing ELECTRON_APP_DIR path: %ELECTRON_APP_DIR%
+    echo Testing ELECTRON_APP_DIR variable assignment...
+    echo   Raw assignment: set "ELECTRON_APP_DIR=%PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64"
+    echo   PACKAGE_DIR value: %PACKAGE_DIR%
+    echo   Resolved ELECTRON_APP_DIR: %ELECTRON_APP_DIR%
+    echo   Expected path (from Step 2): %ELECTRON_APP_DIR_TEST%
+    
+    echo.
+    echo Comparing paths:
+    if "%ELECTRON_APP_DIR%" == "%ELECTRON_APP_DIR_TEST%" (
+        echo ✓ Paths match - variable assignment is working correctly
+    ) else (
+        echo ✗ Paths don't match - there's a variable assignment issue
+        echo   Squirrel section path: [%ELECTRON_APP_DIR%]
+        echo   Working test path:     [%ELECTRON_APP_DIR_TEST%]
+    )
     
     if exist "%ELECTRON_APP_DIR%" (
         echo ✓ Found Electron app at: %ELECTRON_APP_DIR%
