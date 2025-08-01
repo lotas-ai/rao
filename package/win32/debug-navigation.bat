@@ -90,10 +90,10 @@ if not defined NOSQUIRREL (
     set "ELECTRON_APP_DIR=%PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64"
     
     echo Testing ELECTRON_APP_DIR variable assignment...
-    echo   Raw assignment: set "ELECTRON_APP_DIR=%PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64"
+    echo   Raw assignment: set "ELECTRON_APP_DIR=%%PACKAGE_DIR%%..\..\src\node\desktop\out\Rao-win32-x64"
     echo   PACKAGE_DIR value: %PACKAGE_DIR%
     echo   Resolved ELECTRON_APP_DIR: %ELECTRON_APP_DIR%
-    echo   Expected path (from Step 2): %ELECTRON_APP_DIR_TEST%
+    echo   Expected path from Step 2: %ELECTRON_APP_DIR_TEST%
     
     echo.
     echo Comparing paths:
