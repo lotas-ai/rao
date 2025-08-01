@@ -96,10 +96,17 @@ if not defined NOSQUIRREL (
         echo Found Electron app at: %ELECTRON_APP_DIR%
         
         REM Change to desktop directory where node_modules exists
-        pushd %PACKAGE_DIR%..\..\src\node\desktop
+        set "DESKTOP_DIR=%PACKAGE_DIR%..\..\src\node\desktop"
+        pushd "%DESKTOP_DIR%"
+        
+        REM Verify we're in the right directory
+        echo Current directory: %CD%
+        
+        REM Use absolute path for BUILD_DIR since we changed directories
+        set "ABS_BUILD_DIR=%PACKAGE_DIR%%BUILD_DIR%"
         
         REM Use existing create-squirrel-packages.js script
-        "%NODE%" "%PACKAGE_DIR%create-squirrel-packages.js" "%BUILD_DIR%"
+        "%NODE%" "%PACKAGE_DIR%create-squirrel-packages.js" "%ABS_BUILD_DIR%"
         
         popd
         
