@@ -19,12 +19,7 @@ if "%1" == "-h" goto :showhelp
 if "%1" == "help" goto :showhelp
 if "%1" == "/?" goto :showhelp
 
-if "%PACKAGE_DIR%" == "" (
-    set PACKAGE_DIR=%~dp0
-    pushd "%PACKAGE_DIR%"
-    set "PACKAGE_DIR=%CD%\"
-    popd
-)
+if "%PACKAGE_DIR%" == "" set PACKAGE_DIR=%~dp0
 if "%BUILD_DIR%" == "" set BUILD_DIR=build
 if "%CMAKE_BUILD_TYPE%" == "" set CMAKE_BUILD_TYPE=RelWithDebInfo
 if "%CMAKE_BUILD_TYPE%" == "Debug" set BUILD_DIR=build-debug
@@ -69,7 +64,14 @@ if not defined NOSQUIRREL (
     echo Creating Squirrel.Windows packages for auto-updates...
     
     REM Find the Electron app directory (should be in the build output)
-    set "ELECTRON_APP_DIR=%PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64"
+    REM Use pushd to resolve the path properly
+    pushd "%~dp0..\..\src\node\desktop\out" 2>nul
+    if not errorlevel 1 (
+        set "ELECTRON_APP_DIR=%CD%\Rao-win32-x64"
+        popd
+    ) else (
+        set "ELECTRON_APP_DIR=%~dp0..\..\src\node\desktop\out\Rao-win32-x64"
+    )
     
     if exist "%ELECTRON_APP_DIR%" (
         echo Found Electron app at: %ELECTRON_APP_DIR%
