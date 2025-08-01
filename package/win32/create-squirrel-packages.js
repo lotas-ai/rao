@@ -23,6 +23,28 @@ if (!fs.existsSync(electronAppDir)) {
   process.exit(1);
 }
 
+// WORKAROUND: Copy R directory to app root if electron-winstaller excludes it
+const rDir = path.join(electronAppDir, 'resources', 'app', 'R');
+const rDestDir = path.join(electronAppDir, 'R');
+
+console.log('DEBUG: Checking R directory workaround...');
+console.log('DEBUG: R source dir:', rDir);
+console.log('DEBUG: R dest dir:', rDestDir);
+console.log('DEBUG: R source exists:', fs.existsSync(rDir));
+console.log('DEBUG: R dest exists:', fs.existsSync(rDestDir));
+
+if (fs.existsSync(rDir)) {
+  if (!fs.existsSync(rDestDir)) {
+    console.log('Copying R directory to app root as workaround...');
+    fs.cpSync(rDir, rDestDir, { recursive: true });
+    console.log('✓ R directory copied to app root');
+  } else {
+    console.log('R directory already exists in app root, skipping copy');
+  }
+} else {
+  console.log('ERROR: R directory not found in source Electron app at:', rDir);
+}
+
 electronWinstaller.createWindowsInstaller({
   appDirectory: electronAppDir,
   outputDirectory: outputDir,
