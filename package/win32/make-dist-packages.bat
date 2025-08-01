@@ -95,8 +95,13 @@ if not defined NOSQUIRREL (
         popd
         echo Found Electron app at: %ELECTRON_APP_DIR%
         
+        REM Change to desktop directory where node_modules exists
+        pushd %PACKAGE_DIR%..\..\src\node\desktop
+        
         REM Use existing create-squirrel-packages.js script
         "%NODE%" "%PACKAGE_DIR%create-squirrel-packages.js" "%BUILD_DIR%"
+        
+        popd
         
         REM Move Squirrel files to build directory
         if exist "%BUILD_DIR%\squirrel" (
