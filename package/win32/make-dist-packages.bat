@@ -25,6 +25,30 @@ if "%CMAKE_BUILD_TYPE%" == "" set CMAKE_BUILD_TYPE=RelWithDebInfo
 if "%CMAKE_BUILD_TYPE%" == "Debug" set BUILD_DIR=build-debug
 if "%PKG_TEMP_DIR%" == "" set PKG_TEMP_DIR=C:/rsbuild
 
+REM Set up dependencies path if not already set
+if not defined RSTUDIO_DEPENDENCIES (
+    if not exist c:\rstudio-tools\dependencies (
+        set RSTUDIO_DEPENDENCIES=%PACKAGE_DIR%..\..\dependencies
+    ) else (
+        set RSTUDIO_DEPENDENCIES=c:\rstudio-tools\dependencies
+    )
+)
+
+REM Call rstudio-tools if needed to get RSTUDIO_NODE_VERSION
+if not defined RSTUDIO_NODE_VERSION (
+    call %RSTUDIO_DEPENDENCIES%\tools\rstudio-tools.cmd
+)
+
+REM Find node tools.
+set NODE_DIR=%RSTUDIO_DEPENDENCIES%\common\node\%RSTUDIO_NODE_VERSION%
+set NODE=%NODE_DIR%\node.exe
+if not exist %NODE% (
+    echo node.exe not found at %NODE_DIR%; exiting
+    endlocal
+    exit /b 1
+)
+echo Using node: %NODE%
+
 echo DEBUG: make-dist-packages.bat using following values:
 echo DEBUG:     PACKAGE_DIR=%PACKAGE_DIR%
 echo DEBUG:     BUILD_DIR=%BUILD_DIR%
@@ -72,7 +96,7 @@ if not defined NOSQUIRREL (
         echo Found Electron app at: %ELECTRON_APP_DIR%
         
         REM Use existing create-squirrel-packages.js script
-        node "%PACKAGE_DIR%create-squirrel-packages.js" "%BUILD_DIR%"
+        "%NODE%" "%PACKAGE_DIR%create-squirrel-packages.js" "%BUILD_DIR%"
         
         REM Move Squirrel files to build directory
         if exist "%BUILD_DIR%\squirrel" (
