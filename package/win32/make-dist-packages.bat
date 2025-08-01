@@ -313,10 +313,17 @@ if exist "%SOURCE_R_DIR%" (
     goto :error
 )
 
-REM Also copy session module R files from build directory if they exist
+REM Also copy session module R files from build directory if they exist (preserving modules subdirectory)
 if exist "%BUILD_DIR_ARG%\src\cpp\session\modules\R" (
     echo Copying session module R files to Electron app...
-    xcopy /E /I /Y "%BUILD_DIR_ARG%\src\cpp\session\modules\R\*" "%ELECTRON_DIR%\resources\app\R\"
+    if not exist "%ELECTRON_DIR%\resources\app\R\modules" (
+        mkdir "%ELECTRON_DIR%\resources\app\R\modules"
+        if ERRORLEVEL 1 (
+            echo ERROR: Failed to create R\modules directory
+            goto :error
+        )
+    )
+    xcopy /E /I /Y "%BUILD_DIR_ARG%\src\cpp\session\modules\R\*" "%ELECTRON_DIR%\resources\app\R\modules\"
     if ERRORLEVEL 1 (
         echo ERROR: Failed to copy session module R files from %BUILD_DIR_ARG%\src\cpp\session\modules\R
         goto :error
@@ -340,6 +347,19 @@ if exist "%ELECTRON_DIR%\resources\app\R" (
         echo SUCCESS: Tools.R confirmed present before packaging
     ) else (
         echo ERROR: Tools.R missing before packaging
+        goto :error
+    )
+    
+    if exist "%ELECTRON_DIR%\resources\app\R\modules\ModuleTools.R" (
+        echo SUCCESS: ModuleTools.R confirmed present in modules subdirectory
+    ) else (
+        echo ERROR: ModuleTools.R missing from modules subdirectory
+        if exist "%ELECTRON_DIR%\resources\app\R\modules" (
+            echo DEBUG: modules directory exists, contents:
+            dir "%ELECTRON_DIR%\resources\app\R\modules\"
+        ) else (
+            echo ERROR: modules directory does not exist
+        )
         goto :error
     )
 ) else (
