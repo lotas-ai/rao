@@ -3,7 +3,10 @@ const path = require('path');
 
 // Get paths from command line arguments or use defaults
 const buildDir = process.argv[2] || 'build';
-const electronAppDir = path.join(buildDir, 'out', 'Rao-win32-x64');
+// Calculate correct Electron app directory path (Windows builds directly in desktop folder)
+const packageDir = path.dirname(path.dirname(__dirname)); // rao/package/win32 -> rao/package -> rao
+const electronSourceDir = path.join(packageDir, 'src', 'node', 'desktop');
+const electronAppDir = path.join(electronSourceDir, 'out', 'Rao-win32-x64');
 
 console.log('Creating Squirrel.Windows packages...');
 console.log('Build directory:', buildDir);
