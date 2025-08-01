@@ -217,12 +217,11 @@ if "%RSTUDIO_TARGET%" == "Electron" (
     pushd %ELECTRON_SOURCE_DIR%
     REM Install npm packages if needed
     if "%NPM_INSTALLED%" == "0" (
-        REM Ensure Node.js is in PATH for npm scripts
-        set "PATH=%NODE_DIR%;%PATH%"
+        REM Use --scripts-prepend-node-path to ensure node is available for npm scripts
         if exist package-lock.json (
-            call %NPM% ci
+            call %NPM% ci --scripts-prepend-node-path=true
         ) else (
-            call %NPM% install
+            call %NPM% install --scripts-prepend-node-path=true
         )
         set NPM_INSTALLED=1
     )
