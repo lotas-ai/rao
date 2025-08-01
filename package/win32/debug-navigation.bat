@@ -23,10 +23,62 @@ echo PACKAGE_DIR=%PACKAGE_DIR%
 echo BUILD_DIR=%BUILD_DIR%
 echo CMAKE_BUILD_TYPE=%CMAKE_BUILD_TYPE%
 echo Current directory: %CD%
+echo Script location: %~dp0
 echo.
 
-echo Testing Squirrel.Windows Section Logic (from make-dist-packages.bat)
-echo =====================================================================
+echo STEP 1: Variable Expansion Analysis
+echo ====================================
+echo Testing PACKAGE_DIR variable expansion...
+echo Raw PACKAGE_DIR: [%PACKAGE_DIR%]
+echo Script location (~dp0): [%~dp0]
+echo.
+
+echo Checking if PACKAGE_DIR ends with backslash...
+set "LAST_CHAR=%PACKAGE_DIR:~-1%"
+echo Last character: [%LAST_CHAR%]
+if "%LAST_CHAR%" == "\" (
+    echo ✓ PACKAGE_DIR ends with backslash
+) else (
+    echo ✗ PACKAGE_DIR does not end with backslash
+)
+echo.
+
+echo STEP 2: Path Construction Testing
+echo ==================================
+echo Testing each component of the Electron app path...
+
+set "PATH_COMPONENT_1=%PACKAGE_DIR%.."
+set "PATH_COMPONENT_2=%PACKAGE_DIR%..\.."
+set "PATH_COMPONENT_3=%PACKAGE_DIR%..\..\src"
+set "PATH_COMPONENT_4=%PACKAGE_DIR%..\..\src\node"
+set "PATH_COMPONENT_5=%PACKAGE_DIR%..\..\src\node\desktop"
+set "PATH_COMPONENT_6=%PACKAGE_DIR%..\..\src\node\desktop\out"
+set "ELECTRON_APP_DIR_TEST=%PACKAGE_DIR%..\..\src\node\desktop\out\Rao-win32-x64"
+
+echo Component 1: %PATH_COMPONENT_1%
+if exist "%PATH_COMPONENT_1%" (echo   ✓ EXISTS) else (echo   ✗ MISSING)
+
+echo Component 2: %PATH_COMPONENT_2%
+if exist "%PATH_COMPONENT_2%" (echo   ✓ EXISTS) else (echo   ✗ MISSING)
+
+echo Component 3: %PATH_COMPONENT_3%
+if exist "%PATH_COMPONENT_3%" (echo   ✓ EXISTS) else (echo   ✗ MISSING)
+
+echo Component 4: %PATH_COMPONENT_4%
+if exist "%PATH_COMPONENT_4%" (echo   ✓ EXISTS) else (echo   ✗ MISSING)
+
+echo Component 5: %PATH_COMPONENT_5%
+if exist "%PATH_COMPONENT_5%" (echo   ✓ EXISTS) else (echo   ✗ MISSING)
+
+echo Component 6: %PATH_COMPONENT_6%
+if exist "%PATH_COMPONENT_6%" (echo   ✓ EXISTS) else (echo   ✗ MISSING)
+
+echo Final path: %ELECTRON_APP_DIR_TEST%
+if exist "%ELECTRON_APP_DIR_TEST%" (echo   ✓ EXISTS) else (echo   ✗ MISSING)
+echo.
+
+echo STEP 3: Testing Squirrel.Windows Section Logic
+echo ================================================
 
 echo Testing NOSQUIRREL environment variable...
 if not defined NOSQUIRREL (
