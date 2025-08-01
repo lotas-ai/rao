@@ -66,29 +66,26 @@ if not defined NOSQUIRREL (
     REM Find the Electron app directory (should be in the build output)
     echo DEBUG: PACKAGE_DIR = %PACKAGE_DIR%
     
-    REM Try to navigate to the desktop directory using cd
+    REM Navigate to desktop directory and check what's there
     pushd "%PACKAGE_DIR%"
     cd ..\..
     cd src\node\desktop
-    set "DESKTOP_BASE=%CD%"
-    echo DEBUG: Desktop base directory: %DESKTOP_BASE%
+    echo DEBUG: Desktop base directory: %CD%
     
-    REM Check if out directory exists
-    if exist "%DESKTOP_BASE%\out" (
+    REM Check if out directory exists using relative path
+    if exist "out" (
         echo DEBUG: Out directory exists
-        if exist "%DESKTOP_BASE%\out\Rao-win32-x64" (
-            set "ELECTRON_APP_DIR=%DESKTOP_BASE%\out\Rao-win32-x64"
+        if exist "out\Rao-win32-x64" (
+            set "ELECTRON_APP_DIR=%CD%\out\Rao-win32-x64"
             echo DEBUG: Found Electron app at: %ELECTRON_APP_DIR%
         ) else (
             echo DEBUG: Out directory exists but Rao-win32-x64 not found
             echo DEBUG: Contents of out directory:
-            dir /b "%DESKTOP_BASE%\out"
+            dir /b "out"
             set "ELECTRON_APP_DIR="
         )
     ) else (
         echo DEBUG: Out directory does not exist
-        echo DEBUG: Contents of desktop directory:
-        dir /b "%DESKTOP_BASE%"
         set "ELECTRON_APP_DIR="
     )
     
