@@ -64,12 +64,31 @@ if not defined NOSQUIRREL (
     echo Creating Squirrel.Windows packages for auto-updates...
     
     REM Find the Electron app directory (should be in the build output)
-    pushd "%PACKAGE_DIR%\..\..\src\node\desktop\out"
-    set "ELECTRON_APP_DIR=%CD%\Rao-win32-x64"
-    popd
-    
+    set "DESKTOP_OUT_DIR=%PACKAGE_DIR%\..\..\src\node\desktop\out"
     echo DEBUG: PACKAGE_DIR = %PACKAGE_DIR%
-    echo DEBUG: Resolved ELECTRON_APP_DIR = %ELECTRON_APP_DIR%
+    echo DEBUG: Looking for desktop out dir: %DESKTOP_OUT_DIR%
+    echo DEBUG: Desktop out dir exists: 
+    if exist "%DESKTOP_OUT_DIR%" (echo YES) else (echo NO)
+    
+    if exist "%DESKTOP_OUT_DIR%" (
+        pushd "%DESKTOP_OUT_DIR%"
+        set "ELECTRON_APP_DIR=%CD%\Rao-win32-x64"
+        popd
+        echo DEBUG: Resolved ELECTRON_APP_DIR = %ELECTRON_APP_DIR%
+    ) else (
+        echo DEBUG: Desktop out directory not found, checking desktop dir...
+        set "DESKTOP_DIR=%PACKAGE_DIR%\..\..\src\node\desktop"
+        echo DEBUG: Desktop dir: %DESKTOP_DIR%
+        if exist "%DESKTOP_DIR%" (
+            echo DEBUG: Desktop dir exists, listing contents:
+            dir /b "%DESKTOP_DIR%"
+        ) else (
+            echo DEBUG: Desktop dir does not exist!
+        )
+        set "ELECTRON_APP_DIR="
+    )
+    
+    echo DEBUG: Final ELECTRON_APP_DIR = %ELECTRON_APP_DIR%
     echo DEBUG: Checking if directory exists: "%ELECTRON_APP_DIR%"
     if exist "%ELECTRON_APP_DIR%" (
         echo Found Electron app at: %ELECTRON_APP_DIR%
