@@ -24,8 +24,11 @@ if "%BUILD_DIR%" == "" set BUILD_DIR=build
 if "%CMAKE_BUILD_TYPE%" == "" set CMAKE_BUILD_TYPE=RelWithDebInfo
 if "%CMAKE_BUILD_TYPE%" == "Debug" set BUILD_DIR=build-debug
 if "%PKG_TEMP_DIR%" == "" set PKG_TEMP_DIR=C:/rsbuild
-REM Get project root by removing \package\win32\ from PACKAGE_DIR
-set "PROJECT_ROOT=%PACKAGE_DIR:\package\win32\=%"
+REM Get project root by going up two directories from package\win32 and getting absolute path
+pushd "%PACKAGE_DIR%"
+cd ..\..
+set "PROJECT_ROOT=%CD%"
+popd
 
 REM Set up dependencies path if not already set
 if not defined RSTUDIO_DEPENDENCIES (
