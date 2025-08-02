@@ -1,4 +1,5 @@
 const process = require("process");
+const path = require("path");
 
 const config = {
   plugins: [
@@ -69,7 +70,45 @@ const config = {
       ProductName: "Rao",
     },
     extendInfo: './Info.plist.in',
+    extraResource: process.platform === 'win32' ? (() => {
+      const fs = require('fs');
+      const pkgTempDir = process.env.PKG_TEMP_DIR;
+      
+      if (!pkgTempDir) {
+        throw new Error('PKG_TEMP_DIR environment variable not set.');
+      }
+      
+      const cpackDir = path.join(pkgTempDir, '_CPack_Packages/win64/NSIS');
+      const packages = fs.readdirSync(cpackDir).filter(name => name.startsWith('Rao-'));
+      
+      return [path.join(cpackDir, packages[0], 'resources/app')];
+    })() : [],
   },
+
+  makers: [
+    {
+      name: '@electron-forge/maker-squirrel',
+      config: {
+        name: 'Rao',
+        authors: 'Lotas',
+        description: 'Rao IDE',
+        setupIcon: './resources/icons/Rao.ico',
+        noMsi: true
+      }
+    },
+    {
+      name: '@electron-forge/maker-zip',
+      platforms: ['darwin', 'linux', 'win32']
+    },
+    {
+      name: '@electron-forge/maker-deb',
+      config: {}
+    },
+    {
+      name: '@electron-forge/maker-rpm',
+      config: {}
+    }
+  ]
 };
 
 module.exports = config;

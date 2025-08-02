@@ -56,3 +56,5 @@ venv/
 
 CLAUDE.md
 .claude/
+/package/win32/packages
+/dependencies/windows/ripgrep
