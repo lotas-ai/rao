@@ -150,10 +150,12 @@ if(GWT_COPY)
       PATTERN "WEB-INF" EXCLUDE
       PATTERN ".gitignore" EXCLUDE)
 
-   # copy symbol maps
-   install(
-      DIRECTORY "${GWT_EXTRAS_DIR}/rstudio/symbolMaps/"
-      DESTINATION ${RSTUDIO_INSTALL_SUPPORTING}/www-symbolmaps)
+   # copy symbol maps (optional - only if they exist)
+   if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${GWT_EXTRAS_DIR}/rstudio/symbolMaps")
+      install(
+         DIRECTORY "${GWT_EXTRAS_DIR}/rstudio/symbolMaps/"
+         DESTINATION ${RSTUDIO_INSTALL_SUPPORTING}/www-symbolmaps)
+   endif()
 
 endif()
 
