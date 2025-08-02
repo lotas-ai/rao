@@ -404,12 +404,12 @@ export class MenuCallback extends EventEmitter {
       label: label,
       id: cmdId,
       click: (menuItem, _browserWindow, _event) => {
-        // Handle manual updates for Linux and Windows (Mac uses auto-updater)
+        // Handle manual updates for Linux only (Mac and Windows use auto-updater)
         if (cmdId === 'checkForUpdates') {
-          if (process.platform !== 'darwin') {
+          if (process.platform === 'linux') {
             void checkForUpdatesManually();
           }
-          // No-op for Mac - auto-updater handles updates
+          // No-op for Mac and Windows - auto-updater handles updates
           return;
         }
         this.emit(MenuCallback.COMMAND_INVOKED, menuItem.id);

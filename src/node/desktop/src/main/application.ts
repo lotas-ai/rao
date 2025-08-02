@@ -472,8 +472,8 @@ export class Application implements AppState {
       });
     }
     
-    // Manual update check for Linux and Windows (Mac uses auto-updater)
-    if (process.platform === 'linux' || process.platform === 'win32') {
+    // Manual update check for Linux only (Mac and Windows use auto-updater)
+    if (process.platform === 'linux') {
       checkForUpdatesOnStartup();
     }
 
