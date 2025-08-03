@@ -1123,6 +1123,15 @@
    clear = function() { .rs.clearUserPref("check_for_updates") }
 )
 
+# Enable automatic updates
+#
+# Whether to automatically download and install updates in the background (Mac/Windows only).
+.rs.uiPrefs$autoUpdatesEnabled <- list(
+   get = function() { .rs.getUserPref("auto_updates_enabled") },
+   set = function(value) { .rs.setUserPref("auto_updates_enabled", value) },
+   clear = function() { .rs.clearUserPref("auto_updates_enabled") }
+)
+
 # Show internal functions when debugging
 #
 # Whether to show functions without source references in the Traceback pane while

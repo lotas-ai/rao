@@ -1584,6 +1584,19 @@ core::Error UserPrefValues::setCheckForUpdates(bool val)
 }
 
 /**
+ * Whether to automatically download and install updates in the background (Mac/Windows only).
+ */
+bool UserPrefValues::autoUpdatesEnabled()
+{
+   return readPref<bool>("auto_updates_enabled");
+}
+
+core::Error UserPrefValues::setAutoUpdatesEnabled(bool val)
+{
+   return writePref("auto_updates_enabled", val);
+}
+
+/**
  * Whether to show functions without source references in the Traceback pane while debugging.
  */
 bool UserPrefValues::showInternalFunctions()

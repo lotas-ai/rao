@@ -19,7 +19,7 @@ import { ipcRenderer } from 'electron';
 export function getDesktopInfoBridge() {
   return {
     platform: '',
-    version: '',
+    version: ipcRenderer.sendSync('desktop_get_version'),
     scrollingCompensationType: '',
     fixedWidthFontList: ipcRenderer.sendSync('desktop_get_fixed_width_font_list'),
     fixedWidthFont: ipcRenderer.sendSync('desktop_get_fixed_width_font'),

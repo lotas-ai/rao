@@ -26,6 +26,9 @@ import { app, dialog, shell } from 'electron';
 import { logger } from '../core/logger';
 import * as https from 'https';
 import * as semver from 'semver';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 
 // S3 bucket base URL
 const S3_BASE_URL = 'https://lotas-downloads.s3.us-east-2.amazonaws.com';
@@ -188,6 +191,9 @@ export async function checkForUpdates(showNoUpdateDialog = true): Promise<boolea
       // Format release notes for better display
       const formattedNotes = updateInfo.notes || 'No release notes available.';
       
+      logger().logInfo('DEBUG: About to show MANUAL update dialog with "Download" and "Later" buttons');
+      logger().logInfo(`DEBUG: Dialog message will be: A new version (${updateInfo.version}) is available!`);
+      
       // Show update dialog with enhanced formatting
       const result = await dialog.showMessageBox({
         type: 'info',
@@ -200,12 +206,53 @@ export async function checkForUpdates(showNoUpdateDialog = true): Promise<boolea
         noLink: true
       });
       
+      logger().logInfo(`DEBUG: Manual update dialog result: ${result.response === 0 ? 'Download' : 'Later'}`);
+      
       logger().logDebug(`Update check: user response: ${result.response === 0 ? 'Download' : 'Later'}`);
       
       if (result.response === 0) {
-        logger().logInfo(`Update check: opening download URL: ${updateInfo.downloadUrl}`);
-        // Open download URL in browser
-        shell.openExternal(updateInfo.downloadUrl);
+        logger().logInfo(`Update check: starting download from: ${updateInfo.downloadUrl}`);
+        
+        // Show download progress dialog
+        const downloadResult = await dialog.showMessageBox({
+          type: 'info',
+          title: 'Downloading Update',
+          message: `Downloading Rao ${updateInfo.version}...`,
+          detail: 'Please wait while the update is downloaded.',
+          buttons: ['OK'],
+          defaultId: 0
+        });
+        
+        // Download the file
+        const downloadedPath = await downloadUpdateFile(updateInfo.downloadUrl, updateInfo.version);
+        
+        if (downloadedPath) {
+          // Show completion dialog with option to open folder
+          const completeResult = await dialog.showMessageBox({
+            type: 'info',
+            title: 'Download Complete',
+            message: `Rao ${updateInfo.version} has been downloaded successfully!`,
+            detail: `The installer has been saved to:\n${downloadedPath}\n\nWould you like to open the Downloads folder?`,
+            buttons: ['Open Folder', 'Close'],
+            defaultId: 0,
+            cancelId: 1
+          });
+          
+          if (completeResult.response === 0) {
+            // Open Downloads folder
+            shell.showItemInFolder(downloadedPath);
+          }
+        } else {
+          // Download failed, fallback to opening browser
+          await dialog.showMessageBox({
+            type: 'error',
+            title: 'Download Failed',
+            message: 'Failed to download the update file.',
+            detail: 'Opening download page in your browser instead.',
+            buttons: ['OK']
+          });
+          shell.openExternal(updateInfo.downloadUrl);
+        }
       }
       
       return true;
@@ -250,6 +297,8 @@ export async function checkForUpdates(showNoUpdateDialog = true): Promise<boolea
  * Check for updates with user feedback (can be called from menu item)
  */
 export function checkForUpdatesManually(): Promise<boolean> {
+  logger().logInfo('=== DEBUG: checkForUpdatesManually() called - MANUAL UPDATE CHECK ===');
+  logger().logInfo('DEBUG: This should show "Download" button, not "Restart" button');
   return checkForUpdates(true);
 }
 
@@ -264,4 +313,47 @@ export function checkForUpdatesOnStartup(): void {
     logger().logInfo('Update check: starting silent startup update check');
     void checkForUpdates(false);
   }, 2000);
+}
+
+/**
+ * Download update file to user's Downloads folder
+ */
+async function downloadUpdateFile(downloadUrl: string, version: string): Promise<string | null> {
+  try {
+    const platform = process.platform;
+    const fileExt = platform === 'darwin' ? '.dmg' : platform === 'win32' ? '.exe' : '.deb';
+    const fileName = `Rao-v${version}${fileExt}`;
+    const downloadsPath = path.join(os.homedir(), 'Downloads', fileName);
+    
+    logger().logInfo(`Downloading update file: ${downloadUrl} to ${downloadsPath}`);
+    
+    return new Promise((resolve, reject) => {
+      const file = fs.createWriteStream(downloadsPath);
+      
+      https.get(downloadUrl, (response) => {
+        if (response.statusCode !== 200) {
+          reject(new Error(`Download failed: ${response.statusCode}`));
+          return;
+        }
+        
+        response.pipe(file);
+        
+        file.on('finish', () => {
+          file.close();
+          logger().logInfo(`Download completed: ${downloadsPath}`);
+          resolve(downloadsPath);
+        });
+        
+        file.on('error', (err) => {
+          fs.unlink(downloadsPath, () => {}); // Delete the file on error
+          reject(err);
+        });
+      }).on('error', (err) => {
+        reject(err);
+      });
+    });
+  } catch (error) {
+    logger().logError(`Error downloading update file: ${error}`);
+    return null;
+  }
 } 

@@ -289,7 +289,7 @@ cmake -G"${CMAKE_GENERATOR}"                           \
       -DRSTUDIO_TARGET=$RSTUDIO_TARGET                 \
       -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE             \
       -DRSTUDIO_PACKAGE_BUILD=1                        \
-      -DRSTUDIO_DISABLE_CHECK_FOR_UPDATES=ON           \
+      -DRSTUDIO_DISABLE_CHECK_FOR_UPDATES=OFF          \
       -DRSTUDIO_CRASHPAD_ENABLED=0                     \
       -DCMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}" \
       -DGWT_BIN_DIR="$BUILD_DIR/gwt/bin"               \

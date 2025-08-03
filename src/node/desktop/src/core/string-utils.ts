@@ -14,7 +14,7 @@
  */
 
 export function removeDups(strings: string[]): string[] {
-  return [...new Set(strings)];
+  return Array.from(new Set(strings));
 }
 
 const nonAttrHtml = /[<>&'"/]/g;

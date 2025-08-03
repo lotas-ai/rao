@@ -1492,6 +1492,15 @@ public interface PrefsConstants extends com.google.gwt.i18n.client.Messages {
     @Key("otherNotifyMeLabel")
     String otherNotifyMeLabel();
 
+    /**
+     * Translated "Automatically download and install updates".
+     *
+     * @return translated "Automatically download and install updates"
+     */
+    @DefaultMessage("Automatically download and install updates")
+    @Key("otherAutoUpdatesLabel")
+    String otherAutoUpdatesLabel();
+
        /**
     * Translated "Send automated crash reports to Lotas Inc".
     * 

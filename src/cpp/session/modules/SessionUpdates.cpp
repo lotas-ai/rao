@@ -161,6 +161,14 @@ void checkForUpdates(const json::JsonRpcRequest& request,
    beginUpdateCheck(manual, boost::bind(endRPCUpdateCheck, cont, _1));
 }
 
+void getAutoUpdatesEnabled(const json::JsonRpcRequest& request,
+                          const json::JsonRpcFunctionContinuation& cont)
+{
+   json::JsonRpcResponse response;
+   response.setResult(prefs::userPrefs().autoUpdatesEnabled());
+   cont(Success(), &response);
+}
+
 } // anonymous namespace
 
 Error initialize()
@@ -170,9 +178,10 @@ Error initialize()
 
    // RStudio-based update checking disabled - use Electron auto-updater instead
    ExecBlock initBlock;
-   // initBlock.addFunctions()
-   //    (bind(registerAsyncRpcMethod, "check_for_updates", checkForUpdates))
-   // ;
+   initBlock.addFunctions()
+      (bind(registerAsyncRpcMethod, "check_for_updates", checkForUpdates))
+      (bind(registerAsyncRpcMethod, "get_auto_updates_enabled", getAutoUpdatesEnabled))
+   ;
    return initBlock.execute();
 }
 

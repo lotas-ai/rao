@@ -136,6 +136,7 @@ public class DesktopApplicationHeader implements ApplicationHeader,
       events.addHandler(SessionInitEvent.TYPE, (SessionInitEvent sie) ->
       {
          final SessionInfo sessionInfo = session.getSessionInfo();
+         System.out.println("=== DEBUG: SessionInitEvent handler called ===");
 
          toolbar_.completeInitialization(sessionInfo);
 
@@ -145,6 +146,7 @@ public class DesktopApplicationHeader implements ApplicationHeader,
          {
             public void execute()
             {
+               System.out.println("DEBUG: SessionInit scheduled command executing");
                Desktop.getFrame().onWorkbenchInitialized(
                      StringUtil.notNull(sessionInfo.getScratchDir()));
 
@@ -152,12 +154,27 @@ public class DesktopApplicationHeader implements ApplicationHeader,
                // if (sessionInfo.getDisableCheckForUpdates())
                //    commands.checkForUpdates().remove();
 
-               // Automatic update checks disabled - Electron auto-updater handles this
-               // if (!sessionInfo.getDisableCheckForUpdates() &&
-               //     pUIPrefs_.get().checkForUpdates().getValue())
-               // {
-               //    checkForUpdates(false);
-               // }
+               System.out.println("DEBUG: Checking startup update conditions:");
+               System.out.println("DEBUG: getDisableCheckForUpdates()=" + sessionInfo.getDisableCheckForUpdates());
+               System.out.println("DEBUG: isMacintoshDesktop()=" + BrowseCap.isMacintoshDesktop());
+               System.out.println("DEBUG: isWindowsDesktop()=" + BrowseCap.isWindowsDesktop());
+               System.out.println("DEBUG: autoUpdatesEnabled()=" + pUIPrefs_.get().autoUpdatesEnabled().getValue());
+               
+               // Check for updates on startup:
+               // - Linux: always check (no auto-updates available)
+               // - Mac/Windows: only if auto-updates are enabled
+               boolean shouldCheckOnStartup = !sessionInfo.getDisableCheckForUpdates() &&
+                   (BrowseCap.isLinuxDesktop() || 
+                   ((BrowseCap.isMacintoshDesktop() || BrowseCap.isWindowsDesktop()) && 
+                    pUIPrefs_.get().autoUpdatesEnabled().getValue()));
+               
+               if (shouldCheckOnStartup)
+               {
+                  System.out.println("DEBUG: Calling checkForUpdates(false) on startup");
+                  checkForUpdates(false);
+               } else {
+                  System.out.println("DEBUG: NOT calling checkForUpdates on startup");
+               }
             }
          });
       });
@@ -398,6 +415,7 @@ public class DesktopApplicationHeader implements ApplicationHeader,
    @Handler
    void onCheckForUpdates()
    {
+      System.out.println("=== DEBUG: onCheckForUpdates() button clicked ===");
       checkForUpdates(true);
    }
 
@@ -416,37 +434,81 @@ public class DesktopApplicationHeader implements ApplicationHeader,
 
    private void checkForUpdates(final boolean manual)
    {
-      server_.checkForUpdates(manual,
-            new ServerRequestCallback<UpdateCheckResult>()
-      {
-         @Override
-         public void onResponseReceived(UpdateCheckResult result)
-         {
-            respondToUpdateCheck(result, manual);
+      System.out.println("=== DEBUG: checkForUpdates() called with manual=" + manual + " ===");
+      
+      if (BrowseCap.isElectron()) {
+         // For Linux: always use manual updater (no auto-updates available)
+         // For Mac/Windows: use manual updater only when explicitly requested (button click)
+         boolean shouldUseManualUpdater = BrowseCap.isLinuxDesktop() || manual;
+         
+         System.out.println("DEBUG: Platform - Linux: " + BrowseCap.isLinuxDesktop() + 
+                           ", Mac: " + BrowseCap.isMacintoshDesktop() + 
+                           ", Windows: " + BrowseCap.isWindowsDesktop());
+         System.out.println("DEBUG: Should use manual updater: " + shouldUseManualUpdater);
+         
+         if (shouldUseManualUpdater) {
+            System.out.println("DEBUG: Using Electron manual updater");
+            Desktop.getFrame().checkForUpdatesManually();
+         } else {
+            System.out.println("DEBUG: Skipping manual updater - auto-updater will handle startup checks on Mac/Windows");
+            // Do nothing - let the auto-updater in application.ts handle startup checks
          }
-
-         @Override
-         public void onError(ServerError error)
+      } else {
+         System.out.println("DEBUG: Using legacy server-side update check");
+         
+         server_.checkForUpdates(manual,
+               new ServerRequestCallback<UpdateCheckResult>()
          {
-            // Only show the error message when manually checking for updates 
-            if (manual)
+            @Override
+            public void onResponseReceived(UpdateCheckResult result)
             {
-               globalDisplay_.showErrorMessage(constants_.errorCheckingUpdatesMessage(),
-                     constants_.errorOccurredCheckingUpdatesMessage()
-                     + error.getMessage()
-                     + "\n\n"
-                     + constants_.visitWebsiteForNewVersionText());
+               System.out.println("DEBUG: checkForUpdates received response");
+               System.out.println("DEBUG: Update result - version: " + (result != null ? result.getUpdateVersion() : "null"));
+               System.out.println("DEBUG: Update result - message: " + (result != null ? result.getUpdateMessage() : "null"));
+               System.out.println("DEBUG: Update result - url: " + (result != null ? result.getUpdateUrl() : "null"));
+               respondToUpdateCheck(result, manual);
             }
-         }
-      });
+
+            @Override
+            public void onError(ServerError error)
+            {
+               System.out.println("DEBUG: checkForUpdates received error");
+               System.out.println("DEBUG: Error code: " + error.getCode());
+               System.out.println("DEBUG: Error message: " + error.getMessage());
+               System.out.println("DEBUG: Error user message: " + error.getUserMessage());
+               
+               // Only show the error message when manually checking for updates 
+               if (manual)
+               {
+                  globalDisplay_.showErrorMessage(constants_.errorCheckingUpdatesMessage(),
+                        constants_.errorOccurredCheckingUpdatesMessage()
+                        + error.getMessage()
+                        + "\n\n"
+                        + constants_.visitWebsiteForNewVersionText());
+               }
+            }
+         });
+      }
    }
 
    private void respondToUpdateCheck(final UpdateCheckResult result,
                                      boolean manual)
    {
+      System.out.println("=== DEBUG: respondToUpdateCheck() called ===");
+      System.out.println("DEBUG: manual=" + manual);
+      System.out.println("DEBUG: result is null: " + (result == null));
+      
+      if (result == null) {
+         System.out.println("DEBUG: Result is null, returning early");
+         return;
+      }
+      
       boolean ignoredUpdate = false;
       String updateVersion = result.getUpdateVersion();
       boolean updateAvailable = updateVersion.length() > 0;
+      
+      System.out.println("DEBUG: updateVersion=" + updateVersion);
+      System.out.println("DEBUG: updateAvailable=" + updateAvailable);
       if (updateAvailable)
       {
          JsArrayString ignoredUpdates = ignoredUpdatesState_.getIgnoredUpdates();

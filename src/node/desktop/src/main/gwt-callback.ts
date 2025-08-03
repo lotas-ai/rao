@@ -707,6 +707,10 @@ export class GwtCallback extends EventEmitter {
       });
     });
 
+    ipcMain.on('desktop_get_version', (event) => {
+      event.returnValue = app.getVersion();
+    });
+
     ipcMain.on('desktop_get_fixed_width_font_list', (event) => {
       event.returnValue = this.monospaceFonts.join('\n');
     });
@@ -1063,6 +1067,29 @@ export class GwtCallback extends EventEmitter {
         detectRosetta();
       }
     });
+    
+    ipcMain.on('desktop_check_for_updates_manually', () => {
+      logger().logInfo('DEBUG: desktop_check_for_updates_manually IPC handler called');
+      // Import and call the manual updater function
+      import('./manual-updater').then(({ checkForUpdatesManually }) => {
+        logger().logInfo('DEBUG: Calling checkForUpdatesManually from manual-updater');
+        void checkForUpdatesManually();
+      }).catch((error) => {
+        logger().logError(`DEBUG: Error importing manual-updater: ${error}`);
+      });
+    });
+
+    ipcMain.on('desktop_set_auto_updates_enabled', (event, enabled: boolean) => {
+      logger().logInfo(`DEBUG: desktop_set_auto_updates_enabled IPC handler called with: ${enabled}`);
+      // Get the application instance and update auto-updater behavior
+      const appInstance = appState() as any; // Cast to any since Application has more methods than AppState interface
+      if (appInstance && typeof appInstance.setAutoUpdatesEnabled === 'function') {
+        logger().logInfo(`DEBUG: Calling appInstance.setAutoUpdatesEnabled(${enabled})`);
+        appInstance.setAutoUpdatesEnabled(enabled);
+      } else {
+        logger().logError('DEBUG: Application instance or setAutoUpdatesEnabled method not found');
+      }
+    });
 
     ipcMain.handle('desktop_get_security_mode', async () => {
       // Get the security mode from the R session via HTTP request
@@ -1092,6 +1119,8 @@ export class GwtCallback extends EventEmitter {
         return 'secure'; // Default to secure mode on error
       }
     });
+
+
   }
 
   addMacOSVersionError(): void {

@@ -819,6 +819,12 @@
             "title": "Check for new version at startup",
             "description": "Whether to check for new versions of Rao when Rao starts."
         },
+        "auto_updates_enabled": {
+            "type": "boolean",
+            "default": true,
+            "title": "Enable automatic updates",
+            "description": "Whether to automatically download and install updates in the background (Mac/Windows only)."
+        },
         "show_internal_functions": {
             "type": "boolean",
             "default": false,

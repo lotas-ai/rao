@@ -395,87 +395,21 @@ export class Application implements AppState {
     );
     this.sessionLauncher.launchFirstSession(installPath, !app.isPackaged);
 
+    // Use the existing GWT callback created by MainWindow to avoid duplicate handler registration
+    this.gwtCallback = appState().gwtCallback;
+    this.gwtCallback?.once(GwtCallback.WORKBENCH_INITIALIZED, () => {
+      this.checkAutoUpdatesPreference();
+    });
+
     this.setDockMenu();
     
     // Auto-updates for macOS and Windows using S3 with enhanced logic
+    // This will be controlled by the user preference once the session is available
     if ((process.platform === 'darwin' || process.platform === 'win32') && app.isPackaged) {
-      let updateDownloaded = false;
-      let installedOnStartup = false;
-      
-      // Add event listeners to the global autoUpdater before calling updateElectronApp
-      autoUpdater.on('checking-for-update', () => {
-        logger().logInfo('Auto-updater: checking-for-update');
-      });
-      
-      autoUpdater.on('update-available', () => {
-        logger().logInfo('Auto-updater: update-available');
-      });
-      
-      autoUpdater.on('update-not-available', () => {
-        logger().logInfo('Auto-updater: update-not-available');
-      });
-      
-      autoUpdater.on('update-downloaded', (event, releaseNotes, releaseName, releaseDate, updateURL) => {
-        updateDownloaded = true;
-        logger().logInfo('Auto-updater: update-downloaded - showing notification now');
-        logger().logInfo(`Update details: ${releaseName} (${releaseDate})`);
-        
-        // Show notification with "Later" option
-        const options = {
-          type: 'info' as const,
-          title: 'Update Available',
-          message: `Rao ${releaseName} is ready to install. Restart now or it will install automatically when you quit the app.`,
-          detail: releaseNotes || 'New version available',
-          buttons: ['Restart Now', 'Later'],
-          defaultId: 0,
-          cancelId: 1
-        };
-        
-        dialog.showMessageBox(options).then(result => {
-          if (result.response === 0) {
-            // User chose "Restart Now"
-            autoUpdater.quitAndInstall();
-          }
-          // If "Later", we'll install on app quit (handled below)
-        });
-      });
-      
-      autoUpdater.on('error', (error: Error) => {
-        logger().logError(`Auto-updater error: ${error.message}`);
-      });
-
-      // Start auto-updater
-      const platform = process.platform === 'darwin' ? 'darwin' : 'win32';
-      const baseUrl = `https://lotas-downloads.s3.us-east-2.amazonaws.com/${platform}/x64`;
-      
-      updateElectronApp({
-        updateSource: {
-          type: UpdateSourceType.StaticStorage,
-          baseUrl: baseUrl
-        },
-        updateInterval: '5 minutes',
-        notifyUser: false, // We handle notifications manually
-        logger: {
-          info: (message: string) => logger().logInfo(`UEA: ${message}`),
-          warn: (message: string) => logger().logWarning(`UEA: ${message}`),
-          error: (message: string) => logger().logError(`UEA: ${message}`),
-          log: (message: string) => logger().logInfo(`UEA: ${message}`)
-        }
-      });
-
-      // Install on app quit if update was downloaded but user chose "Later"
-      app.on('before-quit', (event) => {
-        if (updateDownloaded && !installedOnStartup) {
-          logger().logInfo('Installing update on quit...');
-          autoUpdater.quitAndInstall();
-        }
-      });
+      this.setupAutoUpdater();
     }
     
-    // Manual update check for Linux and Windows (Mac uses auto-updater)
-    if (process.platform === 'linux' || process.platform === 'win32') {
-      checkForUpdatesOnStartup();
-    }
+    // Linux uses manual updates only - no automatic startup checks
 
     return run();
   }
@@ -566,6 +500,125 @@ export class Application implements AppState {
     }
   }
 
+  private updateDownloaded = false;
+  private installedOnStartup = false;
+  private autoUpdaterInitialized = false;
+
+  setupAutoUpdater() {
+    // Start auto-updater by default (user preference will override if needed)
+    logger().logInfo('Starting auto-updater by default - will be controlled by user preference when session loads');
+    this.startAutoUpdater();
+  }
+
+  private startAutoUpdater() {
+    if (this.autoUpdaterInitialized) {
+      return; // Already initialized
+    }
+
+    let updateDownloaded = false;
+    let installedOnStartup = false;
+    
+    // Add event listeners to the global autoUpdater before calling updateElectronApp
+    autoUpdater.on('checking-for-update', () => {
+      logger().logInfo('Auto-updater: checking-for-update');
+    });
+    
+    autoUpdater.on('update-available', () => {
+      logger().logInfo('Auto-updater: update-available');
+    });
+    
+    autoUpdater.on('update-not-available', () => {
+      logger().logInfo('Auto-updater: update-not-available');
+    });
+    
+    autoUpdater.on('update-downloaded', (event, releaseNotes, releaseName, releaseDate, updateURL) => {
+      updateDownloaded = true;
+      this.updateDownloaded = true;
+      logger().logInfo('Auto-updater: update-downloaded');
+      logger().logInfo(`Update details: ${releaseName} (${releaseDate})`);
+      
+      // CRITICAL FIX: Prevent notifications for identical versions
+      const currentVersion = app.getVersion().trim();
+      const availableVersion = (releaseName || '').trim();
+      logger().logInfo(`DEBUG: Version comparison - Current: "${currentVersion}", Available: "${availableVersion}"`);
+      
+      if (currentVersion === availableVersion) {
+        logger().logInfo('DEBUG: BLOCKING notification - versions are identical!');
+        return; // Don't show notification for same version
+      }
+      
+      logger().logInfo('DEBUG: Versions different - showing notification');
+      
+      // Show notification with "Later" option
+      const options = {
+        type: 'info' as const,
+        title: 'Update Available',
+        message: `Rao ${releaseName} is ready to install. Restart now or it will install automatically when you quit the app.`,
+        detail: releaseNotes || 'New version available',
+        buttons: ['Restart Now', 'Later'],
+        defaultId: 0,
+        cancelId: 1
+      };
+      
+      dialog.showMessageBox(options).then(result => {
+        if (result.response === 0) {
+          // User chose "Restart Now"
+          autoUpdater.quitAndInstall();
+        }
+        // If "Later", we'll install on app quit (handled below)
+      });
+    });
+    
+    autoUpdater.on('error', (error: Error) => {
+      logger().logError(`Auto-updater error: ${error.message}`);
+    });
+
+    // Start auto-updater
+    const platform = process.platform === 'darwin' ? 'darwin' : 'win32';
+    const baseUrl = `https://lotas-downloads.s3.us-east-2.amazonaws.com/${platform}/x64`;
+    
+    updateElectronApp({
+      updateSource: {
+        type: UpdateSourceType.StaticStorage,
+        baseUrl: baseUrl
+      },
+      updateInterval: '5 minutes',
+      notifyUser: false, // We handle notifications manually
+      logger: {
+        info: (message: string) => logger().logInfo(`UEA: ${message}`),
+        warn: (message: string) => logger().logWarning(`UEA: ${message}`),
+        error: (message: string) => logger().logError(`UEA: ${message}`),
+        log: (message: string) => logger().logInfo(`UEA: ${message}`)
+      }
+    });
+
+    // Install on app quit if update was downloaded but user chose "Later"
+    app.on('before-quit', (event) => {
+      if (this.updateDownloaded && !this.installedOnStartup) {
+        logger().logInfo('Installing update on quit...');
+        autoUpdater.quitAndInstall();
+      }
+    });
+
+    this.autoUpdaterInitialized = true;
+  }
+
+  private stopAutoUpdater() {
+    if (!this.autoUpdaterInitialized) {
+      return; // Already stopped
+    }
+
+    logger().logInfo('Stopping auto-updater (disabled by user preference)');
+    
+    // Remove all listeners
+    autoUpdater.removeAllListeners();
+    
+    // Note: updateElectronApp doesn't provide a clean way to stop,
+    // so we'll rely on removing listeners to prevent actions
+    
+    this.autoUpdaterInitialized = false;
+  }
+
   setDockMenu() {
     if (process.platform === 'darwin') {
       const menuDock = Menu.buildFromTemplate([
@@ -578,6 +631,56 @@ export class Application implements AppState {
       ]);
 
       app.dock.setMenu(menuDock);
+    }
+  }
+
+  /**
+   * Check user preference for auto-updates and control auto-updater behavior
+   */
+  private async checkAutoUpdatesPreference(): Promise<void> {
+    // Only check for Mac/Windows where auto-updater is used
+    if (process.platform !== 'darwin' && process.platform !== 'win32') {
+      return;
+    }
+
+    try {
+      logger().logInfo('Checking auto-updates preference from session...');
+      
+      // Use a simple fetch call similar to the existing security mode check
+      const port = appState().port;
+      const url = `http://127.0.0.1:${port}/rpc/get_auto_updates_enabled`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Shared-Secret': process.env.RS_SHARED_SECRET ?? '',
+        },
+        body: JSON.stringify({})
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        const autoUpdatesEnabled = result.result !== false; // Default to true
+        
+        logger().logInfo(`Auto-updates preference: ${autoUpdatesEnabled}`);
+        
+        if (autoUpdatesEnabled) {
+          logger().logInfo('Auto-updates enabled - starting auto-updater');
+          this.startAutoUpdater();
+        } else {
+          logger().logInfo('Auto-updates disabled by user preference - stopping auto-updater');
+          this.stopAutoUpdater();
+        }
+      } else {
+        logger().logError(`Failed to get auto-updates preference: ${response.status} ${response.statusText}`);
+        // Default to enabled on error
+        this.startAutoUpdater();
+      }
+    } catch (error) {
+      logger().logError(`Error checking auto-updates preference: ${error}`);
+      // Default to enabled on error
+      this.startAutoUpdater();
     }
   }
 }

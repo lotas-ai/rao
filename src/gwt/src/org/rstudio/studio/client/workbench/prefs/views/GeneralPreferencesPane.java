@@ -194,13 +194,14 @@ public class GeneralPreferencesPane extends PreferencesPane
             prefs_.wrapTabNavigation(),
             true /*defaultSpaced*/));
 
-      // provide check for updates option in desktop mode when not
-      // already globally disabled
+      // provide auto-updates option for Mac and Windows only
+      // Note: We ignore the DisableCheckForUpdates flag here because that's meant to disable
+      // RStudio's original update system, not our custom Rao auto-updates feature
       if (Desktop.isDesktop() &&
-          !session.getSessionInfo().getDisableCheckForUpdates())
+          (BrowseCap.isMacintoshDesktop() || BrowseCap.isWindowsDesktop()))
       {
-         basic.add(checkboxPref(constants_.otherNotifyMeLabel(),
-                   prefs_.checkForUpdates(), true /*defaultSpaced*/));
+         basic.add(checkboxPref(constants_.otherAutoUpdatesLabel(),
+                   prefs_.autoUpdatesEnabled(), true /*defaultSpaced*/));
       }
 
       CheckBox autohideMenubar = checkboxPref(constants_.autohideMenubarLabel(), prefs_.autohideMenubar());

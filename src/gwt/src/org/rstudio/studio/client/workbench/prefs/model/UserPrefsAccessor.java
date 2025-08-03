@@ -1726,6 +1726,18 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
+    * Whether to automatically download and install updates in the background (Mac/Windows only).
+    */
+   public PrefValue<Boolean> autoUpdatesEnabled()
+   {
+      return bool(
+         "auto_updates_enabled",
+         _constants.autoUpdatesEnabledTitle(), 
+         _constants.autoUpdatesEnabledDescription(), 
+         true);
+   }
+
+   /**
     * Whether to show functions without source references in the Traceback pane while debugging.
     */
    public PrefValue<Boolean> showInternalFunctions()
@@ -4080,6 +4092,8 @@ public class UserPrefsAccessor extends Prefs
          autoExpandErrorTracebacks().setValue(layer, source.getBool("auto_expand_error_tracebacks"));
       if (source.hasKey("check_for_updates"))
          checkForUpdates().setValue(layer, source.getBool("check_for_updates"));
+      if (source.hasKey("auto_updates_enabled"))
+         autoUpdatesEnabled().setValue(layer, source.getBool("auto_updates_enabled"));
       if (source.hasKey("show_internal_functions"))
          showInternalFunctions().setValue(layer, source.getBool("show_internal_functions"));
       if (source.hasKey("shiny_viewer_type"))
@@ -4498,6 +4512,7 @@ public class UserPrefsAccessor extends Prefs
       prefs.add(handleErrorsInUserCodeOnly());
       prefs.add(autoExpandErrorTracebacks());
       prefs.add(checkForUpdates());
+      prefs.add(autoUpdatesEnabled());
       prefs.add(showInternalFunctions());
       prefs.add(shinyViewerType());
       prefs.add(shinyBackgroundJobs());

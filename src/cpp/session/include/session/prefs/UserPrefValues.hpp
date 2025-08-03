@@ -209,6 +209,7 @@ namespace prefs {
 #define kHandleErrorsInUserCodeOnly "handle_errors_in_user_code_only"
 #define kAutoExpandErrorTracebacks "auto_expand_error_tracebacks"
 #define kCheckForUpdates "check_for_updates"
+#define kAutoUpdatesEnabled "auto_updates_enabled"
 #define kShowInternalFunctions "show_internal_functions"
 #define kShinyViewerType "shiny_viewer_type"
 #define kShinyViewerTypeUser "user"
@@ -1181,6 +1182,12 @@ public:
     */
    bool checkForUpdates();
    core::Error setCheckForUpdates(bool val);
+
+   /**
+    * Whether to automatically download and install updates in the background (Mac/Windows only).
+    */
+   bool autoUpdatesEnabled();
+   core::Error setAutoUpdatesEnabled(bool val);
 
    /**
     * Whether to show functions without source references in the Traceback pane while debugging.

@@ -1030,6 +1030,14 @@ public interface UserPrefsAccessorConstants extends Constants {
    String checkForUpdatesDescription();
 
    /**
+    * Whether to automatically download and install updates in the background (Mac/Windows only).
+    */
+   @DefaultStringValue("Enable automatic updates")
+   String autoUpdatesEnabledTitle();
+   @DefaultStringValue("Whether to automatically download and install updates in the background (Mac/Windows only).")
+   String autoUpdatesEnabledDescription();
+
+   /**
     * Whether to show functions without source references in the Traceback pane while debugging.
     */
    @DefaultStringValue("Show internal functions when debugging")

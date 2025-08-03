@@ -418,7 +418,7 @@ export function getDesktopBridge() {
       const webcontents = webContents.getAllWebContents();
 
       if (webcontents.length) {
-        path = path.replaceAll('\\', '\\\\').replaceAll('"', '\\"').replaceAll('\n', '\\n');
+        path = path.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
 
         // use first window that has the desktop hooks (the splash screen, for example, does NOT have them)
         for (const webcontent of webcontents) {
@@ -778,6 +778,16 @@ export function getDesktopBridge() {
 
     getPathForFile: (file: File) => {
       return webUtils.getPathForFile(file);
+    },
+
+    checkForUpdatesManually: () => {
+      logString('debug', '[desktop-bridge] checkForUpdatesManually called from GWT');
+      ipcRenderer.send('desktop_check_for_updates_manually');
+    },
+
+    setAutoUpdatesEnabled: (enabled: boolean) => {
+      logString('debug', `[desktop-bridge] setAutoUpdatesEnabled called with: ${enabled}`);
+      ipcRenderer.send('desktop_set_auto_updates_enabled', enabled);
     },
 
     // Important: be sure last item above has a trailing commma since the pro
