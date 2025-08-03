@@ -95,17 +95,16 @@ if exist node_modules\@electron-forge\maker-squirrel (
         exit /b 1
     )
     set NPM_INSTALLED=1
-)
-popd
-
-REM Run CMake install to ensure all binaries are in the CPack directory
-echo Running CMake install to prepare binaries...
-pushd %PACKAGE_DIR%\build
-cmake --install . --config Release
-if ERRORLEVEL 1 (
-    echo Error: CMake install failed
-    popd
-    exit /b 1
+    
+    REM Patch Squirrel timeout after npm install - MUST SUCCEED
+    echo Patching Squirrel timeout to prevent installation failures...
+    powershell -ExecutionPolicy Bypass -File "%PACKAGE_DIR%\patch-squirrel-timeout.ps1" -ElectronSourceDir "%ELECTRON_SOURCE_DIR%"
+    if ERRORLEVEL 1 (
+        echo.!! ERROR: Squirrel timeout patch failed - build cannot continue
+        echo This indicates a problem with npm dependencies or Squirrel binaries
+        popd
+        exit /b 1
+    )
 )
 popd
 

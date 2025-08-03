@@ -225,6 +225,16 @@ if "%RSTUDIO_TARGET%" == "Electron" (
             call %NPM% install
         )
         set NPM_INSTALLED=1
+        
+        REM Patch Squirrel timeout after npm install - MUST SUCCEED
+        echo Patching Squirrel timeout to prevent installation failures...
+        powershell -ExecutionPolicy Bypass -File "%PACKAGE_DIR%\patch-squirrel-timeout.ps1" -ElectronSourceDir "%ELECTRON_SOURCE_DIR%"
+        if ERRORLEVEL 1 (
+            echo.!! ERROR: Squirrel timeout patch failed - build cannot continue
+            echo This indicates a problem with npm dependencies or Squirrel binaries
+            popd
+            exit /b 1
+        )
     )
     REM Save original package.json
     copy package.json package.json.orig
@@ -276,6 +286,99 @@ if "%MULTIARCH%" == "1" (
         exit /b 1
     )
 )
+
+REM Create NSIS installer package using CPack
+echo Creating NSIS installer package...
+set PKG_TEMP_DIR=C:\rsbuild
+echo Using PKG_TEMP_DIR: %PKG_TEMP_DIR%
+
+REM Debug information before CPack
+echo.
+echo === CPack Debug Information ===
+echo Current directory: %CD%
+echo PKG_TEMP_DIR: %PKG_TEMP_DIR%
+echo BUILD_DIR: %BUILD_DIR%
+
+pushd build
+echo Changed to build directory: %CD%
+
+REM Check required files exist
+if not exist "CPackConfig.cmake" (
+    echo.!! ERROR: CPackConfig.cmake not found in %CD%
+    popd
+    exit /b 1
+)
+echo Found CPackConfig.cmake
+
+REM Check if output directory exists
+if not exist "%PKG_TEMP_DIR%" (
+    echo Creating output directory: %PKG_TEMP_DIR%
+    mkdir "%PKG_TEMP_DIR%"
+)
+echo Output directory ready: %PKG_TEMP_DIR%
+
+REM Show CPack configuration
+echo.
+echo === CPack Configuration ===
+findstr /i "CPACK_PACKAGE_DIRECTORY\|CPACK_GENERATOR\|CPACK_PACKAGE_NAME" CPackConfig.cmake
+
+echo.
+echo === Running CPack ===
+cpack -G NSIS || (
+    echo.
+    echo.!! ERROR: CPack NSIS package generation failed
+    echo === Post-failure Debug Information ===
+    echo Current directory: %CD%
+    echo Files in current directory:
+    dir /b
+    echo Files in %PKG_TEMP_DIR%:
+    if exist "%PKG_TEMP_DIR%" (
+        dir /b "%PKG_TEMP_DIR%"
+    ) else (
+        echo %PKG_TEMP_DIR% does not exist
+    )
+    echo === End Debug Information ===
+    popd
+    exit /b 1
+)
+
+echo.
+echo === CPack Success - Checking Output ===
+echo Files created in %PKG_TEMP_DIR%:
+if exist "%PKG_TEMP_DIR%" (
+    dir /b "%PKG_TEMP_DIR%"
+) else (
+    echo.!! WARNING: %PKG_TEMP_DIR% does not exist after CPack
+)
+
+if exist "%PKG_TEMP_DIR%\_CPack_Packages" (
+    echo _CPack_Packages directory structure:
+    dir /s /b "%PKG_TEMP_DIR%\_CPack_Packages"
+) else (
+    echo.!! WARNING: _CPack_Packages directory not created
+)
+
+popd
+echo === End CPack Debug ===
+echo.
+
+REM Copy installer from CPack output to build directory for make-dist-packages.bat
+echo Copying installer from %PKG_TEMP_DIR% to build directory...
+if exist "%PKG_TEMP_DIR%\Rao-*.exe" (
+    copy /Y "%PKG_TEMP_DIR%\Rao-*.exe" build\ || (
+        echo.!! ERROR: Failed to copy installer to build directory
+        exit /b 1
+    )
+    echo Installer copied successfully
+) else (
+    echo.!! ERROR: No installer found in %PKG_TEMP_DIR%
+    echo Available files in %PKG_TEMP_DIR%:
+    if exist "%PKG_TEMP_DIR%" (
+        dir /b "%PKG_TEMP_DIR%"
+    )
+    exit /b 1
+)
+echo.
 
 REM Create packages for development builds.
 REM The official build invokes this from Jenkinsfile after signing binaries.
