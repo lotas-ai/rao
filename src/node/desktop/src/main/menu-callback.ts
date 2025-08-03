@@ -404,7 +404,14 @@ export class MenuCallback extends EventEmitter {
       label: label,
       id: cmdId,
       click: (menuItem, _browserWindow, _event) => {
-        // Let checkForUpdates command flow through to GWT handler
+        // Handle manual updates for Linux only (Mac and Windows use auto-updater)
+        if (cmdId === 'checkForUpdates') {
+          if (process.platform === 'linux') {
+            void checkForUpdatesManually();
+          }
+          // No-op for Mac and Windows - auto-updater handles updates
+          return;
+        }
         this.emit(MenuCallback.COMMAND_INVOKED, menuItem.id);
       },
     };

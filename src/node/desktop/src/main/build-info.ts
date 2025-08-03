@@ -33,15 +33,15 @@ export interface BuildInfo {
 // -----------------------------------------------------------------------------
 export function buildInfo(): BuildInfo {
   return {
-    RSTUDIO_VERSION: '9999.9.9-dev+999',
-    RSTUDIO_BUILD_DATE: '2022-02-02',
-    RSTUDIO_COPYRIGHT_YEAR: '2022',
-    RSTUDIO_VERSION_PATCH: 1,
-    RSTUDIO_R_MAJOR_VERSION_REQUIRED: 3,
+    RSTUDIO_VERSION: '0.3.0',
+    RSTUDIO_BUILD_DATE: '2025-08-03',
+    RSTUDIO_COPYRIGHT_YEAR: '2025',
+    RSTUDIO_VERSION_PATCH: 0,
+    RSTUDIO_R_MAJOR_VERSION_REQUIRED: 4,
     RSTUDIO_R_MINOR_VERSION_REQUIRED: 0,
-    RSTUDIO_R_PATCH_VERSION_REQUIRED: 1,
-    RSTUDIO_PACKAGE_OS: 'Unknown OS',
-    RSTUDIO_GIT_COMMIT: 'c58914566b7f443d4311d7d7da944e4ad49f2baa',
-    RSTUDIO_RELEASE_NAME: 'Developer Build',
+    RSTUDIO_R_PATCH_VERSION_REQUIRED: 0,
+    RSTUDIO_PACKAGE_OS: 'Windows',
+    RSTUDIO_GIT_COMMIT: 'ecd87352c9ca4dca424214a9603859b5117c20d2',
+    RSTUDIO_RELEASE_NAME: 'Cucumberleaf Sunflower',
   };
 }

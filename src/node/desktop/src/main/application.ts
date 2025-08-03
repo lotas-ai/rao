@@ -84,6 +84,11 @@ export class Application implements AppState {
    * Startup code run before app 'ready' event.
    */
   async beforeAppReady(): Promise<ProgramStatus> {
+    // Set App User Model ID for proper Windows integration and Squirrel behavior
+    if (process.platform === 'win32') {
+      app.setAppUserModelId('com.squirrel.rao.Rao');
+    }
+
     const status = this.argsManager.initCommandLine(this);
 
     if (status.exit) {

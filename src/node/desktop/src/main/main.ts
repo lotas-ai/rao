@@ -13,146 +13,240 @@
  *
  */
 
-import { app } from 'electron';
-import i18next from 'i18next';
-import { safeError } from '../core/err';
-import { logLevel, logger } from '../core/logger';
-import { setApplication } from './app-state';
-import { Application } from './application';
-import { initI18n } from './i18n-manager';
-import { ElectronDesktopOptions } from './preferences/electron-desktop-options';
-import { parseStatus } from './program-status';
-import { createStandaloneErrorDialog } from './utils';
-import { Xdg } from '../core/xdg';
-import { existsSync, readFileSync } from 'fs';
-import path from 'path';
+// MINIMAL IMPORTS FOR FAST SQUIRREL EVENT HANDLING
+const moduleStartTime = Date.now()
+console.log(`[SQUIRREL-TIMING] 0ms: main.ts module loading started`)
 
-/**
- * RStudio entrypoint
- */
-class RStudioMain {
-  async main(): Promise<void> {
-    try {
-      await this.startup();
-    } catch (error: unknown) {
-      const err = safeError(error);
-      await app.whenReady(); // can't show upcoming error message window until app is ready
-      await createStandaloneErrorDialog(i18next.t('mainTs.unhandledException'), err.message);
-      console.error(err.message); // logging possibly not available this early in startup
-      if (logLevel() === 'debug') {
-        console.error(err.stack);
-      }
-      app.exit(1);
-    }
-  }
+import { app } from 'electron'
+console.log(`[SQUIRREL-TIMING] ${Date.now() - moduleStartTime}ms: Electron app imported`)
 
-  private initializeAppConfig() {
-    const configDirs = [Xdg.userConfigDir().getAbsolutePath(), app.getPath('appData')];
-    for (const configDir of configDirs) {
-      const configPath = path.join(configDir, 'electron-flags.conf');
-      if (existsSync(configPath)) {
-        logger().logDebug(`Using Electron flags from file ${configPath}`);
-        const configContents = readFileSync(configPath, { encoding: 'utf-8' });
-        const configLines = configContents.split(/\r?\n/);
-        for (const configLine of configLines) {
-          if (configLine.startsWith('--')) {
-            logger().logDebug(`Appending switch: ${configLine}`);
-            const equalsIndex = configLine.indexOf('=');
-            if (equalsIndex !== -1) {
-              const name = configLine.substring(2, equalsIndex);
-              const value = configLine.substring(equalsIndex + 1);
-              app.commandLine.appendSwitch(name, value);
-            } else {
-              const name = configLine.substring(2);
-              app.commandLine.appendSwitch(name);
-            }
-          }
-        }
-        return;
-      }
-    }
-  }
+import { handleSquirrelEvent } from './squirrel-updater'
+console.log(`[SQUIRREL-TIMING] ${Date.now() - moduleStartTime}ms: Squirrel updater imported`)
 
-  private async initializeRenderingEngine() {
-    const options = ElectronDesktopOptions();
+// Simple log for Squirrel events (no heavy logging setup)
+const log = {
+  error: (msg: string, err?: any) => console.error(`[SQUIRREL-ERROR] ${msg}`, err || ''),
+  info: (msg: string) => console.log(`[SQUIRREL-INFO] ${msg}`)
+}
 
-    if (!options.useGpuDriverBugWorkarounds()) {
-      app.commandLine.appendSwitch('disable-gpu-driver-bug-workarounds');
-    }
+// GitHub Desktop's exact Squirrel handling pattern - MUST BE FIRST
+let handlingSquirrelEvent = false
+if (process.platform === 'win32' && process.argv.length > 1) {
+  const startTime = moduleStartTime
+  // Set global timing for use across modules
+  ;(global as any).squirrelStartTime = startTime
+  console.log(`[SQUIRREL-TIMING] ${Date.now() - startTime}ms: Squirrel event detection started`)
+  
+  const arg = process.argv[1]
+  console.log(`[SQUIRREL-TIMING] ${Date.now() - startTime}ms: Detected event: ${arg}`)
+  
+  const promise = handleSquirrelEvent(arg)
 
-    if (!options.useGpuExclusionList()) {
-      app.commandLine.appendSwitch('ignore-gpu-blacklist');
-    }
-
-    // read rendering engine, if any
-    const engine = ElectronDesktopOptions().renderingEngine().toLowerCase();
-
-    // for whatever reason, setting '--use-gl=desktop' doesn't seem to enable
-    // the GPU on macOS; testing on other platforms would be worthwhile but
-    // Chromium will enable GPU acceleration by default where possible so it
-    // seems okay to ignore here
-    if (engine.length === 0 || engine === 'desktop' || engine == 'auto') {
-      return;
-    }
-
-    // handle gles (primarily for linux)
-    if (engine === 'gles') {
-      app.commandLine.appendSwitch('use-gl', 'gles');
-      return;
-    }
-
-    // handle software rendering
-    if (engine === 'software') {
-      app.commandLine.appendSwitch('disable-gpu');
-      return;
-    }
-  }
-
-  private async initializeAccessibility() {
-    // there have been cases, historically, where Chromium accessibility
-    // would enable itself and introduce performance issues even though the
-    // user was not using an accessibility aid such as a screen reader, e.g.:
-    // https://github.com/rstudio/rstudio/issues/1990)
-    if (ElectronDesktopOptions().disableRendererAccessibility()) {
-      app.commandLine.appendSwitch('disable-renderer-accessibility');
-    }
-  }
-
-  private async startup(): Promise<void> {
-    await this.initializeRenderingEngine();
-    await this.initializeAccessibility();
-
-    // NOTE: On Linux it looks like Electron prefers using ANGLE for GPU
-    // rendering; however, we've seen in at least one case (Ubuntu 20.04 in
-    // Parallels VM) fails to render in that case (we just get a white screen).
-    // Prefer 'desktop' by default, but we'll need to respect the user-defined
-    // property as well.
-    if (process.platform === 'linux') {
-      if (!app.commandLine.hasSwitch('use-gl')) {
-        app.commandLine.appendSwitch('use-gl', 'desktop');
-      }
-    }
-
-    const rstudio = new Application();
-    rstudio.argsManager.handleLogLevel();
-    setApplication(rstudio);
-
-    this.initializeAppConfig();
-
-    if (!parseStatus(await rstudio.beforeAppReady())) {
-      return;
-    }
-
-    await app.whenReady();
-
-    if (!parseStatus(await rstudio.run())) {
-      return;
-    }
+  if (promise) {
+    handlingSquirrelEvent = true
+    console.log(`[SQUIRREL-TIMING] ${Date.now() - startTime}ms: Squirrel handler promise created`)
+    
+    promise
+      .catch(e => {
+        console.log(`[SQUIRREL-TIMING] ${Date.now() - startTime}ms: ERROR in Squirrel handler: ${e.message}`)
+        log.error(`Failed handling Squirrel event: ${arg}`, e)
+      })
+      .then(() => {
+        console.log(`[SQUIRREL-TIMING] ${Date.now() - startTime}ms: Calling app.quit()`)
+        app.quit()
+      })
+  } else {
+    console.log(`[SQUIRREL-TIMING] ${Date.now() - startTime}ms: No Squirrel event to handle`)
   }
 }
 
-// Startup
-initI18n();
+// Only start normal app if not handling Squirrel events
+// Load heavy imports ONLY when needed to avoid Squirrel timeout
+if (!handlingSquirrelEvent) {
+          async function startNormalApp() {
+           // Import heavy modules only when not handling Squirrel events
+           const { default: i18next } = await import('i18next')
+           const { safeError } = await import('../core/err')
+           const { logLevel, logger } = await import('../core/logger')
+           
+           // Set up global log for normal app operation
+           const g = global as any
+           g.log = {
+             error: (message: string, error?: Error) => {
+               if (error) {
+                 logger().logError(`${message} - ${error}`)
+               } else {
+                 logger().logError(message)
+               }
+             },
+             warn: (message: string, error?: Error) => {
+               if (error) {
+                 logger().logWarning(`${message} - ${error}`)
+               } else {
+                 logger().logWarning(message)
+               }
+             },
+             info: (message: string, error?: Error) => {
+               if (error) {
+                 logger().logInfo(`${message} - ${error}`)
+               } else {
+                 logger().logInfo(message)
+               }
+             },
+             debug: (message: string, error?: Error) => {
+               if (error) {
+                 logger().logDebug(`${message} - ${error}`)
+               } else {
+                 logger().logDebug(message)
+               }
+             }
+           }
+           
+           const { setApplication } = await import('./app-state')
+           const { Application } = await import('./application')
+           const { initI18n } = await import('./i18n-manager')
+           const { ElectronDesktopOptions } = await import('./preferences/electron-desktop-options')
+           const { parseStatus } = await import('./program-status')
+           const { createStandaloneErrorDialog } = await import('./utils')
+           const { Xdg } = await import('../core/xdg')
+           const { existsSync, readFileSync } = await import('fs')
+           const path = await import('path')
+    
+    /**
+     * RStudio entrypoint
+     */
+    class RStudioMain {
+      async main(): Promise<void> {
 
-const main = new RStudioMain();
-void main.main();
+        // Set App User Model ID for proper Windows integration
+        if (process.platform === 'win32') {
+          app.setAppUserModelId('com.squirrel.rao.Rao');
+        }
+
+        try {
+          await this.startup();
+        } catch (error: unknown) {
+          const err = safeError(error);
+          await app.whenReady(); // can't show upcoming error message window until app is ready
+          await createStandaloneErrorDialog(i18next.t('mainTs.unhandledException'), err.message);
+          console.error(err.message); // logging possibly not available this early in startup
+          if (logLevel() === 'debug') {
+            console.error(err.stack);
+          }
+          app.exit(1);
+        }
+      }
+
+      private initializeAppConfig() {
+        const configDirs = [Xdg.userConfigDir().getAbsolutePath(), app.getPath('appData')];
+        for (const configDir of configDirs) {
+          const configPath = path.join(configDir, 'electron-flags.conf');
+          if (existsSync(configPath)) {
+            logger().logDebug(`Using Electron flags from file ${configPath}`);
+            const configContents = readFileSync(configPath, { encoding: 'utf-8' });
+            const configLines = configContents.split(/\r?\n/);
+            for (const configLine of configLines) {
+              if (configLine.startsWith('--')) {
+                logger().logDebug(`Appending switch: ${configLine}`);
+                const equalsIndex = configLine.indexOf('=');
+                if (equalsIndex !== -1) {
+                  const name = configLine.substring(2, equalsIndex);
+                  const value = configLine.substring(equalsIndex + 1);
+                  app.commandLine.appendSwitch(name, value);
+                } else {
+                  const name = configLine.substring(2);
+                  app.commandLine.appendSwitch(name);
+                }
+              }
+            }
+            return;
+          }
+        }
+      }
+
+      private async initializeRenderingEngine() {
+        const options = ElectronDesktopOptions();
+
+        if (!options.useGpuDriverBugWorkarounds()) {
+          app.commandLine.appendSwitch('disable-gpu-driver-bug-workarounds');
+        }
+
+        if (!options.useGpuExclusionList()) {
+          app.commandLine.appendSwitch('ignore-gpu-blacklist');
+        }
+
+        // read rendering engine, if any
+        const engine = ElectronDesktopOptions().renderingEngine().toLowerCase();
+
+        // for whatever reason, setting '--use-gl=desktop' doesn't seem to enable
+        // the GPU on macOS; testing on other platforms would be worthwhile but
+        // Chromium will enable GPU acceleration by default where possible so it
+        // seems okay to ignore here
+        if (engine.length === 0 || engine === 'desktop' || engine == 'auto') {
+          return;
+        }
+
+        // handle gles (primarily for linux)
+        if (engine === 'gles') {
+          app.commandLine.appendSwitch('use-gl', 'gles');
+          return;
+        }
+
+        // handle software rendering
+        if (engine === 'software') {
+          app.commandLine.appendSwitch('disable-gpu');
+          return;
+        }
+      }
+
+      private async initializeAccessibility() {
+        // there have been cases, historically, where Chromium accessibility
+        // would enable itself and introduce performance issues even though the
+        // user was not using an accessibility aid such as a screen reader, e.g.:
+        // https://github.com/rstudio/rstudio/issues/1990)
+        if (ElectronDesktopOptions().disableRendererAccessibility()) {
+          app.commandLine.appendSwitch('disable-renderer-accessibility');
+        }
+      }
+
+      private async startup(): Promise<void> {
+        await this.initializeRenderingEngine();
+        await this.initializeAccessibility();
+
+        // NOTE: On Linux it looks like Electron prefers using ANGLE for GPU
+        // rendering; however, we've seen in at least one case (Ubuntu 20.04 in
+        // Parallels VM) fails to render in that case (we just get a white screen).
+        // Prefer 'desktop' by default, but we'll need to respect the user-defined
+        // property as well.
+        if (process.platform === 'linux') {
+          if (!app.commandLine.hasSwitch('use-gl')) {
+            app.commandLine.appendSwitch('use-gl', 'desktop');
+          }
+        }
+
+        const rstudio = new Application();
+        rstudio.argsManager.handleLogLevel();
+        setApplication(rstudio);
+
+        this.initializeAppConfig();
+
+        if (!parseStatus(await rstudio.beforeAppReady())) {
+          return;
+        }
+
+        await app.whenReady();
+
+        if (!parseStatus(await rstudio.run())) {
+          return;
+        }
+      }
+    }
+    
+    initI18n();
+    
+    const main = new RStudioMain();
+    void main.main();
+  }
+  
+  void startNormalApp();
+}
