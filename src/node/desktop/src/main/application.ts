@@ -458,7 +458,7 @@ export class Application implements AppState {
           type: UpdateSourceType.StaticStorage,
           baseUrl: baseUrl
         },
-        updateInterval: '5 minutes',
+        updateInterval: '60 minutes',
         notifyUser: false, // We handle notifications manually
         logger: {
           info: (message: string) => logger().logInfo(`UEA: ${message}`),

@@ -59,3 +59,4 @@ CLAUDE.md
 /package/win32/packages
 /dependencies/windows/ripgrep
 src/node/desktop/package.json.orig
+/temp_nupkg_extraction
