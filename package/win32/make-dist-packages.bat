@@ -95,16 +95,16 @@ if exist node_modules\@electron-forge\maker-squirrel (
         exit /b 1
     )
     set NPM_INSTALLED=1
-    
-    REM Patch Squirrel timeout after npm install - MUST SUCCEED
-    echo Patching Squirrel timeout to prevent installation failures...
-    powershell -ExecutionPolicy Bypass -File "%PACKAGE_DIR%\patch-squirrel-timeout.ps1" -ElectronSourceDir "%ELECTRON_SOURCE_DIR%"
-    if ERRORLEVEL 1 (
-        echo.!! ERROR: Squirrel timeout patch failed - build cannot continue
-        echo This indicates a problem with npm dependencies or Squirrel binaries
-        popd
-        exit /b 1
-    )
+)
+
+REM Always patch Squirrel timeout after npm check - MUST SUCCEED
+echo Patching Squirrel timeout to prevent installation failures...
+powershell -ExecutionPolicy Bypass -File "%PACKAGE_DIR%\patch-squirrel-timeout.ps1" -ElectronSourceDir "%ELECTRON_SOURCE_DIR%"
+if ERRORLEVEL 1 (
+    echo.!! ERROR: Squirrel timeout patch failed - build cannot continue
+    echo This indicates a problem with npm dependencies or Squirrel binaries
+    popd
+    exit /b 1
 )
 popd
 

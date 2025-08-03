@@ -51,11 +51,28 @@ function Patch-SquirrelBinary {
         }
     }
 
-    # FAIL if no timeouts found - this means the binary is wrong or already modified
+    # Check if no timeouts found - this means already patched or wrong binary
     if ($patchCount -eq 0) {
-        Write-Host "ERROR: No 15000ms timeouts found in $(Split-Path $BinaryPath -Leaf)"
-        Write-Host "This binary may be corrupted, wrong version, or already modified"
-        exit 1
+        # Check if it has 20-minute timeouts (already patched)
+        $replacementBytes = @(0x80, 0xD0, 0x12, 0x00)  # 1,200,000 (20 minutes) in little-endian
+        $existingPatchCount = 0
+        for ($i = 0; $i -lt ($bytes.Length - 3); $i++) {
+            if ($bytes[$i] -eq $replacementBytes[0] -and 
+                $bytes[$i+1] -eq $replacementBytes[1] -and 
+                $bytes[$i+2] -eq $replacementBytes[2] -and 
+                $bytes[$i+3] -eq $replacementBytes[3]) {
+                $existingPatchCount++
+            }
+        }
+        
+        if ($existingPatchCount -gt 0) {
+            Write-Host "  ALREADY PATCHED: Found $existingPatchCount instances of 20-minute timeout"
+            return
+        } else {
+            Write-Host "ERROR: No 15000ms timeouts found and no 20-minute timeouts in $(Split-Path $BinaryPath -Leaf)"
+            Write-Host "This binary may be corrupted or wrong version"
+            exit 1
+        }
     }
 
     # Write the patched file
@@ -66,6 +83,25 @@ function Patch-SquirrelBinary {
 # Patch both Squirrel executables - BOTH MUST SUCCEED
 Patch-SquirrelBinary -BinaryPath $squirrelPath
 Patch-SquirrelBinary -BinaryPath $squirrelMonoPath
+
+# Also patch any Squirrel binaries in build output directories and installed locations
+$outputSquirrelPaths = @(
+    (Join-Path $ElectronSourceDir "out\Rao-win32-x64\Squirrel.exe"),
+    (Join-Path $ElectronSourceDir "out\make\squirrel.windows\x64\Squirrel.exe"),
+    (Join-Path $env:LOCALAPPDATA "rao\Update.exe"),
+    (Join-Path $env:LOCALAPPDATA "rao\app-*\Update.exe")
+)
+
+foreach ($outputPath in $outputSquirrelPaths) {
+    if (Test-Path $outputPath) {
+        Write-Host "Found output Squirrel binary: $(Split-Path $outputPath -Leaf)"
+        try {
+            Patch-SquirrelBinary -BinaryPath $outputPath
+        } catch {
+            Write-Host "Warning: Could not patch output binary $outputPath - it may be in use"
+        }
+    }
+}
 
 Write-Host "=== Squirrel Timeout Patch Complete ==="
 Write-Host "The 15-second timeout has been extended to 20 minutes"
