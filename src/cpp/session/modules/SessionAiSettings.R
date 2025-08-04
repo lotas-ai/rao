@@ -684,6 +684,9 @@
 
 # Sign in with website flow - now using loopback server for desktop
 .rs.addFunction("sign_in_with_website", function(websiteUrl) {
+  # Install authentication dependencies as the very first step
+  .rs.install_auth_dependencies()
+  
   backend_env <- .rs.detect_backend_environment()
   
   # Start loopback server for desktop OAuth callback
@@ -704,9 +707,6 @@
 
 # Start a temporary HTTP server on loopback interface for OAuth callback
 .rs.addFunction("start_auth_loopback_server", function() {
-  # Check and install required packages
-  .rs.install_auth_dependencies()
-  
   # Now load the packages
   if (!requireNamespace("httpuv", quietly = TRUE)) {
     stop("httpuv package installation failed")
