@@ -154,11 +154,7 @@ public class DesktopApplicationHeader implements ApplicationHeader,
                // if (sessionInfo.getDisableCheckForUpdates())
                //    commands.checkForUpdates().remove();
 
-               System.out.println("DEBUG: Checking startup update conditions:");
-               System.out.println("DEBUG: getDisableCheckForUpdates()=" + sessionInfo.getDisableCheckForUpdates());
-               System.out.println("DEBUG: isMacintoshDesktop()=" + BrowseCap.isMacintoshDesktop());
-               System.out.println("DEBUG: isWindowsDesktop()=" + BrowseCap.isWindowsDesktop());
-               System.out.println("DEBUG: autoUpdatesEnabled()=" + pUIPrefs_.get().autoUpdatesEnabled().getValue());
+
                
                // Check for updates on startup:
                // - Linux: always check (no auto-updates available)
@@ -441,20 +437,12 @@ public class DesktopApplicationHeader implements ApplicationHeader,
          // For Mac/Windows: use manual updater only when explicitly requested (button click)
          boolean shouldUseManualUpdater = BrowseCap.isLinuxDesktop() || manual;
          
-         System.out.println("DEBUG: Platform - Linux: " + BrowseCap.isLinuxDesktop() + 
-                           ", Mac: " + BrowseCap.isMacintoshDesktop() + 
-                           ", Windows: " + BrowseCap.isWindowsDesktop());
-         System.out.println("DEBUG: Should use manual updater: " + shouldUseManualUpdater);
-         
          if (shouldUseManualUpdater) {
-            System.out.println("DEBUG: Using Electron manual updater");
             Desktop.getFrame().checkForUpdatesManually();
          } else {
-            System.out.println("DEBUG: Skipping manual updater - auto-updater will handle startup checks on Mac/Windows");
             // Do nothing - let the auto-updater in application.ts handle startup checks
          }
       } else {
-         System.out.println("DEBUG: Using legacy server-side update check");
          
          server_.checkForUpdates(manual,
                new ServerRequestCallback<UpdateCheckResult>()

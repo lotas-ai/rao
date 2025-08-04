@@ -688,4 +688,26 @@ export class Application implements AppState {
       this.startAutoUpdater();
     }
   }
+
+  /**
+   * Set auto-updates enabled/disabled state and control auto-updater behavior
+   * Called from GWT when user changes the preference
+   */
+  setAutoUpdatesEnabled(enabled: boolean): void {
+    logger().logInfo(`setAutoUpdatesEnabled called with: ${enabled}`);
+    
+    // Only apply for Mac/Windows where auto-updater is available
+    if (process.platform !== 'darwin' && process.platform !== 'win32') {
+      logger().logInfo('Auto-updates not supported on this platform');
+      return;
+    }
+
+    if (enabled) {
+      logger().logInfo('Auto-updates enabled - starting auto-updater');
+      this.startAutoUpdater();
+    } else {
+      logger().logInfo('Auto-updates disabled by user - stopping auto-updater');
+      this.stopAutoUpdater();
+    }
+  }
 }

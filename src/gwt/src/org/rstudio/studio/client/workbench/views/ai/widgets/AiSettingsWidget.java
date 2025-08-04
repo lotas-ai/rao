@@ -313,13 +313,13 @@ public class AiSettingsWidget extends Composite
          buttonPanel.getElement().getStyle().setProperty("gap", "8px");
          
          // Sign In button
-         signInButton_ = new Button("Sign in");
+         signInButton_ = new Button("Sign up/in");
          signInButton_.addStyleName(styles_.settingButton());
          signInButton_.addStyleName(styles_.primaryButton());
          addNativeClickHandler(signInButton_.getElement(), "Sign in");
          
          // Options button (...)
-         optionsButton_ = new Button("...");
+         optionsButton_ = new Button("Use API key");
          optionsButton_.addStyleName(styles_.settingButton());
          optionsButton_.addStyleName(styles_.primaryButton());
          optionsButton_.getElement().getStyle().setProperty("flexShrink", "0");

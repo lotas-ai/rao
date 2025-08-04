@@ -1080,14 +1080,13 @@ export class GwtCallback extends EventEmitter {
     });
 
     ipcMain.on('desktop_set_auto_updates_enabled', (event, enabled: boolean) => {
-      logger().logInfo(`DEBUG: desktop_set_auto_updates_enabled IPC handler called with: ${enabled}`);
+      logger().logInfo(`Setting auto-updates enabled: ${enabled}`);
       // Get the application instance and update auto-updater behavior
       const appInstance = appState() as any; // Cast to any since Application has more methods than AppState interface
       if (appInstance && typeof appInstance.setAutoUpdatesEnabled === 'function') {
-        logger().logInfo(`DEBUG: Calling appInstance.setAutoUpdatesEnabled(${enabled})`);
         appInstance.setAutoUpdatesEnabled(enabled);
       } else {
-        logger().logError('DEBUG: Application instance or setAutoUpdatesEnabled method not found');
+        logger().logError('Application instance or setAutoUpdatesEnabled method not found');
       }
     });
 
