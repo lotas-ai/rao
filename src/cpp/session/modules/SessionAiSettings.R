@@ -704,9 +704,15 @@
 
 # Start a temporary HTTP server on loopback interface for OAuth callback
 .rs.addFunction("start_auth_loopback_server", function() {
-  # Check if httpuv is available (required for HTTP server)
+  # Check and install required packages
+  .rs.install_auth_dependencies()
+  
+  # Now load the packages
   if (!requireNamespace("httpuv", quietly = TRUE)) {
-    stop("httpuv package is required for OAuth loopback server functionality")
+    stop("httpuv package installation failed")
+  }
+  if (!requireNamespace("later", quietly = TRUE)) {
+    stop("later package installation failed")
   }
   
   # Try both IPv4 and IPv6 loopback as recommended by RFC 8252
@@ -813,6 +819,60 @@
   }
   
   stop("Could not start OAuth callback server on any loopback interface")
+})
+
+# Install dependencies required for authentication
+.rs.addFunction("install_auth_dependencies", function() {
+  required_packages <- c("httpuv", "later")
+  
+  # Check which packages are missing
+  installed <- vapply(required_packages, function(pkg) {
+    location <- find.package(pkg, quiet = TRUE)
+    length(location) > 0
+  }, FUN.VALUE = logical(1))
+  
+  missing <- required_packages[!installed]
+  if (length(missing) == 0) {
+    return(TRUE)  # All packages already installed
+  }
+  
+  # Ask user to install missing packages
+  title <- "Install Required Packages"
+  message <- paste(
+    "The following packages are required for AI authentication and will be installed:",
+    paste("-", missing, collapse = "\n"),
+    "\nWould you like to proceed?",
+    sep = "\n"
+  )
+  
+  ok <- .rs.api.showQuestion(title, message)
+  if (!ok) {
+    stop("Authentication cannot proceed without required packages", call. = FALSE)
+  }
+  
+  # Install missing packages
+  cat("Installing packages:", paste(missing, collapse = ", "), "\n")
+  
+  tryCatch({
+    utils::install.packages(missing, repos = getOption("repos"))
+    
+    # Verify installation
+    still_missing <- vapply(missing, function(pkg) {
+      location <- find.package(pkg, quiet = TRUE)
+      length(location) == 0
+    }, FUN.VALUE = logical(1))
+    
+    if (any(still_missing)) {
+      failed <- missing[still_missing]
+      stop(paste("Failed to install packages:", paste(failed, collapse = ", ")))
+    }
+    
+    cat("Successfully installed all required packages\n")
+    return(TRUE)
+    
+  }, error = function(e) {
+    stop(paste("Error installing packages:", e$message), call. = FALSE)
+  })
 })
 
 # Parse query string into named list
