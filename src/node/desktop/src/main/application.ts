@@ -641,13 +641,8 @@ export class Application implements AppState {
       // Show notification informing user about next restart
       const options = {
         type: 'info' as const,
-<<<<<<< Updated upstream
-        title: 'Update Available',
-        message: `${releaseName} is ready to install. Restart now or it will install automatically when you quit the app.`,
-=======
         title: 'Update Downloaded',
         message: `Rao ${releaseName} has been downloaded and will be installed the next time you start the application.`,
->>>>>>> Stashed changes
         detail: releaseNotes || 'New version available',
         buttons: ['OK', 'Restart Now'],
         defaultId: 0,
