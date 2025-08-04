@@ -558,7 +558,7 @@ export class Application implements AppState {
       const options = {
         type: 'info' as const,
         title: 'Update Available',
-        message: `Rao ${releaseName} is ready to install. Restart now or it will install automatically when you quit the app.`,
+        message: `${releaseName} is ready to install. Restart now or it will install automatically when you quit the app.`,
         detail: releaseNotes || 'New version available',
         buttons: ['Restart Now', 'Later'],
         defaultId: 0,

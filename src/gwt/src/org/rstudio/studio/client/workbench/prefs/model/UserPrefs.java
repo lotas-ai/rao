@@ -99,17 +99,15 @@ public class UserPrefs extends UserPrefsComputed
          enableScreenReader().addValueChangeHandler(enabled -> Desktop.getFrame().setEnableAccessibility(enabled.getValue()));
          enableMousewheelZoom().addValueChangeHandler(enabled -> Desktop.getFrame().setMousewheelZoomEnabled(enabled.getValue()));
          mousewheelZoomDebounceMs().addValueChangeHandler(debounceMs -> Desktop.getFrame().setMousewheelZoomDebounce(debounceMs.getValue()));
-         // Auto-updates preference is only relevant for Mac/Windows (not Linux)
-         if (BrowseCap.isMacintoshDesktop() || BrowseCap.isWindowsDesktop()) {
-            autoUpdatesEnabled().addValueChangeHandler(enabled -> {
-               Desktop.getFrame().setAutoUpdatesEnabled(enabled.getValue());
-            });
-            
-            // Set initial auto-updates state when preferences are loaded
-            eventBus.addHandler(SessionInitEvent.TYPE, (SessionInitEvent event) -> {
-               Desktop.getFrame().setAutoUpdatesEnabled(autoUpdatesEnabled().getValue());
-            });
-         }
+         // Auto-updates preference - platform check is done in desktop application
+         autoUpdatesEnabled().addValueChangeHandler(enabled -> {
+            Desktop.getFrame().setAutoUpdatesEnabled(enabled.getValue());
+         });
+         
+         // Set initial auto-updates state when preferences are loaded
+         eventBus.addHandler(SessionInitEvent.TYPE, (SessionInitEvent event) -> {
+            Desktop.getFrame().setAutoUpdatesEnabled(autoUpdatesEnabled().getValue());
+         });
       }
    }
 
