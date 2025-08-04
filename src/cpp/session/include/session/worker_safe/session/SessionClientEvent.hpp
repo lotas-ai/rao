@@ -226,6 +226,7 @@ extern const int kAiOperation;
 extern const int kRefreshDocumentContent;
 extern const int kRequestDocumentCloseForRevert;
 extern const int kCopilotStatusChanged;
+extern const int kAiAuthenticationCompleted;
 
 }
    

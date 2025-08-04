@@ -225,6 +225,7 @@ const int kAiOperation = 207;
 const int kRefreshDocumentContent = 208;
 const int kRequestDocumentCloseForRevert = 209;
 const int kCopilotStatusChanged = 210;
+const int kAiAuthenticationCompleted = 211;
 
 }
 
@@ -631,6 +632,8 @@ std::string ClientEvent::typeName() const
          return "request_document_close_for_revert";
       case client_events::kCopilotStatusChanged:
          return "copilot_status_changed";
+      case client_events::kAiAuthenticationCompleted:
+         return "ai_authentication_completed";
       default:
          LOG_WARNING_MESSAGE("unexpected event type: " + 
                              safe_convert::numberToString(type_));

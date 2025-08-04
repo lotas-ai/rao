@@ -312,6 +312,10 @@ SEXP rs_enqueClientEvent(SEXP nameSEXP, SEXP dataSEXP)
          type = session::client_events::kAiStreamData;
       else if (name == "ai_operation")
          type = session::client_events::kAiOperation;
+      else if (name == "ai_authentication_completed")
+      {
+         type = session::client_events::kAiAuthenticationCompleted;
+      }
       else if (name == "request_document_close_for_revert")
          type = session::client_events::kRequestDocumentCloseForRevert;
 

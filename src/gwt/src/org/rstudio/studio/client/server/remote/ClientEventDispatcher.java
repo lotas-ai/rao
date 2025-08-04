@@ -442,6 +442,11 @@ public class ClientEventDispatcher
                Debug.log("DEBUG ClientEventDispatcher: Unknown operation type, skipping: " + operationType);
             }
          }
+         else if (type == ClientEvent.AiAuthenticationCompleted)
+         {
+            // Fire authentication completion event
+            eventBus_.dispatchEvent(new org.rstudio.studio.client.workbench.views.ai.events.AiAuthenticationCompletedEvent());
+         }
          else if (type == ClientEvent.ConsoleOutput)
          {
             ConsoleText output = event.getData();

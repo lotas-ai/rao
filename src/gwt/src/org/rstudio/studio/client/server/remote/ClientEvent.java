@@ -215,6 +215,7 @@ class ClientEvent extends JavaScriptObject
    public static final String RefreshDocumentContent = "refresh_document_content";
    public static final String RequestDocumentCloseForRevert = "request_document_close_for_revert";
    public static final String CopilotStatusChanged = "copilot_status_changed";
+   public static final String AiAuthenticationCompleted = "ai_authentication_completed";
    
    protected ClientEvent()
    {

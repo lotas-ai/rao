@@ -206,9 +206,5 @@ public interface AiServerOperations
    
    void signInWithWebsite(String websiteUrl, ServerRequestCallback<String> requestCallback);
    
-   void generateAuthSessionToken(ServerRequestCallback<String> requestCallback);
-   
-   void checkAuthSessionToken(String sessionToken, ServerRequestCallback<AuthSessionResult> requestCallback);
-   
-   void completeAuthSession(String sessionToken, String apiKey, ServerRequestCallback<AuthSessionResult> requestCallback);
+   void cleanupAuthServer(ServerRequestCallback<java.lang.Void> requestCallback);
 }
