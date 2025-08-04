@@ -227,6 +227,12 @@ export class DesktopBrowserWindow extends EventEmitter {
         this.options.baseUrl &&
         (details.disposition === 'foreground-tab' || details.disposition === 'background-tab')
       ) {
+        // Allow rao-callback URLs to open internally to preserve window.opener relationship
+        if (details.url.includes('/rao-callback')) {
+          // Let this open as a popup within the app
+          return appState().windowOpening();
+        }
+        
         // TODO: validation/restrictions on the URLs?
         void shell.openExternal(details.url);
         return { action: 'deny' };
