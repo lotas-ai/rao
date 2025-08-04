@@ -16,6 +16,7 @@
 import { app, autoUpdater, BrowserWindow, dialog, Event, Menu, screen, WebContents } from 'electron';
 import i18next from 'i18next';
 import path from 'path';
+import * as fs from 'fs';
 import { updateElectronApp, UpdateSourceType } from 'update-electron-app';
 import { getenv, setenv } from '../core/environment';
 import { FilePath } from '../core/file-path';
@@ -52,6 +53,54 @@ import { Client, Server } from 'net-ipc';
 import { LoggerCallback } from './logger-callback';
 import { Xdg } from '../core/xdg';
 import { ModalDialogTracker } from './modal-dialog-tracker';
+
+/**
+ * Helper functions for managing pending update state
+ */
+function getPendingUpdateFilePath(): string {
+  return path.join(app.getPath('userData'), 'pending-update.json');
+}
+
+function savePendingUpdate(updateInfo: { releaseName?: string; releaseNotes?: string; updateURL?: string }): void {
+  try {
+    const filePath = getPendingUpdateFilePath();
+    const data = {
+      hasPendingUpdate: true,
+      savedAt: new Date().toISOString(),
+      ...updateInfo
+    };
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    logger().logInfo('Pending update saved to disk');
+  } catch (error) {
+    logger().logError(`Failed to save pending update: ${error}`);
+  }
+}
+
+function getPendingUpdate(): { hasPendingUpdate: boolean; releaseName?: string; releaseNotes?: string; updateURL?: string } | null {
+  try {
+    const filePath = getPendingUpdateFilePath();
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
+    const data = fs.readFileSync(filePath, 'utf8');
+    return JSON.parse(data);
+  } catch (error) {
+    logger().logError(`Failed to read pending update: ${error}`);
+    return null;
+  }
+}
+
+function clearPendingUpdate(): void {
+  try {
+    const filePath = getPendingUpdateFilePath();
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      logger().logInfo('Pending update cleared from disk');
+    }
+  } catch (error) {
+    logger().logError(`Failed to clear pending update: ${error}`);
+  }
+}
 
 /**
  * The RStudio application
@@ -408,6 +457,11 @@ export class Application implements AppState {
 
     this.setDockMenu();
     
+    // Check for pending updates on startup first (before setting up auto-updater)
+    if ((process.platform === 'darwin' || process.platform === 'win32') && app.isPackaged) {
+      await this.checkPendingUpdateOnStartup();
+    }
+
     // Auto-updates for macOS and Windows using S3 with enhanced logic
     // This will be controlled by the user preference once the session is available
     if ((process.platform === 'darwin' || process.platform === 'win32') && app.isPackaged) {
@@ -509,6 +563,29 @@ export class Application implements AppState {
   private installedOnStartup = false;
   private autoUpdaterInitialized = false;
 
+  /**
+   * Check for pending updates on startup and install them
+   */
+  private async checkPendingUpdateOnStartup(): Promise<void> {
+    try {
+      const pendingUpdate = getPendingUpdate();
+      if (pendingUpdate?.hasPendingUpdate) {
+        logger().logInfo('Found pending update from previous session - installing now');
+        
+        // Clear the pending update flag first to prevent loops
+        clearPendingUpdate();
+        
+        // Install the update and restart
+        autoUpdater.quitAndInstall();
+        return;
+      }
+      
+      logger().logInfo('No pending updates found on startup');
+    } catch (error) {
+      logger().logError(`Error checking for pending updates on startup: ${error}`);
+    }
+  }
+
   setupAutoUpdater() {
     // Start auto-updater by default (user preference will override if needed)
     logger().logInfo('Starting auto-updater by default - will be controlled by user preference when session loads');
@@ -536,7 +613,7 @@ export class Application implements AppState {
       logger().logInfo('Auto-updater: update-not-available');
     });
     
-    autoUpdater.on('update-downloaded', (event, releaseNotes, releaseName, releaseDate, updateURL) => {
+    autoUpdater.on('update-downloaded', (event: any, releaseNotes: string, releaseName: string, releaseDate: Date, updateURL: string) => {
       updateDownloaded = true;
       this.updateDownloaded = true;
       logger().logInfo('Auto-updater: update-downloaded');
@@ -552,25 +629,38 @@ export class Application implements AppState {
         return; // Don't show notification for same version
       }
       
-      logger().logInfo('DEBUG: Versions different - showing notification');
+      logger().logInfo('DEBUG: Versions different - saving as pending update');
       
-      // Show notification with "Later" option
+      // Save the update information for next startup
+      savePendingUpdate({
+        releaseName: releaseName || undefined,
+        releaseNotes: releaseNotes || undefined,
+        updateURL: updateURL || undefined
+      });
+      
+      // Show notification informing user about next restart
       const options = {
         type: 'info' as const,
+<<<<<<< Updated upstream
         title: 'Update Available',
         message: `${releaseName} is ready to install. Restart now or it will install automatically when you quit the app.`,
+=======
+        title: 'Update Downloaded',
+        message: `Rao ${releaseName} has been downloaded and will be installed the next time you start the application.`,
+>>>>>>> Stashed changes
         detail: releaseNotes || 'New version available',
-        buttons: ['Restart Now', 'Later'],
+        buttons: ['OK', 'Restart Now'],
         defaultId: 0,
-        cancelId: 1
+        cancelId: 0
       };
       
-      dialog.showMessageBox(options).then(result => {
-        if (result.response === 0) {
-          // User chose "Restart Now"
+      dialog.showMessageBox(options).then((result: any) => {
+        if (result.response === 1) {
+          // User chose "Restart Now" - install immediately
+          clearPendingUpdate(); // Clear the saved state since we're installing now
           autoUpdater.quitAndInstall();
         }
-        // If "Later", we'll install on app quit (handled below)
+        // If "OK", the update will be installed on next app startup
       });
     });
     
@@ -597,13 +687,7 @@ export class Application implements AppState {
       }
     });
 
-    // Install on app quit if update was downloaded but user chose "Later"
-    app.on('before-quit', (event) => {
-      if (this.updateDownloaded && !this.installedOnStartup) {
-        logger().logInfo('Installing update on quit...');
-        autoUpdater.quitAndInstall();
-      }
-    });
+    // Updates are now handled on next app startup - no automatic restart on quit
 
     this.autoUpdaterInitialized = true;
   }
