@@ -1320,7 +1320,7 @@ public class AiSettingsWidget extends Composite
       
       switch (status.toLowerCase()) {
          case "trial":
-            return "Trial";
+            return "Free Tier";
          case "active":
             return "Active";
          case "past_due":
