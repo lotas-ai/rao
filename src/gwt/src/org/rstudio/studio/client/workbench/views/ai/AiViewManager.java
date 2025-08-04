@@ -30,6 +30,9 @@ import org.rstudio.core.client.Debug;
 import org.rstudio.studio.client.RStudioGinjector;
 import org.rstudio.studio.client.common.GlobalDisplay;
 import org.rstudio.studio.client.application.events.EventBus;
+import org.rstudio.studio.client.application.Desktop;
+import org.rstudio.core.client.StringUtil;
+import com.google.gwt.user.client.Timer;
 
 /**
  * Manages switching between Settings view and Conversation streaming view
@@ -50,6 +53,12 @@ public class AiViewManager
    
    private boolean isInSettingsMode_ = true; // Start in Settings mode to avoid race conditions
    private boolean isInitialized_ = false; // Track initialization state
+   
+   // Authentication polling state
+   private boolean waitingForAuth_ = false;
+   private boolean runningAuthCompleteCheck_ = false;
+   private Timer authPollTimer_ = null;
+   private String authSessionToken_ = null;
    
    public AiViewManager(AiStreamingPanel streamingPanel, 
                        SimplePanel iframeContainer,
@@ -563,44 +572,122 @@ public class AiViewManager
    
    /**
     * Open sign-in window and handle the callback
+    * Uses token-based polling for both desktop and browser modes for consistency and reliability
     */
-   private native void openSignInWindow(String signInUrl) /*-{
-      var self = this;
+   private void openSignInWindow(String signInUrl) {
+      Debug.log("Opening sign-in window. Desktop mode: " + Desktop.hasDesktopFrame());
       
-      // Open sign-in window
-      var signInWindow = $wnd.open(signInUrl, "rao_signin", "width=500,height=600,scrollbars=yes,resizable=yes");
-      
-      // Listen for messages from the sign-in window
-      var messageHandler = function(event) {
-         if (event.origin !== "https://www.lotas.ai" && event.origin !== "http://localhost:3000") {
-            return;
-         }
-         
-         if (event.data && event.data.type === "rao_signin_success" && event.data.apiKey) {
-            // Close the sign-in window
-            if (signInWindow) {
-               signInWindow.close();
+      // Use token-based polling for both desktop and browser modes
+      generateAuthSessionTokenAndPoll(signInUrl);
+   }
+   
+   /**
+    * Generate auth session token and start polling for both desktop and browser modes
+    */
+   private void generateAuthSessionTokenAndPoll(String signInUrl) {
+      // Generate a session token
+      server_.generateAuthSessionToken(new ServerRequestCallback<String>() {
+         @Override
+         public void onResponseReceived(String sessionToken) {
+            authSessionToken_ = sessionToken;
+            
+            // Construct the URL with session token
+            String tokenizedUrl = signInUrl + "?session_token=" + sessionToken;
+            
+            if (Desktop.hasDesktopFrame()) {
+               // Desktop mode: Open in external browser
+               Desktop.getFrame().browseUrl(StringUtil.notNull(tokenizedUrl));
+            } else {
+               // Browser mode: Open in popup window
+               openAuthWindowBrowser(tokenizedUrl);
             }
             
-            // Remove the message listener
-            $wnd.removeEventListener("message", messageHandler);
+            // Start polling for both modes
+            waitingForAuth_ = true;
+            pollForAuthCompleted();
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Failed to generate auth session token: " + error.getMessage());
+            RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
+               "Error", "Failed to start authentication: " + error.getMessage());
+         }
+      });
+   }
+   
+   /**
+    * Poll for authentication completion (both desktop and browser modes)
+    */
+   private void pollForAuthCompleted() {
+      authPollTimer_ = new Timer() {
+         @Override
+         public void run() {
+            // Don't keep polling once auth is complete
+            if (!waitingForAuth_) {
+               return;
+            }
             
-            // Save the API key
-            self.@org.rstudio.studio.client.workbench.views.ai.AiViewManager::handleApiKeyFromSignIn(Ljava/lang/String;)(event.data.apiKey);
+            // Avoid re-entrancy
+            if (runningAuthCompleteCheck_) {
+               return;
+            }
+            
+            runningAuthCompleteCheck_ = true;
+            server_.checkAuthSessionToken(authSessionToken_, new ServerRequestCallback<org.rstudio.studio.client.workbench.views.ai.model.AuthSessionResult>() {
+               @Override
+               public void onResponseReceived(org.rstudio.studio.client.workbench.views.ai.model.AuthSessionResult result) {
+                  runningAuthCompleteCheck_ = false;
+                  
+                  if (result.isComplete() && result.getApiKey() != null && !result.getApiKey().isEmpty()) {
+                     // Authentication successful
+                     waitingForAuth_ = false;
+                     if (authPollTimer_ != null) {
+                        authPollTimer_.cancel();
+                        authPollTimer_ = null;
+                     }
+                     
+                     // Save the API key
+                     handleApiKeyFromSignIn(result.getApiKey());
+                  }
+                  // If not complete, timer will continue polling
+               }
+               
+               @Override
+               public void onError(ServerError error) {
+                  runningAuthCompleteCheck_ = false;
+                  // Ignore errors and continue polling - auth might still be in progress
+                  Debug.log("Auth polling error (continuing): " + error.getMessage());
+               }
+            });
          }
       };
       
-      $wnd.addEventListener("message", messageHandler);
+      authPollTimer_.scheduleRepeating(1000); // Poll every second
+   }
+   
+   /**
+    * Browser mode sign-in window without PostMessage (uses polling like desktop mode)
+    */
+   private native void openAuthWindowBrowser(String signInUrl) /*-{
+      // Open sign-in window as popup
+      var signInWindow = $wnd.open(signInUrl, "rao_signin", "width=500,height=600,scrollbars=yes,resizable=yes");
       
-      // Clean up if window is closed manually
+      // No PostMessage handling needed - polling will detect completion
+      // Just track if window is closed manually for cleanup
       var checkClosed = function() {
-         if (signInWindow.closed) {
-            $wnd.removeEventListener("message", messageHandler);
-         } else {
+         if (signInWindow && signInWindow.closed) {
+            // User closed window manually - could cancel polling if desired
+            // For now, let polling continue in case they complete auth elsewhere
+            return;
+         } else if (signInWindow) {
             setTimeout(checkClosed, 1000);
          }
       };
-      checkClosed();
+      
+      if (signInWindow) {
+         checkClosed();
+      }
    }-*/;
    
    /**
