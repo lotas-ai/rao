@@ -704,8 +704,9 @@
   session_token <- paste0("auth_", as.integer(Sys.time()), "_", sample(10000:99999, 1))
   
   # Store in global environment for tracking
-  assign(".rs.auth_sessions", c(get0(".rs.auth_sessions", envir = .GlobalEnv, ifnotfound = character(0)), session_token), 
-         envir = .GlobalEnv)
+  current_sessions <- get0(".rs.auth_sessions", envir = .GlobalEnv, ifnotfound = character(0))
+  new_sessions <- c(current_sessions, session_token)
+  assign(".rs.auth_sessions", new_sessions, envir = .GlobalEnv)
   
   return(session_token)
 })
@@ -713,16 +714,13 @@
 .rs.addFunction("check_auth_session_token", function(session_token) {
   # Check if this session token exists
   auth_sessions <- get0(".rs.auth_sessions", envir = .GlobalEnv, ifnotfound = character(0))
+  completed_sessions <- get0(".rs.auth_completed_sessions", envir = .GlobalEnv, ifnotfound = list())
   
   if (!session_token %in% auth_sessions) {
     return(list(complete = FALSE, error = "Invalid session token"))
   }
   
   # Check if authentication has been completed for this token
-  # This would typically check a persistent store or cache
-  # For now, return not complete - this will be updated when the callback is processed
-  completed_sessions <- get0(".rs.auth_completed_sessions", envir = .GlobalEnv, ifnotfound = list())
-  
   if (session_token %in% names(completed_sessions)) {
     # Authentication completed - return the API key
     api_key <- completed_sessions[[session_token]]
@@ -743,6 +741,10 @@
   completed_sessions[[session_token]] <- api_key
   assign(".rs.auth_completed_sessions", completed_sessions, envir = .GlobalEnv)
   
+  # Save the API key to persistent storage
+  .rs.save_api_key("rao", api_key)
+  
+  # Return TRUE for success (C++ expects boolean)
   return(TRUE)
 })
 
@@ -761,23 +763,21 @@
 })
 
 # RPC handler for completing authentication sessions (called by callback endpoint)
-.rs.addJsonRpcHandler("complete_auth_session", function(session_token, api_key) {
+.rs.addJsonRpcHandler("complete_auth_session", function(session_token, api_key) { 
   if (is.null(session_token) || is.null(api_key) || 
       session_token == "" || api_key == "") {
-    return(list(success = FALSE, error = "Invalid session token or API key"))
+    return(list(complete = FALSE, error = "Invalid session token or API key"))
   }
   
   tryCatch({
     result <- .rs.complete_auth_session(session_token, api_key)
     
     if (result) {
-      # Also save the API key immediately
-      .rs.save_api_key("rao", api_key)
-      return(list(success = TRUE))
+      return(list(complete = TRUE, apiKey = api_key))
     } else {
-      return(list(success = FALSE, error = "Failed to complete auth session"))
+      return(list(complete = FALSE, error = "Failed to complete auth session"))
     }
   }, error = function(e) {
-    return(list(success = FALSE, error = paste("Error:", e$message)))
+    return(list(complete = FALSE, error = paste("Error:", e$message)))
   })
 })

@@ -574,9 +574,7 @@ public class AiViewManager
     * Open sign-in window and handle the callback
     * Uses token-based polling for both desktop and browser modes for consistency and reliability
     */
-   private void openSignInWindow(String signInUrl) {
-      Debug.log("Opening sign-in window. Desktop mode: " + Desktop.hasDesktopFrame());
-      
+   private void openSignInWindow(String signInUrl) {      
       // Use token-based polling for both desktop and browser modes
       generateAuthSessionTokenAndPoll(signInUrl);
    }
@@ -647,8 +645,9 @@ public class AiViewManager
                         authPollTimer_ = null;
                      }
                      
-                     // Save the API key
-                     handleApiKeyFromSignIn(result.getApiKey());
+                     // Update UI - API key is already saved by the R function
+                     settingsWidget_.onApiKeySaved();
+                     aiPane_.refreshSettings();
                   }
                   // If not complete, timer will continue polling
                }
@@ -667,18 +666,43 @@ public class AiViewManager
    }
    
    /**
-    * Browser mode sign-in window without PostMessage (uses polling like desktop mode)
+    * Browser mode sign-in window with postMessage fallback support
     */
    private native void openAuthWindowBrowser(String signInUrl) /*-{
+      var thiz = this;
+      
       // Open sign-in window as popup
       var signInWindow = $wnd.open(signInUrl, "rao_signin", "width=500,height=600,scrollbars=yes,resizable=yes");
       
-      // No PostMessage handling needed - polling will detect completion
-      // Just track if window is closed manually for cleanup
+      // Add postMessage listener as fallback for session token system
+      var messageHandler = function(event) {
+         
+         if (event.data && event.data.type === 'rao_signin_success') {
+            
+            if (event.data.sessionToken && event.data.apiKey) {
+               // Complete the auth session using the provided session token
+               thiz.@org.rstudio.studio.client.workbench.views.ai.AiViewManager::completeAuthSessionFromCallback(Ljava/lang/String;Ljava/lang/String;)(
+                  event.data.sessionToken, 
+                  event.data.apiKey
+               );
+            }
+            
+            // Clean up
+            $wnd.removeEventListener("message", messageHandler);
+         } else if (event.data && event.data.type === 'rao_signin_error') {
+            // Clean up
+            $wnd.removeEventListener("message", messageHandler);
+         }
+      };
+      
+      // Listen for postMessage events
+      $wnd.addEventListener("message", messageHandler, false);
+      
+      // Track if window is closed manually for cleanup
       var checkClosed = function() {
          if (signInWindow && signInWindow.closed) {
-            // User closed window manually - could cancel polling if desired
-            // For now, let polling continue in case they complete auth elsewhere
+            // Clean up message listener
+            $wnd.removeEventListener("message", messageHandler);
             return;
          } else if (signInWindow) {
             setTimeout(checkClosed, 1000);
@@ -691,19 +715,41 @@ public class AiViewManager
    }-*/;
    
    /**
-    * Handle API key received from sign-in flow
+    * Complete auth session from postMessage callback (fallback method)
     */
-   private void handleApiKeyFromSignIn(String apiKey) {
-      server_.saveApiKey("rao", apiKey, new ServerRequestCallback<java.lang.Void>() {
+   private void completeAuthSessionFromCallback(String sessionToken, String apiKey) {
+      
+      // Complete the auth session via RPC - this calls the R complete_auth_session function
+      server_.completeAuthSession(sessionToken, apiKey, new ServerRequestCallback<org.rstudio.studio.client.workbench.views.ai.model.AuthSessionResult>() {
          @Override
-         public void onResponseReceived(java.lang.Void response) {
+         public void onResponseReceived(org.rstudio.studio.client.workbench.views.ai.model.AuthSessionResult result) {
+            
+            // Stop polling since we're handling completion via postMessage
+            waitingForAuth_ = false;
+            if (authPollTimer_ != null) {
+               authPollTimer_.cancel();
+               authPollTimer_ = null;
+            }
+            
+            // The API key should already be saved by the R function, but ensure UI is updated
             settingsWidget_.onApiKeySaved();
+            
+            // Also refresh the entire settings page like manual API key saves do
+            aiPane_.refreshSettings();
          }
          
          @Override
          public void onError(ServerError error) {
+            // Stop polling since we attempted completion
+            waitingForAuth_ = false;
+            if (authPollTimer_ != null) {
+               authPollTimer_.cancel();
+               authPollTimer_ = null;
+            }
+            
+            // Show error to user
             RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
-               "Error", "Failed to save API key: " + error.getMessage());
+               "Authentication Error", "Failed to complete authentication: " + error.getMessage());
          }
       });
    }

@@ -209,4 +209,6 @@ public interface AiServerOperations
    void generateAuthSessionToken(ServerRequestCallback<String> requestCallback);
    
    void checkAuthSessionToken(String sessionToken, ServerRequestCallback<AuthSessionResult> requestCallback);
+   
+   void completeAuthSession(String sessionToken, String apiKey, ServerRequestCallback<AuthSessionResult> requestCallback);
 }

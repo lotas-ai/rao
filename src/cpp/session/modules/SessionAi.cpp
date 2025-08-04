@@ -832,17 +832,22 @@ Error completeAuthSession(const json::JsonRpcRequest& request,
                          const std::string& sessionToken,
                          const std::string& apiKey)
 {
-   json::Object result;
+   bool success = false;
    Error error = r::exec::RFunction(".rs.complete_auth_session")
          .addParam(sessionToken)
          .addParam(apiKey)
-         .call(&result);
+         .call(&success);
 
    if (error)
    {
       LOG_ERROR(error);
       return error;
    }
+
+   // Construct AuthSessionResult structure that Java expects
+   json::Object result;
+   result["complete"] = success;
+   result["apiKey"] = success ? apiKey : "";
 
    p_response->setResult(result);
    return Success();
@@ -3482,7 +3487,10 @@ Error initialize()
             boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
                [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
                   std::string sessionToken, apiKey;
-                  Error error = json::readParams(request.params, &sessionToken, &apiKey);
+                  Error error = json::readParam(request.params, 0, &sessionToken);
+                  if (error)
+                     return error;
+                  error = json::readParam(request.params, 1, &apiKey);
                   if (error)
                      return error;
                   return completeAuthSession(request, p_response, sessionToken, apiKey);
