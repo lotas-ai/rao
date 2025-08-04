@@ -786,6 +786,73 @@ Error signInWithWebsite(const json::JsonRpcRequest& request,
    return Success();
 }
 
+Error generateAuthSessionToken(const json::JsonRpcRequest& request,
+                              json::JsonRpcResponse* p_response)
+{
+   std::string sessionToken;
+   Error error = r::exec::RFunction(".rs.generate_auth_session_token")
+         .call(&sessionToken);
+
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+
+   if (sessionToken.empty())
+   {
+      return systemError(boost::system::errc::invalid_argument, "Empty session token returned", ERROR_LOCATION);
+   }
+
+   p_response->setResult(sessionToken);
+   return Success();
+}
+
+Error checkAuthSessionToken(const json::JsonRpcRequest& request,
+                           json::JsonRpcResponse* p_response,
+                           const std::string& sessionToken)
+{
+   json::Object result;
+   Error error = r::exec::RFunction(".rs.check_auth_session_token")
+         .addParam(sessionToken)
+         .call(&result);
+
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+
+   p_response->setResult(result);
+   return Success();
+}
+
+Error completeAuthSession(const json::JsonRpcRequest& request,
+                         json::JsonRpcResponse* p_response,
+                         const std::string& sessionToken,
+                         const std::string& apiKey)
+{
+   bool success = false;
+   Error error = r::exec::RFunction(".rs.complete_auth_session")
+         .addParam(sessionToken)
+         .addParam(apiKey)
+         .call(&success);
+
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+
+   // Construct AuthSessionResult structure that Java expects
+   json::Object result;
+   result["complete"] = success;
+   result["apiKey"] = success ? apiKey : "";
+
+   p_response->setResult(result);
+   return Success();
+}
+
 Error setActiveProvider(const json::JsonRpcRequest& request,
                         json::JsonRpcResponse* p_response,
                         const std::string& provider)
@@ -3401,6 +3468,32 @@ Error initialize()
                   if (error)
                      return error;
                   return signInWithWebsite(request, p_response, websiteUrl);
+               })))
+      (bind(module_context::registerRpcMethod, "generate_auth_session_token",
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  return generateAuthSessionToken(request, p_response);
+               })))
+      (bind(module_context::registerRpcMethod, "check_auth_session_token",
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  std::string sessionToken;
+                  Error error = json::readParam(request.params, 0, &sessionToken);
+                  if (error)
+                     return error;
+                  return checkAuthSessionToken(request, p_response, sessionToken);
+               })))
+      (bind(module_context::registerRpcMethod, "complete_auth_session",
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  std::string sessionToken, apiKey;
+                  Error error = json::readParam(request.params, 0, &sessionToken);
+                  if (error)
+                     return error;
+                  error = json::readParam(request.params, 1, &apiKey);
+                  if (error)
+                     return error;
+                  return completeAuthSession(request, p_response, sessionToken, apiKey);
                })))
       (bind(module_context::registerRpcMethod, "set_active_provider",
             boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(

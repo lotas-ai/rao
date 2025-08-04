@@ -310,12 +310,12 @@ public class AiSettingsWidget extends Composite
          HorizontalPanel buttonPanel = new HorizontalPanel();
          buttonPanel.getElement().getStyle().setProperty("display", "flex");
          buttonPanel.getElement().getStyle().setProperty("alignItems", "center");
-         buttonPanel.getElement().getStyle().setProperty("gap", "8px");
          
          // Sign In button
-         signInButton_ = new Button("Sign up/in");
+         signInButton_ = new Button("Sign up/Sign in");
          signInButton_.addStyleName(styles_.settingButton());
          signInButton_.addStyleName(styles_.primaryButton());
+         signInButton_.getElement().getStyle().setProperty("marginRight", "8px");
          addNativeClickHandler(signInButton_.getElement(), "Sign in");
          
          // Options button (...)

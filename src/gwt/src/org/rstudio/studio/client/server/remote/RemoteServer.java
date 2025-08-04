@@ -1982,6 +1982,27 @@ public class RemoteServer implements Server, AiServerOperations
    }
 
    @Override
+   public void generateAuthSessionToken(ServerRequestCallback<String> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, GENERATE_AUTH_SESSION_TOKEN, requestCallback);
+   }
+
+   @Override
+   public void checkAuthSessionToken(String sessionToken, ServerRequestCallback<org.rstudio.studio.client.workbench.views.ai.model.AuthSessionResult> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, CHECK_AUTH_SESSION_TOKEN, sessionToken, requestCallback);
+   }
+
+   @Override
+   public void completeAuthSession(String sessionToken, String apiKey, ServerRequestCallback<org.rstudio.studio.client.workbench.views.ai.model.AuthSessionResult> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(sessionToken));
+      params.set(1, new JSONString(apiKey));
+      sendRequest(RPC_SCOPE, COMPLETE_AUTH_SESSION, params, requestCallback);
+   }
+
+   @Override
    public void setModel(String provider, String model, ServerRequestCallback<java.lang.Void> requestCallback)
    {
       JSONArray params = new JSONArray();
@@ -7799,6 +7820,9 @@ public class RemoteServer implements Server, AiServerOperations
    private static final String DELETE_API_KEY = "delete_api_key";
    private static final String SET_ACTIVE_PROVIDER = "set_active_provider";
    private static final String SIGN_IN_WITH_WEBSITE = "sign_in_with_website";
+   private static final String GENERATE_AUTH_SESSION_TOKEN = "generate_auth_session_token";
+   private static final String CHECK_AUTH_SESSION_TOKEN = "check_auth_session_token";
+   private static final String COMPLETE_AUTH_SESSION = "complete_auth_session";
    private static final String SET_MODEL = "set_model";
    private static final String GET_TEMPERATURE = "get_temperature";
    private static final String SET_TEMPERATURE = "set_temperature";
