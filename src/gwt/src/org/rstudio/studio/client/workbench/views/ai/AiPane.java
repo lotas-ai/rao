@@ -3053,4 +3053,13 @@ public class AiPane extends WorkbenchPane
    public AiPaneScroll getScrollHandler() {
       return scrollHandler_;
    }
+   
+   /**
+    * Called when authentication completes to refresh the UI
+    */
+   public void onAuthenticationComplete() {
+      if (toolbars_ != null && toolbars_.getViewManager() != null) {
+         toolbars_.getViewManager().onAuthenticationComplete();
+      }
+   }
 }

@@ -682,102 +682,182 @@
   return(.rs.delete_user_rule(index))
 })
 
-# Sign in with website flow
+# Sign in with website flow - now using loopback server for desktop
 .rs.addFunction("sign_in_with_website", function(websiteUrl) {
   backend_env <- .rs.detect_backend_environment()
+  
+  # Start loopback server for desktop OAuth callback
+  loopback_info <- .rs.start_auth_loopback_server()
+  loopback_url <- paste0("http://", loopback_info$address, ":", loopback_info$port, "/auth_callback")
     
   if (backend_env == "local") {
-    # Use localhost for local development - redirect to dedicated callback page
-    sign_in_url <- "http://localhost:3000/rao-callback"
+    # Use localhost for local development
+    sign_in_url <- paste0("http://localhost:3000/rao-callback?redirect_uri=", URLencode(loopback_url, reserved = TRUE))
   } else {
-    # Use production website - redirect to dedicated callback page
-    sign_in_url <- "https://www.lotas.ai/rao-callback"
+    # Use production website
+    sign_in_url <- paste0("https://www.lotas.ai/rao-callback?redirect_uri=", URLencode(loopback_url, reserved = TRUE))
   }
   
   # Return just the URL string
   sign_in_url
 })
 
-# Authentication session token management for desktop mode
-.rs.addFunction("generate_auth_session_token", function() {
-  # Generate a unique session token
-  session_token <- paste0("auth_", as.integer(Sys.time()), "_", sample(10000:99999, 1))
-  
-  # Store in global environment for tracking
-  current_sessions <- get0(".rs.auth_sessions", envir = .GlobalEnv, ifnotfound = character(0))
-  new_sessions <- c(current_sessions, session_token)
-  assign(".rs.auth_sessions", new_sessions, envir = .GlobalEnv)
-  
-  return(session_token)
-})
-
-.rs.addFunction("check_auth_session_token", function(session_token) {
-  # Check if this session token exists
-  auth_sessions <- get0(".rs.auth_sessions", envir = .GlobalEnv, ifnotfound = character(0))
-  completed_sessions <- get0(".rs.auth_completed_sessions", envir = .GlobalEnv, ifnotfound = list())
-  
-  if (!session_token %in% auth_sessions) {
-    return(list(complete = FALSE, error = "Invalid session token"))
+# Start a temporary HTTP server on loopback interface for OAuth callback
+.rs.addFunction("start_auth_loopback_server", function() {
+  # Check if httpuv is available (required for HTTP server)
+  if (!requireNamespace("httpuv", quietly = TRUE)) {
+    stop("httpuv package is required for OAuth loopback server functionality")
   }
   
-  # Check if authentication has been completed for this token
-  if (session_token %in% names(completed_sessions)) {
-    # Authentication completed - return the API key
-    api_key <- completed_sessions[[session_token]]
+  # Try both IPv4 and IPv6 loopback as recommended by RFC 8252
+  loopback_addresses <- c("127.0.0.1", "::1")
+  
+  for (address in loopback_addresses) {
+    # Try ephemeral port range (49152-65535 as recommended by IANA)
+    # Start with a random port in this range
+    start_port <- sample(49152:65535, 1)
     
-    # Clean up the session
-    .rs.cleanup_auth_session(session_token)
-    
-    return(list(complete = TRUE, apiKey = api_key))
-  }
-  
-  # Still waiting for authentication
-  return(list(complete = FALSE))
-})
-
-.rs.addFunction("complete_auth_session", function(session_token, api_key) {
-  # Mark this session as completed with the API key
-  completed_sessions <- get0(".rs.auth_completed_sessions", envir = .GlobalEnv, ifnotfound = list())
-  completed_sessions[[session_token]] <- api_key
-  assign(".rs.auth_completed_sessions", completed_sessions, envir = .GlobalEnv)
-  
-  # Save the API key to persistent storage
-  .rs.save_api_key("rao", api_key)
-  
-  # Return TRUE for success (C++ expects boolean)
-  return(TRUE)
-})
-
-.rs.addFunction("cleanup_auth_session", function(session_token) {
-  # Remove from active sessions
-  auth_sessions <- get0(".rs.auth_sessions", envir = .GlobalEnv, ifnotfound = character(0))
-  auth_sessions <- auth_sessions[auth_sessions != session_token]
-  assign(".rs.auth_sessions", auth_sessions, envir = .GlobalEnv)
-  
-  # Remove from completed sessions
-  completed_sessions <- get0(".rs.auth_completed_sessions", envir = .GlobalEnv, ifnotfound = list())
-  completed_sessions[[session_token]] <- NULL
-  assign(".rs.auth_completed_sessions", completed_sessions, envir = .GlobalEnv)
-  
-  return(TRUE)
-})
-
-# RPC handler for completing authentication sessions (called by callback endpoint)
-.rs.addJsonRpcHandler("complete_auth_session", function(session_token, api_key) { 
-  if (is.null(session_token) || is.null(api_key) || 
-      session_token == "" || api_key == "") {
-    return(list(complete = FALSE, error = "Invalid session token or API key"))
-  }
-  
-  tryCatch({
-    result <- .rs.complete_auth_session(session_token, api_key)
-    
-    if (result) {
-      return(list(complete = TRUE, apiKey = api_key))
-    } else {
-      return(list(complete = FALSE, error = "Failed to complete auth session"))
+    for (i in 1:100) {  # Try up to 100 ports
+      port <- start_port + i - 1
+      if (port > 65535) port <- 49152 + (port - 65536)  # Wrap around
+      
+      tryCatch({
+        # Create a temporary HTTP server
+        server <- httpuv::startServer(address, port, list(
+        call = function(req) {
+          # Handle the OAuth callback
+          if (req$PATH_INFO == "/auth_callback") {
+            query_string <- req$QUERY_STRING
+            
+            # Parse query parameters
+            params <- .rs.parse_query_string(query_string)
+            
+            if (!is.null(params$api_key) && params$api_key != "") {
+              # Save the API key
+              .rs.save_api_key("rao", params$api_key)
+              
+              # Notify the UI that authentication completed
+              .rs.enqueClientEvent("ai_authentication_completed", list())
+              
+              # Schedule server cleanup after 3 seconds to allow response to be sent
+              later::later(function() {
+                tryCatch({
+                  httpuv::stopServer(server)
+                  if (exists(".rs.auth_server", envir = .GlobalEnv)) {
+                    rm(".rs.auth_server", envir = .GlobalEnv)
+                  }
+                }, error = function(e) {
+                  # Ignore cleanup errors
+                })
+              }, delay = 3)
+              
+              # Return success page
+              success_html <- paste0(
+                '<!DOCTYPE html>',
+                '<html><head>',
+                '<meta charset="UTF-8">',
+                '<title>Authentication Successful</title></head>',
+                '<body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px;">',
+                '<div style="color: green; font-size: 48px; margin-bottom: 16px;">&#x2713;</div>',
+                '<h2 style="color: #333; margin-bottom: 8px;">Authentication Successful</h2>',
+                '<p style="color: #666;">You can now close this window and return to RStudio.</p>',
+                '<script>setTimeout(function(){ window.close(); }, 3000);</script>',
+                '</body></html>'
+              )
+              
+              return(list(
+                status = 200L,
+                headers = list("Content-Type" = "text/html"),
+                body = success_html
+              ))
+            } else {
+              # Handle error case
+              error_html <- paste0(
+                '<!DOCTYPE html>',
+                '<html><head><title>Authentication Failed</title></head>',
+                '<body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px;">',
+                '<div style="color: red; font-size: 48px; margin-bottom: 16px;">✗</div>',
+                '<h2 style="color: #333; margin-bottom: 8px;">Authentication Failed</h2>',
+                '<p style="color: #666;">No API key received. Please try again.</p>',
+                '</body></html>'
+              )
+              
+              return(list(
+                status = 400L,
+                headers = list("Content-Type" = "text/html"),
+                body = error_html
+              ))
+            }
+          }
+          
+          # Default 404 response
+          return(list(
+            status = 404L,
+            headers = list("Content-Type" = "text/plain"),
+            body = "Not Found"
+          ))
+        }
+        ))
+        
+        # Store server reference for cleanup  
+        assign(".rs.auth_server", server, envir = .GlobalEnv)
+        
+        # Return the port number and address used
+        return(list(port = port, address = address))
+        
+      }, error = function(e) {
+        # Port in use or other error, try next port
+        next
+      })
     }
-  }, error = function(e) {
-    return(list(complete = FALSE, error = paste("Error:", e$message)))
-  })
+  }
+  
+  stop("Could not start OAuth callback server on any loopback interface")
+})
+
+# Parse query string into named list
+.rs.addFunction("parse_query_string", function(query_string) {
+  if (is.null(query_string) || query_string == "") {
+    return(list())
+  }
+  
+  # Remove leading ? if present
+  if (substr(query_string, 1, 1) == "?") {
+    query_string <- substr(query_string, 2, nchar(query_string))
+  }
+  
+  # Split by & and then by =
+  pairs <- strsplit(query_string, "&")[[1]]
+  result <- list()
+  
+  for (pair in pairs) {
+    if (grepl("=", pair)) {
+      parts <- strsplit(pair, "=", fixed = TRUE)[[1]]
+      if (length(parts) == 2) {
+        key <- URLdecode(parts[1])
+        value <- URLdecode(parts[2])
+        result[[key]] <- value
+      }
+    }
+  }
+  
+  return(result)
+})
+
+# Clean up any existing authentication server
+.rs.addFunction("cleanup_auth_server", function() {
+  if (exists(".rs.auth_server", envir = .GlobalEnv)) {
+    tryCatch({
+      httpuv::stopServer(get(".rs.auth_server", envir = .GlobalEnv))
+      rm(".rs.auth_server", envir = .GlobalEnv)
+    }, error = function(e) {
+      # Ignore cleanup errors
+    })
+  }
+})
+
+# RPC handler for cleaning up authentication server
+.rs.addJsonRpcHandler("cleanup_auth_server", function() {
+  .rs.cleanup_auth_server()
+  return(TRUE)
 })

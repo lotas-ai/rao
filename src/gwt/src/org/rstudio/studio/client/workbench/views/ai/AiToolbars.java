@@ -601,7 +601,8 @@ public class AiToolbars
          searchContainer,
          frame_,
          pane_.getAiServerOperations(),
-         pane_
+         pane_,
+         eventBus_
       );
       
       // Start in Settings mode as requested
