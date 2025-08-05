@@ -250,6 +250,10 @@
     color: #495057;
 }
 
+.statusPaymentActionRequired {
+    color: #495057;
+}
+
 .statusCancelled {
     color: #495057;
 }

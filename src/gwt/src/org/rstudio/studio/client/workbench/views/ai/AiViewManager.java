@@ -75,7 +75,6 @@ public class AiViewManager
       aiPane_ = aiPane;
       
       // Register for authentication completion events
-      Debug.log("DEBUG Java AiViewManager: Registering for AiAuthenticationCompletedEvent");
       eventBus.addHandler(AiAuthenticationCompletedEvent.TYPE, this);
       
       // Set up the global authentication completion handler
@@ -651,11 +650,11 @@ public class AiViewManager
     * This will be called when the loopback server successfully receives the API key
     */
    public void onAuthenticationComplete() {
-      Debug.log("DEBUG Java AiViewManager.onAuthenticationComplete: Called, updating UI");
       // Update UI - API key is already saved by the loopback server
-      settingsWidget_.refreshAllSettings();
       aiPane_.refreshSettings();
-      Debug.log("DEBUG Java AiViewManager.onAuthenticationComplete: Completed UI update");
+      
+      // Show green message prompting user to set working directory (same as API key saved)
+      settingsWidget_.onAuthenticationCompleted();
    }
    
    /**
@@ -684,7 +683,6 @@ public class AiViewManager
     */
    @Override
    public void onAiAuthenticationCompleted(AiAuthenticationCompletedEvent event) {
-      Debug.log("DEBUG Java AiViewManager: Received AiAuthenticationCompletedEvent via EventBus");
       onAuthenticationComplete();
    }
    

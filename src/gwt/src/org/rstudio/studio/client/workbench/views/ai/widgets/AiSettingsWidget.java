@@ -79,6 +79,7 @@ public class AiSettingsWidget extends Composite
       String statusActive();
       String statusTrial();
       String statusPastDue();
+      String statusPaymentActionRequired();
       String statusCancelled();
       String statusExpired();
       String profileInfo();
@@ -1325,6 +1326,8 @@ public class AiSettingsWidget extends Composite
             return "Active";
          case "past_due":
             return "Past Due";
+         case "payment_action_required":
+            return "Payment Required";
          case "cancelled":
             return "Cancelled";
          case "expired":
@@ -1342,6 +1345,7 @@ public class AiSettingsWidget extends Composite
       subscriptionStatusLabel_.removeStyleName(styles_.statusActive());
       subscriptionStatusLabel_.removeStyleName(styles_.statusTrial());
       subscriptionStatusLabel_.removeStyleName(styles_.statusPastDue());
+      subscriptionStatusLabel_.removeStyleName(styles_.statusPaymentActionRequired());
       subscriptionStatusLabel_.removeStyleName(styles_.statusCancelled());
       subscriptionStatusLabel_.removeStyleName(styles_.statusExpired());
       
@@ -1356,6 +1360,9 @@ public class AiSettingsWidget extends Composite
                break;
             case "past_due":
                subscriptionStatusLabel_.addStyleName(styles_.statusPastDue());
+               break;
+            case "payment_action_required":
+               subscriptionStatusLabel_.addStyleName(styles_.statusPaymentActionRequired());
                break;
             case "cancelled":
                subscriptionStatusLabel_.addStyleName(styles_.statusCancelled());
@@ -1534,6 +1541,15 @@ public class AiSettingsWidget extends Composite
    }
    
    public void onApiKeySaved()
+   {
+      hasApiKey_ = true;
+      shouldShowDirectoryPrompt_ = true;
+      updateAllSections();
+      loadUserProfile();
+      loadSubscriptionStatus();
+   }
+   
+   public void onAuthenticationCompleted()
    {
       hasApiKey_ = true;
       shouldShowDirectoryPrompt_ = true;
