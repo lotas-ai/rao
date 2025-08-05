@@ -404,7 +404,7 @@ public class AiSettingsWidget extends Composite
       contentPanel.add(profileErrorLabel_);
       
       // Prompt message label - show after API key is saved
-      directoryPromptLabel_ = new Label("Please set a working directory below to use Rao.");
+      directoryPromptLabel_ = new Label("Please set a working directory below to use Rao. Once done, start a new conversation with the + button in the top left.");
       directoryPromptLabel_.addStyleName(styles_.successMessage());
       directoryPromptLabel_.setVisible(shouldShowDirectoryPrompt_);
       contentPanel.add(directoryPromptLabel_);
