@@ -2753,6 +2753,7 @@
   # Mark buffer as inactive if no more function calls
   if (length(remaining_buffer) == 0) {
     .rs.set_conversation_var("function_call_buffer_active", FALSE)
+    .rs.set_conversation_var("first_function_call_id", NULL)
   }
     
   return(next_call)
