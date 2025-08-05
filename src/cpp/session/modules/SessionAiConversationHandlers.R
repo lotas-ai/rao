@@ -459,7 +459,7 @@
 })
 
 .rs.addFunction("ai.generate_conversation_name", function(conversation_id) {
-   # BULLETPROOF FIX: Check if conversation already has a name before generating
+   # Check if conversation already has a name before generating
    # This prevents all double conversation name requests regardless of source
    existing_name <- .rs.get_conversation_name(conversation_id)
    
