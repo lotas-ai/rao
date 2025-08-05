@@ -766,7 +766,7 @@
                 '<body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px;">',
                 '<div style="color: green; font-size: 48px; margin-bottom: 16px;">&#x2713;</div>',
                 '<h2 style="color: #333; margin-bottom: 8px;">Authentication Successful</h2>',
-                '<p style="color: #666;">You can now close this window and return to RStudio.</p>',
+                '<p style="color: #666;">You can now close this window and return to Rao.</p>',
                 '<script>setTimeout(function(){ window.close(); }, 3000);</script>',
                 '</body></html>'
               )
