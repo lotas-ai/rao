@@ -765,8 +765,7 @@
           } else if (grepl("SSL|TLS|certificate", error_message, ignore.case = TRUE)) {
             error_message <- "SSL/TLS connection error."
           } else {
-            # For any other error during the request, assume it's a connection issue
-            error_message <- paste("Backend connection error:", error_message)
+            error_message <- paste("Network connection error:", error_message)
           }
           
           # Send error event for connection failures
