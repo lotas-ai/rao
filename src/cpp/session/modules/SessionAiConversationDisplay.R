@@ -55,6 +55,19 @@
    .rs.enqueClientEvent("ai_operation", data)
 })
 
+.rs.addFunction("enqueue_error_message", function(error_message) {
+   # Generate a unique message ID for the error message
+   error_id <- paste0("error_", as.numeric(Sys.time()) * 1000, "_", sample(1000:9999, 1))
+   
+   # Send error message creation event to client
+   .rs.send_ai_operation("create_error_message", list(
+      message_id = error_id,
+      content = error_message
+   ))
+   
+   return(error_id)
+})
+
 
 
 .rs.addFunction("update_conversation_display", function() {

@@ -717,7 +717,7 @@
             # Provide status-specific fallback messages if we don't have a good error message
             if (is.null(error_message) || nchar(trimws(error_message)) == 0 || error_message == paste("HTTP", status_code, "error from backend server")) {
               if (status_code == 401) {
-                error_message <- "Authentication failed. Invalid API key."
+                error_message <- "Authentication failed. Invalid log-in or API key."
               } else if (status_code == 403) {
                 error_message <- "Access forbidden. Please check your API key permissions."
               } else if (status_code == 404) {
@@ -1567,15 +1567,18 @@
                     
                     # First unescape the raw content completely (same as edit_file)
                     processed_content <- raw_content
-                    # First handle double backslashes (\\\\) -> (\)
-                    processed_content <- gsub('\\\\\\\\', '\\\\', processed_content)
-                    # Then handle escaped newlines (\\n) -> (actual newline)
-                    processed_content <- gsub('\\\\n', '\n', processed_content)
-                    # Handle escaped tabs (\\t) -> (actual tab)
-                    processed_content <- gsub('\\\\t', '\t', processed_content)
-                    # Handle escaped quotes (\\") -> (")
-                    processed_content <- gsub('\\\\"', '"', processed_content)
-                    
+                    processed_content <- 
+                      gsub('<<<BS>>>', '\\\\',
+                      gsub('<<<DQ>>>', '\\"',
+                      gsub('<<<TAB>>>', '\\\\t',
+                      gsub('<<<NL>>>', '\\\\n',
+                      gsub('\\\\t', '\t',
+                      gsub('\\\\n', '\n',
+                      gsub('\\\\\\\"', '<<<DQ>>>',
+                      gsub('\\\\\\\\t', '<<<TAB>>>',
+                      gsub('\\\\\\\\n', '<<<NL>>>',
+                      gsub('\\\\\\\\', '<<<BS>>>',
+                      processed_content))))))))))
                     # Now apply buffering AFTER unescaping to avoid splitting escape sequences
                     # Check if we've reached the end of the command field by looking for ", "explanation"
                     explanation_pattern <- '\\s*"\\s*,\\s*"explanation"'
@@ -2558,6 +2561,10 @@
     # Handle different response types
     if (!is.null(last_event_data$error)) {
       result$error <- last_event_data$error
+      # Include HTTP status if available
+      if (!is.null(last_event_data$http_status)) {
+        result$http_status <- last_event_data$http_status
+      }
       # For structured errors, extract user-friendly message; for string errors, use as-is
       if (is.list(last_event_data$error) && !is.null(last_event_data$error$user_message)) {
         result$message <- last_event_data$error$user_message
@@ -2792,14 +2799,18 @@
     
     # First unescape the raw content completely
     processed_content <- raw_content
-    # First handle double backslashes (\\\\) -> (\)
-    processed_content <- gsub('\\\\\\\\', '\\\\', processed_content)
-    # Then handle escaped newlines (\\n) -> (actual newline)
-    processed_content <- gsub('\\\\n', '\n', processed_content)
-    # Handle escaped tabs (\\t) -> (actual tab)
-    processed_content <- gsub('\\\\t', '\t', processed_content)
-    # Handle escaped quotes (\\") -> (")
-    processed_content <- gsub('\\\\"', '"', processed_content)
+    processed_content <- 
+      gsub('<<<BS>>>', '\\\\',
+      gsub('<<<DQ>>>', '\\"',
+      gsub('<<<TAB>>>', '\\\\t',
+      gsub('<<<NL>>>', '\\\\n',
+      gsub('\\\\t', '\t',
+      gsub('\\\\n', '\n',
+      gsub('\\\\\\\"', '<<<DQ>>>',
+      gsub('\\\\\\\\t', '<<<TAB>>>',
+      gsub('\\\\\\\\n', '<<<NL>>>',
+      gsub('\\\\\\\\', '<<<BS>>>',
+      processed_content))))))))))
     
     # Check if we've reached the end of the field by looking for end marker
     end_match <- regexpr(end_marker_pattern, processed_content, perl = TRUE)

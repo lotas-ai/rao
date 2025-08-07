@@ -1406,11 +1406,75 @@
    }
 
    # First search in open documents (editor content) with include/exclude filtering
-   open_doc_results <- .rs.grep_in_open_documents(query, !is.null(arguments$case_sensitive) && arguments$case_sensitive, include_patterns, exclude_patterns)
+   # Wrap in tryCatch to handle invalid regex patterns
+   grep_operation_result <- tryCatch({
+      open_doc_results <- .rs.grep_in_open_documents(query, !is.null(arguments$case_sensitive) && arguments$case_sensitive, include_patterns, exclude_patterns)
+      list(success = TRUE, results = open_doc_results)
+   }, error = function(e) {
+      list(success = FALSE, error_message = e$message)
+   })
    
-   result <- processx::run(rg_binary, args, timeout = 5, error_on_status = FALSE)
+   # Check if grep operation failed due to invalid regex
+   if (!grep_operation_result$success) {
+      # Create error response following the same pattern as search_replace
+      error_message <- paste0("Grep search failed: ", grep_operation_result$error_message)
+      
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
+      function_call_output <- list(
+        id = function_output_id,
+        type = "function_call_output",
+        call_id = function_call$call_id,
+        output = error_message,
+        related_to = function_call$msg_id,
+        success = FALSE
+      )
+      
+      # Update conversation display immediately when grep_search fails
+      .rs.update_conversation_display()
+      
+      return(list(
+         function_call_output = function_call_output,
+         function_output_id = function_output_id,
+         breakout_of_function_calls = TRUE,
+         status = "continue_silent"  # Let AI try again with correct pattern
+      ))
+   }
+   
+   # Extract successful results
+   open_doc_results <- grep_operation_result$results
+   
+   # Also wrap ripgrep execution to handle potential errors
+   result <- tryCatch({
+      processx::run(rg_binary, args, timeout = 5, error_on_status = FALSE)
+   }, error = function(e) {
+      # Return a synthetic result object indicating failure
+      list(timeout = FALSE, stdout = "", stderr = e$message, status = 1)
+   })
    if (result$timeout) {
       grep_results <- "Results:\n\n_error: ripgrep timed out. Concisely ask the user to set a more specific working directory with setwd()."
+   } else if (!is.null(result$status) && result$status != 0 && !is.null(result$stderr) && nchar(result$stderr) > 0) {
+      # Handle ripgrep errors (like invalid regex patterns)
+      error_message <- paste0("Grep search failed: ", result$stderr)
+      
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
+      function_call_output <- list(
+        id = function_output_id,
+        type = "function_call_output",
+        call_id = function_call$call_id,
+        output = error_message,
+        related_to = function_call$msg_id,
+        success = FALSE
+      )
+      
+      # Update conversation display immediately when grep_search fails
+      .rs.update_conversation_display()
+      
+      return(list(
+         function_call_output = function_call_output,
+         function_output_id = function_output_id,
+         breakout_of_function_calls = TRUE,
+         status = "continue_silent"
+      ))
    } else {
       file_content <- result$stdout
       

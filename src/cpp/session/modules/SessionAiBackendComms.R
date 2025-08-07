@@ -91,7 +91,8 @@
   api_key <- .rs.get_api_key(provider)
   
   if (is.null(api_key)) {
-    stop("No API key found. Please set up a valid Rao API key at www.lotas.ai/account.")
+    .rs.enqueue_error_message("No API key found. Please set up a valid Rao API key at www.lotas.ai/account.")
+    return(NULL)
   }
   
   list(
@@ -423,7 +424,8 @@
         if (!is_conversation_name_request) {
           .rs.enqueClientEvent("update_thinking_message", list(message = "", hide_cancel = TRUE))
         }
-        stop("No AI provider available. Please set up an API key in the Settings (gear icon) before attempting to use AI features.")
+        .rs.enqueue_error_message("Please sign in or provide an API key in the Settings (gear icon) before attempting to use the chat.")
+        return(NULL)
       }
     }
   }
@@ -433,7 +435,8 @@
     if (!is_conversation_name_request) {
       .rs.enqueClientEvent("update_thinking_message", list(message = "", hide_cancel = TRUE))
     }
-    stop(paste0("No API key found for ", provider, ". Please set up a valid API key in the Settings (gear icon)."))
+    .rs.enqueue_error_message(paste0("No API key found for this user. Please use a valid log-in or set up a valid API key in the Settings (gear icon)."))
+    return(NULL)
   }
   
   symbols_note <- NULL
@@ -568,10 +571,17 @@
       }, error = function(e) FALSE)
       
       if (!backend_healthy) {
-        stop("Could not connect to backend server within 30 seconds. Please check your connectivity and try again. Often this is solved by just retrying. If the problem persists, please open a thread at https://community.lotas.ai/.")
+        .rs.enqueue_error_message("Could not connect to backend server within 30 seconds. Please check your internet connectivity and try again. Often this is solved by just retrying. If the problem persists, please open a thread at https://community.lotas.ai/.")
+        return(NULL)
       }
     }
     
+    # Implement retry logic for API calls - try up to 3 times for retryable errors
+    max_retries <- 3
+    last_error <- NULL
+    
+    for (attempt in 1:max_retries) {
+    tryCatch({
     async_info <- .rs.run_api_request_async(request_data = request_data, request_id = request_id)
     response <- .rs.poll_api_request_result(async_info)
 
@@ -597,25 +607,83 @@
       return(NULL)
     }
     
-    if (!is.null(response$error)) {
-      # Handle structured error responses from backend
-      if (is.character(response$error)) {
-        # Legacy string error - pass through directly
-        stop(response$error)
+    # Check for structured error responses (subscription/billing errors)
+    if (!is.null(response$error) && is.list(response$error) && 
+        (!is.null(response$error$user_message) || !is.null(response$error$error_message))) {
+      error_obj <- response
+      error_message <- if (!is.null(response$error$user_message)) {
+        response$error$user_message
+      } else if (!is.null(response$error$error_message)) {
+        response$error$error_message
       } else {
-        # Structured error response
-        error_message <- if (!is.null(response$error$user_message)) {
-          response$error$user_message
-        } else if (!is.null(response$error$error_message)) {
-          response$error$error_message
-        } else {
-          "Unknown error from backend"
-        }
-        stop(error_message)
+        "Unknown error from backend"
+      }
+      
+      # Check if this error is retryable using the structured error object
+      http_status <- response$http_status
+    } else if (!is.null(response$error)) {
+      # Simple string error format (API/timeout/validation errors)
+      error_obj <- response
+      error_message <- response$error
+      
+      # Check if this error is retryable using the structured error object
+      http_status <- response$http_status
+    }
+    
+    # Process the error if we found one
+    if (exists("error_message") && !is.null(error_message)) {
+      
+      if (.rs.is_retryable_error(error_obj, http_status) && attempt < max_retries) {
+        last_error <- error_message
+        
+        # Same retry delay for all retryable errors
+        retry_delay <- 2 + (attempt - 1)  # 2s, 3s, 4s
+        
+        Sys.sleep(retry_delay)
+        next  # Try again
+      } else {
+        # Non-retryable error - show error message and return NULL
+        .rs.enqueue_error_message(error_message)
+        return(NULL)
       }
     }
 
     return(response)
+      
+    }, error = function(e) {
+      # Check if this is a non-retryable error that should break out of retry loop
+      if ("non_retryable_error" %in% class(e)) {
+        .rs.enqueue_error_message(e$message)
+        return(NULL)
+      }
+      
+      error_message <- e$message
+      
+      # For exceptions during API calls (network errors, etc.), 
+      # these are typically retryable connection issues
+      if (attempt < max_retries) {
+        last_error <- error_message
+        
+        # Use default retry delay for network/connection exceptions
+        retry_delay <- 2 + (attempt - 1)  # 2s, 3s, 4s
+        
+        Sys.sleep(retry_delay)
+        return(NULL)  # Continue to next iteration
+      } else {
+        # Final attempt - show error message
+        .rs.enqueue_error_message(error_message)
+        return(NULL)
+      }
+    })
+    }
+    
+    # If we get here, all retries failed - show error message and return NULL
+    if (!is.null(last_error)) {
+      .rs.enqueue_error_message(last_error)
+    } else {
+      .rs.enqueue_error_message("The connection to the back-end failed and continued to fail on retries. Check your network connectivity, try the query again, or open a new conversation. If the error persists, please open a thread at https://community.lotas.ai/")
+    }
+    return(NULL)
     
   }, error = function(e) {
     if (!is_conversation_name_request && !is_summarization_request) {
@@ -626,31 +694,12 @@
       return(NULL)
     }
     
-    # Check for specific error types and provide appropriate messages
     error_msg <- e$message
     
-    # Authentication errors (only specific authentication failures)
-    if (grepl("Authentication failed|API key|No user found|401|403|Unauthorized|Forbidden", error_msg, ignore.case = TRUE)) {
-      stop("Authentication failed. Please check your Rao API key in the Settings (gear icon in the top right). If the problem persists, please open a thread at https://community.lotas.ai/.")
-    }
-    
-    # Connection errors
-    if (grepl("Connection refused|Cannot connect|timeout|DNS|network|Could not resolve host|Backend.*unreachable|Backend request timed out|Backend connection error", error_msg, ignore.case = TRUE)) {
-      stop("Cannot connect to backend server. Please check your internet connection and try again. If the problem persists, please open a thread at https://community.lotas.ai/.")
-    }
-    
-    # Rate limiting errors
-    if (grepl("rate limit|too many requests|429", error_msg, ignore.case = TRUE)) {
-      stop("Rate limit exceeded. Please wait a moment before trying again.")
-    }
-    
-    # Server errors
-    if (grepl("500|502|503|504|Internal Server Error|Bad Gateway|Service Unavailable|Gateway Timeout", error_msg, ignore.case = TRUE)) {
-      stop("Backend server error. Please try again in a few moments. If the problem persists, please open a thread at https://community.lotas.ai/.")
-    }
-    
-    # Pass through all other error messages directly - structured errors will have been handled above
-    stop(e$message)
+    # Pass through the original error message without modification
+    # The structured error handling above should have already prevented retries for subscription errors
+    .rs.enqueue_error_message(error_msg)
+    return(NULL)
   })
 })
 
@@ -831,11 +880,19 @@
 .rs.addFunction("check_backend_health", function() {
   config <- .rs.get_backend_config()
   
-  tryCatch({
+  # Progressive retry with increasing timeouts: 5s, 10s, 15s with 2s pauses
+  timeouts <- c(5, 10, 15)
+  
+  for (i in seq_along(timeouts)) {
+  timeout_seconds <- timeouts[i]
+  cat(timeout_seconds)
+  
+  # Attempt health check with current timeout
+  healthy <- tryCatch({
     request <- httr2::request(config$url)
     request <- httr2::req_url_path(request, "/actuator/health")
     request <- httr2::req_method(request, "GET")
-    request <- httr2::req_timeout(request, 30)
+    request <- httr2::req_timeout(request, timeout_seconds)
     response <- httr2::req_perform(request)
     status <- httr2::resp_status(response)
     if (status == 200) {
@@ -847,6 +904,90 @@
   }, error = function(e) {
     return(FALSE)
   })
+  
+  # If this attempt succeeded, return TRUE immediately
+  if (healthy) {
+    return(TRUE)
+  }
+  
+  # If not the last attempt, pause for 2 seconds before next try
+  if (i < length(timeouts)) {
+    Sys.sleep(2)
+  }
+  }
+  
+  # All attempts failed
+  return(FALSE)
+})
+
+.rs.addFunction("is_retryable_error", function(error_response, http_status = NULL) {
+  # Determine if an error should be retried based on structured backend error types
+  
+  # Handle structured ErrorResponse objects
+  if (is.list(error_response) && !is.null(error_response$error) && 
+      is.list(error_response$error) && !is.null(error_response$error$error_type)) {
+    error_type <- error_response$error$error_type
+    
+    # Non-retryable subscription/billing errors (require user action)
+    non_retryable_types <- c(
+      "SUBSCRIPTION_LIMIT_REACHED",
+      "TRIAL_EXPIRED", 
+      "PAYMENT_ACTION_REQUIRED",
+      "USAGE_BILLING_REQUIRED",
+      "USAGE_BILLING_LIMIT_REACHED",
+      "SUBSCRIPTION_EXPIRED",
+      "SUBSCRIPTION_PAYMENT_FAILED",
+      "OVERAGE_PAYMENT_FAILED",
+      "AUTHENTICATION_ERROR"
+    )
+    
+    if (error_type %in% non_retryable_types) {
+      return(FALSE)
+    }
+    
+    # Retryable error types
+    retryable_types <- c(
+      "SYSTEM_ERROR"  # Backend system errors are retryable
+    )
+    
+    if (error_type %in% retryable_types) {
+      return(TRUE)
+    }
+    
+    # MODEL_ERROR and UNKNOWN_ERROR - treat conservatively
+    if (error_type %in% c("MODEL_ERROR", "UNKNOWN_ERROR")) {
+      # Without specific error type classification, we can't reliably determine
+      # if these are retryable. The backend should use more specific error types.
+      return(FALSE)
+    }
+    
+    return(FALSE)
+  }
+  
+  # Handle HTTP status codes when available (based on actual rao-backend responses)
+  if (!is.null(http_status)) {
+    # Non-retryable HTTP status codes from rao-backend
+    if (http_status %in% c(400, 401, 402, 403, 404, 409)) {
+      return(FALSE)
+    }
+    
+    # Retryable HTTP status codes from rao-backend
+    if (http_status %in% c(429, 500)) {
+      return(TRUE)
+    }
+  }
+  
+  # For simple string errors, we can't reliably determine if they're retryable
+  # The backend should use structured ErrorResponse objects for proper categorization
+  # Only handle very specific cases where we know the exact error format
+  if (is.character(error_response)) {
+    # No pattern matching - we don't know what these string errors represent
+    # The backend should be updated to use structured errors for proper handling
+    return(FALSE)
+  }
+  
+  # Default: don't retry unknown errors to be safe
+  return(FALSE)
 })
 
 .rs.addFunction("cancel_backend_request", function(request_id) {

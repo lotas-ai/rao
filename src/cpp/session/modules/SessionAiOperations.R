@@ -2569,6 +2569,31 @@
       msg_id = function_call_message_id
    )
    
+   # Validate JSON arguments BEFORE recording function call in conversation log
+   json_validation_result <- tryCatch({
+      .rs.safe_parse_function_arguments(normalized_function_call)
+      NULL  # Return NULL if validation succeeds
+   }, error = function(e) {
+      # Return error details if validation fails
+      list(
+         error_message = e$message,
+         function_output_id = .rs.get_preallocated_message_id(call_id, 2)
+      )
+   })
+   
+   # If JSON validation failed, enqueue error message and return early
+   if (!is.null(json_validation_result)) {
+      # Use proper error enqueue function instead of recording invalid function call
+      error_message <- "The model made an invalid function call. "
+      .rs.enqueue_error_message(error_message)
+      
+      # Return error result to stop processing
+      return(list(
+         breakout_of_function_calls = TRUE,
+         error_enqueued = TRUE
+      ))
+   }
+   
    current_logForChecking <- Filter(function(entry) {
       if (is.null(entry$function_call)) {
          return(TRUE)
@@ -2663,8 +2688,8 @@
       # Note: Function calls are now stored only in conversation_log.json (not conversation.json)
    }
    
-   # Progress messages
-   arguments <- .rs.safe_parse_function_arguments(function_call)
+   # Parse arguments (validation already done earlier)
+   arguments <- .rs.safe_parse_function_arguments(normalized_function_call)
    
    # Process the function call using specific handlers
    # Note: end_turn is now handled as standalone event at backend level, not as function call
