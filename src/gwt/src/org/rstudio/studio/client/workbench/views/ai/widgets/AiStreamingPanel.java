@@ -392,6 +392,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          case "create_assistant_message":
             createAssistantMessageSynchronously(event.messageId, event.content);
             break;
+         case "create_error_message":
+            createErrorMessageSynchronously(event.messageId, event.content);
+            break;
          case "clear_conversation":
             clearAllContent();
             // Reset expected sequence when conversation is cleared and rebuilt
@@ -654,6 +657,98 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
             contentDiv.setInnerHTML(renderedHtml);
          }
       });
+   }
+   
+   /**
+    * Create error message synchronously with close button
+    */
+   private void createErrorMessageSynchronously(String messageId, String errorMessage)
+   {
+      Element conversationElement = getActiveConversationContainer();
+      if (conversationElement == null)
+      {
+         return;
+      }
+      
+      // Check if element already exists
+      Element existingElement = getElementById(messageId);
+      if (existingElement != null)
+      {
+         return;
+      }
+      
+      // Create error message container
+      Element errorContainer = Document.get().createDivElement();
+      errorContainer.setClassName("error-message-container");
+      errorContainer.setId(messageId);
+      
+      Element messageDiv = Document.get().createDivElement();
+      messageDiv.setClassName("message error");
+      
+      // Create error content div
+      Element contentDiv = Document.get().createDivElement();
+      contentDiv.setClassName("error-content");
+      
+      // Create error icon and text container
+      Element iconTextContainer = Document.get().createDivElement();
+      iconTextContainer.setClassName("error-icon-text");
+      
+      // Add error icon
+      Element iconDiv = Document.get().createDivElement();
+      iconDiv.setClassName("error-icon");
+      iconDiv.setInnerText("!");
+      
+      // Add error text
+      Element textDiv = Document.get().createDivElement();
+      textDiv.setClassName("error-text");
+      textDiv.setInnerText(errorMessage);
+      
+      iconTextContainer.appendChild(iconDiv);
+      iconTextContainer.appendChild(textDiv);
+      
+      // Create close button
+      Element closeButton = Document.get().createDivElement();
+      closeButton.setClassName("error-close-button");
+      closeButton.setInnerText("×");
+      closeButton.setAttribute("title", "Dismiss");
+      
+      // Add click handler for close button
+      addErrorCloseHandler(closeButton, messageId);
+      
+      contentDiv.appendChild(iconTextContainer);
+      contentDiv.appendChild(closeButton);
+      messageDiv.appendChild(contentDiv);
+      errorContainer.appendChild(messageDiv);
+      
+      // Insert in correct position  
+      insertElementInOrder(conversationElement, errorContainer, messageId, currentProcessingSequence_);
+      
+      // Force scroll to show error message
+      if (!recreationMode_) {
+         scrollManager_.forceScrollToBottom();
+      }
+   }
+   
+   /**
+    * Add click handler for error message close button
+    */
+   private native void addErrorCloseHandler(Element closeButton, String messageId) /*-{
+      var self = this;
+      closeButton.onclick = function() {
+         self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiStreamingPanel::closeErrorMessage(Ljava/lang/String;)(messageId);
+      };
+   }-*/;
+   
+   /**
+    * Close error message by removing it from DOM
+    */
+   private void closeErrorMessage(String messageId)
+   {
+      Element errorElement = getElementById(messageId);
+      if (errorElement != null && errorElement.getParentElement() != null)
+      {
+         errorElement.getParentElement().removeChild(errorElement);
+      }
    }
    
    /**

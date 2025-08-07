@@ -1,5 +1,5 @@
 /* External declarations for unobfuscated classes */
-@external markdown-content, text, ai-streaming-panel, user, assistant, aiConsoleWrapper, aiConsoleHeader, aiTerminalWrapper, aiEditFileHeader, aiEditFileWrapper, aiEditFileWidget, diff-stats, diff-stats-container, addition, removal, ace_editor, ace_gutter, ace_gutter-layer, ace_diff_added, ace_diff_deleted, ace_theme-monokai, ace_theme-twilight, ace_theme-vibrant_ink, ace_test_line_0, ace_test_line_1, ace_test_line_2, thinking-message, thinking-content, thinking-text, thinking-message-container;
+@external markdown-content, text, ai-streaming-panel, user, assistant, message, error, aiConsoleWrapper, aiConsoleHeader, aiTerminalWrapper, aiEditFileHeader, aiEditFileWrapper, aiEditFileWidget, diff-stats, diff-stats-container, addition, removal, ace_editor, ace_gutter, ace_gutter-layer, ace_diff_added, ace_diff_deleted, ace_theme-monokai, ace_theme-twilight, ace_theme-vibrant_ink, ace_test_line_0, ace_test_line_1, ace_test_line_2, thinking-message, thinking-content, thinking-text, thinking-message-container, error-message-container, error-content, error-icon-text, error-icon, error-text, error-close-button;
 
 /* AI Console Widget Styles */
 .aiConsoleWidget {
@@ -373,4 +373,76 @@ div.ace_diff_deleted,
       opacity: 1; 
       transform: scale(1.02); 
    }
+}
+
+/* Error Message Styles - Simple gray design */
+.error-message-container {
+   margin: 6px 0;
+   display: block;
+   clear: both;
+}
+
+.message.error {
+   background-color: #f5f5f5;
+   border: 1px solid #ddd;
+   border-radius: 4px;
+   padding: 10px 12px;
+   margin: 6px 0;
+   position: relative;
+}
+
+.error-content {
+   display: flex;
+   align-items: flex-start;
+   justify-content: space-between;
+   gap: 8px;
+}
+
+.error-icon-text {
+   display: flex;
+   align-items: flex-start;
+   gap: 0px;
+   flex: 1;
+}
+
+.error-icon {
+   display: none;
+}
+
+.error-text {
+   color: #991717;
+   font-family: inherit;
+   font-size: 14px;
+   line-height: 1.4;
+   word-wrap: break-word;
+   flex: 1;
+   font-weight: normal;
+}
+
+.error-close-button {
+   background: none;
+   border: none;
+   color: #999;
+   cursor: pointer;
+   font-size: 14px;
+   line-height: 1;
+   padding: 2px;
+   flex-shrink: 0;
+   width: 16px;
+   height: 16px;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   border-radius: 2px;
+   transition: background-color 0.1s ease, color 0.1s ease;
+   font-weight: bold;
+}
+
+.error-close-button:hover {
+   background-color: #e5e5e5;
+   color: #666;
+}
+
+.error-close-button:active {
+   background-color: #d5d5d5;
 }

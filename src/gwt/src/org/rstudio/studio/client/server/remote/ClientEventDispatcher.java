@@ -436,7 +436,8 @@ public class ClientEventDispatcher
                 "create_widget_buttons".equals(operationType) ||
                 "create_function_call_message".equals(operationType) ||
                 "start_background_recreation".equals(operationType) ||
-                "finish_background_recreation".equals(operationType)) {
+                "finish_background_recreation".equals(operationType) ||
+                "create_error_message".equals(operationType)) {
                
                callAddOperationEvent(sequence, operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting, diffData, functionCallType);
             } else {
