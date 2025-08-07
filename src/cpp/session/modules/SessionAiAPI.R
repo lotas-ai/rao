@@ -968,9 +968,7 @@
     # Check timeout - only timeout if no activity for the specified time
     time_since_activity <- difftime(current_time, last_activity_time, units = "secs")
     
-    if (time_since_activity >= activity_timeout_seconds) {
-      cat("DEBUG: Timeout due to inactivity - no deltas received for", time_since_activity, "seconds\n")
-      
+    if (time_since_activity >= activity_timeout_seconds) {      
       # Kill the background process to close the httr streaming request
       tryCatch({
         bg_process$kill()
@@ -1160,11 +1158,8 @@
             
             # Skip this iteration if JSON parsing failed
             if (is.null(event_data)) {
-              cat("DEBUG: Skipping malformed JSON event, continuing stream processing\n")
               next
             }
-            
-            
             
             # Capture streaming request ID from response_id events for cancellation
             if (!is.null(event_data$response_id) && is.null(streaming_request_id)) {
@@ -2613,61 +2608,7 @@
     }
     
     return(result)
-  } else {
-    # Comprehensive debugging for NULL last_event_data cases
-    cat("ERROR: poll_api_request_result reached end with NULL last_event_data\n")
-    cat("=== DIAGNOSTIC INFORMATION ===\n")
-    cat("Request ID:", request_id, "\n")
-    cat("Total execution time:", difftime(Sys.time(), start_time, units = "secs"), "seconds\n")
-    cat("Final process state:", final_process_state, "\n")
-    cat("Process was alive at start:", process_was_alive_at_start, "\n")
-    cat("Stream file existed:", file_existed, "\n")
-    cat("Stream file path:", stream_file, "\n")
-    cat("Total lines processed:", total_lines_processed, "\n")
-    cat("Event lines seen:", event_lines_seen, "\n")
-    cat("Ready seen:", ready_seen, "\n")
-    cat("Complete seen:", complete_seen, "\n")
-    cat("BG error seen:", bg_error_seen, "\n")
-    cat("Malformed JSON count:", malformed_json_count, "\n")
-    cat("Unmatched events count:", unmatched_events_count, "\n")
-    cat("Accumulated response length:", nchar(accumulated_response), "\n")
-    cat("Last activity description:", last_activity_description, "\n")
-    cat("Streaming complete flag:", streaming_complete, "\n")
-    
-    # Show the last few lines of the stream file for debugging
-    if (file.exists(stream_file)) {
-      cat("=== LAST 10 LINES OF STREAM FILE ===\n")
-      tryCatch({
-        all_content <- readLines(stream_file, warn = FALSE)
-        if (length(all_content) > 0) {
-          start_idx <- max(1, length(all_content) - 9)
-          for (i in start_idx:length(all_content)) {
-            cat(sprintf("[%d] %s\n", i, all_content[i]))
-          }
-        } else {
-          cat("Stream file is empty\n")
-        }
-      }, error = function(e) {
-        cat("ERROR reading stream file:", e$message, "\n")
-      })
-    } else {
-      cat("Stream file does not exist\n")
-    }
-    
-    # Try to get background process info
-    cat("=== BACKGROUND PROCESS INFO ===\n")
-    tryCatch({
-      cat("Process alive status:", bg_process$is_alive(), "\n")
-      if (!bg_process$is_alive()) {
-        exit_status <- bg_process$get_exit_status()
-        cat("Exit status:", if (is.null(exit_status)) "NULL" else exit_status, "\n")
-      }
-    }, error = function(e) {
-      cat("ERROR getting process info:", e$message, "\n")
-    })
-    
-    cat("==============================\n")
-    
+  } else {        
     stop("No response received from backend, timeout or error")
   }
 })

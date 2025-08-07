@@ -885,7 +885,6 @@
   
   for (i in seq_along(timeouts)) {
   timeout_seconds <- timeouts[i]
-  cat(timeout_seconds)
   
   # Attempt health check with current timeout
   healthy <- tryCatch({
