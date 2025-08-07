@@ -41,9 +41,10 @@ public class AiConsoleWidget extends AiWidgetBase
                           String explanation,
                           String requestId,
                           boolean isEditable,
-                          ConsoleCommandHandler handler)
+                          ConsoleCommandHandler handler,
+                          String functionCallType)
    {
-      super(messageId, requestId);
+      super(messageId, requestId, functionCallType);
       explanation_ = explanation;
       handler_ = handler;
       isEditable_ = isEditable;
@@ -221,6 +222,11 @@ public class AiConsoleWidget extends AiWidgetBase
    @Override
    protected void onRunClicked()
    {
+      // Debug logging to show original function call type
+      Debug.log("DEBUG: Console widget Run button clicked - Original function call type: " + 
+                (functionCallType_ != null ? functionCallType_ : "unknown") + 
+                ", messageId: " + getMessageId());
+      
       if (handler_ != null)
       {
          // Get the command from the editor
@@ -239,6 +245,11 @@ public class AiConsoleWidget extends AiWidgetBase
    @Override
    protected void onCancelClicked()
    {
+      // Debug logging to show original function call type
+      Debug.log("DEBUG: Console widget Cancel button clicked - Original function call type: " + 
+                (functionCallType_ != null ? functionCallType_ : "unknown") + 
+                ", messageId: " + getMessageId());
+      
       if (handler_ != null)
       {
          handler_.onCancel(getMessageId());

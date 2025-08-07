@@ -1057,13 +1057,11 @@ public class AiPane extends WorkbenchPane
          thiz.@org.rstudio.studio.client.workbench.views.ai.AiPane::handleCancelTerminalCommand(Ljava/lang/String;)(messageId);
       });
       
-
-      
       // Export sequence-based event handling for the new buffering system
-      $wnd.aiAddOperationEvent = $entry(function(sequence, operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting, diffData) {
+      $wnd.aiAddOperationEvent = $entry(function(sequence, operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting, diffData, functionCallType) {
          var streamingPanel = thiz.@org.rstudio.studio.client.workbench.views.ai.AiPane::getStreamingPanel()();
          if (streamingPanel) {
-            streamingPanel.@org.rstudio.studio.client.workbench.views.ai.widgets.AiStreamingPanel::addOperationEvent(ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLcom/google/gwt/core/client/JavaScriptObject;)(sequence || 0, operationType || "", messageId || "", command || "", explanation || "", requestId || "", filename || "", content || "", skipDiffHighlighting || false, diffData || null);
+            streamingPanel.@org.rstudio.studio.client.workbench.views.ai.widgets.AiStreamingPanel::addOperationEvent(ILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ZLcom/google/gwt/core/client/JavaScriptObject;Ljava/lang/String;)(sequence || 0, operationType || "", messageId || "", command || "", explanation || "", requestId || "", filename || "", content || "", skipDiffHighlighting || false, diffData || null, functionCallType || "");
          }
       });
    }-*/;

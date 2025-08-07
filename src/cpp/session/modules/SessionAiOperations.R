@@ -354,7 +354,8 @@
       command = cmd_info$command,
       explanation = cmd_info$explanation,
       request_id = function_call_entry$request_id,
-      is_console = is_console
+      is_console = is_console,
+      function_call_type = function_name
    ))
 })
 
@@ -2641,14 +2642,16 @@
                message_id = as.numeric(function_call_message_id),
                command = cmd_info$command,
                explanation = cmd_info$explanation,
-               request_id = request_id
+               request_id = request_id,
+               function_call_type = function_name
             ))
          } else {
             .rs.send_ai_operation("create_terminal_command", list(
                message_id = as.numeric(function_call_message_id),
                command = cmd_info$command,
                explanation = cmd_info$explanation,
-               request_id = request_id
+               request_id = request_id,
+               function_call_type = function_name
             ))
          }
          
@@ -2830,7 +2833,8 @@
                message_id = widget_op$message_id,
                command = widget_op$command,
                explanation = widget_op$explanation,
-               request_id = widget_op$request_id
+               request_id = widget_op$request_id,
+               function_call_type = widget_op$function_call_type
             ))
 
             .rs.send_ai_operation("create_widget_buttons", list(

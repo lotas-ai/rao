@@ -58,6 +58,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       final String content;
       final boolean skipDiffHighlighting;
       final com.google.gwt.core.client.JavaScriptObject diffData;
+      final String functionCallType;
       
       // Constructor for stream events
       QueuedEvent(AiStreamDataEvent event)
@@ -73,10 +74,11 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          this.content = null;
          this.skipDiffHighlighting = false;
          this.diffData = null;
+         this.functionCallType = null;
       }
       
       // Constructor for operation events
-      QueuedEvent(String operationType, String messageId, String command, String explanation, String requestId, String filename, String content, boolean skipDiffHighlighting, com.google.gwt.core.client.JavaScriptObject diffData)
+      QueuedEvent(String operationType, String messageId, String command, String explanation, String requestId, String filename, String content, boolean skipDiffHighlighting, com.google.gwt.core.client.JavaScriptObject diffData, String functionCallType)
       {
          this.type = "operation";
          this.streamEvent = null;
@@ -89,6 +91,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          this.content = content;
          this.skipDiffHighlighting = skipDiffHighlighting;
          this.diffData = diffData;
+         this.functionCallType = functionCallType;
       }
    }
 
@@ -326,9 +329,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    /**
     * Add a sequence-ordered operation event to the processing queue
     */
-   public void addOperationEvent(int sequence, String operationType, String messageId, String command, String explanation, String requestId, String filename, String content, boolean skipDiffHighlighting, com.google.gwt.core.client.JavaScriptObject diffData)
+   public void addOperationEvent(int sequence, String operationType, String messageId, String command, String explanation, String requestId, String filename, String content, boolean skipDiffHighlighting, com.google.gwt.core.client.JavaScriptObject diffData, String functionCallType)
    {
-      QueuedEvent queuedEvent = new QueuedEvent(operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting, diffData);
+      QueuedEvent queuedEvent = new QueuedEvent(operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting, diffData, functionCallType);
       
       // Special cases: both start_background_recreation and clear_conversation 
       // always process immediately regardless of sequence because they signal 
@@ -372,10 +375,10 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       switch (event.operationType)
       {
          case "create_console_command":
-            createConsoleCommandSynchronously(event.messageId, event.command, event.explanation, event.requestId);
+            createConsoleCommandSynchronously(event.messageId, event.command, event.explanation, event.requestId, event.functionCallType);
             break;
          case "create_terminal_command":
-            createTerminalCommandSynchronously(event.messageId, event.command, event.explanation, event.requestId);
+            createTerminalCommandSynchronously(event.messageId, event.command, event.explanation, event.requestId, event.functionCallType);
             break;
          case "edit_file_command":  // Handle both formats from R
             createEditFileCommandSynchronously(event.messageId, event.filename, event.content, event.explanation, event.requestId, event.skipDiffHighlighting, event.diffData);
@@ -482,7 +485,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          if (!consoleWidgets_.containsKey(messageId))
          {
             String requestId = event.getRequestId();
-            createConsoleCommandSynchronously(messageId, "", "Console command", requestId);
+            createConsoleCommandSynchronously(messageId, "", "Console command", requestId, null);
          }
          
          // Add content to console widget
@@ -495,7 +498,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          if (!terminalWidgets_.containsKey(messageId))
          {
             String requestId = event.getRequestId();
-            createTerminalCommandSynchronously(messageId, "", "Terminal command", requestId);
+            createTerminalCommandSynchronously(messageId, "", "Terminal command", requestId, null);
          }
          
          // Add content to terminal widget
@@ -761,7 +764,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    /**
     * Create console command widget synchronously
     */
-   private void createConsoleCommandSynchronously(String messageId, String command, String explanation, String requestId)
+   private void createConsoleCommandSynchronously(String messageId, String command, String explanation, String requestId, String functionCallType)
    {
       // Check if console widget already exists
       if (consoleWidgets_.containsKey(messageId))
@@ -788,7 +791,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       };
       
       // Create the console widget with correct constructor
-      AiConsoleWidget consoleWidget = new AiConsoleWidget(messageId, command, explanation, requestId, true, handler);
+      AiConsoleWidget consoleWidget = new AiConsoleWidget(messageId, command, explanation, requestId, true, handler, functionCallType);
       
       // Store widget in map BEFORE injecting into DOM
       consoleWidgets_.put(messageId, consoleWidget);
@@ -799,7 +802,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    /**
     * Create terminal command widget synchronously
     */
-   private void createTerminalCommandSynchronously(String messageId, String command, String explanation, String requestId)
+   private void createTerminalCommandSynchronously(String messageId, String command, String explanation, String requestId, String functionCallType)
    {
       // Hide thinking message when AI response (function call) starts
       hideThinkingMessage();
@@ -1368,9 +1371,8 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget = editFileWidgets_.get(messageId);
          if (editFileWidget != null)
          {
-            // For edit_file widgets, we need to create the button container manually
-            // since they don't have a createButtons() method like console/terminal widgets
-            createEditFileButtons(editFileWidget);
+            // Check if we should auto-accept this edit file command
+            checkEditFileAutoAccept(messageId, editFileWidget);
          }
       }
       else if ("search_replace".equals(widgetType))
@@ -1378,11 +1380,132 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          AiSearchReplaceWidget searchReplaceWidget = searchReplaceWidgets_.get(messageId);
          if (searchReplaceWidget != null)
          {
-            // For search_replace widgets, we need to create the button container manually
-            createSearchReplaceButtons(searchReplaceWidget);
+            // Check if we should auto-accept this search replace command
+            checkSearchReplaceAutoAccept(messageId, searchReplaceWidget);
          }
       }
    }
+   
+   /**
+    * Check if an edit file should be auto-accepted and either create buttons or auto-accept
+    */
+   private void checkEditFileAutoAccept(String messageId, org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget)
+   {
+      // Access the AiPane through JavaScript to get server operations
+      callAiCheckAutoAcceptEditFile(messageId, editFileWidget);
+   }
+   
+   /**
+    * Call the AI pane to check auto accept edit settings and either auto-accept or create buttons
+    */
+   private native void callAiCheckAutoAcceptEditFile(String messageId, org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget) /*-{
+      // Get the AiPane instance through the window object
+      var aiPane = $wnd.aiPaneInstance;
+      if (!aiPane) {
+         // Fallback: create buttons if we can't access AiPane
+         editFileWidget.@org.rstudio.studio.client.workbench.views.ai.widgets.AiFileEditorWidgetBase::createButtonsIfNeeded()();
+         return;
+      }
+      
+      var thiz = this;
+      
+      // Get server operations from AiPane
+      var server = aiPane.@org.rstudio.studio.client.workbench.views.ai.AiPane::getAiServerOperations()();
+      
+      // Check if auto_accept_edits is enabled
+      server.@org.rstudio.studio.client.workbench.views.ai.model.AiServerOperations::getAutoAcceptEdits(Lorg/rstudio/studio/client/server/ServerRequestCallback;)(
+         @org.rstudio.studio.client.server.ServerRequestCallback::new()(
+            function(autoAcceptEnabled) {
+               if (!autoAcceptEnabled) {
+                  // Auto-accept is disabled, create buttons
+                  editFileWidget.@org.rstudio.studio.client.workbench.views.ai.widgets.AiFileEditorWidgetBase::createButtonsIfNeeded()();
+                  return;
+               }
+               
+               // Auto-accept is enabled, automatically accept the edit
+               thiz.@org.rstudio.studio.client.workbench.views.ai.widgets.AiStreamingPanel::autoAcceptEditFile(Ljava/lang/String;Lorg/rstudio/studio/client/workbench/views/ai/widgets/AiEditFileWidget;)(messageId, editFileWidget);
+            },
+            function(error) {
+               // Error checking auto-accept setting, create buttons
+               editFileWidget.@org.rstudio.studio.client.workbench.views.ai.widgets.AiFileEditorWidgetBase::createButtonsIfNeeded()();
+            }
+         )
+      );
+   }-*/;
+   
+   /**
+    * Check if a search replace should be auto-accepted and either create buttons or auto-accept
+    */
+   private void checkSearchReplaceAutoAccept(String messageId, AiSearchReplaceWidget searchReplaceWidget)
+   {
+      // Access the AiPane through JavaScript to get server operations
+      callAiCheckAutoAcceptSearchReplace(messageId, searchReplaceWidget);
+   }
+   
+   /**
+    * Call the AI pane to check auto accept edit settings and either auto-accept or create buttons
+    */
+   private native void callAiCheckAutoAcceptSearchReplace(String messageId, AiSearchReplaceWidget searchReplaceWidget) /*-{
+      // Get the AiPane instance through the window object
+      var aiPane = $wnd.aiPaneInstance;
+      if (!aiPane) {
+         // Fallback: create buttons if we can't access AiPane
+         searchReplaceWidget.@org.rstudio.studio.client.workbench.views.ai.widgets.AiFileEditorWidgetBase::createButtonsIfNeeded()();
+         return;
+      }
+      
+      var thiz = this;
+      
+      // Get server operations from AiPane
+      var server = aiPane.@org.rstudio.studio.client.workbench.views.ai.AiPane::getAiServerOperations()();
+      
+      // Check if auto_accept_edits is enabled
+      server.@org.rstudio.studio.client.workbench.views.ai.model.AiServerOperations::getAutoAcceptEdits(Lorg/rstudio/studio/client/server/ServerRequestCallback;)(
+         @org.rstudio.studio.client.server.ServerRequestCallback::new()(
+            function(autoAcceptEnabled) {
+               if (!autoAcceptEnabled) {
+                  // Auto-accept is disabled, create buttons
+                  searchReplaceWidget.@org.rstudio.studio.client.workbench.views.ai.widgets.AiFileEditorWidgetBase::createButtonsIfNeeded()();
+                  return;
+               }
+               
+               // Auto-accept is enabled, automatically accept the search replace
+               thiz.@org.rstudio.studio.client.workbench.views.ai.widgets.AiStreamingPanel::autoAcceptSearchReplace(Ljava/lang/String;Lorg/rstudio/studio/client/workbench/views/ai/widgets/AiSearchReplaceWidget;)(messageId, searchReplaceWidget);
+            },
+            function(error) {
+               // Error checking auto-accept setting, create buttons
+               searchReplaceWidget.@org.rstudio.studio.client.workbench.views.ai.widgets.AiFileEditorWidgetBase::createButtonsIfNeeded()();
+            }
+         )
+      );
+   }-*/;
+   
+   /**
+    * Automatically accept an edit file command without showing buttons
+    */
+   private void autoAcceptEditFile(String messageId, org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget)
+   {
+      // Get the edited content from the widget and trigger acceptance
+      String editedContent = editFileWidget.getContent();
+      
+      // Call the existing accept handler directly (same logic as clicking accept button)
+      handleAcceptEditFileCommand(messageId, editedContent);
+      onFunctionCallCompleted(messageId);
+   }
+   
+   /**
+    * Automatically accept a search replace command without showing buttons
+    */
+   private void autoAcceptSearchReplace(String messageId, AiSearchReplaceWidget searchReplaceWidget)
+   {
+      // Get the edited content from the widget and trigger acceptance
+      String editedContent = searchReplaceWidget.getContent();
+      
+      // Call the existing accept handler directly (same logic as clicking accept button)
+      handleAcceptSearchReplaceCommand(messageId, editedContent);
+      onFunctionCallCompleted(messageId);
+   }
+
    
    /**
     * Create buttons for edit_file widgets that were restored without buttons

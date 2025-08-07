@@ -207,4 +207,42 @@ public interface AiServerOperations
    void signInWithWebsite(String websiteUrl, ServerRequestCallback<String> requestCallback);
    
    void cleanupAuthServer(ServerRequestCallback<java.lang.Void> requestCallback);
+   
+   // Automation settings
+   void getAutoAcceptEdits(ServerRequestCallback<Boolean> requestCallback);
+   
+   void setAutoAcceptEdits(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback);
+   
+   void getAutoAcceptConsole(ServerRequestCallback<Boolean> requestCallback);
+   
+   void setAutoAcceptConsole(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback);
+   
+   void getAutoAcceptTerminal(ServerRequestCallback<Boolean> requestCallback);
+   
+   void setAutoAcceptTerminal(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback);
+   
+   void getAutoRunFiles(ServerRequestCallback<Boolean> requestCallback);
+   
+   void setAutoRunFiles(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback);
+   
+   void getAutoDeleteFiles(ServerRequestCallback<Boolean> requestCallback);
+   
+   void setAutoDeleteFiles(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback);
+   
+   // Allow/deny list settings
+   void getAutoAcceptConsoleAllowAnything(ServerRequestCallback<Boolean> requestCallback);
+   
+   void setAutoAcceptConsoleAllowAnything(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback);
+   
+   void getAutoAcceptTerminalAllowAnything(ServerRequestCallback<Boolean> requestCallback);
+   
+   void setAutoAcceptTerminalAllowAnything(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback);
+   
+   void getAutoRunFilesAllowAnything(ServerRequestCallback<Boolean> requestCallback);
+   
+   void setAutoRunFilesAllowAnything(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback);
+   
+   void getAutomationList(String listType, ServerRequestCallback<JavaScriptObject> requestCallback);
+   
+   void setAutomationList(String listType, JavaScriptObject items, ServerRequestCallback<java.lang.Void> requestCallback);
 }

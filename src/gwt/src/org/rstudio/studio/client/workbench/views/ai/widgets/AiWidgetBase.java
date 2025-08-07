@@ -26,12 +26,22 @@ public abstract class AiWidgetBase extends Composite
    // Common fields that all AI widgets have
    protected final String messageId_;
    protected final String requestId_;
+   protected final String functionCallType_;
    
    // Constructor for common fields
    protected AiWidgetBase(String messageId, String requestId)
    {
       messageId_ = messageId;
       requestId_ = requestId;
+      functionCallType_ = null; // Default for widgets that don't specify
+   }
+   
+   // Constructor with function call type
+   protected AiWidgetBase(String messageId, String requestId, String functionCallType)
+   {
+      messageId_ = messageId;
+      requestId_ = requestId;
+      functionCallType_ = functionCallType;
    }
    
    /**

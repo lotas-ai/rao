@@ -306,6 +306,142 @@ public class AiViewManager
                }
             });
          }
+         
+         @Override
+         public void onAutoAcceptEditsChange(boolean enabled) {
+            server_.setAutoAcceptEdits(enabled, new ServerRequestCallback<java.lang.Void>() {
+               @Override
+               public void onResponseReceived(java.lang.Void response) {
+                  Debug.log("Auto-accept edits set to: " + enabled);
+               }
+               
+               @Override
+               public void onError(ServerError error) {
+                  Debug.log("setAutoAcceptEdits failed: " + error.getMessage());
+                  RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
+                     "Error", "Failed to set auto-accept edits: " + error.getMessage());
+               }
+            });
+         }
+         
+         @Override
+         public void onAutoAcceptConsoleChange(boolean enabled) {
+            server_.setAutoAcceptConsole(enabled, new ServerRequestCallback<java.lang.Void>() {
+               @Override
+               public void onResponseReceived(java.lang.Void response) {
+                  Debug.log("Auto-accept console set to: " + enabled);
+               }
+               
+               @Override
+               public void onError(ServerError error) {
+                  Debug.log("setAutoAcceptConsole failed: " + error.getMessage());
+                  RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
+                     "Error", "Failed to set auto-accept console: " + error.getMessage());
+               }
+            });
+         }
+         
+         @Override
+         public void onAutoAcceptTerminalChange(boolean enabled) {
+            server_.setAutoAcceptTerminal(enabled, new ServerRequestCallback<java.lang.Void>() {
+               @Override
+               public void onResponseReceived(java.lang.Void response) {
+                  Debug.log("Auto-accept terminal set to: " + enabled);
+               }
+               
+               @Override
+               public void onError(ServerError error) {
+                  Debug.log("setAutoAcceptTerminal failed: " + error.getMessage());
+                  RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
+                     "Error", "Failed to set auto-accept terminal: " + error.getMessage());
+               }
+            });
+         }
+         
+         @Override
+         public void onAutoRunFilesChange(boolean enabled) {
+            server_.setAutoRunFiles(enabled, new ServerRequestCallback<java.lang.Void>() {
+               @Override
+               public void onResponseReceived(java.lang.Void response) {
+                  Debug.log("Auto-run files set to: " + enabled);
+               }
+               
+               @Override
+               public void onError(ServerError error) {
+                  Debug.log("setAutoRunFiles failed: " + error.getMessage());
+                  RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
+                     "Error", "Failed to set auto-run files: " + error.getMessage());
+               }
+            });
+         }
+         
+         @Override
+         public void onAutoDeleteFilesChange(boolean enabled) {
+            server_.setAutoDeleteFiles(enabled, new ServerRequestCallback<java.lang.Void>() {
+               @Override
+               public void onResponseReceived(java.lang.Void response) {
+                  Debug.log("Auto-delete files set to: " + enabled);
+               }
+               
+               @Override
+               public void onError(ServerError error) {
+                  Debug.log("setAutoDeleteFiles failed: " + error.getMessage());
+                  RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
+                     "Error", "Failed to set auto-delete files: " + error.getMessage());
+               }
+            });
+         }
+         
+         @Override
+         public void onAutoAcceptConsoleAllowAnythingChange(boolean enabled) {
+            server_.setAutoAcceptConsoleAllowAnything(enabled, new ServerRequestCallback<java.lang.Void>() {
+               @Override
+               public void onResponseReceived(java.lang.Void response) {
+                  Debug.log("Auto-accept console allow anything set to: " + enabled);
+               }
+               
+               @Override
+               public void onError(ServerError error) {
+                  Debug.log("setAutoAcceptConsoleAllowAnything failed: " + error.getMessage());
+                  RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
+                     "Error", "Failed to set auto-accept console allow anything: " + error.getMessage());
+               }
+            });
+         }
+         
+         @Override
+         public void onAutoAcceptTerminalAllowAnythingChange(boolean enabled) {
+            server_.setAutoAcceptTerminalAllowAnything(enabled, new ServerRequestCallback<java.lang.Void>() {
+               @Override
+               public void onResponseReceived(java.lang.Void response) {
+                  Debug.log("Auto-accept terminal allow anything set to: " + enabled);
+               }
+               
+               @Override
+               public void onError(ServerError error) {
+                  Debug.log("setAutoAcceptTerminalAllowAnything failed: " + error.getMessage());
+                  RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
+                     "Error", "Failed to set auto-accept terminal allow anything: " + error.getMessage());
+               }
+            });
+         }
+         
+         @Override
+         public void onAutoRunFilesAllowAnythingChange(boolean enabled) {
+            server_.setAutoRunFilesAllowAnything(enabled, new ServerRequestCallback<java.lang.Void>() {
+               @Override
+               public void onResponseReceived(java.lang.Void response) {
+                  Debug.log("Auto-run files allow anything set to: " + enabled);
+               }
+               
+               @Override
+               public void onError(ServerError error) {
+                  Debug.log("setAutoRunFilesAllowAnything failed: " + error.getMessage());
+                  RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
+                     "Error", "Failed to set auto-run files allow anything: " + error.getMessage());
+               }
+            });
+         }
       };
       
       settingsWidget_ = new AiSettingsWidget(

@@ -302,7 +302,21 @@
       working_directory = NULL,
       temperature = 0.5,
       security_mode = "improve",
-      web_search_enabled = FALSE
+      web_search_enabled = FALSE,
+      auto_accept_edits = FALSE,
+      auto_accept_console = FALSE,
+      auto_accept_terminal = FALSE,
+      auto_run_files = FALSE,
+      auto_delete_files = FALSE,
+      auto_accept_console_allow_anything = FALSE,
+      auto_accept_terminal_allow_anything = FALSE,
+      auto_run_files_allow_anything = FALSE,
+      auto_accept_console_allow_list = character(0),
+      auto_accept_console_deny_list = character(0),
+      auto_accept_terminal_allow_list = character(0),
+      auto_accept_terminal_deny_list = character(0),
+      auto_run_files_allow_list = character(0),
+      auto_run_files_deny_list = character(0)
     ))
   }
   
@@ -327,6 +341,48 @@
     if (is.null(settings$web_search_enabled)) {
       settings$web_search_enabled <- FALSE
     }
+    if (is.null(settings$auto_accept_edits)) {
+      settings$auto_accept_edits <- FALSE
+    }
+    if (is.null(settings$auto_accept_console)) {
+      settings$auto_accept_console <- FALSE
+    }
+    if (is.null(settings$auto_accept_terminal)) {
+      settings$auto_accept_terminal <- FALSE
+    }
+    if (is.null(settings$auto_run_files)) {
+      settings$auto_run_files <- FALSE
+    }
+    if (is.null(settings$auto_delete_files)) {
+      settings$auto_delete_files <- FALSE
+    }
+    if (is.null(settings$auto_accept_console_allow_anything)) {
+      settings$auto_accept_console_allow_anything <- FALSE
+    }
+    if (is.null(settings$auto_accept_terminal_allow_anything)) {
+      settings$auto_accept_terminal_allow_anything <- FALSE
+    }
+    if (is.null(settings$auto_run_files_allow_anything)) {
+      settings$auto_run_files_allow_anything <- FALSE
+    }
+    if (is.null(settings$auto_accept_console_allow_list)) {
+      settings$auto_accept_console_allow_list <- list()
+    }
+    if (is.null(settings$auto_accept_console_deny_list)) {
+      settings$auto_accept_console_deny_list <- list()
+    }
+    if (is.null(settings$auto_accept_terminal_allow_list)) {
+      settings$auto_accept_terminal_allow_list <- list()
+    }
+    if (is.null(settings$auto_accept_terminal_deny_list)) {
+      settings$auto_accept_terminal_deny_list <- list()
+    }
+    if (is.null(settings$auto_run_files_allow_list)) {
+      settings$auto_run_files_allow_list <- list()
+    }
+    if (is.null(settings$auto_run_files_deny_list)) {
+      settings$auto_run_files_deny_list <- list()
+    }
     
     return(settings)
   }, error = function(e) {
@@ -336,7 +392,21 @@
       working_directory = NULL,
       temperature = 0.5,
       security_mode = "secure",
-      web_search_enabled = FALSE
+      web_search_enabled = FALSE,
+      auto_accept_edits = FALSE,
+      auto_accept_console = FALSE,
+      auto_accept_terminal = FALSE,
+      auto_run_files = FALSE,
+      auto_delete_files = FALSE,
+      auto_accept_console_allow_anything = FALSE,
+      auto_accept_terminal_allow_anything = FALSE,
+      auto_run_files_allow_anything = FALSE,
+      auto_accept_console_allow_list = character(0),
+      auto_accept_console_deny_list = character(0),
+      auto_accept_terminal_allow_list = character(0),
+      auto_accept_terminal_deny_list = character(0),
+      auto_run_files_allow_list = character(0),
+      auto_run_files_deny_list = character(0)
     ))
   })
 })
@@ -390,7 +460,7 @@
 .rs.addFunction("get_ai_setting", function(key, default_value = NULL) {
   # Get a specific setting value
   settings <- .rs.load_ai_settings()
-  return(settings[[key]] %||% default_value)
+  return(if (is.null(settings[[key]])) default_value else settings[[key]])
 })
 
 # Temperature management functions
@@ -519,6 +589,281 @@
 
 .rs.addJsonRpcHandler("set_web_search_enabled", function(enabled) {
   return(.rs.set_web_search_enabled_action(enabled))
+})
+
+# Automation settings management functions
+.rs.addFunction("get_auto_accept_edits", function() {
+  auto_accept_edits <- .rs.get_ai_setting("auto_accept_edits", FALSE)
+  return(as.logical(auto_accept_edits))
+})
+
+.rs.addFunction("set_auto_accept_edits_action", function(enabled) {  
+  if (is.null(enabled)) {
+    return(FALSE)
+  }
+  
+  # Convert to logical and save to persistent settings
+  enabled <- as.logical(enabled)
+  result <- .rs.update_ai_setting("auto_accept_edits", enabled)  
+  return(result)
+})
+
+.rs.addFunction("get_auto_accept_console", function() {
+  auto_accept_console <- .rs.get_ai_setting("auto_accept_console", FALSE)
+  return(as.logical(auto_accept_console))
+})
+
+.rs.addFunction("set_auto_accept_console_action", function(enabled) {  
+  if (is.null(enabled)) {
+    return(FALSE)
+  }
+  
+  # Convert to logical and save to persistent settings
+  enabled <- as.logical(enabled)
+  result <- .rs.update_ai_setting("auto_accept_console", enabled)  
+  return(result)
+})
+
+.rs.addFunction("get_auto_accept_terminal", function() {
+  auto_accept_terminal <- .rs.get_ai_setting("auto_accept_terminal", FALSE)
+  return(as.logical(auto_accept_terminal))
+})
+
+.rs.addFunction("set_auto_accept_terminal_action", function(enabled) {  
+  if (is.null(enabled)) {
+    return(FALSE)
+  }
+  
+  # Convert to logical and save to persistent settings
+  enabled <- as.logical(enabled)
+  result <- .rs.update_ai_setting("auto_accept_terminal", enabled)  
+  return(result)
+})
+
+.rs.addFunction("get_auto_run_files", function() {
+  auto_run_files <- .rs.get_ai_setting("auto_run_files", FALSE)
+  return(as.logical(auto_run_files))
+})
+
+.rs.addFunction("set_auto_run_files_action", function(enabled) {  
+  if (is.null(enabled)) {
+    return(FALSE)
+  }
+  
+  # Convert to logical and save to persistent settings
+  enabled <- as.logical(enabled)
+  result <- .rs.update_ai_setting("auto_run_files", enabled)  
+  return(result)
+})
+
+.rs.addFunction("get_auto_delete_files", function() {
+  auto_delete_files <- .rs.get_ai_setting("auto_delete_files", FALSE)
+  return(as.logical(auto_delete_files))
+})
+
+.rs.addFunction("set_auto_delete_files_action", function(enabled) {  
+  if (is.null(enabled)) {
+    return(FALSE)
+  }
+  
+  # Convert to logical and save to persistent settings
+  enabled <- as.logical(enabled)
+  result <- .rs.update_ai_setting("auto_delete_files", enabled)  
+  return(result)
+})
+
+# JSON RPC handlers for automation settings
+.rs.addJsonRpcHandler("get_auto_accept_edits", function() {
+  return(.rs.get_auto_accept_edits())
+})
+
+.rs.addJsonRpcHandler("set_auto_accept_edits", function(enabled) {
+  return(.rs.set_auto_accept_edits_action(enabled))
+})
+
+.rs.addJsonRpcHandler("get_auto_accept_console", function() {
+  return(.rs.get_auto_accept_console())
+})
+
+.rs.addJsonRpcHandler("set_auto_accept_console", function(enabled) {
+  return(.rs.set_auto_accept_console_action(enabled))
+})
+
+.rs.addJsonRpcHandler("get_auto_accept_terminal", function() {
+  return(.rs.get_auto_accept_terminal())
+})
+
+.rs.addJsonRpcHandler("set_auto_accept_terminal", function(enabled) {
+  return(.rs.set_auto_accept_terminal_action(enabled))
+})
+
+.rs.addJsonRpcHandler("get_auto_run_files", function() {
+  return(.rs.get_auto_run_files())
+})
+
+.rs.addJsonRpcHandler("set_auto_run_files", function(enabled) {
+  return(.rs.set_auto_run_files_action(enabled))
+})
+
+.rs.addJsonRpcHandler("get_auto_delete_files", function() {
+  return(.rs.get_auto_delete_files())
+})
+
+.rs.addJsonRpcHandler("set_auto_delete_files", function(enabled) {
+  return(.rs.set_auto_delete_files_action(enabled))
+})
+
+# Allow/deny list settings management functions
+.rs.addFunction("get_auto_accept_console_allow_anything", function() {
+  allow_anything <- .rs.get_ai_setting("auto_accept_console_allow_anything", FALSE)
+  return(as.logical(allow_anything))
+})
+
+.rs.addFunction("set_auto_accept_console_allow_anything_action", function(enabled) {  
+  if (is.null(enabled)) {
+    return(FALSE)
+  }
+  
+  # Convert to logical and save to persistent settings
+  enabled <- as.logical(enabled)
+  result <- .rs.update_ai_setting("auto_accept_console_allow_anything", enabled)  
+  return(result)
+})
+
+.rs.addFunction("get_auto_accept_terminal_allow_anything", function() {
+  allow_anything <- .rs.get_ai_setting("auto_accept_terminal_allow_anything", FALSE)
+  return(as.logical(allow_anything))
+})
+
+.rs.addFunction("set_auto_accept_terminal_allow_anything_action", function(enabled) {  
+  if (is.null(enabled)) {
+    return(FALSE)
+  }
+  
+  # Convert to logical and save to persistent settings
+  enabled <- as.logical(enabled)
+  result <- .rs.update_ai_setting("auto_accept_terminal_allow_anything", enabled)  
+  return(result)
+})
+
+.rs.addFunction("get_auto_run_files_allow_anything", function() {
+  allow_anything <- .rs.get_ai_setting("auto_run_files_allow_anything", FALSE)
+  return(as.logical(allow_anything))
+})
+
+.rs.addFunction("set_auto_run_files_allow_anything_action", function(enabled) {  
+  if (is.null(enabled)) {
+    return(FALSE)
+  }
+  
+  # Convert to logical and save to persistent settings
+  enabled <- as.logical(enabled)
+  result <- .rs.update_ai_setting("auto_run_files_allow_anything", enabled)  
+  return(result)
+})
+
+.rs.addFunction("get_automation_list", function(list_type) {
+  if (is.null(list_type) || !is.character(list_type)) {
+    return(list())
+  }
+  
+  # list_type should now be correct (e.g., "auto_accept_console_allow_list")
+  list_items <- .rs.get_ai_setting(list_type, character(0))  # Default to empty character vector
+  
+  # Ensure we always return character vectors consistently, regardless of JSON storage format
+  if (is.list(list_items)) {
+    # Convert list back to character vector (handles multi-item case from JSON)
+    list_items <- as.character(unlist(list_items))
+  } else if (is.character(list_items)) {
+    # Already a character vector (single-item case), keep as-is
+    list_items <- list_items
+  } else {
+    # Fallback to empty character vector
+    list_items <- character(0)
+  }
+  
+  # Convert to list for JSON response
+  list_items <- as.list(list_items)
+  
+  cat("get_automation_list: list_type =", list_type, "returning", length(list_items), "items:", paste(unlist(list_items), collapse=", "), "\n")
+  
+  return(list_items)
+})
+
+.rs.addFunction("set_automation_list_action", function(list_type, items) {
+  if (is.null(list_type) || !is.character(list_type)) {
+    return(FALSE)
+  }
+  
+  if (is.null(items)) {
+    items <- list()
+  }
+  
+  # list_type should now be correct (e.g., "auto_accept_console_allow_list")
+  cat("set_automation_list_action received - list_type:", list_type, "class:", class(items), "length:", length(items), "\n")
+  cat("items structure:", str(items), "\n")
+  
+  # C++ json::Array is passed as a list directly to R - no JSON string conversion needed
+  if (is.list(items)) {
+    # Convert list elements to character vector
+    items <- as.character(unlist(items))
+  } else if (!is.character(items)) {
+    # Fallback: convert to character
+    items <- as.character(items)
+  }
+  
+  # Remove any empty strings
+  items <- items[nzchar(items)]
+  
+  cat("set_automation_list_action: list_type =", list_type, "final items =", paste(items, collapse=", "), "\n")
+  
+  # Save as character vector (not list) to avoid nested structure
+  # Empty vector for no items, character vector for items
+  if (length(items) == 0) {
+    items <- character(0)  # Empty character vector instead of list()
+  }
+  # items is already a character vector from the conversion above
+  
+  cat("set_automation_list_action: saving as", class(items), "with length =", length(items), "\n")
+  
+  # Save as a list to ensure consistent JSON array format (prevents auto_unbox issues)
+  # This ensures both single and multi-item lists are stored as JSON arrays
+  items_list <- as.list(items)
+  result <- .rs.update_ai_setting(list_type, items_list)  
+  return(result)
+})
+
+# JSON RPC handlers for allow/deny list settings
+.rs.addJsonRpcHandler("get_auto_accept_console_allow_anything", function() {
+  return(.rs.get_auto_accept_console_allow_anything())
+})
+
+.rs.addJsonRpcHandler("set_auto_accept_console_allow_anything", function(enabled) {
+  return(.rs.set_auto_accept_console_allow_anything_action(enabled))
+})
+
+.rs.addJsonRpcHandler("get_auto_accept_terminal_allow_anything", function() {
+  return(.rs.get_auto_accept_terminal_allow_anything())
+})
+
+.rs.addJsonRpcHandler("set_auto_accept_terminal_allow_anything", function(enabled) {
+  return(.rs.set_auto_accept_terminal_allow_anything_action(enabled))
+})
+
+.rs.addJsonRpcHandler("get_auto_run_files_allow_anything", function() {
+  return(.rs.get_auto_run_files_allow_anything())
+})
+
+.rs.addJsonRpcHandler("set_auto_run_files_allow_anything", function(enabled) {
+  return(.rs.set_auto_run_files_allow_anything_action(enabled))
+})
+
+.rs.addJsonRpcHandler("get_automation_list", function(list_type) {
+  return(.rs.get_automation_list(list_type))
+})
+
+.rs.addJsonRpcHandler("set_automation_list", function(list_type, items) {
+  return(.rs.set_automation_list_action(list_type, items))
 })
 
 # User rules management functions
@@ -920,4 +1265,52 @@
 .rs.addJsonRpcHandler("cleanup_auth_server", function() {
   .rs.cleanup_auth_server()
   return(TRUE)
+})
+
+# Console command auto-accept checking function (internal use only)
+.rs.addFunction("should_auto_accept_console_command", function(r_code) {
+  # Check if auto_accept_console is enabled
+  auto_accept_enabled <- .rs.get_auto_accept_console()
+  if (!auto_accept_enabled) {
+    return(FALSE)
+  }
+  
+  # Extract R functions from the code
+  functions_in_code <- .rs.extract_r_functions(r_code)
+  
+  # If no functions were extracted, don't auto-accept
+  if (length(functions_in_code) == 0) {
+    return(FALSE)
+  }
+  
+  # Check allow_anything setting
+  allow_anything <- .rs.get_auto_accept_console_allow_anything()
+  
+  if (allow_anything) {
+    # If allow_anything is TRUE, check that none of the functions are in the deny list
+    deny_list <- .rs.get_automation_list("auto_accept_console_deny_list")
+    deny_list <- unlist(deny_list)  # Convert from list to character vector
+    
+    # Check if any function in the code is in the deny list
+    for (func in functions_in_code) {
+      if (func %in% deny_list) {
+        return(FALSE)  # Found a function in deny list, don't auto-accept
+      }
+    }
+    
+    return(TRUE)  # No functions in deny list, auto-accept
+  } else {
+    # If allow_anything is FALSE, check that ALL functions are in the allow list
+    allow_list <- .rs.get_automation_list("auto_accept_console_allow_list")
+    allow_list <- unlist(allow_list)  # Convert from list to character vector
+    
+    # Check if all functions in the code are in the allow list
+    for (func in functions_in_code) {
+      if (!func %in% allow_list) {
+        return(FALSE)  # Found a function not in allow list, don't auto-accept
+      }
+    }
+    
+    return(TRUE)  # All functions are in allow list, auto-accept
+  }
 })

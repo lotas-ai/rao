@@ -1513,14 +1513,16 @@
                         message_id = as.numeric(current_widget_message_id),
                         command = "",
                         explanation = "Execute command",
-                        request_id = request_id
+                        request_id = request_id,
+                        function_call_type = function_name
                       ))
                     } else {
                       .rs.send_ai_operation("create_terminal_command", list(
                         message_id = as.numeric(current_widget_message_id),
                         command = "",
                         explanation = "Execute command",
-                        request_id = request_id
+                        request_id = request_id,
+                        function_call_type = function_name
                       ))
                     }
                     
@@ -2485,11 +2487,32 @@
           # Determine widget type
           widget_type <- if (function_name == "run_console_cmd") "console" else if (function_name == "run_terminal_cmd") "terminal" else "interactive"
           
-          # Send create_widget_buttons operation
-          .rs.send_ai_operation("create_widget_buttons", list(
-            message_id = as.character(widget_message_id),
-            content = widget_type
-          ))
+          # For console commands, check if we should auto-accept instead of creating buttons
+          if (function_name == "run_console_cmd") {
+            # Get the command from the function call arguments
+            command <- .rs.safe_parse_function_arguments(entry$function_call)$command
+            
+            # Check if this command should be auto-accepted
+            should_auto_accept <- .rs.should_auto_accept_console_command(command)
+            
+            if (should_auto_accept) {
+              # Auto-accept the command by directly calling the accept function
+              # This follows the same flow as if the user clicked accept
+              .rs.accept_console_command(as.character(widget_message_id), command, first_function_call_id)
+            } else {
+              # Send create_widget_buttons operation for manual acceptance
+              .rs.send_ai_operation("create_widget_buttons", list(
+                message_id = as.character(widget_message_id),
+                content = widget_type
+              ))
+            }
+          } else {
+            # For non-console commands, always create buttons
+            .rs.send_ai_operation("create_widget_buttons", list(
+              message_id = as.character(widget_message_id),
+              content = widget_type
+            ))
+          }
           
           break
         }

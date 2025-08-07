@@ -404,6 +404,7 @@ public class ClientEventDispatcher
             String content = getStringFromRData(jsData, "content", "");
             boolean skipDiffHighlighting = getBooleanFromRData(jsData, "skip_diff_highlighting");
             com.google.gwt.core.client.JavaScriptObject diffData = getJavaScriptObjectFromRData(jsData, "diff_data");
+            String functionCallType = getStringFromRData(jsData, "function_call_type", "");
             
             // Clean up filename to remove HTML diff markup
             if (filename != null && filename.contains("<span")) {
@@ -437,7 +438,7 @@ public class ClientEventDispatcher
                 "start_background_recreation".equals(operationType) ||
                 "finish_background_recreation".equals(operationType)) {
                
-               callAddOperationEvent(sequence, operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting, diffData);
+               callAddOperationEvent(sequence, operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting, diffData, functionCallType);
             } else {
                Debug.log("DEBUG ClientEventDispatcher: Unknown operation type, skipping: " + operationType);
             }
@@ -1503,9 +1504,9 @@ public class ClientEventDispatcher
       return null;
    }
      
-   private native void callAddOperationEvent(int sequence, String operationType, String messageId, String command, String explanation, String requestId, String filename, String content, boolean skipDiffHighlighting, com.google.gwt.core.client.JavaScriptObject diffData) /*-{
+   private native void callAddOperationEvent(int sequence, String operationType, String messageId, String command, String explanation, String requestId, String filename, String content, boolean skipDiffHighlighting, com.google.gwt.core.client.JavaScriptObject diffData, String functionCallType) /*-{
       if ($wnd.aiAddOperationEvent) {
-         $wnd.aiAddOperationEvent(sequence, operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting, diffData);
+         $wnd.aiAddOperationEvent(sequence, operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting, diffData, functionCallType);
       }
    }-*/;
    

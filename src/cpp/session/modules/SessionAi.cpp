@@ -3226,6 +3226,379 @@ Error setWebSearchEnabled(const json::JsonRpcRequest& request,
    return Success();
 }
 
+// Automation settings functions
+Error getAutoAcceptEdits(const json::JsonRpcRequest& request,
+                        json::JsonRpcResponse* p_response)
+{   
+   bool enabled;
+   Error error = r::exec::RFunction(".rs.get_auto_accept_edits").call(&enabled);
+   if (error)
+   {
+      LOG_ERROR(error);
+      p_response->setResult(false); // Default value
+   }
+   else
+   {
+      p_response->setResult(enabled);
+   }
+   return Success();
+}
+
+Error setAutoAcceptEdits(const json::JsonRpcRequest& request,
+                        json::JsonRpcResponse* p_response,
+                        bool enabled)
+{   
+   // Call the R handler for setting auto accept edits
+   bool success = false;
+   Error error = r::exec::RFunction(".rs.set_auto_accept_edits_action")
+         .addParam(enabled)
+         .call(&success);
+         
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+      
+   if (!success)
+   {
+      return Error("AutoAcceptEditsSetError", 1, "Failed to set auto accept edits", ERROR_LOCATION);
+   }
+   
+   return Success();
+}
+
+Error getAutoAcceptConsole(const json::JsonRpcRequest& request,
+                          json::JsonRpcResponse* p_response)
+{   
+   bool enabled;
+   Error error = r::exec::RFunction(".rs.get_auto_accept_console").call(&enabled);
+   if (error)
+   {
+      LOG_ERROR(error);
+      p_response->setResult(false); // Default value
+   }
+   else
+   {
+      p_response->setResult(enabled);
+   }
+   return Success();
+}
+
+Error setAutoAcceptConsole(const json::JsonRpcRequest& request,
+                          json::JsonRpcResponse* p_response,
+                          bool enabled)
+{   
+   // Call the R handler for setting auto accept console
+   bool success = false;
+   Error error = r::exec::RFunction(".rs.set_auto_accept_console_action")
+         .addParam(enabled)
+         .call(&success);
+         
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+      
+   if (!success)
+   {
+      return Error("AutoAcceptConsoleSetError", 1, "Failed to set auto accept console", ERROR_LOCATION);
+   }
+   
+   return Success();
+}
+
+Error getAutoAcceptTerminal(const json::JsonRpcRequest& request,
+                           json::JsonRpcResponse* p_response)
+{   
+   bool enabled;
+   Error error = r::exec::RFunction(".rs.get_auto_accept_terminal").call(&enabled);
+   if (error)
+   {
+      LOG_ERROR(error);
+      p_response->setResult(false); // Default value
+   }
+   else
+   {
+      p_response->setResult(enabled);
+   }
+   return Success();
+}
+
+Error setAutoAcceptTerminal(const json::JsonRpcRequest& request,
+                           json::JsonRpcResponse* p_response,
+                           bool enabled)
+{   
+   // Call the R handler for setting auto accept terminal
+   bool success = false;
+   Error error = r::exec::RFunction(".rs.set_auto_accept_terminal_action")
+         .addParam(enabled)
+         .call(&success);
+         
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+      
+   if (!success)
+   {
+      return Error("AutoAcceptTerminalSetError", 1, "Failed to set auto accept terminal", ERROR_LOCATION);
+   }
+   
+   return Success();
+}
+
+Error getAutoRunFiles(const json::JsonRpcRequest& request,
+                     json::JsonRpcResponse* p_response)
+{   
+   bool enabled;
+   Error error = r::exec::RFunction(".rs.get_auto_run_files").call(&enabled);
+   if (error)
+   {
+      LOG_ERROR(error);
+      p_response->setResult(false); // Default value
+   }
+   else
+   {
+      p_response->setResult(enabled);
+   }
+   return Success();
+}
+
+Error setAutoRunFiles(const json::JsonRpcRequest& request,
+                     json::JsonRpcResponse* p_response,
+                     bool enabled)
+{   
+   // Call the R handler for setting auto run files
+   bool success = false;
+   Error error = r::exec::RFunction(".rs.set_auto_run_files_action")
+         .addParam(enabled)
+         .call(&success);
+         
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+      
+   if (!success)
+   {
+      return Error("AutoRunFilesSetError", 1, "Failed to set auto run files", ERROR_LOCATION);
+   }
+   
+   return Success();
+}
+
+Error getAutoDeleteFiles(const json::JsonRpcRequest& request,
+                        json::JsonRpcResponse* p_response)
+{   
+   bool enabled;
+   Error error = r::exec::RFunction(".rs.get_auto_delete_files").call(&enabled);
+   if (error)
+   {
+      LOG_ERROR(error);
+      p_response->setResult(false); // Default value
+   }
+   else
+   {
+      p_response->setResult(enabled);
+   }
+   return Success();
+}
+
+Error setAutoDeleteFiles(const json::JsonRpcRequest& request,
+                        json::JsonRpcResponse* p_response,
+                        bool enabled)
+{   
+   // Call the R handler for setting auto delete files
+   bool success = false;
+   Error error = r::exec::RFunction(".rs.set_auto_delete_files_action")
+         .addParam(enabled)
+         .call(&success);
+         
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+      
+   if (!success)
+   {
+      return Error("AutoDeleteFilesSetError", 1, "Failed to set auto delete files", ERROR_LOCATION);
+   }
+   
+   return Success();
+}
+
+// Allow/deny list settings functions
+Error getAutoAcceptConsoleAllowAnything(const json::JsonRpcRequest& request,
+                                       json::JsonRpcResponse* p_response)
+{   
+   bool enabled;
+   Error error = r::exec::RFunction(".rs.get_auto_accept_console_allow_anything").call(&enabled);
+   if (error)
+   {
+      LOG_ERROR(error);
+      p_response->setResult(false); // Default value
+   }
+   else
+   {
+      p_response->setResult(enabled);
+   }
+   return Success();
+}
+
+Error setAutoAcceptConsoleAllowAnything(const json::JsonRpcRequest& request,
+                                       json::JsonRpcResponse* p_response,
+                                       bool enabled)
+{   
+   bool success = false;
+   Error error = r::exec::RFunction(".rs.set_auto_accept_console_allow_anything_action")
+         .addParam(enabled)
+         .call(&success);
+         
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+      
+   if (!success)
+   {
+      return Error("AutoAcceptConsoleAllowAnythingSetError", 1, "Failed to set auto accept console allow anything", ERROR_LOCATION);
+   }
+   
+   return Success();
+}
+
+Error getAutoAcceptTerminalAllowAnything(const json::JsonRpcRequest& request,
+                                        json::JsonRpcResponse* p_response)
+{   
+   bool enabled;
+   Error error = r::exec::RFunction(".rs.get_auto_accept_terminal_allow_anything").call(&enabled);
+   if (error)
+   {
+      LOG_ERROR(error);
+      p_response->setResult(false); // Default value
+   }
+   else
+   {
+      p_response->setResult(enabled);
+   }
+   return Success();
+}
+
+Error setAutoAcceptTerminalAllowAnything(const json::JsonRpcRequest& request,
+                                        json::JsonRpcResponse* p_response,
+                                        bool enabled)
+{   
+   bool success = false;
+   Error error = r::exec::RFunction(".rs.set_auto_accept_terminal_allow_anything_action")
+         .addParam(enabled)
+         .call(&success);
+         
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+      
+   if (!success)
+   {
+      return Error("AutoAcceptTerminalAllowAnythingSetError", 1, "Failed to set auto accept terminal allow anything", ERROR_LOCATION);
+   }
+   
+   return Success();
+}
+
+Error getAutoRunFilesAllowAnything(const json::JsonRpcRequest& request,
+                                  json::JsonRpcResponse* p_response)
+{   
+   bool enabled;
+   Error error = r::exec::RFunction(".rs.get_auto_run_files_allow_anything").call(&enabled);
+   if (error)
+   {
+      LOG_ERROR(error);
+      p_response->setResult(false); // Default value
+   }
+   else
+   {
+      p_response->setResult(enabled);
+   }
+   return Success();
+}
+
+Error setAutoRunFilesAllowAnything(const json::JsonRpcRequest& request,
+                                  json::JsonRpcResponse* p_response,
+                                  bool enabled)
+{   
+   bool success = false;
+   Error error = r::exec::RFunction(".rs.set_auto_run_files_allow_anything_action")
+         .addParam(enabled)
+         .call(&success);
+         
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+      
+   if (!success)
+   {
+      return Error("AutoRunFilesAllowAnythingSetError", 1, "Failed to set auto run files allow anything", ERROR_LOCATION);
+   }
+   
+   return Success();
+}
+
+// Allow/deny list management functions
+Error getAutomationList(const json::JsonRpcRequest& request,
+                       json::JsonRpcResponse* p_response,
+                       const std::string& listType)
+{   
+   json::Value result;
+   Error error = r::exec::RFunction(".rs.get_automation_list")
+         .addParam(listType)
+         .call(&result);
+   if (error)
+   {
+      LOG_ERROR(error);
+      p_response->setResult(json::Array()); // Default empty array
+   }
+   else
+   {
+      p_response->setResult(result);
+   }
+   return Success();
+}
+
+Error setAutomationList(const json::JsonRpcRequest& request,
+                       json::JsonRpcResponse* p_response,
+                       const std::string& listType,
+                       const json::Array& items)
+{   
+   bool success = false;
+   Error error = r::exec::RFunction(".rs.set_automation_list_action")
+         .addParam(listType)
+         .addParam(items)
+         .call(&success);
+         
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+      
+   if (!success)
+   {
+      return Error("AutomationListSetError", 1, "Failed to set automation list", ERROR_LOCATION);
+   }
+   
+   return Success();
+}
+
 Error initialize()
 {
    using boost::bind;
@@ -3657,6 +4030,142 @@ Error initialize()
                      return error;
                   return setWebSearchEnabled(request, p_response, enabled);
                })))
+      // Automation settings RPC methods
+      (bind(module_context::registerRpcMethod, "get_auto_accept_edits", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  return getAutoAcceptEdits(request, p_response);
+               })))
+      (bind(module_context::registerRpcMethod, "set_auto_accept_edits",
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  bool enabled;
+                  Error error = json::readParam(request.params, 0, &enabled);
+                  if (error)
+                     return error;
+                  return setAutoAcceptEdits(request, p_response, enabled);
+               })))
+      (bind(module_context::registerRpcMethod, "get_auto_accept_console", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  return getAutoAcceptConsole(request, p_response);
+               })))
+      (bind(module_context::registerRpcMethod, "set_auto_accept_console",
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  bool enabled;
+                  Error error = json::readParam(request.params, 0, &enabled);
+                  if (error)
+                     return error;
+                  return setAutoAcceptConsole(request, p_response, enabled);
+               })))
+      (bind(module_context::registerRpcMethod, "get_auto_accept_terminal", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  return getAutoAcceptTerminal(request, p_response);
+               })))
+      (bind(module_context::registerRpcMethod, "set_auto_accept_terminal",
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  bool enabled;
+                  Error error = json::readParam(request.params, 0, &enabled);
+                  if (error)
+                     return error;
+                  return setAutoAcceptTerminal(request, p_response, enabled);
+               })))
+      (bind(module_context::registerRpcMethod, "get_auto_run_files", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  return getAutoRunFiles(request, p_response);
+               })))
+      (bind(module_context::registerRpcMethod, "set_auto_run_files",
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  bool enabled;
+                  Error error = json::readParam(request.params, 0, &enabled);
+                  if (error)
+                     return error;
+                  return setAutoRunFiles(request, p_response, enabled);
+               })))
+      (bind(module_context::registerRpcMethod, "get_auto_delete_files", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  return getAutoDeleteFiles(request, p_response);
+               })))
+      (bind(module_context::registerRpcMethod, "set_auto_delete_files",
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  bool enabled;
+                  Error error = json::readParam(request.params, 0, &enabled);
+                  if (error)
+                     return error;
+                  return setAutoDeleteFiles(request, p_response, enabled);
+               })))
+      // Allow/deny list settings RPC methods
+      (bind(module_context::registerRpcMethod, "get_auto_accept_console_allow_anything", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  return getAutoAcceptConsoleAllowAnything(request, p_response);
+               })))
+      (bind(module_context::registerRpcMethod, "set_auto_accept_console_allow_anything",
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  bool enabled;
+                  Error error = json::readParam(request.params, 0, &enabled);
+                  if (error)
+                     return error;
+                  return setAutoAcceptConsoleAllowAnything(request, p_response, enabled);
+               })))
+      (bind(module_context::registerRpcMethod, "get_auto_accept_terminal_allow_anything", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  return getAutoAcceptTerminalAllowAnything(request, p_response);
+               })))
+      (bind(module_context::registerRpcMethod, "set_auto_accept_terminal_allow_anything",
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  bool enabled;
+                  Error error = json::readParam(request.params, 0, &enabled);
+                  if (error)
+                     return error;
+                  return setAutoAcceptTerminalAllowAnything(request, p_response, enabled);
+               })))
+      (bind(module_context::registerRpcMethod, "get_auto_run_files_allow_anything", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  return getAutoRunFilesAllowAnything(request, p_response);
+               })))
+      (bind(module_context::registerRpcMethod, "set_auto_run_files_allow_anything",
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  bool enabled;
+                  Error error = json::readParam(request.params, 0, &enabled);
+                  if (error)
+                     return error;
+                  return setAutoRunFilesAllowAnything(request, p_response, enabled);
+               })))
+      (bind(module_context::registerRpcMethod, "get_automation_list",
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  std::string listType;
+                  Error error = json::readParam(request.params, 0, &listType);
+                  if (error)
+                     return error;
+                  return getAutomationList(request, p_response, listType);
+               })))
+      (bind(module_context::registerRpcMethod, "set_automation_list",
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  std::string listType;
+                  json::Array items;
+                  Error error = json::readParam(request.params, 0, &listType);
+                  if (error)
+                     return error;
+                  error = json::readParam(request.params, 1, &items);
+                  if (error)
+                     return error;
+                  return setAutomationList(request, p_response, listType, items);
+               })))
       // User rules management RPC methods
       (bind(module_context::registerRpcMethod, "get_user_rules",
             boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
@@ -3704,6 +4213,7 @@ Error initialize()
    ExecBlock sourceBlock;
    sourceBlock.addFunctions()
       (bind(sourceModuleRFile, "SessionAiHelpers.R"))    // first helper functions
+      (bind(sourceModuleRFile, "SessionAiParse.R"))      // code parsing functions
       (bind(sourceModuleRFile, "SessionAiAPI.R"))        // then API functions 
       (bind(sourceModuleRFile, "SessionAiSettings.R")) // then key management
       (bind(sourceModuleRFile, "SessionAiButtons.R"))

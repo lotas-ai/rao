@@ -60,6 +60,14 @@ public class AiSettingsWidget extends Composite
       void onAddRule(String rule);
       void onEditRule(int index, String rule);
       void onDeleteRule(int index);
+      void onAutoAcceptEditsChange(boolean enabled);
+      void onAutoAcceptConsoleChange(boolean enabled);
+      void onAutoAcceptTerminalChange(boolean enabled);
+      void onAutoRunFilesChange(boolean enabled);
+      void onAutoDeleteFilesChange(boolean enabled);
+      void onAutoAcceptConsoleAllowAnythingChange(boolean enabled);
+      void onAutoAcceptTerminalAllowAnythingChange(boolean enabled);
+      void onAutoRunFilesAllowAnythingChange(boolean enabled);
    }
    
    public interface Styles extends CssResource
@@ -158,6 +166,7 @@ public class AiSettingsWidget extends Composite
    private HTML workingDirectorySection_;
    private HTML rulesSection_;
    private HTML securitySection_;
+   private HTML automationSection_;
    
    // State
    private boolean hasApiKey_ = false;
@@ -178,6 +187,17 @@ public class AiSettingsWidget extends Composite
    private boolean workingDirectorySectionExpanded_ = true;
    private boolean rulesSectionExpanded_ = true;
    private boolean securitySectionExpanded_ = true;
+   private boolean automationSectionExpanded_ = true;
+   
+   // Automation toggle widgets
+   private HTML autoAcceptEditsToggle_;
+   private HTML autoAcceptConsoleToggle_;
+   private HTML autoAcceptTerminalToggle_;
+   private HTML autoRunFilesToggle_;
+   private HTML autoDeleteFilesToggle_;
+   
+   // Map to store FlowPanel references for automation lists
+   private Map<String, FlowPanel> automationListContainers_ = new HashMap<String, FlowPanel>();
    
    public AiSettingsWidget(SettingsHandler handler, 
                           AiServerOperations server, 
@@ -224,15 +244,22 @@ public class AiSettingsWidget extends Composite
       rulesSection_.addStyleName(styles_.settingsSection());
       mainPanel.add(rulesSection_);
       
-      // Model Section
-      modelSection_ = new HTML();
-      modelSection_.addStyleName(styles_.settingsSection());
-      mainPanel.add(modelSection_);
+
       
       // Security Section
       securitySection_ = new HTML();
       securitySection_.addStyleName(styles_.settingsSection());
       mainPanel.add(securitySection_);
+      
+      // Automation Section
+      automationSection_ = new HTML();
+      automationSection_.addStyleName(styles_.settingsSection());
+      mainPanel.add(automationSection_);
+      
+      // Model Section (moved after Automation)
+      modelSection_ = new HTML();
+      modelSection_.addStyleName(styles_.settingsSection());
+      mainPanel.add(modelSection_);
       
       // CRITICAL FIX: Wrap in ScrollPanel to enable scrolling like other working widgets
       ScrollPanel scrollPanel = new ScrollPanel(mainPanel);
@@ -1114,6 +1141,427 @@ public class AiSettingsWidget extends Composite
       }
    }
    
+   private void buildAutomationSection()
+   {
+      VerticalPanel section = new VerticalPanel();
+      section.setWidth("100%");
+      
+      // Section header
+      HorizontalPanel headerPanel = createSectionHeader("Automation", "automation", automationSectionExpanded_);
+      section.add(headerPanel);
+      
+      // Add chevron button positioned absolutely on the right
+      HTML chevronButton = createChevronButton("automation", automationSectionExpanded_);
+      section.add(chevronButton);
+      
+      // Content section (collapsible)
+      VerticalPanel contentPanel = new VerticalPanel();
+      contentPanel.setWidth("100%");
+      contentPanel.addStyleName(styles_.sectionContent());
+      if (!automationSectionExpanded_) {
+         contentPanel.addStyleName(styles_.sectionContentCollapsed());
+      }
+      
+      // Auto-accept edits setting
+      contentPanel.add(createAutomationToggle(
+         "Auto-accept edits",
+         "When enabled, edits proposed by the modelwill be automatically accepted without user confirmation.",
+         "autoAcceptEdits",
+         false
+      ));
+      
+      // Auto-accept console commands setting
+      contentPanel.add(createAutomationToggle(
+         "Auto-accept console commands",
+         "When enabled, if the model proposes console commands, those on an allow list will be automatically executed without user confirmation. Commands to not run can be specified in a deny list.",
+         "autoAcceptConsole",
+         false
+      ));
+      // Add allow/deny panel at the same level to avoid table layout constraints
+      VerticalPanel consoleAllowDenyPanel = createAllowDenyListPanel("auto_accept_console");
+      consoleAllowDenyPanel.getElement().setAttribute("data-automation-panel", "autoAcceptConsole");
+      consoleAllowDenyPanel.getElement().getStyle().setProperty("display", "none"); // Start hidden
+      contentPanel.add(consoleAllowDenyPanel);
+      
+      // Auto-accept terminal commands setting
+      contentPanel.add(createAutomationToggle(
+         "Auto-accept terminal commands",
+         "When enabled, if the model proposes terminal commands, those on an allow list will be automatically executed without user confirmation. Commands to not run can be specified in a deny list.",
+         "autoAcceptTerminal",
+         false
+      ));
+      // Add allow/deny panel at the same level to avoid table layout constraints
+      VerticalPanel terminalAllowDenyPanel = createAllowDenyListPanel("auto_accept_terminal");
+      terminalAllowDenyPanel.getElement().setAttribute("data-automation-panel", "autoAcceptTerminal");
+      terminalAllowDenyPanel.getElement().getStyle().setProperty("display", "none"); // Start hidden
+      contentPanel.add(terminalAllowDenyPanel);
+      
+      // Auto-run files setting
+      contentPanel.add(createAutomationToggle(
+         "Auto-run code from files",
+         "When enabled, if the model proposes to run code from allowed files, that code will be automatically executed without user confirmation. Files to not run can be specified in a deny list.",
+         "autoRunFiles",
+         false
+      ));
+      // Add allow/deny panel at the same level to avoid table layout constraints
+      VerticalPanel runFilesAllowDenyPanel = createAllowDenyListPanel("auto_run_files");
+      runFilesAllowDenyPanel.getElement().setAttribute("data-automation-panel", "autoRunFiles");
+      runFilesAllowDenyPanel.getElement().getStyle().setProperty("display", "none"); // Start hidden
+      contentPanel.add(runFilesAllowDenyPanel);
+      
+      // Auto-delete files setting
+      contentPanel.add(createAutomationToggle(
+         "Auto-delete files",
+         "When enabled, if the model proposes to delete files, those deletions will be automatically executed without user confirmation.",
+         "autoDeleteFiles",
+         false
+      ));
+      
+      // Add content panel to section
+      section.add(contentPanel);
+      
+      automationSection_.getElement().setInnerHTML("");
+      automationSection_.getElement().appendChild(section.getElement());
+      
+      // Apply collapsed class if section is collapsed
+      if (!automationSectionExpanded_) {
+         automationSection_.addStyleName(styles_.collapsed());
+         // Immediately apply the visual collapse using JavaScript
+         applyImmediateCollapse(automationSection_.getElement());
+      } else {
+         automationSection_.removeStyleName(styles_.collapsed());
+      }
+   }
+   
+   private VerticalPanel createAutomationToggle(String title, String description, String settingName, boolean defaultValue)
+   {
+      // Create main container with ruleContainer styling to match rules section
+      VerticalPanel mainContainer = new VerticalPanel();
+      mainContainer.setWidth("100%");
+      mainContainer.addStyleName(styles_.ruleContainer());
+      
+      // Title and toggle row
+      HorizontalPanel titleRow = new HorizontalPanel();
+      titleRow.setWidth("100%");
+      titleRow.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
+      
+      // Title
+      HTML titleLabel = new HTML("<b>" + title + "</b>");
+      titleLabel.addStyleName(styles_.settingLabel());
+      titleRow.add(titleLabel);
+      
+      // Toggle switch
+      HTML toggle = new HTML();
+      String backgroundColor = defaultValue ? "#4CAF50" : "#ccc";
+      String sliderPosition = defaultValue ? "right: 1px;" : "left: 1px;";
+      toggle.getElement().setInnerHTML(
+         "<div style='position: relative; width: 32px; height: 16px; background: " + backgroundColor + "; border-radius: 8px; cursor: pointer; transition: background 0.3s;' data-value='" + defaultValue + "' data-setting='" + settingName + "'>" +
+         "<div style='position: absolute; top: 1px; " + sliderPosition + " width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.2);'></div>" +
+         "</div>"
+      );
+      
+      // Store toggle reference and add event handler
+      if ("autoAcceptEdits".equals(settingName)) {
+         autoAcceptEditsToggle_ = toggle;
+         addNativeAutomationChangeHandler(toggle.getElement(), "autoAcceptEdits");
+      } else if ("autoAcceptConsole".equals(settingName)) {
+         autoAcceptConsoleToggle_ = toggle;
+         addNativeAutomationChangeHandler(toggle.getElement(), "autoAcceptConsole");
+      } else if ("autoAcceptTerminal".equals(settingName)) {
+         autoAcceptTerminalToggle_ = toggle;
+         addNativeAutomationChangeHandler(toggle.getElement(), "autoAcceptTerminal");
+      } else if ("autoRunFiles".equals(settingName)) {
+         autoRunFilesToggle_ = toggle;
+         addNativeAutomationChangeHandler(toggle.getElement(), "autoRunFiles");
+      } else if ("autoDeleteFiles".equals(settingName)) {
+         autoDeleteFilesToggle_ = toggle;
+         addNativeAutomationChangeHandler(toggle.getElement(), "autoDeleteFiles");
+      }
+      
+      titleRow.add(toggle);
+      titleRow.setCellHorizontalAlignment(toggle, HorizontalPanel.ALIGN_RIGHT);
+      
+      mainContainer.add(titleRow);
+      
+      // Description text
+      HTML descriptionHTML = new HTML(description);
+      descriptionHTML.addStyleName(styles_.ruleText());
+      descriptionHTML.getElement().getStyle().setProperty("marginTop", "4px");
+      mainContainer.add(descriptionHTML);
+      
+      // Allow/deny panels are now added separately at the same level as the toggle containers
+      // to avoid table layout constraints
+      
+      return mainContainer;
+   }
+   
+   private VerticalPanel createAllowDenyListPanel(String settingName)
+   {
+      VerticalPanel panel = new VerticalPanel();
+      panel.setWidth("100%");
+      panel.getElement().getStyle().setProperty("marginTop", "8px");
+      panel.getElement().getStyle().setProperty("marginBottom", "8px");
+      panel.getElement().getStyle().setProperty("paddingLeft", "12px");
+      panel.getElement().getStyle().setProperty("borderLeft", "2px solid #e0e0e0");
+      
+      // "Allow anything" toggle
+      HorizontalPanel allowAnythingRow = new HorizontalPanel();
+      allowAnythingRow.setWidth("100%");
+      allowAnythingRow.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
+      allowAnythingRow.getElement().getStyle().setProperty("marginBottom", "8px");
+      
+      // Create descriptive label based on setting type
+      HTML allowAnythingLabel = new HTML(getAllowAnythingMessage(settingName, false)); // Start with "allow list" mode
+      allowAnythingLabel.addStyleName(styles_.settingLabel());
+      allowAnythingLabel.getElement().getStyle().setProperty("fontSize", "13px");
+      allowAnythingLabel.getElement().setAttribute("data-allow-anything-label", settingName);
+      allowAnythingRow.add(allowAnythingLabel);
+      
+      HTML allowAnythingToggle = new HTML();
+      allowAnythingToggle.getElement().setInnerHTML(
+         "<div style='position: relative; width: 28px; height: 14px; background: #ccc; border-radius: 7px; cursor: pointer; transition: background 0.3s;' data-value='false' data-setting='" + settingName + "_allow_anything'>" +
+         "<div style='position: absolute; top: 1px; left: 1px; width: 12px; height: 12px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.2);'></div>" +
+         "</div>"
+      );
+      
+      // Add click handler for "Allow anything" toggle
+      addNativeAllowAnythingToggleHandler(allowAnythingToggle.getElement(), settingName + "_allow_anything");
+      
+      allowAnythingRow.add(allowAnythingToggle);
+      allowAnythingRow.setCellHorizontalAlignment(allowAnythingToggle, HorizontalPanel.ALIGN_RIGHT);
+      
+      panel.add(allowAnythingRow);
+      
+      // Allow/Deny lists container (shown when "Allow anything" is off)
+      VerticalPanel listsContainer = new VerticalPanel();
+      listsContainer.setWidth("100%");
+      listsContainer.getElement().setAttribute("data-lists-container", settingName);
+      
+      // Allow list section
+      FlowPanel allowListSection = createListSection("Allow list", settingName + "_allow_list");
+      listsContainer.add(allowListSection);
+      
+      // Deny list section  
+      FlowPanel denyListSection = createListSection("Deny list", settingName + "_deny_list");
+      listsContainer.add(denyListSection);
+      
+      panel.add(listsContainer);
+      
+      return panel;
+   }
+   
+   private FlowPanel createListSection(String title, String listType)
+   {
+      FlowPanel section = new FlowPanel();
+      section.setWidth("100%");
+      section.getElement().getStyle().setProperty("marginBottom", "12px");
+      section.getElement().getStyle().setProperty("display", "block");
+      
+      // Section title
+      Label titleLabel = new Label(title);
+      titleLabel.addStyleName(styles_.settingLabel());
+      titleLabel.getElement().getStyle().setProperty("fontSize", "12px");
+      titleLabel.getElement().getStyle().setProperty("fontWeight", "bold");
+      titleLabel.getElement().getStyle().setProperty("marginBottom", "4px");
+      titleLabel.getElement().getStyle().setProperty("display", "block");
+      section.add(titleLabel);
+      
+      // Input field
+      TextBox inputField = new TextBox();
+      inputField.addStyleName(styles_.settingInput());
+      inputField.setWidth("100%");
+      inputField.getElement().getStyle().setProperty("fontSize", "13px");
+      inputField.getElement().getStyle().setProperty("display", "block");
+      inputField.getElement().setAttribute("placeholder", "Type and press Enter to add");
+      inputField.getElement().setAttribute("data-list-type", listType);
+      section.add(inputField);
+      
+      // Items container
+      FlowPanel itemsContainer = new FlowPanel();
+      itemsContainer.getElement().getStyle().setProperty("marginTop", "6px");
+      itemsContainer.getElement().getStyle().setProperty("display", "block");
+      itemsContainer.getElement().setAttribute("data-items-container", listType);
+      section.add(itemsContainer);
+      
+      // Store reference to the FlowPanel for later access
+      automationListContainers_.put(listType, itemsContainer);
+      
+      // Add enter key handler
+      addListInputHandler(inputField, itemsContainer, listType);
+      
+      return section;
+   }
+   
+   private void addListInputHandler(TextBox inputField, FlowPanel itemsContainer, String listType) {
+      // Use native event handler pattern like the rest of the system
+      addNativeKeyHandler(inputField.getElement(), itemsContainer, listType);
+   }
+   
+   private void addListItem(FlowPanel container, String text, String listType) {
+      // Create item container similar to context items
+      FlowPanel itemContainer = new FlowPanel();
+      itemContainer.getElement().getStyle().setProperty("display", "inline-flex");
+      itemContainer.getElement().getStyle().setProperty("alignItems", "center");
+      itemContainer.getElement().getStyle().setProperty("backgroundColor", "white");
+      itemContainer.getElement().getStyle().setProperty("border", "1px solid #cccccc");
+      itemContainer.getElement().getStyle().setProperty("borderRadius", "3px");
+      itemContainer.getElement().getStyle().setProperty("padding", "2px 6px");
+      itemContainer.getElement().getStyle().setProperty("margin", "0 4px 4px 0");
+      itemContainer.getElement().getStyle().setProperty("fontSize", "12px");
+      
+      // Text label
+      Label textLabel = new Label(text);
+      textLabel.getElement().getStyle().setProperty("marginRight", "4px");
+      itemContainer.add(textLabel);
+      
+      // Remove button
+      Label removeButton = new Label("×");
+      removeButton.getElement().getStyle().setProperty("cursor", "pointer");
+      removeButton.getElement().getStyle().setProperty("color", "#999999");
+      removeButton.getElement().getStyle().setProperty("fontWeight", "bold");
+      removeButton.getElement().getStyle().setProperty("fontSize", "14px");
+      removeButton.getElement().getStyle().setProperty("width", "12px");
+      removeButton.getElement().getStyle().setProperty("textAlign", "center");
+      removeButton.getElement().getStyle().setProperty("position", "relative");
+      removeButton.getElement().getStyle().setProperty("top", "-2px");
+      removeButton.getElement().getStyle().setProperty("userSelect", "none");
+      
+      // Use the same native click handler pattern as other settings buttons
+      addNativeClickHandler(removeButton.getElement(), "RemoveListItem-" + listType + "-" + text);
+      
+      itemContainer.add(removeButton);
+      container.add(itemContainer);
+      
+      // Sort items alphabetically
+      sortListItems(container);
+      
+      // Save to settings
+      saveListToSettings(listType);
+   }
+   
+   private void sortListItems(FlowPanel container) {
+      // Collect all items with their text content
+      java.util.List<Widget> items = new java.util.ArrayList<Widget>();
+      java.util.List<String> texts = new java.util.ArrayList<String>();
+      
+      for (int i = 0; i < container.getWidgetCount(); i++) {
+         Widget widget = container.getWidget(i);
+         if (widget instanceof FlowPanel) {
+            FlowPanel itemPanel = (FlowPanel) widget;
+            // Get the text from the first child (Label)
+            if (itemPanel.getWidgetCount() > 0 && itemPanel.getWidget(0) instanceof Label) {
+               Label textLabel = (Label) itemPanel.getWidget(0);
+               String text = textLabel.getText();
+               items.add(widget);
+               texts.add(text);
+            }
+         }
+      }
+      
+      // Sort by text content (case-insensitive)
+      java.util.List<Integer> indices = new java.util.ArrayList<Integer>();
+      for (int i = 0; i < texts.size(); i++) {
+         indices.add(i);
+      }
+      
+      indices.sort(new java.util.Comparator<Integer>() {
+         @Override
+         public int compare(Integer a, Integer b) {
+            return texts.get(a).toLowerCase().compareTo(texts.get(b).toLowerCase());
+         }
+      });
+      
+      // Clear and re-add in sorted order
+      container.clear();
+      for (Integer index : indices) {
+         container.add(items.get(index));
+      }
+   }
+   
+   private void saveListToSettings(String listType) {
+      // Find the items container for this list type
+      com.google.gwt.dom.client.Element automationElement = automationSection_.getElement();
+      com.google.gwt.dom.client.Element itemsContainer = findElementByAttribute(automationElement, "data-items-container", listType);
+      
+      if (itemsContainer != null) {
+         // Collect all list items using native JavaScript
+         String[] items = collectListItems(itemsContainer);
+         
+         // Convert to JavaScript array and save via server
+         com.google.gwt.core.client.JavaScriptObject jsArray = createJavaScriptArray(items);
+         server_.setAutomationList(listType, jsArray, new ServerRequestCallback<java.lang.Void>() {
+            @Override
+            public void onResponseReceived(java.lang.Void result) {
+               Debug.log("Successfully saved " + items.length + " items for " + listType);
+            }
+            
+            @Override
+            public void onError(ServerError error) {
+               Debug.log("Error saving list items for " + listType + ": " + error.getMessage());
+            }
+         });
+      }
+   }
+   
+   private void toggleAllowDenyPanel(String settingName, boolean show) {
+      // Find the allow/deny panel for this setting using native DOM query
+      com.google.gwt.dom.client.Element automationElement = automationSection_.getElement();
+      com.google.gwt.dom.client.Element panel = findElementByAttribute(automationElement, "data-automation-panel", settingName);
+      if (panel != null) {
+         if (show) {
+            panel.getStyle().setProperty("display", "block");
+         } else {
+            panel.getStyle().setProperty("display", "none");
+         }
+      }
+   }
+   
+   private native com.google.gwt.dom.client.Element findElementByAttribute(com.google.gwt.dom.client.Element parent, String attributeName, String attributeValue) /*-{
+      var elements = parent.querySelectorAll("*[" + attributeName + "='" + attributeValue + "']");
+      return elements.length > 0 ? elements[0] : null;
+   }-*/;
+   
+   private native com.google.gwt.core.client.JavaScriptObject createJavaScriptArray(String[] items) /*-{
+      var array = [];
+      for (var i = 0; i < items.length; i++) {
+         array.push(items[i]);
+      }
+      return array;
+   }-*/;
+   
+   private native void removeListItemByText(com.google.gwt.dom.client.Element itemsContainer, String text) /*-{
+      var itemElements = itemsContainer.querySelectorAll("div[style*='display: inline-flex']");
+      
+      for (var i = 0; i < itemElements.length; i++) {
+         var itemElement = itemElements[i];
+         var labelElement = itemElement.firstElementChild;
+         if (labelElement) {
+            var itemText = labelElement.innerText || labelElement.textContent || '';
+            if (itemText === text) {
+               // Remove this item from the DOM
+               itemElement.parentNode.removeChild(itemElement);
+               break;
+            }
+         }
+      }
+   }-*/;
+   
+   private native String[] collectListItems(com.google.gwt.dom.client.Element itemsContainer) /*-{
+      var itemElements = itemsContainer.querySelectorAll("div[style*='display: inline-flex']");
+      var items = [];
+      
+      for (var i = 0; i < itemElements.length; i++) {
+         var itemElement = itemElements[i];
+         var labelElement = itemElement.firstElementChild;
+         if (labelElement) {
+            items[i] = labelElement.innerText || labelElement.textContent || '';
+         } else {
+            items[i] = '';
+         }
+      }
+      return items;
+   }-*/;
+   
    private void loadUserProfile() {
       server_.getUserProfile(new ServerRequestCallback<AiUserProfile>() {
          @Override
@@ -1202,6 +1650,7 @@ public class AiSettingsWidget extends Composite
       
       updateSecurityModeDisplay();
       updateWebSearchDisplay();
+      updateAutomationTogglesDisplay();
       
       // Load user rules
       refreshRules();
@@ -1250,8 +1699,9 @@ public class AiSettingsWidget extends Composite
       buildProfileSection();
       buildWorkingDirectorySection();
       buildRulesSection();
-      buildModelSection();
       buildSecuritySection();
+      buildAutomationSection();
+      buildModelSection();
       
       // Ensure directory input is populated after UI is built
       updateWorkingDirectorySection();
@@ -1586,9 +2036,10 @@ public class AiSettingsWidget extends Composite
       // Refresh subscription status
       refreshSubscriptionStatus();
       
-      // Always query fresh security mode and web search values from R functions
+      // Always query fresh security mode, web search, and automation values from R functions
       updateSecurityModeDisplay();
       updateWebSearchDisplay();
+      updateAutomationTogglesDisplay();
       
       // Refresh other settings that might have changed
       loadCurrentSettings();
@@ -1780,6 +2231,107 @@ public class AiSettingsWidget extends Composite
       }, false);
    }-*/;
    
+   // Add native DOM event handler for automation toggles
+   private native void addNativeAutomationChangeHandler(com.google.gwt.dom.client.Element element, String settingName) /*-{
+      var self = this;
+      
+      element.addEventListener('click', function(event) {
+         var toggleDiv = element.querySelector('div[data-value]');
+         if (toggleDiv) {
+            var currentValue = toggleDiv.getAttribute('data-value');
+            var newValue = currentValue === 'false' ? 'true' : 'false';
+            toggleDiv.setAttribute('data-value', newValue);
+            
+            // Update visual state
+            var slider = toggleDiv.querySelector('div');
+            var isEnabled = newValue === 'true';
+            toggleDiv.style.background = isEnabled ? '#4CAF50' : '#ccc';
+            
+            // Use right positioning for enabled (green), left for disabled (grey)
+            if (isEnabled) {
+               slider.style.left = '';
+               slider.style.right = '1px';
+            } else {
+               slider.style.right = '';
+               slider.style.left = '1px';
+            }
+            
+            // Call appropriate handler based on setting name
+            if (settingName === 'autoAcceptEdits') {
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleAutoAcceptEditsChange()();
+            } else if (settingName === 'autoAcceptConsole') {
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleAutoAcceptConsoleChange()();
+            } else if (settingName === 'autoAcceptTerminal') {
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleAutoAcceptTerminalChange()();
+            } else if (settingName === 'autoRunFiles') {
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleAutoRunFilesChange()();
+            } else if (settingName === 'autoDeleteFiles') {
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleAutoDeleteFilesChange()();
+            }
+            
+            // Only prevent default when actually handling the toggle
+            event.preventDefault();
+            event.stopPropagation();
+         }
+         // If not a toggle click, let it bubble normally (allows text selection)
+      }, false);
+   }-*/;
+   
+   // Add native DOM event handler for "Allow anything" toggles
+   private native void addNativeAllowAnythingToggleHandler(com.google.gwt.dom.client.Element element, String settingName) /*-{
+      var self = this;
+      
+      element.addEventListener('click', function(event) {
+         var toggleDiv = element.querySelector('div[data-value]');
+         if (toggleDiv) {
+            var currentValue = toggleDiv.getAttribute('data-value');
+            var newValue = currentValue === 'false' ? 'true' : 'false';
+            toggleDiv.setAttribute('data-value', newValue);
+            
+            // Update visual state
+            var slider = toggleDiv.querySelector('div');
+            var isEnabled = newValue === 'true';
+            toggleDiv.style.background = isEnabled ? '#4CAF50' : '#ccc';
+            
+            // Use right positioning for enabled (green), left for disabled (grey)
+            if (isEnabled) {
+               slider.style.left = '';
+               slider.style.right = '1px';
+            } else {
+               slider.style.right = '';
+               slider.style.left = '1px';
+            }
+            
+            // Call handler to save setting
+            self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleAllowAnythingToggle(Ljava/lang/String;Z)(settingName, isEnabled);
+            
+            // Only prevent default when actually handling the toggle
+            event.preventDefault();
+            event.stopPropagation();
+         }
+      }, false);
+   }-*/;
+   
+   // Add native DOM event handler for text input Enter key
+   private native void addNativeKeyHandler(com.google.gwt.dom.client.Element inputElement, Object itemsContainer, String listType) /*-{
+      var self = this;
+      
+      inputElement.addEventListener('keydown', function(event) {
+         if (event.key === 'Enter' || event.keyCode === 13) {
+            var value = inputElement.value.trim();
+            if (value !== '') {
+               // Call Java method to add the item
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleAddListItem(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;)(itemsContainer, value, listType);
+               
+               // Clear the input
+               inputElement.value = '';
+            }
+            event.preventDefault();
+            event.stopPropagation();
+         }
+      }, false);
+   }-*/;
+   
    // Rule management handlers
    private void handleAddRule() {
       // Show the new rule input panel
@@ -1838,6 +2390,24 @@ public class AiSettingsWidget extends Composite
       VerticalPanel menu = ruleMenus_.get(ruleIndex);
       if (menu != null) {
          menu.setVisible(false);
+      }
+   }
+   
+   private void handleRemoveListItem(String listType, String text) {
+      Debug.log("Remove button clicked for: " + text + " from list: " + listType);
+      
+      // Find the items container for this list type
+      com.google.gwt.dom.client.Element automationElement = automationSection_.getElement();
+      com.google.gwt.dom.client.Element itemsContainer = findElementByAttribute(automationElement, "data-items-container", listType);
+      
+      if (itemsContainer != null) {
+         // Find and remove the specific item by text content
+         removeListItemByText(itemsContainer, text);
+         
+         // Save updated list to settings
+         saveListToSettings(listType);
+      } else {
+         Debug.log("Items container not found for list type: " + listType);
       }
    }
    
@@ -1985,6 +2555,12 @@ public class AiSettingsWidget extends Composite
             } else if (buttonText.startsWith('EditCancel-')) {
                var ruleIndex = parseInt(buttonText.split('-')[1]);
                self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleEditCancel(I)(ruleIndex);
+            } else if (buttonText.startsWith('RemoveListItem-')) {
+               // Parse: "RemoveListItem-autoAcceptConsole_allow-text"
+               var parts = buttonText.split('-');
+               var listType = parts[1];
+               var text = parts.slice(2).join('-'); // Rejoin in case text contains dashes
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleRemoveListItem(Ljava/lang/String;Ljava/lang/String;)(listType, text);
             }
             
             // Only prevent default for actual button clicks
@@ -2159,6 +2735,169 @@ public class AiSettingsWidget extends Composite
       });
    }
    
+   private void handleAutoAcceptEditsChange() {
+      // Follow security mode pattern - query server for current state, then toggle
+      server_.getAutoAcceptEdits(new ServerRequestCallback<Boolean>() {
+         @Override
+         public void onResponseReceived(Boolean currentValue) {
+            boolean current = currentValue != null ? currentValue : false;
+            boolean newValue = !current;
+            Debug.log("Auto-accept edits set to: " + newValue);
+            
+            // Update visual state to match the new server value
+            if (autoAcceptEditsToggle_ != null) {
+               updateToggleDisplay(autoAcceptEditsToggle_.getElement(), newValue ? "true" : "false", "true");
+            }
+            
+            handler_.onAutoAcceptEditsChange(newValue);
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Error getting auto accept edits: " + error.getMessage());
+         }
+      });
+   }
+   
+   private void handleAutoAcceptConsoleChange() {
+      // Follow security mode pattern - query server for current state, then toggle
+      server_.getAutoAcceptConsole(new ServerRequestCallback<Boolean>() {
+         @Override
+         public void onResponseReceived(Boolean currentValue) {
+            boolean current = currentValue != null ? currentValue : false;
+            boolean newValue = !current;
+            Debug.log("Auto-accept console set to: " + newValue);
+            
+            // Update visual state to match the new server value
+            if (autoAcceptConsoleToggle_ != null) {
+               updateToggleDisplay(autoAcceptConsoleToggle_.getElement(), newValue ? "true" : "false", "true");
+            }
+            
+            // Update panel visibility to match the new server value
+            toggleAllowDenyPanel("autoAcceptConsole", newValue);
+            
+            handler_.onAutoAcceptConsoleChange(newValue);
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Error getting auto accept console: " + error.getMessage());
+         }
+      });
+   }
+   
+   private void handleAutoAcceptTerminalChange() {
+      // Follow security mode pattern - query server for current state, then toggle
+      server_.getAutoAcceptTerminal(new ServerRequestCallback<Boolean>() {
+         @Override
+         public void onResponseReceived(Boolean currentValue) {
+            boolean current = currentValue != null ? currentValue : false;
+            boolean newValue = !current;
+            Debug.log("Auto-accept terminal set to: " + newValue);
+            
+            // Update visual state to match the new server value
+            if (autoAcceptTerminalToggle_ != null) {
+               updateToggleDisplay(autoAcceptTerminalToggle_.getElement(), newValue ? "true" : "false", "true");
+            }
+            
+            // Update panel visibility to match the new server value
+            toggleAllowDenyPanel("autoAcceptTerminal", newValue);
+            
+            handler_.onAutoAcceptTerminalChange(newValue);
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Error getting auto accept terminal: " + error.getMessage());
+         }
+      });
+   }
+   
+   private void handleAutoRunFilesChange() {
+      // Follow security mode pattern - query server for current state, then toggle
+      server_.getAutoRunFiles(new ServerRequestCallback<Boolean>() {
+         @Override
+         public void onResponseReceived(Boolean currentValue) {
+            boolean current = currentValue != null ? currentValue : false;
+            boolean newValue = !current;
+            Debug.log("Auto-run files set to: " + newValue);
+            
+            // Update visual state to match the new server value
+            if (autoRunFilesToggle_ != null) {
+               updateToggleDisplay(autoRunFilesToggle_.getElement(), newValue ? "true" : "false", "true");
+            }
+            
+            // Update panel visibility to match the new server value
+            toggleAllowDenyPanel("autoRunFiles", newValue);
+            
+            handler_.onAutoRunFilesChange(newValue);
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Error getting auto run files: " + error.getMessage());
+         }
+      });
+   }
+   
+   private void handleAutoDeleteFilesChange() {
+      // Follow security mode pattern - query server for current state, then toggle
+      server_.getAutoDeleteFiles(new ServerRequestCallback<Boolean>() {
+         @Override
+         public void onResponseReceived(Boolean currentValue) {
+            boolean current = currentValue != null ? currentValue : false;
+            boolean newValue = !current;
+            Debug.log("Auto-delete files set to: " + newValue);
+            
+            // Update visual state to match the new server value
+            if (autoDeleteFilesToggle_ != null) {
+               updateToggleDisplay(autoDeleteFilesToggle_.getElement(), newValue ? "true" : "false", "true");
+            }
+            
+            handler_.onAutoDeleteFilesChange(newValue);
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Error getting auto delete files: " + error.getMessage());
+         }
+      });
+   }
+   
+   private void handleAllowAnythingToggle(String settingName, boolean enabled) {
+      Debug.log("Allow anything toggle for " + settingName + " set to: " + enabled);
+      
+      // Update the message text immediately
+      updateAllowAnythingLabelText(settingName, enabled);
+      
+      // Extract base setting name for list visibility
+      String baseSettingName = settingName.replace("_allow_anything", "");
+      
+      // Show/hide specific lists based on mode
+      // When "allow anything" is OFF (allow list mode), show only allow list
+      // When "allow anything" is ON (deny list mode), show only deny list
+      updateListsVisibility(baseSettingName, !enabled);
+      
+      // Handle different settings based on setting name
+      if ("autoAcceptConsole_allow_anything".equals(settingName)) {
+         handler_.onAutoAcceptConsoleAllowAnythingChange(enabled);
+      } else if ("autoAcceptTerminal_allow_anything".equals(settingName)) {
+         handler_.onAutoAcceptTerminalAllowAnythingChange(enabled);
+      } else if ("autoRunFiles_allow_anything".equals(settingName)) {
+         handler_.onAutoRunFilesAllowAnythingChange(enabled);
+      }
+   }
+   
+   private void handleAddListItem(Object itemsContainer, String text, String listType) {
+      // Cast the container back to FlowPanel
+      if (itemsContainer instanceof FlowPanel) {
+         FlowPanel container = (FlowPanel) itemsContainer;
+         addListItem(container, text, listType);
+      }
+   }
+
+
+   
    private void updateSecurityModeDisplay() {
       // Always query fresh values from server instead of using cached values
       server_.getSecurityMode(new ServerRequestCallback<String>() {
@@ -2191,6 +2930,127 @@ public class AiSettingsWidget extends Composite
             
             // Initialize PostHog with secure mode as default
             updatePostHogForSecurityMode("secure");
+         }
+      });
+   }
+   
+   private void updateAutomationTogglesDisplay() {
+      // Load auto-accept edits setting
+      server_.getAutoAcceptEdits(new ServerRequestCallback<Boolean>() {
+         @Override
+         public void onResponseReceived(Boolean enabled) {
+            boolean isEnabled = enabled != null ? enabled : false;
+            if (autoAcceptEditsToggle_ != null) {
+               updateToggleDisplay(autoAcceptEditsToggle_.getElement(), isEnabled ? "true" : "false", "true");
+            }
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Error loading auto accept edits for display: " + error.getMessage());
+            if (autoAcceptEditsToggle_ != null) {
+               updateToggleDisplay(autoAcceptEditsToggle_.getElement(), "false", "true");
+            }
+         }
+      });
+      
+      // Load auto-accept console setting
+      server_.getAutoAcceptConsole(new ServerRequestCallback<Boolean>() {
+         @Override
+         public void onResponseReceived(Boolean enabled) {
+            boolean isEnabled = enabled != null ? enabled : false;
+            if (autoAcceptConsoleToggle_ != null) {
+               updateToggleDisplay(autoAcceptConsoleToggle_.getElement(), isEnabled ? "true" : "false", "true");
+            }
+            // Update panel visibility to match server state
+            toggleAllowDenyPanel("autoAcceptConsole", isEnabled);
+            
+            // Load allow/deny lists for console
+            if (isEnabled) {
+               loadAutomationLists("auto_accept_console");
+            }
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Error loading auto accept console for display: " + error.getMessage());
+            if (autoAcceptConsoleToggle_ != null) {
+               updateToggleDisplay(autoAcceptConsoleToggle_.getElement(), "false", "true");
+            }
+            toggleAllowDenyPanel("autoAcceptConsole", false);
+         }
+      });
+      
+      // Load auto-accept terminal setting
+      server_.getAutoAcceptTerminal(new ServerRequestCallback<Boolean>() {
+         @Override
+         public void onResponseReceived(Boolean enabled) {
+            boolean isEnabled = enabled != null ? enabled : false;
+            if (autoAcceptTerminalToggle_ != null) {
+               updateToggleDisplay(autoAcceptTerminalToggle_.getElement(), isEnabled ? "true" : "false", "true");
+            }
+            // Update panel visibility to match server state
+            toggleAllowDenyPanel("autoAcceptTerminal", isEnabled);
+            
+            // Load allow/deny lists for terminal
+            if (isEnabled) {
+               loadAutomationLists("auto_accept_terminal");
+            }
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Error loading auto accept terminal for display: " + error.getMessage());
+            if (autoAcceptTerminalToggle_ != null) {
+               updateToggleDisplay(autoAcceptTerminalToggle_.getElement(), "false", "true");
+            }
+            toggleAllowDenyPanel("autoAcceptTerminal", false);
+         }
+      });
+      
+      // Load auto-run files setting
+      server_.getAutoRunFiles(new ServerRequestCallback<Boolean>() {
+         @Override
+         public void onResponseReceived(Boolean enabled) {
+            boolean isEnabled = enabled != null ? enabled : false;
+            if (autoRunFilesToggle_ != null) {
+               updateToggleDisplay(autoRunFilesToggle_.getElement(), isEnabled ? "true" : "false", "true");
+            }
+            // Update panel visibility to match server state
+            toggleAllowDenyPanel("autoRunFiles", isEnabled);
+            
+            // Load allow/deny lists for run files
+            if (isEnabled) {
+               loadAutomationLists("auto_run_files");
+            }
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Error loading auto run files for display: " + error.getMessage());
+            if (autoRunFilesToggle_ != null) {
+               updateToggleDisplay(autoRunFilesToggle_.getElement(), "false", "true");
+            }
+            toggleAllowDenyPanel("autoRunFiles", false);
+         }
+      });
+      
+      // Load auto-delete files setting
+      server_.getAutoDeleteFiles(new ServerRequestCallback<Boolean>() {
+         @Override
+         public void onResponseReceived(Boolean enabled) {
+            boolean isEnabled = enabled != null ? enabled : false;
+            if (autoDeleteFilesToggle_ != null) {
+               updateToggleDisplay(autoDeleteFilesToggle_.getElement(), isEnabled ? "true" : "false", "true");
+            }
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Error loading auto delete files for display: " + error.getMessage());
+            if (autoDeleteFilesToggle_ != null) {
+               updateToggleDisplay(autoDeleteFilesToggle_.getElement(), "false", "true");
+            }
          }
       });
    }
@@ -2399,6 +3259,8 @@ public class AiSettingsWidget extends Composite
             return rulesSection_;
          case "security":
             return securitySection_;
+         case "automation":
+            return automationSection_;
          default:
             return null;
       }
@@ -2502,6 +3364,8 @@ public class AiSettingsWidget extends Composite
             return rulesSectionExpanded_;
          case "security":
             return securitySectionExpanded_;
+         case "automation":
+            return automationSectionExpanded_;
          default:
             return true;
       }
@@ -2526,6 +3390,9 @@ public class AiSettingsWidget extends Composite
             break;
          case "security":
             securitySectionExpanded_ = expanded;
+            break;
+         case "automation":
+            automationSectionExpanded_ = expanded;
             break;
       }
    }
@@ -2594,5 +3461,227 @@ public class AiSettingsWidget extends Composite
          console.error('Error applying immediate collapse:', e);
       }
    }-*/;
+
+   private void loadAutomationLists(String settingPrefix) {
+      // Load both allow and deny lists for the given setting prefix
+      // (e.g., "auto_accept_console" loads both allow_list and deny_list)
+      
+      String allowListType = settingPrefix + "_allow_list";
+      String denyListType = settingPrefix + "_deny_list";
+      String allowAnythingType = settingPrefix + "_allow_anything";
+      
+      Debug.log("Loading automation lists for: " + settingPrefix);
+      
+      // Load "Allow anything" toggle state first
+      loadAllowAnythingToggle(settingPrefix, allowAnythingType);
+      
+      // Load allow list
+      server_.getAutomationList(allowListType, new ServerRequestCallback<JavaScriptObject>() {
+         @Override
+         public void onResponseReceived(JavaScriptObject result) {
+            if (result != null) {
+               String[] items = convertJavaScriptArrayToStringArray(result);
+               loadListItems(allowListType, items);
+               Debug.log("Loaded " + items.length + " items for " + allowListType);
+            }
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Error loading " + allowListType + ": " + error.getMessage());
+         }
+      });
+      
+      // Load deny list
+      server_.getAutomationList(denyListType, new ServerRequestCallback<JavaScriptObject>() {
+         @Override
+         public void onResponseReceived(JavaScriptObject result) {
+            if (result != null) {
+               String[] items = convertJavaScriptArrayToStringArray(result);
+               loadListItems(denyListType, items);
+               Debug.log("Loaded " + items.length + " items for " + denyListType);
+            }
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Error loading " + denyListType + ": " + error.getMessage());
+         }
+      });
+   }
+   
+   private void loadListItems(String listType, String[] items) {
+      // Get the FlowPanel reference from our stored map
+      FlowPanel container = automationListContainers_.get(listType);
+      
+      if (container != null) {
+         // Clear existing items
+         container.clear();
+         
+         // Add each item using the existing addListItem method
+         for (String item : items) {
+            if (item != null && !item.trim().isEmpty()) {
+               addListItem(container, item, listType);
+            }
+         }
+         
+         Debug.log("Loaded " + items.length + " items into container for " + listType);
+      } else {
+         Debug.log("FlowPanel container not found for list type: " + listType);
+      }
+   }
+   
+   private native String[] convertJavaScriptArrayToStringArray(JavaScriptObject jsArray) /*-{
+      if (!jsArray || !Array.isArray(jsArray)) {
+         return [];
+      }
+      
+      var result = [];
+      for (var i = 0; i < jsArray.length; i++) {
+         if (jsArray[i] != null) {
+            result[i] = String(jsArray[i]);
+         }
+      }
+      return result;
+   }-*/;
+   
+   private void loadAllowAnythingToggle(String settingPrefix, String allowAnythingType) {
+      // Load the "Allow anything" toggle state for this setting
+      if ("auto_accept_console".equals(settingPrefix)) {
+         server_.getAutoAcceptConsoleAllowAnything(new ServerRequestCallback<Boolean>() {
+            @Override
+            public void onResponseReceived(Boolean enabled) {
+               boolean isEnabled = enabled != null ? enabled : false;
+               updateAllowAnythingToggleDisplay(allowAnythingType, isEnabled);
+               // Update lists visibility based on "Allow anything" state
+               updateListsVisibility(settingPrefix, !isEnabled);
+            }
+            
+            @Override
+            public void onError(ServerError error) {
+               Debug.log("Error loading " + allowAnythingType + ": " + error.getMessage());
+               updateAllowAnythingToggleDisplay(allowAnythingType, false);
+               updateListsVisibility(settingPrefix, true); // Default to show lists
+            }
+         });
+      } else if ("auto_accept_terminal".equals(settingPrefix)) {
+         server_.getAutoAcceptTerminalAllowAnything(new ServerRequestCallback<Boolean>() {
+            @Override
+            public void onResponseReceived(Boolean enabled) {
+               boolean isEnabled = enabled != null ? enabled : false;
+               updateAllowAnythingToggleDisplay(allowAnythingType, isEnabled);
+               updateListsVisibility(settingPrefix, !isEnabled);
+            }
+            
+            @Override
+            public void onError(ServerError error) {
+               Debug.log("Error loading " + allowAnythingType + ": " + error.getMessage());
+               updateAllowAnythingToggleDisplay(allowAnythingType, false);
+               updateListsVisibility(settingPrefix, true);
+            }
+         });
+      } else if ("auto_run_files".equals(settingPrefix)) {
+         server_.getAutoRunFilesAllowAnything(new ServerRequestCallback<Boolean>() {
+            @Override
+            public void onResponseReceived(Boolean enabled) {
+               boolean isEnabled = enabled != null ? enabled : false;
+               updateAllowAnythingToggleDisplay(allowAnythingType, isEnabled);
+               updateListsVisibility(settingPrefix, !isEnabled);
+            }
+            
+            @Override
+            public void onError(ServerError error) {
+               Debug.log("Error loading " + allowAnythingType + ": " + error.getMessage());
+               updateAllowAnythingToggleDisplay(allowAnythingType, false);
+               updateListsVisibility(settingPrefix, true);
+            }
+         });
+      }
+   }
+   
+   private void updateAllowAnythingToggleDisplay(String settingName, boolean enabled) {
+      com.google.gwt.dom.client.Element automationElement = automationSection_.getElement();
+      com.google.gwt.dom.client.Element toggleElement = findElementByAttribute(automationElement, "data-setting", settingName);
+      
+      if (toggleElement != null) {
+         updateToggleDisplay(toggleElement, enabled ? "true" : "false", "true");
+         Debug.log("Updated " + settingName + " toggle display to: " + enabled);
+      } else {
+         Debug.log("Toggle element not found for: " + settingName);
+      }
+      
+      // Also update the descriptive label text
+      updateAllowAnythingLabelText(settingName, enabled);
+   }
+   
+   private void updateAllowAnythingLabelText(String settingName, boolean allowAnythingEnabled) {
+      com.google.gwt.dom.client.Element automationElement = automationSection_.getElement();
+      // Extract the base setting name (remove "_allow_anything" suffix if present)
+      String baseSettingName = settingName.replace("_allow_anything", "");
+      com.google.gwt.dom.client.Element labelElement = findElementByAttribute(automationElement, "data-allow-anything-label", baseSettingName);
+      
+      if (labelElement != null) {
+         String newMessage = getAllowAnythingMessage(baseSettingName, allowAnythingEnabled);
+         labelElement.setInnerHTML(newMessage);
+         Debug.log("Updated label text for " + baseSettingName + " to mode: " + (allowAnythingEnabled ? "deny list" : "allow list"));
+      } else {
+         Debug.log("Label element not found for: " + baseSettingName);
+      }
+   }
+   
+   private void updateListsVisibility(String settingPrefix, boolean allowMode) {
+      // allowMode = true: show only allow list (hide deny list)
+      // allowMode = false: show only deny list (hide allow list)
+      
+      com.google.gwt.dom.client.Element automationElement = automationSection_.getElement();
+      
+      // Find allow list section
+      String allowListType = settingPrefix + "_allow_list";
+      FlowPanel allowContainer = automationListContainers_.get(allowListType);
+      if (allowContainer != null) {
+         com.google.gwt.dom.client.Element allowSection = allowContainer.getParent().getElement();
+         allowSection.getStyle().setProperty("display", allowMode ? "block" : "none");
+         Debug.log("Updated allow list visibility for " + settingPrefix + " to: " + (allowMode ? "visible" : "hidden"));
+      }
+      
+      // Find deny list section  
+      String denyListType = settingPrefix + "_deny_list";
+      FlowPanel denyContainer = automationListContainers_.get(denyListType);
+      if (denyContainer != null) {
+         com.google.gwt.dom.client.Element denySection = denyContainer.getParent().getElement();
+         denySection.getStyle().setProperty("display", allowMode ? "none" : "block");
+         Debug.log("Updated deny list visibility for " + settingPrefix + " to: " + (allowMode ? "hidden" : "visible"));
+      }
+   }
+   
+   private String getAllowAnythingMessage(String settingName, boolean allowAnythingEnabled) {
+      String action = "";
+      String allowMode = "";
+      String denyMode = "";
+      
+      if ("auto_accept_console".equals(settingName)) {
+         action = "auto-run console commands";
+         allowMode = "auto run only the allow list";
+         denyMode = "auto run everything except the deny list";
+      } else if ("auto_accept_terminal".equals(settingName)) {
+         action = "auto-run terminal commands";
+         allowMode = "auto run only the allow list";
+         denyMode = "auto run everything except the deny list";
+      } else if ("auto_run_files".equals(settingName)) {
+         action = "auto-run code from files";
+         allowMode = "auto run only the allow list";
+         denyMode = "auto run everything except the deny list";
+      } else {
+         // Fallback
+         action = "auto-run commands";
+         allowMode = "auto run only the allow list";
+         denyMode = "auto run everything except the deny list";
+      }
+      
+      String currentMode = allowAnythingEnabled ? denyMode : allowMode;
+      
+      return "Only " + action + " on the allow list or " + action.replace("auto-run", "auto run") + 
+             " except those on the deny list. You are currently on: <b>" + currentMode + "</b>.";
+   }
 
 }

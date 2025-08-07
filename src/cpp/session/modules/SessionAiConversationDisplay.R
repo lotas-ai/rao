@@ -454,7 +454,8 @@
                   message_id = widget_op$message_id,
                   command = widget_op$command,
                   explanation = widget_op$explanation,
-                  request_id = widget_op$request_id
+                  request_id = widget_op$request_id,
+                  function_call_type = widget_op$function_call_type
                ))
                items_created <- items_created + 1
                

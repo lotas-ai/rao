@@ -256,6 +256,7 @@ import com.google.gwt.json.client.JSONNull;
 import com.google.gwt.json.client.JSONNumber;
 import com.google.gwt.json.client.JSONObject;
 import com.google.gwt.json.client.JSONString;
+import com.google.gwt.json.client.JSONValue;
 import com.google.gwt.user.client.Random;
 import com.google.inject.Inject;
 import com.google.inject.Provider;
@@ -7846,6 +7847,28 @@ public class RemoteServer implements Server, AiServerOperations
    private static final String ADD_USER_RULE = "add_user_rule";
    private static final String EDIT_USER_RULE = "edit_user_rule";
    private static final String DELETE_USER_RULE = "delete_user_rule";
+   
+   // Automation settings
+   private static final String GET_AUTO_ACCEPT_EDITS = "get_auto_accept_edits";
+   private static final String SET_AUTO_ACCEPT_EDITS = "set_auto_accept_edits";
+   private static final String GET_AUTO_ACCEPT_CONSOLE = "get_auto_accept_console";
+   private static final String SET_AUTO_ACCEPT_CONSOLE = "set_auto_accept_console";
+   private static final String GET_AUTO_ACCEPT_TERMINAL = "get_auto_accept_terminal";
+   private static final String SET_AUTO_ACCEPT_TERMINAL = "set_auto_accept_terminal";
+   private static final String GET_AUTO_RUN_FILES = "get_auto_run_files";
+   private static final String SET_AUTO_RUN_FILES = "set_auto_run_files";
+   private static final String GET_AUTO_DELETE_FILES = "get_auto_delete_files";
+   private static final String SET_AUTO_DELETE_FILES = "set_auto_delete_files";
+   
+   // Allow/deny list settings
+   private static final String GET_AUTO_ACCEPT_CONSOLE_ALLOW_ANYTHING = "get_auto_accept_console_allow_anything";
+   private static final String SET_AUTO_ACCEPT_CONSOLE_ALLOW_ANYTHING = "set_auto_accept_console_allow_anything";
+   private static final String GET_AUTO_ACCEPT_TERMINAL_ALLOW_ANYTHING = "get_auto_accept_terminal_allow_anything";
+   private static final String SET_AUTO_ACCEPT_TERMINAL_ALLOW_ANYTHING = "set_auto_accept_terminal_allow_anything";
+   private static final String GET_AUTO_RUN_FILES_ALLOW_ANYTHING = "get_auto_run_files_allow_anything";
+   private static final String SET_AUTO_RUN_FILES_ALLOW_ANYTHING = "set_auto_run_files_allow_anything";
+   private static final String GET_AUTOMATION_LIST = "get_automation_list";
+   private static final String SET_AUTOMATION_LIST = "set_automation_list";
 
    private static final String CHECK_IMAGE_CONTENT_DUPLICATE = "check_image_content_duplicate";
    private static final String GET_PERSISTENT_DIFF_DATA = "get_persistent_diff_data";
@@ -8257,5 +8280,136 @@ public class RemoteServer implements Server, AiServerOperations
       JSONArray params = new JSONArray();
       params.set(0, new JSONNumber(index));
       sendRequest(RPC_SCOPE, DELETE_USER_RULE, params, requestCallback);
+   }
+   
+   // Automation settings implementations
+   @Override
+   public void getAutoAcceptEdits(ServerRequestCallback<Boolean> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, GET_AUTO_ACCEPT_EDITS, requestCallback);
+   }
+   
+   @Override
+   public void setAutoAcceptEdits(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, JSONBoolean.getInstance(enabled));
+      sendRequest(RPC_SCOPE, SET_AUTO_ACCEPT_EDITS, params, requestCallback);
+   }
+   
+   @Override
+   public void getAutoAcceptConsole(ServerRequestCallback<Boolean> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, GET_AUTO_ACCEPT_CONSOLE, requestCallback);
+   }
+   
+   @Override
+   public void setAutoAcceptConsole(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, JSONBoolean.getInstance(enabled));
+      sendRequest(RPC_SCOPE, SET_AUTO_ACCEPT_CONSOLE, params, requestCallback);
+   }
+   
+   @Override
+   public void getAutoAcceptTerminal(ServerRequestCallback<Boolean> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, GET_AUTO_ACCEPT_TERMINAL, requestCallback);
+   }
+   
+   @Override
+   public void setAutoAcceptTerminal(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, JSONBoolean.getInstance(enabled));
+      sendRequest(RPC_SCOPE, SET_AUTO_ACCEPT_TERMINAL, params, requestCallback);
+   }
+   
+   @Override
+   public void getAutoRunFiles(ServerRequestCallback<Boolean> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, GET_AUTO_RUN_FILES, requestCallback);
+   }
+   
+   @Override
+   public void setAutoRunFiles(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, JSONBoolean.getInstance(enabled));
+      sendRequest(RPC_SCOPE, SET_AUTO_RUN_FILES, params, requestCallback);
+   }
+   
+   @Override
+   public void getAutoDeleteFiles(ServerRequestCallback<Boolean> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, GET_AUTO_DELETE_FILES, requestCallback);
+   }
+   
+   @Override
+   public void setAutoDeleteFiles(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, JSONBoolean.getInstance(enabled));
+      sendRequest(RPC_SCOPE, SET_AUTO_DELETE_FILES, params, requestCallback);
+   }
+   
+   // Allow/deny list settings implementations
+   @Override
+   public void getAutoAcceptConsoleAllowAnything(ServerRequestCallback<Boolean> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, GET_AUTO_ACCEPT_CONSOLE_ALLOW_ANYTHING, requestCallback);
+   }
+   
+   @Override
+   public void setAutoAcceptConsoleAllowAnything(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, JSONBoolean.getInstance(enabled));
+      sendRequest(RPC_SCOPE, SET_AUTO_ACCEPT_CONSOLE_ALLOW_ANYTHING, params, requestCallback);
+   }
+   
+   @Override
+   public void getAutoAcceptTerminalAllowAnything(ServerRequestCallback<Boolean> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, GET_AUTO_ACCEPT_TERMINAL_ALLOW_ANYTHING, requestCallback);
+   }
+   
+   @Override
+   public void setAutoAcceptTerminalAllowAnything(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, JSONBoolean.getInstance(enabled));
+      sendRequest(RPC_SCOPE, SET_AUTO_ACCEPT_TERMINAL_ALLOW_ANYTHING, params, requestCallback);
+   }
+   
+   @Override
+   public void getAutoRunFilesAllowAnything(ServerRequestCallback<Boolean> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, GET_AUTO_RUN_FILES_ALLOW_ANYTHING, requestCallback);
+   }
+   
+   @Override
+   public void setAutoRunFilesAllowAnything(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, JSONBoolean.getInstance(enabled));
+      sendRequest(RPC_SCOPE, SET_AUTO_RUN_FILES_ALLOW_ANYTHING, params, requestCallback);
+   }
+   
+   @Override
+   public void getAutomationList(String listType, ServerRequestCallback<JavaScriptObject> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(listType));
+      sendRequest(RPC_SCOPE, GET_AUTOMATION_LIST, params, requestCallback);
+   }
+   
+   @Override
+   public void setAutomationList(String listType, JavaScriptObject items, ServerRequestCallback<java.lang.Void> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(listType));
+      params.set(1, new JSONObject(items));
+      sendRequest(RPC_SCOPE, SET_AUTOMATION_LIST, params, requestCallback);
    }
 }
