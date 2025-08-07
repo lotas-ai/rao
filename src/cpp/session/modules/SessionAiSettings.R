@@ -390,7 +390,7 @@
 .rs.addFunction("get_ai_setting", function(key, default_value = NULL) {
   # Get a specific setting value
   settings <- .rs.load_ai_settings()
-  return(settings[[key]] %||% default_value)
+  return(if (is.null(settings[[key]])) default_value else settings[[key]])
 })
 
 # Temperature management functions

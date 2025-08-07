@@ -460,7 +460,7 @@
   
   # Sort conversation by ID to ensure chronological order before sending to backend
   # This ensures all conversation data sent to rao-backend is properly ordered by message_id
-  sorted_conversation <- conversation[order(sapply(conversation, function(x) x$id %||% 0))]
+  sorted_conversation <- conversation[order(sapply(conversation, function(x) if (is.null(x$id)) 0 else x$id))]
   
   # Get client version for backend tracking
   client_version <- tryCatch({

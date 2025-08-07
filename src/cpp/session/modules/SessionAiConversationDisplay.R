@@ -404,7 +404,7 @@
    }
    
    # Sort conversation_log by ID to ensure chronological processing
-   conversation_log_sorted <- conversation_log[order(sapply(conversation_log, function(x) x$id %||% 0))]
+   conversation_log_sorted <- conversation_log[order(sapply(conversation_log, function(x) if (is.null(x$id)) 0 else x$id))]
    
    items_created <- 0
    
@@ -453,7 +453,7 @@
                   # If handle_run_file fails, create a fallback with an error message
                   list(
                      command = paste0("# Error retrieving file content: ", e$message),
-                     explanation = .rs.get_message_title(entry$id, conversation_log) %||% "Running file"
+                     explanation = if (is.null(.rs.get_message_title(entry$id, conversation_log))) "Running file" else .rs.get_message_title(entry$id, conversation_log)
                   )
                })
             }
