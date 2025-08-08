@@ -29,6 +29,7 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
    // Common constructor for file editing widgets
    protected AiFileEditorWidgetBase(String messageId, 
                                    String requestId,
+                                   String functionCallType,
                                    String filename,
                                    String explanation,
                                    boolean isEditable,
@@ -36,7 +37,7 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
                                    boolean skipDiffHighlighting,
                                    com.google.gwt.core.client.JavaScriptObject diffData)
    {
-      super(messageId, requestId);
+      super(messageId, requestId, functionCallType);
       filename_ = filename;
       explanation_ = explanation;
       isEditable_ = isEditable;
@@ -87,7 +88,7 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
     */
    public void createButtonsIfNeeded()
    {
-      if (acceptButton_ == null && cancelButton_ == null && isEditable_ && !isCancelled_) {
+      if (verticalButtonStack_ == null && isEditable_ && !isCancelled_) {
          Widget parent = this.getWidget();
          if (parent instanceof VerticalPanel) {
             createButtonContainer((VerticalPanel) parent);
@@ -170,35 +171,28 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
    }
    
    /**
-    * Create button container with accept/cancel buttons
+    * Create button container with vertical button stack
+    * Uses exactly the same mechanism as console widgets for consistent positioning
     */
    private void createButtonContainer(VerticalPanel container)
    {
-      // Create button container
-      SimplePanel buttonContainer = new SimplePanel();
-      buttonContainer.addStyleName(getButtonContainerStyleClass());
-      buttonContainer.setWidth("100%");
-      buttonContainer.getElement().getStyle().setProperty("position", "relative");
-      buttonContainer.getElement().getStyle().setHeight(0, Unit.PX);
-      buttonContainer.getElement().getStyle().setProperty("zIndex", "10");
+      // Create the new vertical button stack (no extracted items needed for edit file)
+      verticalButtonStack_ = createVerticalButtonStack(functionCallType_, "");
       
-      // Create button wrapper
-      HorizontalPanel buttonWrapper = new HorizontalPanel();
-      buttonWrapper.setSpacing(0);
-      buttonWrapper.getElement().getStyle().setProperty("position", "absolute");
-      buttonWrapper.getElement().getStyle().setProperty("top", "-1px");
-      buttonWrapper.getElement().getStyle().setProperty("right", "8px");
-      buttonWrapper.getElement().getStyle().setProperty("zIndex", "999");
+      // Create a horizontal panel to hold the button stack on the right (same as console widgets)
+      HorizontalPanel buttonRow = new HorizontalPanel();
+      buttonRow.setWidth("100%");
+      buttonRow.setHorizontalAlignment(HorizontalPanel.ALIGN_RIGHT);
+      buttonRow.getElement().getStyle().setMargin(0, Unit.PX); // Remove any margin
+      buttonRow.getElement().getStyle().setPadding(0, Unit.PX); // Remove any padding
       
-      // Create buttons using base class method with widget-specific styles
-      acceptButton_ = createStandardButton("Accept", getAcceptButtonStyleClass(), "accept");
-      cancelButton_ = createStandardButton("Cancel", getCancelButtonStyleClass(), "cancel");
+      // Add the button stack to the right side
+      buttonRow.add(verticalButtonStack_);
+      buttonRow.setCellHorizontalAlignment(verticalButtonStack_, HorizontalPanel.ALIGN_RIGHT);
       
-      buttonWrapper.add(acceptButton_);
-      buttonWrapper.add(cancelButton_);
-      
-      buttonContainer.setWidget(buttonWrapper);
-      container.add(buttonContainer);
+      // Add the button row to the main container with no spacing
+      container.add(buttonRow);
+      container.setCellHeight(buttonRow, "0px"); // Minimize height
    }
    
    /**
@@ -371,7 +365,7 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
          setupDiffLineNumbers(diffArray);
          
          // Create buttons now if they don't exist yet (streaming completion)
-         if (acceptButton_ == null && cancelButton_ == null && isEditable_ && !isCancelled_) {
+         if (verticalButtonStack_ == null && isEditable_ && !isCancelled_) {
             // Find the container to add buttons to
             Widget parent = this.getWidget();
             if (parent instanceof VerticalPanel) {
@@ -723,11 +717,6 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
    // Standard button management
    
    @Override
-   protected Button[] getStandardButtons() {
-      return new Button[] { acceptButton_, cancelButton_ };
-   }
-   
-   @Override
    public void hideButtons() {
       // For cancelled operations, buttons don't exist, so nothing to hide
       if (isCancelled_) {
@@ -735,7 +724,14 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
       }
       
       // Use base class functionality
-      hideButtonsInternal();
+      hideVerticalStack();
+   }
+   
+   @Override
+   protected void hideVerticalStack() {
+      if (verticalButtonStack_ != null) {
+         verticalButtonStack_.setVisible(false);
+      }
    }
    
    // Abstract methods that subclasses must implement for customization
@@ -750,15 +746,7 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
     */
    protected abstract String getButtonContainerStyleClass();
    
-   /**
-    * Get the CSS style class for the accept button
-    */
-   protected abstract String getAcceptButtonStyleClass();
-   
-   /**
-    * Get the CSS style class for the cancel button
-    */
-   protected abstract String getCancelButtonStyleClass();
+
    
    /**
     * Get the ID prefix for the ACE editor element
@@ -774,9 +762,32 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
    protected final com.google.gwt.core.client.JavaScriptObject preComputedDiffData_;
    
    protected AceEditor editor_;
-   protected Button acceptButton_;
-   protected Button cancelButton_;
+   protected VerticalPanel verticalButtonStack_;
    protected HorizontalPanel headerPanel_;
    protected Label filenameLabel_;
    protected JsArrayInteger diffMarkers_;
+   
+   @Override
+   protected void setVerticalStackEnabled(boolean enabled) {
+      if (verticalButtonStack_ != null) {
+         // Enable/disable the entire vertical stack
+         verticalButtonStack_.getElement().getStyle().setProperty("pointerEvents", enabled ? "auto" : "none");
+         verticalButtonStack_.getElement().getStyle().setOpacity(enabled ? 1.0 : 0.5);
+         
+         // Update each button's style
+         for (int i = 0; i < verticalButtonStack_.getWidgetCount(); i++) {
+            Widget widget = verticalButtonStack_.getWidget(i);
+            if (widget instanceof HTML) {
+               HTML button = (HTML) widget;
+               if (enabled) {
+                  button.getElement().getStyle().setProperty("cursor", "pointer");
+                  button.getElement().getStyle().clearOpacity();
+               } else {
+                  button.getElement().getStyle().setProperty("cursor", "not-allowed");
+                  button.getElement().getStyle().setOpacity(0.5);
+               }
+            }
+         }
+      }
+   }
 } 

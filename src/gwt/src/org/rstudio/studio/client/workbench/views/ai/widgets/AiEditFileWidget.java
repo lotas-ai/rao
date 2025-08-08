@@ -23,6 +23,10 @@ import org.rstudio.studio.client.workbench.views.source.editors.text.ace.Positio
 import org.rstudio.studio.client.common.filetypes.FileTypeRegistry;
 import org.rstudio.core.client.Debug;
 import org.rstudio.core.client.widget.FontSizer;
+import org.rstudio.studio.client.workbench.views.ai.model.AiServerOperations;
+import org.rstudio.studio.client.RStudioGinjector;
+import org.rstudio.studio.client.server.ServerRequestCallback;
+import org.rstudio.studio.client.server.ServerError;
 
 /**
  * Widget for displaying edit_file function calls with an Ace editor
@@ -84,7 +88,7 @@ public class AiEditFileWidget extends AiFileEditorWidgetBase
                           boolean skipDiffHighlighting,
                           com.google.gwt.core.client.JavaScriptObject diffData)
    {
-      super(messageId, requestId, filename, explanation, isEditable, isCancelled, skipDiffHighlighting, diffData);
+      super(messageId, requestId, "edit_file", filename, explanation, isEditable, isCancelled, skipDiffHighlighting, diffData);
       handler_ = handler;
       
       initWidget(createWidget(content, filename));
@@ -113,15 +117,7 @@ public class AiEditFileWidget extends AiFileEditorWidgetBase
       return "aiEditFileButtons";
    }
    
-   @Override
-   protected String getAcceptButtonStyleClass() {
-      return "aiEditFileAcceptButton";
-   }
-   
-   @Override
-   protected String getCancelButtonStyleClass() {
-      return "aiEditFileCancelButton";
-   }
+
    
    @Override
    protected String getEditorIdPrefix() {
@@ -141,11 +137,6 @@ public class AiEditFileWidget extends AiFileEditorWidgetBase
 
    
    // Implement abstract methods from AiWidgetBase
-   
-   @Override
-   protected Button[] getStandardButtons() {
-      return new Button[] { acceptButton_, cancelButton_ };
-   }
    
    @Override
    protected void onAcceptClicked()
@@ -181,6 +172,38 @@ public class AiEditFileWidget extends AiFileEditorWidgetBase
    }
    
    @Override
+   protected void onAllowListClicked()
+   {
+      // Enable auto-accept edits mode
+      enableAutoAcceptEdits();
+      
+      // Then execute the current edit automatically
+      if (handler_ != null) {
+         String editedContent = getContent();
+         handler_.onAccept(getMessageId(), editedContent);
+         setButtonsEnabled(false);
+      }
+   }
+
+   /**
+    * Enable auto-accept edits mode
+    */
+   private void enableAutoAcceptEdits() {
+      AiServerOperations server = RStudioGinjector.INSTANCE.getServer();
+      server.setAutoAcceptEdits(true, new ServerRequestCallback<java.lang.Void>() {
+         @Override
+         public void onResponseReceived(java.lang.Void response) {
+            // Auto-accept edits enabled successfully
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            // Failed to enable auto-accept edits
+         }
+      });
+   }
+   
+   @Override
    public void hideButtons() {
       // For cancelled edits, buttons don't exist, so nothing to hide
       if (isCancelled_) {
@@ -188,7 +211,7 @@ public class AiEditFileWidget extends AiFileEditorWidgetBase
       }
       
       // Use base class functionality
-      hideButtonsInternal();
+      hideVerticalStack();
    }
    
    private final EditFileCommandHandler handler_;

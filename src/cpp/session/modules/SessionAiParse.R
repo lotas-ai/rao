@@ -16,7 +16,20 @@
          return(character(0))
       }
       
-      expr <- parse(text = r_code, keep.source = TRUE)
+      # Trim triple backticks with optional language specifiers
+      # Remove leading ```[optional language]
+      trimmed_code <- gsub("^```[a-zA-Z]*\\s*\\n?", "", r_code, perl = TRUE)
+      # Remove trailing ```
+      trimmed_code <- gsub("\\n?```\\s*$", "", trimmed_code, perl = TRUE)
+      # Remove any remaining ``` lines
+      trimmed_code <- gsub("```\\n", "", trimmed_code, perl = TRUE)
+      trimmed_code <- trimws(trimmed_code)
+      
+      if (nchar(trimmed_code) == 0) {
+         return(character(0))
+      }
+      
+      expr <- parse(text = trimmed_code, keep.source = TRUE)
       if (length(expr) == 0) {
          return(character(0))
       }
@@ -48,8 +61,21 @@
          return(character(0))
       }
       
+      # Trim triple backticks with optional language specifiers  
+      # Remove leading ```[optional language]
+      trimmed_code <- gsub("^```[a-zA-Z]*\\s*\\n?", "", bash_code, perl = TRUE)
+      # Remove trailing ```
+      trimmed_code <- gsub("\\n?```\\s*$", "", trimmed_code, perl = TRUE)
+      # Remove any remaining ``` lines
+      trimmed_code <- gsub("```\\n", "", trimmed_code, perl = TRUE)
+      trimmed_code <- trimws(trimmed_code)
+      
+      if (nchar(trimmed_code) == 0) {
+         return(character(0))
+      }
+      
       # Use official POSIX shell grammar-based parser
-      return(.rs.parse_shell_commands(bash_code))
+      return(.rs.parse_shell_commands(trimmed_code))
       
    }, error = function(e) {
       return(character(0))
@@ -234,4 +260,13 @@
       i <- i + 1
    }
    return(i)
+})
+
+# JSON RPC handlers for function extraction
+.rs.addJsonRpcHandler("extract_r_functions", function(r_code) {
+   return(.rs.extract_r_functions(r_code))
+})
+
+.rs.addJsonRpcHandler("extract_bash_functions", function(bash_code) {
+   return(.rs.extract_bash_functions(bash_code))
 })

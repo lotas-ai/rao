@@ -18,11 +18,15 @@ import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.core.client.JsArrayInteger;
 import org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor;
 import org.rstudio.studio.client.workbench.views.source.editors.text.ace.AceEditorNative;
+import org.rstudio.core.client.Debug;
 import org.rstudio.studio.client.workbench.views.source.editors.text.ace.Range;
 import org.rstudio.studio.client.workbench.views.source.editors.text.ace.Position;
 import org.rstudio.studio.client.common.filetypes.FileTypeRegistry;
-import org.rstudio.core.client.Debug;
 import org.rstudio.core.client.widget.FontSizer;
+import org.rstudio.studio.client.workbench.views.ai.model.AiServerOperations;
+import org.rstudio.studio.client.RStudioGinjector;
+import org.rstudio.studio.client.server.ServerRequestCallback;
+import org.rstudio.studio.client.server.ServerError;
 
 /**
  * Widget for displaying search_replace function calls with an Ace editor
@@ -58,7 +62,7 @@ public class AiSearchReplaceWidget extends AiFileEditorWidgetBase
                                boolean skipDiffHighlighting,
                                com.google.gwt.core.client.JavaScriptObject diffData)
    {
-      super(messageId, requestId, filename, explanation, isEditable, isCancelled, skipDiffHighlighting, diffData);
+      super(messageId, requestId, "search_replace", filename, explanation, isEditable, isCancelled, skipDiffHighlighting, diffData);
       handler_ = handler;
       
       initWidget(createWidget(content, filename));
@@ -85,24 +89,11 @@ public class AiSearchReplaceWidget extends AiFileEditorWidgetBase
       return "aiSearchReplaceButtons";
    }
    
-   @Override
-   protected String getAcceptButtonStyleClass() {
-      return "aiSearchReplaceAcceptButton";
-   }
-   
-   @Override
-   protected String getCancelButtonStyleClass() {
-      return "aiSearchReplaceCancelButton";
-   }
+
    
    @Override
    protected String getEditorIdPrefix() {
       return "ai-search-replace-editor-";
-   }
-   
-   @Override
-   protected Button[] getStandardButtons() {
-      return new Button[] { acceptButton_, cancelButton_ };
    }
    
    @Override
@@ -131,6 +122,38 @@ public class AiSearchReplaceWidget extends AiFileEditorWidgetBase
    }
    
    @Override
+   protected void onAllowListClicked()
+   {
+      // Enable auto-accept edits mode
+      enableAutoAcceptEdits();
+      
+      // Then execute the current search/replace automatically
+      if (handler_ != null) {
+         String editedContent = getContent();
+         handler_.onAccept(getMessageId(), editedContent);
+         setButtonsEnabled(false);
+      }
+   }
+
+   /**
+    * Enable auto-accept edits mode
+    */
+   private void enableAutoAcceptEdits() {
+      AiServerOperations server = RStudioGinjector.INSTANCE.getServer();
+      server.setAutoAcceptEdits(true, new ServerRequestCallback<java.lang.Void>() {
+         @Override
+         public void onResponseReceived(java.lang.Void response) {
+            // Auto-accept edits enabled successfully
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            // Failed to enable auto-accept edits
+         }
+      });
+   }
+   
+   @Override
    public void hideButtons() {
       // For cancelled operations, buttons don't exist, so nothing to hide
       if (isCancelled_) {
@@ -138,7 +161,7 @@ public class AiSearchReplaceWidget extends AiFileEditorWidgetBase
       }
       
       // Use base class functionality
-      hideButtonsInternal();
+      hideVerticalStack();
    }
    
    // SearchReplace-specific fields

@@ -189,6 +189,13 @@
    }
    
    if (!is.null(related_function_call)) {
+      # Check if auto-accept is enabled for edit_file operations
+      auto_accept_enabled <- tryCatch({
+         .rs.get_auto_accept_edits()
+      }, error = function(e) {
+         FALSE
+      })
+      
       # Create procedural user message for edit_file pending using pre-allocated ID (index 4 for edit_file)
       call_id <- related_function_call$function_call$call_id
       pending_message_id <- .rs.get_preallocated_message_id(call_id, 4)
@@ -197,7 +204,8 @@
          role = "user",
          content = "Response pending...",
          related_to = related_to_id,  # Point to the edit_file function call ID
-         procedural = TRUE  # Mark as procedural so it doesn't show in UI
+         procedural = TRUE,  # Mark as procedural so it doesn't show in UI
+         auto_accept = auto_accept_enabled  # Flag for auto-accept
       )
       conversation_log <- c(conversation_log, list(pending_message))
       .rs.write_conversation_log(conversation_log)
@@ -834,6 +842,14 @@
 })
 
 .rs.addFunction("handle_search_replace", function(function_call, current_log, related_to_id, request_id) {
+   
+   # Check if auto-accept is enabled (define early for use throughout function)
+   auto_accept_enabled <- tryCatch({
+      .rs.get_auto_accept_edits()
+   }, error = function(e) {
+      FALSE
+   })
+   
    arguments <- .rs.safe_parse_function_arguments(function_call)
 
    file_path <- arguments$file_path
@@ -876,6 +892,7 @@
    
    # Validate required arguments
    if (is.null(file_path) || is.null(old_string) || is.null(new_string)) {
+      
       error_message <- "Error: Missing required arguments (file_path, old_string, or new_string)"
       
       function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
@@ -901,6 +918,7 @@
    
    # Handle special case: empty old_string means create/append to file
    if (old_string == "") {
+
       # For empty old_string, we create new file or append to existing file
       effective_content <- .rs.get_effective_file_content(file_path)
       is_new_file <- is.null(effective_content)
@@ -1020,7 +1038,8 @@
          role = "user",
          content = "Response pending...",
          related_to = function_call$msg_id,
-         procedural = TRUE
+         procedural = TRUE,
+         auto_accept = auto_accept_enabled
       )
       conversation_log <- c(conversation_log, list(pending_message))
       .rs.write_conversation_log(conversation_log)
@@ -1039,7 +1058,8 @@
          original_content = effective_content,
          related_to_id = related_to_id,
          is_create_append_mode = TRUE,
-         breakout_of_function_calls = TRUE
+         breakout_of_function_calls = TRUE,
+         auto_accept = auto_accept_enabled
       )
       
       return(result)
@@ -1258,12 +1278,14 @@
    
    # Create procedural user message for search_replace pending (using pre-allocated ID)
    pending_message_id <- .rs.get_preallocated_message_id(function_call$call_id, 3)
+   
    pending_message <- list(
       id = pending_message_id,
       role = "user",
       content = "Response pending...",
       related_to = function_call$msg_id,  # Point to the search_replace function call ID
-      procedural = TRUE  # Mark as procedural so it doesn't show in UI
+      procedural = TRUE,  # Mark as procedural so it doesn't show in UI
+      auto_accept = auto_accept_enabled  # Flag for auto-accept
    )
    conversation_log <- c(conversation_log, list(pending_message))
    .rs.write_conversation_log(conversation_log)
@@ -1281,7 +1303,8 @@
       current_content = new_content,
       original_content = effective_content,
       related_to_id = related_to_id,
-      breakout_of_function_calls = TRUE  # This creates the widget and waits for user
+      breakout_of_function_calls = TRUE,
+      auto_accept = auto_accept_enabled   # Flag for auto-accept
    )
    
    return(result)

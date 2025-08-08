@@ -113,9 +113,20 @@
       result <- path.expand(result)
       
       context_items <- .rs.getVar("context_items")
+      if (is.null(context_items)) context_items <- list()
       
-      paths <- sapply(context_items, function(item) path.expand(item$path))
-      if (!result %in% paths) {
+      # Collect existing file/directory paths only; skip non-file items (docs/chat)
+      existing_paths <- c()
+      if (length(context_items) > 0) {
+         for (i in seq_along(context_items)) {
+            item <- context_items[[i]]
+            if (!is.null(item$path) && is.character(item$path) && length(item$path) == 1 && nzchar(item$path)) {
+               existing_paths <- c(existing_paths, path.expand(item$path))
+            }
+         }
+      }
+      
+      if (!(result %in% existing_paths)) {
          # Check if this is a directory (only works for disk files)
          is_directory <- FALSE
          if (file.exists(result)) {
@@ -125,7 +136,7 @@
          context_items[[length(context_items) + 1]] <- list(
             path = result,
             name = basename(result),
-            type = if(is_directory) "directory" else "file",
+            type = if (is_directory) "directory" else "file",
             timestamp = Sys.time()
          )
          .rs.setVar("context_items", context_items)
@@ -209,6 +220,90 @@
    return(TRUE)
 })
 
+.rs.addFunction("add_chat_context", function(conversation_id, name = NULL) {
+   # Validate
+   if (is.null(conversation_id) || is.na(as.integer(conversation_id))) {
+      return(FALSE)
+   }
+   conversation_id <- as.integer(conversation_id)
+
+   # Derive name from CSV if not supplied
+   if (is.null(name) || !nzchar(name)) {
+      if (exists(".rs.get_conversation_name", mode = "function")) {
+         name <- .rs.get_conversation_name(conversation_id)
+      } else {
+         name <- paste0("Conversation ", conversation_id)
+      }
+   }
+
+   context_items <- .rs.getVar("context_items")
+   if (is.null(context_items)) context_items <- list()
+
+   # Deduplicate on type+id
+   for (i in seq_along(context_items)) {
+      it <- context_items[[i]]
+      if (!is.null(it$type) && identical(it$type, "chat") && !is.null(it$id) &&
+          identical(as.integer(it$id), conversation_id)) {
+         return(TRUE)
+      }
+   }
+
+   new_item <- list(
+      type = "chat",
+      id = conversation_id,
+      name = as.character(name)
+   )
+
+   context_items[[length(context_items) + 1]] <- new_item
+   .rs.setVar("context_items", context_items)
+   return(TRUE)
+})
+
+.rs.addJsonRpcHandler("add_chat_context", function(conversation_id, name = NULL) {
+   return(.rs.add_chat_context(conversation_id, name))
+})
+
+.rs.addFunction("add_docs_context", function(topic, name = NULL) {
+   # Validate
+   if (is.null(topic) || !is.character(topic)) topic <- ""
+   
+   # Require topic to be non-empty
+   if (!nzchar(topic)) {
+      return(FALSE)
+   }
+
+   # Default name if not provided
+   if (is.null(name) || !nzchar(name)) {
+      name <- topic
+   }
+
+   context_items <- .rs.getVar("context_items")
+   if (is.null(context_items)) context_items <- list()
+
+   # Deduplicate on type+topic
+   for (i in seq_along(context_items)) {
+      it <- context_items[[i]]
+      if (!is.null(it$type) && identical(it$type, "docs") &&
+          !is.null(it$topic) && identical(as.character(it$topic), as.character(topic))) {
+         return(TRUE)
+      }
+   }
+
+   new_item <- list(
+      type = "docs",
+      topic = as.character(topic),
+      name = as.character(name)
+   )
+
+   context_items[[length(context_items) + 1]] <- new_item
+   .rs.setVar("context_items", context_items)
+   return(TRUE)
+})
+
+.rs.addJsonRpcHandler("add_docs_context", function(topic, name = NULL) {
+   return(.rs.add_docs_context(topic, name))
+})
+
 .rs.addFunction("get_context_items", function(expand_directories = FALSE) {
    # Always ensure no duplicates before returning
    .rs.cleanup_context_items()
@@ -219,12 +314,16 @@
      return(character(0))
    }
    
-   # Collect all context paths for duplicate detection
-   all_context_paths <- sapply(context_items, function(item) item$path)
+   # Collect all context paths for duplicate detection (only for file/directory items)
+   all_context_paths <- sapply(context_items, function(item) {
+      if (!is.null(item$path)) item$path else ""
+   })
    
    all_paths <- character(0)
    for (i in 1:length(context_items)) {
       item <- context_items[[i]]
+      
+      # Handle file and directory context items (have path)
       if (!is.null(item$path)) {
          normalized_path <- path.expand(item$path)
          
@@ -233,9 +332,14 @@
             # Use item$name which contains line numbers like "filename.R (10-20)"
             display_path <- paste0(normalized_path, "|", item$name)
          } else {
-            # For regular files, use intelligent naming for display
+            # For regular files and directories, encode type information
             display_name <- .rs.get_unique_display_name(normalized_path, all_context_paths)
-            display_path <- normalized_path
+            # Encode directory type with same pattern as chat/docs: "dir:path|displayName"
+            if (!is.null(item$type) && item$type == "directory") {
+               display_path <- paste0("dir:", normalized_path, "|", display_name)
+            } else {
+               display_path <- normalized_path
+            }
          }
          
          all_paths <- c(all_paths, display_path)
@@ -249,6 +353,18 @@
                all_paths <- c(all_paths, dir_files)
             }
          }
+      }
+      # Handle chat context items (have type = "chat")
+      else if (!is.null(item$type) && item$type == "chat") {
+         # Create unique ID for chat items: chat:id|display_name
+         unique_id <- paste0("chat:", item$id, "|", item$name)
+         all_paths <- c(all_paths, unique_id)
+      }
+      # Handle docs context items (have type = "docs")
+      else if (!is.null(item$type) && item$type == "docs") {
+         # Create unique ID for docs items: docs:topic|display_name
+         unique_id <- paste0("docs:", item$topic, "|", item$name)
+         all_paths <- c(all_paths, unique_id)
       }
    }
    
@@ -266,6 +382,69 @@
       return(FALSE)
    }
    
+   # Check if this is a chat context item (format: chat:id|display_name)
+   if (grepl("^chat:", path_or_unique_id)) {
+      pipe_pos <- regexpr("\\|", path_or_unique_id)
+      if (pipe_pos > 0) {
+         # Extract the conversation ID from "chat:id|display_name"
+         id_part <- substr(path_or_unique_id, 6, pipe_pos - 1)  # Skip "chat:"
+         target_id <- as.integer(id_part)
+         
+         for (i in seq_along(context_items)) {
+            item <- context_items[[i]]
+            if (!is.null(item$type) && item$type == "chat" && 
+                !is.null(item$id) && as.integer(item$id) == target_id) {
+               context_items <- context_items[-i]
+               .rs.setVar("context_items", context_items)
+               return(TRUE)
+            }
+         }
+      }
+      return(FALSE)
+   }
+   
+   # Check if this is a docs context item (format: docs:topic|display_name)
+   if (grepl("^docs:", path_or_unique_id)) {
+      pipe_pos <- regexpr("\\|", path_or_unique_id)
+      if (pipe_pos > 0) {
+         # Extract the topic part from "docs:topic|display_name"
+         target_topic <- substr(path_or_unique_id, 6, pipe_pos - 1)  # Skip "docs:"
+         
+         for (i in seq_along(context_items)) {
+            item <- context_items[[i]]
+            if (!is.null(item$type) && item$type == "docs" && 
+                !is.null(item$topic) && item$topic == target_topic) {
+               context_items <- context_items[-i]
+               .rs.setVar("context_items", context_items)
+               return(TRUE)
+            }
+         }
+      }
+      return(FALSE)
+   }
+   
+   # Check if this is a directory context item (format: dir:path|display_name)
+   if (grepl("^dir:", path_or_unique_id)) {
+      pipe_pos <- regexpr("\\|", path_or_unique_id)
+      if (pipe_pos > 0) {
+         # Extract the path part from "dir:path|display_name"
+         target_path <- substr(path_or_unique_id, 5, pipe_pos - 1)  # Skip "dir:"
+         target_path <- path.expand(target_path)
+         
+         for (i in seq_along(context_items)) {
+            item <- context_items[[i]]
+            if (!is.null(item$path) && !is.null(item$type) && item$type == "directory" &&
+                path.expand(item$path) == target_path) {
+               context_items <- context_items[-i]
+               .rs.setVar("context_items", context_items)
+               return(TRUE)
+            }
+         }
+      }
+      return(FALSE)
+   }
+   
+   # Handle file/directory context items (existing logic)
    # Don't expand the path if it contains | since the part after | is not a path
    if (grepl("\\|", path_or_unique_id)) {
       # This is a unique ID with display name (path|display_name)
@@ -325,6 +504,8 @@
    
    for (i in 1:length(context_items)) {
       item <- context_items[[i]]
+      
+      # Handle file and directory context items (have path)
       if (!is.null(item$path)) {
          normalized_path <- path.expand(item$path)
          
@@ -341,6 +522,26 @@
             seen_unique_ids <- c(seen_unique_ids, unique_id)
             
             item$path <- normalized_path
+            cleaned_items[[length(cleaned_items) + 1]] <- item
+         }
+      }
+      # Handle chat context items (have type = "chat")
+      else if (!is.null(item$type) && item$type == "chat") {
+         # Create unique identifier for chat items
+         unique_id <- paste0("chat:", item$id)
+         
+         if (!(unique_id %in% seen_unique_ids)) {
+            seen_unique_ids <- c(seen_unique_ids, unique_id)
+            cleaned_items[[length(cleaned_items) + 1]] <- item
+         }
+      }
+      # Handle docs context items (have type = "docs")
+      else if (!is.null(item$type) && item$type == "docs") {
+         # Create unique identifier for docs items
+         unique_id <- paste0("docs:", item$topic)
+         
+         if (!(unique_id %in% seen_unique_ids)) {
+            seen_unique_ids <- c(seen_unique_ids, unique_id)
             cleaned_items[[length(cleaned_items) + 1]] <- item
          }
       }
@@ -690,6 +891,60 @@
     # On error, return the output_lines as-is
     return(output_lines)
   })
+})
+
+.rs.addFunction("get_help_as_md", function(topic, package = "") {
+  # Validate inputs
+  if (missing(topic) || !is.character(topic) || length(topic) == 0 || !nzchar(topic)) {
+    return("")
+  }
+  if (!is.character(package) || length(package) == 0) package <- ""
+
+  # Fetch help HTML via existing help system
+  res <- NULL
+  tryCatch({
+    res <- .rs.getHelp(topic, package)
+  }, error = function(e) {
+    cat("DEBUG: get_help_as_md: error fetching help for '", topic, "' (package '", package, "'): ", e$message, "\n", sep = "")
+  })
+
+  if (is.null(res) || is.null(res$html) || !nzchar(res$html)) {
+    return("")
+  }
+
+  # Ensure rmarkdown/pandoc are available
+  if (!requireNamespace("rmarkdown", quietly = TRUE)) {
+    stop("get_help_as_md requires the 'rmarkdown' package.")
+  }
+
+  # Wrap in minimal HTML document for Pandoc and convert to Markdown (GFM)
+  html <- paste0("<!doctype html><meta charset='utf-8'><body>", res$html, "</body>")
+  html_file <- tempfile(fileext = ".html")
+  md_file <- tempfile(fileext = ".md")
+  on.exit({
+    try(unlink(html_file), silent = TRUE)
+    try(unlink(md_file), silent = TRUE)
+  }, add = TRUE)
+
+  writeLines(html, html_file, useBytes = TRUE)
+
+  # Convert HTML to GitHub-Flavored Markdown with no wrapping
+  rmarkdown::pandoc_convert(
+    html_file,
+    from = "html",
+    to = "gfm",
+    output = md_file,
+    options = c("--wrap=none")
+  )
+
+  md <- tryCatch({
+    paste(readLines(md_file, warn = FALSE, encoding = "UTF-8"), collapse = "\n")
+  }, error = function(e) {
+    cat("DEBUG: get_help_as_md: error reading Markdown output for topic '", topic, "': ", e$message, "\n", sep = "")
+    ""
+  })
+
+  md
 })
 
 .rs.addFunction("generate_directory_tree", function(root_path = NULL) {

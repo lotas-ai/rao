@@ -74,27 +74,7 @@
    pointer-events: auto !important;
 }
 
-.aiConsoleRunButton {
-   border: none;
-   padding: 6px 12px;
-   border-radius: 3px;
-   cursor: pointer !important;
-   font-size: 12px;
-   pointer-events: auto !important;
-   position: relative !important;
-   z-index: 999 !important;
-}
 
-.aiConsoleCancelButton {
-   border: none;
-   padding: 6px 12px;
-   border-radius: 3px;
-   cursor: pointer !important;
-   font-size: 12px;
-   pointer-events: auto !important;
-   position: relative !important;
-   z-index: 999 !important;
-}
 
 /* Console command message styling */
 .consoleCommand {
@@ -133,6 +113,7 @@
    color: #666;
    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
    margin-right: 8px;
+   flex-shrink: 0;
 }
 
 .aiTerminalEditor {
@@ -155,23 +136,7 @@
    justify-content: flex-end;
 }
 
-.aiTerminalRunButton {
-   border: none;
-   padding: 6px 12px;
-   border-radius: 4px;
-   cursor: pointer;
-   font-size: 12px;
-   font-weight: bold;
-}
 
-.aiTerminalCancelButton {
-   border: none;
-   padding: 6px 12px;
-   border-radius: 4px;
-   cursor: pointer;
-   font-size: 12px;
-   font-weight: bold;
-}
 
 .terminalCommand {
    background-color: #f8f9fa;
@@ -248,26 +213,16 @@
    justify-content: flex-end;
 }
 
-.aiEditFileAcceptButton {
-   border: none;
-   padding: 6px 12px;
-   border-radius: 3px;
-   cursor: pointer !important;
-   font-size: 12px;
-   pointer-events: auto !important;
-   position: relative !important;
-   z-index: 999 !important;
-}
 
-.aiEditFileCancelButton {
-   border: none;
-   padding: 6px 12px;
-   border-radius: 3px;
-   cursor: pointer !important;
-   font-size: 12px;
-   pointer-events: auto !important;
-   position: relative !important;
-   z-index: 999 !important;
+
+/* New Vertical Button Stack Styles */
+.aiVerticalButtonStack {
+   background-color: #f5f5f5;
+   border: 1px solid #ddd;
+   border-top: none;
+   border-radius: 0 0 4px 4px;
+   margin: 0 8px 4px 8px;
+   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .editFileCommand {

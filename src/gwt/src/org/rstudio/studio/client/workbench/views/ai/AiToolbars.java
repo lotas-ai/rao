@@ -86,6 +86,15 @@ import com.google.gwt.user.client.Event;
 import com.google.gwt.user.client.EventListener;
 import com.google.gwt.user.client.ui.Focusable;
 import com.google.gwt.core.client.JavaScriptObject;
+import com.google.gwt.user.client.ui.TextBox;
+import com.google.gwt.user.client.ui.HTML;
+import com.google.gwt.user.client.ui.HorizontalPanel;
+import com.google.gwt.event.dom.client.KeyUpEvent;
+import com.google.gwt.event.dom.client.KeyUpHandler;
+import com.google.gwt.core.client.JsArrayString;
+import org.rstudio.studio.client.server.ServerError;
+import org.rstudio.studio.client.server.ServerRequestCallback;
+import org.rstudio.studio.client.workbench.views.ai.model.ConversationNamesResult;
 
 /**
  * Provides the toolbars and main widget for the AI pane.
@@ -246,11 +255,405 @@ public class AiToolbars
       // Add the gray bar to the content panel
       contentPanel.add(topPlaceholderPanel);
       
-      // Add click handler to the @ button to open file browser
+      // Add click handler to the @ button to open a small vertical menu
       attachFileButton_.addClickHandler(new ClickHandler() {
          @Override
          public void onClick(ClickEvent event) {
-            aiContext_.handleBrowseForFile(selectedFilesPanel_);
+            final PopupPanel menu = new PopupPanel(true, true);
+            menu.setStyleName("");
+            Element menuEl = menu.getElement();
+            menuEl.getStyle().setBackgroundColor("#ffffff");
+            menuEl.getStyle().setProperty("border", "1px solid #cccccc");
+            menuEl.getStyle().setProperty("borderRadius", "4px");
+            menuEl.getStyle().setProperty("boxShadow", "0 2px 6px rgba(0,0,0,0.15)");
+
+            FlowPanel container = new FlowPanel();
+            // Size to content (no fixed min width) and keep text on one line
+            container.getElement().getStyle().setProperty("display", "inline-block");
+            container.getElement().getStyle().setProperty("whiteSpace", "nowrap");
+
+            // Helper to create a menu item with an SVG icon and hover styling
+            final java.util.function.BiFunction<String, ClickHandler, Widget> makeItem =
+               new java.util.function.BiFunction<String, ClickHandler, Widget>() {
+                  @Override
+                  public Widget apply(String text, ClickHandler onClick) {
+                     final FlowPanel row = new FlowPanel();
+                     Element rowEl = row.getElement();
+                     rowEl.getStyle().setProperty("display", "flex");
+                     rowEl.getStyle().setProperty("alignItems", "center");
+                     rowEl.getStyle().setPaddingTop(4, Unit.PX);
+                     rowEl.getStyle().setPaddingBottom(4, Unit.PX);
+                     rowEl.getStyle().setPaddingLeft(6, Unit.PX);
+                     rowEl.getStyle().setPaddingRight(6, Unit.PX);
+                     rowEl.getStyle().setCursor(Style.Cursor.POINTER);
+                     rowEl.getStyle().setColor("#333333");
+                     rowEl.getStyle().setFontSize(11, Unit.PX); // match "@ Add context"
+
+                     // Icon container
+                     Element iconSpan = Document.get().createSpanElement();
+                     iconSpan.getStyle().setProperty("display", "inline-block");
+                     iconSpan.getStyle().setWidth(16, Unit.PX);
+                     iconSpan.getStyle().setHeight(16, Unit.PX);
+                     iconSpan.getStyle().setProperty("verticalAlign", "middle");
+
+                     // Text label
+                     Label textLabel = new Label(text);
+                     Element textEl = textLabel.getElement();
+                     textEl.getStyle().setMarginLeft(6, Unit.PX);
+                     textEl.getStyle().setFontSize(11, Unit.PX);
+                     textEl.getStyle().setColor("#333333");
+
+                     // Attach hover behavior on the whole row
+                     row.addDomHandler(new com.google.gwt.event.dom.client.MouseOverHandler() {
+                        @Override
+                        public void onMouseOver(MouseOverEvent e) {
+                           rowEl.getStyle().setBackgroundColor("#f0f0f0");
+                           textEl.getStyle().setColor("#555555");
+                        }
+                     }, MouseOverEvent.getType());
+                     row.addDomHandler(new com.google.gwt.event.dom.client.MouseOutHandler() {
+                        @Override
+                        public void onMouseOut(MouseOutEvent e) {
+                           rowEl.getStyle().setBackgroundColor("transparent");
+                           textEl.getStyle().setColor("#333333");
+                        }
+                     }, MouseOutEvent.getType());
+
+                      if (onClick != null) {
+                         row.addDomHandler(new ClickHandler() {
+                            @Override
+                            public void onClick(ClickEvent clickEvent) {
+                               onClick.onClick(clickEvent);
+                            }
+                         }, ClickEvent.getType());
+                      }
+
+                     // Compose row
+                     row.getElement().appendChild(iconSpan);
+                     row.add(textLabel);
+                     return row;
+                  }
+               };
+
+            // File & Folders -> existing browse flow
+            Widget filesItem = makeItem.apply("File & Folders", new ClickHandler() {
+               @Override
+               public void onClick(ClickEvent e) {
+                  aiContext_.handleBrowseForFile(selectedFilesPanel_);
+               }
+            });
+            // Set document/page SVG icon (to distinguish from Docs open-book)
+            {
+               Element iconSpan = filesItem.getElement().getFirstChildElement();
+               if (iconSpan != null) {
+                  iconSpan.setInnerHTML(
+                     "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
+                     + "<path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/>"
+                     + "<polyline points='14 2 14 8 20 8'/></svg>");
+               }
+            }
+
+            // Chat -> stacked main item using the common row style; right-side submenu
+            final Widget[] chatItemRef = new Widget[1];
+            chatItemRef[0] = makeItem.apply("Chat", new ClickHandler(){
+               @Override public void onClick(ClickEvent e){
+                  final PopupPanel picker = new PopupPanel(true, true);
+                  Element pickerEl = picker.getElement();
+                  pickerEl.getStyle().setBackgroundColor("#ffffff");
+                  pickerEl.getStyle().setProperty("border", "1px solid #cccccc");
+                  pickerEl.getStyle().setProperty("borderRadius", "4px");
+                  pickerEl.getStyle().setProperty("boxShadow", "0 2px 6px rgba(0,0,0,0.15)");
+
+                  final FlowPanel panel = new FlowPanel();
+                  panel.getElement().getStyle().setProperty("display", "block");
+                  panel.getElement().getStyle().setProperty("whiteSpace", "nowrap");
+                  panel.getElement().getStyle().setPadding(0, Unit.PX);
+
+                  final TextBox input = new TextBox();
+                  input.getElement().setAttribute("placeholder", "Previous conversation");
+                  input.getElement().getStyle().setFontSize(11, Unit.PX);
+                  input.getElement().getStyle().setWidth(100, Unit.PCT);
+                  input.getElement().getStyle().setPaddingTop(4, Unit.PX);
+                  input.getElement().getStyle().setPaddingBottom(4, Unit.PX);
+                  input.getElement().getStyle().setPaddingLeft(6, Unit.PX);
+                  input.getElement().getStyle().setPaddingRight(6, Unit.PX);
+                  input.getElement().getStyle().setMargin(0, Unit.PX);
+                  input.getElement().getStyle().setProperty("boxSizing", "border-box");
+                  input.getElement().getStyle().setProperty("border", "1px solid #cccccc");
+                  panel.add(input);
+
+                  final FlowPanel results = new FlowPanel();
+                  results.getElement().getStyle().setProperty("margin", "0px");
+                  results.getElement().getStyle().setProperty("padding", "0px");
+                  results.getElement().getStyle().setProperty("overflowX", "auto");
+                  results.getElement().getStyle().setProperty("overflowY", "auto");
+                  results.getElement().getStyle().setProperty("whiteSpace", "nowrap");
+                  panel.add(results);
+
+                  // Load once, then filter on keyup (prefix match)
+                  pane_.getAiServerOperations().listConversationNames(new ServerRequestCallback<ConversationNamesResult>(){
+                     @Override public void onResponseReceived(ConversationNamesResult data){
+                        final com.google.gwt.core.client.JsArray<ConversationNamesResult.ConversationNameEntry> names = data.getNames();
+                        input.addKeyUpHandler(new KeyUpHandler(){
+                           @Override public void onKeyUp(KeyUpEvent ev){
+                              String q = input.getText(); if (q == null) q = ""; q = q.trim().toLowerCase();
+                              results.clear();
+                              int n = names == null ? 0 : names.length();
+                              int shown = 0;
+                              for (int i=0; i<n && shown<50; i++){
+                                 ConversationNamesResult.ConversationNameEntry entry = names.get(i);
+                                 String name = entry.getName();
+                                 String lower = name == null ? "" : name.toLowerCase();
+                                 if (q.isEmpty() || lower.startsWith(q)){
+                                    final int cid = entry.getConversationId();
+                                    HorizontalPanel row = new HorizontalPanel();
+                                    row.getElement().getStyle().setPaddingTop(4, Unit.PX);
+                                    row.getElement().getStyle().setPaddingBottom(4, Unit.PX);
+                                    row.getElement().getStyle().setPaddingLeft(6, Unit.PX);
+                                    row.getElement().getStyle().setPaddingRight(6, Unit.PX);
+                                    row.getElement().getStyle().setWidth(100, Unit.PCT);
+                                    row.getElement().getStyle().setCursor(Style.Cursor.POINTER);
+                                    Label label = new Label(name);
+                                    label.getElement().getStyle().setMarginLeft(0, Unit.PX);
+                                    label.getElement().getStyle().setFontSize(11, Unit.PX);
+                                    row.add(label);
+                                    row.addDomHandler(new MouseOverHandler(){
+                                       @Override public void onMouseOver(MouseOverEvent evt){ row.getElement().getStyle().setBackgroundColor("#e6e6e6"); }
+                                    }, MouseOverEvent.getType());
+                                    row.addDomHandler(new MouseOutHandler(){
+                                       @Override public void onMouseOut(MouseOutEvent evt){ row.getElement().getStyle().setBackgroundColor("#ffffff"); }
+                                    }, MouseOutEvent.getType());
+                                    row.addDomHandler(new ClickHandler(){
+                                       @Override public void onClick(ClickEvent e2){
+                                          pane_.getAiServerOperations().addChatContext(cid, name, new ServerRequestCallback<Boolean>(){
+                                             @Override public void onResponseReceived(Boolean ok){ 
+                                                picker.hide(); 
+                                                // Refresh context bar to show the new chat item
+                                                if (ok && pane_.getAiContext() != null) {
+                                                   FlowPanel selectedFilesPanel = getSelectedFilesPanel();
+                                                   pane_.getAiContext().loadContextItems(selectedFilesPanel);
+                                                }
+                                             }
+                                             @Override public void onError(ServerError error){ picker.hide(); }
+                                          });
+                                       }
+                                    }, ClickEvent.getType());
+                                    results.add(row);
+                                    shown++;
+                                 }
+                              }
+                           }
+                        });
+                        // Trigger initial fill
+                        input.fireEvent(new KeyUpEvent(){});
+                     }
+                     @Override public void onError(ServerError error){ /* ignore */ }
+                  });
+
+                  picker.setWidget(panel);
+                  picker.setPopupPositionAndShow(new PopupPanel.PositionCallback(){
+                      @Override public void setPosition(int offsetWidth, int offsetHeight){
+                        // Place to the right of the main menu and align search box top with the triggering row
+                        int left = menu.getAbsoluteLeft() + menu.getOffsetWidth();
+                        int triggerTop = chatItemRef[0].getAbsoluteTop();
+                        // Align search input's top edge with Chat button's top edge
+                        int top = triggerTop;
+                        // Size: 1.5x width of main menu (fallback 240), but limit height to fit without constraint
+                        int menuW = Math.max(menu.getOffsetWidth(), 160);
+                        int menuH = Math.max(menu.getOffsetHeight(), 120);
+                        int w = (int) Math.round(menuW * 1.5);
+                        // Calculate available space below Chat button to AI pane bottom
+                        int paneBottom = pane_.getElement().getAbsoluteTop() + pane_.getElement().getOffsetHeight();
+                        int availableHeight = paneBottom - triggerTop;
+                        int maxHeight = Math.max(120, availableHeight - 10); // 10px margin from bottom
+                        int h = Math.min(menuH * 2, maxHeight);
+                        picker.setWidth(w + "px");
+                        picker.setHeight(h + "px");
+                        
+                        // Make inner results area scrollable within height
+                        // Reserve ~28px for input
+                        results.getElement().getStyle().setProperty("height", Math.max(0, h - 28) + "px");
+                        // Constrain to not extend below AI pane bottom
+                        if (top + h > paneBottom) {
+                           top = Math.max(pane_.getElement().getAbsoluteTop(), paneBottom - h);
+                        }
+                        picker.setPopupPosition(left, top);
+                     }
+                  });
+               }
+            });
+            final Widget chatItem = chatItemRef[0];
+            // Ensure Chat main row has icon and a single right-aligned chevron
+            {
+               Element rowEl = chatItem.getElement();
+               Element first = rowEl.getFirstChildElement();
+               if (first != null) {
+                  first.setInnerHTML("<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z'/></svg>");
+               }
+               com.google.gwt.dom.client.Element spacer = com.google.gwt.dom.client.Document.get().createSpanElement();
+               spacer.getStyle().setProperty("flex", "1 1 auto");
+               rowEl.appendChild(spacer);
+               com.google.gwt.dom.client.Element chev = com.google.gwt.dom.client.Document.get().createSpanElement();
+               chev.setInnerHTML("<svg xmlns='http://www.w3.org/2000/svg' width='12' height='14' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='9 6 15 12 9 18'/></svg>");
+               chev.getStyle().setMarginLeft(6, Unit.PX);
+               chev.getStyle().setMarginTop(2, Unit.PX);
+               rowEl.appendChild(chev);
+            }
+
+            // Docs -> stacked main item using common row; right-side submenu
+            final Widget[] docsItemRef = new Widget[1];
+            docsItemRef[0] = makeItem.apply("Docs", new ClickHandler(){
+               @Override public void onClick(ClickEvent e){
+                  final PopupPanel picker = new PopupPanel(true, true);
+                  Element pickerEl = picker.getElement();
+                  pickerEl.getStyle().setBackgroundColor("#ffffff");
+                  pickerEl.getStyle().setProperty("border", "1px solid #cccccc");
+                  pickerEl.getStyle().setProperty("borderRadius", "4px");
+                  pickerEl.getStyle().setProperty("boxShadow", "0 2px 6px rgba(0,0,0,0.15)");
+
+                  final FlowPanel panel = new FlowPanel();
+                  panel.getElement().getStyle().setProperty("display", "block");
+                  panel.getElement().getStyle().setProperty("whiteSpace", "nowrap");
+                  panel.getElement().getStyle().setPadding(0, Unit.PX);
+
+                  final TextBox input = new TextBox();
+                  input.getElement().setAttribute("placeholder", "Function name");
+                  input.getElement().getStyle().setFontSize(11, Unit.PX);
+                  input.getElement().getStyle().setWidth(100, Unit.PCT);
+                  input.getElement().getStyle().setPaddingTop(4, Unit.PX);
+                  input.getElement().getStyle().setPaddingBottom(4, Unit.PX);
+                  input.getElement().getStyle().setPaddingLeft(6, Unit.PX);
+                  input.getElement().getStyle().setPaddingRight(6, Unit.PX);
+                  input.getElement().getStyle().setMargin(0, Unit.PX);
+                  input.getElement().getStyle().setProperty("boxSizing", "border-box");
+                  input.getElement().getStyle().setProperty("border", "1px solid #cccccc");
+                  panel.add(input);
+
+                  final FlowPanel results = new FlowPanel();
+                  results.getElement().getStyle().setProperty("margin", "0px");
+                  results.getElement().getStyle().setProperty("padding", "0px");
+                  results.getElement().getStyle().setProperty("overflowX", "auto");
+                  results.getElement().getStyle().setProperty("overflowY", "auto");
+                  results.getElement().getStyle().setProperty("whiteSpace", "nowrap");
+                  panel.add(results);
+
+                  // No initial load for Docs; wait for user to type
+
+                  input.addKeyUpHandler(new KeyUpHandler(){
+                     @Override public void onKeyUp(KeyUpEvent ev){
+                        String q = input.getText(); if (q == null) q = ""; q = q.trim();
+                        results.clear();
+                        if (q.isEmpty()) return;
+                        pane_.getAiServerOperations().suggestTopics(q, new ServerRequestCallback<JsArrayString>(){
+                           @Override public void onResponseReceived(JsArrayString topics){
+                              results.clear();
+                              int n = topics == null ? 0 : topics.length();
+                              for (int i=0; i<n && i<50; i++){
+                                 final String topic = topics.get(i);
+                                 HorizontalPanel row = new HorizontalPanel();
+                                 row.getElement().getStyle().setPaddingTop(4, Unit.PX);
+                                 row.getElement().getStyle().setPaddingBottom(4, Unit.PX);
+                                 row.getElement().getStyle().setPaddingLeft(6, Unit.PX);
+                                 row.getElement().getStyle().setPaddingRight(6, Unit.PX);
+                                 row.getElement().getStyle().setWidth(100, Unit.PCT);
+                                 row.getElement().getStyle().setCursor(Style.Cursor.POINTER);
+                                 Label label = new Label(topic);
+                                 label.getElement().getStyle().setMarginLeft(0, Unit.PX);
+                                 label.getElement().getStyle().setFontSize(11, Unit.PX);
+                                 row.add(label);
+                                 row.addDomHandler(new MouseOverHandler(){
+                                    @Override public void onMouseOver(MouseOverEvent evt){ row.getElement().getStyle().setBackgroundColor("#e6e6e6"); }
+                                 }, MouseOverEvent.getType());
+                                 row.addDomHandler(new MouseOutHandler(){
+                                    @Override public void onMouseOut(MouseOutEvent evt){ row.getElement().getStyle().setBackgroundColor("#ffffff"); }
+                                 }, MouseOutEvent.getType());
+                                 row.addDomHandler(new ClickHandler(){
+                                    @Override public void onClick(ClickEvent e2){
+                                       String name = topic;
+                                       pane_.getAiServerOperations().addDocsContext(topic, name, new ServerRequestCallback<Boolean>(){
+                                          @Override public void onResponseReceived(Boolean ok){ 
+                                             picker.hide(); 
+                                             // Refresh context bar to show the new docs item
+                                             if (ok && pane_.getAiContext() != null) {
+                                                FlowPanel selectedFilesPanel = getSelectedFilesPanel();
+                                                pane_.getAiContext().loadContextItems(selectedFilesPanel);
+                                             }
+                                          }
+                                          @Override public void onError(ServerError error){ picker.hide(); }
+                                       });
+
+                                    }
+                                 }, ClickEvent.getType());
+                                 results.add(row);
+
+                              }
+
+                           }
+                           @Override public void onError(ServerError error){ results.clear(); }
+                        });
+                     }
+                  });
+
+                  picker.setWidget(panel);
+                  picker.setPopupPositionAndShow(new PopupPanel.PositionCallback(){
+                      @Override public void setPosition(int offsetWidth, int offsetHeight){
+                        int left = menu.getAbsoluteLeft() + menu.getOffsetWidth();
+                        int triggerTop = docsItemRef[0].getAbsoluteTop();
+                        // Align search input's top edge with Docs button's top edge
+                        int top = triggerTop;
+                        int menuW = Math.max(menu.getOffsetWidth(), 160);
+                        int menuH = Math.max(menu.getOffsetHeight(), 120);
+                        int w = (int)Math.round(menuW * 1.5);
+                        // Calculate available space below Docs button to AI pane bottom
+                        int paneBottom = pane_.getElement().getAbsoluteTop() + pane_.getElement().getOffsetHeight();
+                        int availableHeight = paneBottom - triggerTop;
+                        int maxHeight = Math.max(120, availableHeight - 10); // 10px margin from bottom
+                        int h = Math.min(menuH * 2, maxHeight);
+                        picker.setWidth(w + "px");
+                        picker.setHeight(h + "px");
+                        
+                        results.getElement().getStyle().setProperty("height", Math.max(0, h - 28) + "px");
+                        if (top + h > paneBottom) {
+                           top = Math.max(pane_.getElement().getAbsoluteTop(), paneBottom - h);
+                        }
+                        picker.setPopupPosition(left, top);
+                     }
+                  });
+               }
+            });
+            final Widget docsItem = docsItemRef[0];
+            // Ensure Docs main row has icon and a single right-aligned chevron
+            {
+               Element rowEl = docsItem.getElement();
+               Element first = rowEl.getFirstChildElement();
+               if (first != null) {
+                  first.setInnerHTML("<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M12 7 A9 9 0 0 0 3 7'/><path d='M12 7 A9 9 0 0 1 21 7'/><path d='M3 7 L3 19'/><path d='M21 7 L21 19'/><path d='M3 19 Q7 16 12 19'/><path d='M21 19 Q17 16 12 19'/><path d='M12 8 L12 19'/></svg>");
+               }
+               com.google.gwt.dom.client.Element spacer = com.google.gwt.dom.client.Document.get().createSpanElement();
+               spacer.getStyle().setProperty("flex", "1 1 auto");
+               rowEl.appendChild(spacer);
+               com.google.gwt.dom.client.Element chev = com.google.gwt.dom.client.Document.get().createSpanElement();
+               chev.setInnerHTML("<svg xmlns='http://www.w3.org/2000/svg' width='12' height='14' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='9 6 15 12 9 18'/></svg>");
+               chev.getStyle().setMarginLeft(6, Unit.PX);
+               chev.getStyle().setMarginTop(2, Unit.PX);
+               rowEl.appendChild(chev);
+            }
+
+            container.add(filesItem);
+            container.add(chatItem);
+            container.add(docsItem);
+            menu.setWidget(container);
+
+            // Position the popup above the @ button (open upwards)
+            menu.setPopupPositionAndShow(new PopupPanel.PositionCallback() {
+               @Override
+               public void setPosition(int offsetWidth, int offsetHeight) {
+                  Element btn = attachFileButton_.getElement();
+                  int left = btn.getAbsoluteLeft();
+                  int top = btn.getAbsoluteTop() - offsetHeight;
+                  menu.setPopupPosition(left, top);
+               }
+            });
          }
       });
       

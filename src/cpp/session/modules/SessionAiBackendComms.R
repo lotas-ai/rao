@@ -1460,6 +1460,53 @@
   })
 })
 
+.rs.addFunction("get_conversation_summary_for_context", function(conversation_id) {
+  # Get the most recent summary for a specific conversation ID
+  # This is used when including previous conversations as context
+  tryCatch({
+    # Load summaries from the context conversation, not current conversation
+    ai_base_dir <- .rs.get_ai_base_dir()
+    conversations_dir <- file.path(ai_base_dir, "conversations")
+    context_conversation_dir <- file.path(conversations_dir, paste0("conversation_", conversation_id))
+    summaries_path <- file.path(context_conversation_dir, "summaries.json")
+        
+    if (!file.exists(summaries_path)) {
+      return(NULL)
+    }
+    
+    summaries_json <- readLines(summaries_path, warn = FALSE)
+    if (length(summaries_json) == 0) {
+      return(NULL)
+    }
+    
+    summaries <- jsonlite::fromJSON(paste(summaries_json, collapse = "\n"), simplifyVector = FALSE)
+    
+    if (is.null(summaries$summaries) || length(summaries$summaries) == 0) {
+      return(NULL)
+    }
+    
+    # Get the most recent summary (highest query number)
+    query_numbers <- as.numeric(names(summaries$summaries))
+    
+    if (length(query_numbers) == 0) {
+      return(NULL)
+    }
+    
+    latest_query <- max(query_numbers)
+    latest_summary <- summaries$summaries[[as.character(latest_query)]]
+    
+    if (!is.null(latest_summary$summary_text)) {
+      # The summary_text is just a string, return it directly
+      return(latest_summary$summary_text)
+    }
+    
+    return(NULL)
+  }, error = function(e) {
+    cat("Error getting conversation summary for context:", e$message, "\n")
+    return(NULL)
+  })
+})
+
 .rs.addFunction("prepare_conversation_with_summaries", function(conversation) {
   summaries <- .rs.load_conversation_summaries()
   

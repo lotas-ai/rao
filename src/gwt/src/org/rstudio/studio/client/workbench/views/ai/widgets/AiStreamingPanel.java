@@ -20,6 +20,7 @@ import com.google.gwt.safehtml.shared.SafeHtmlBuilder;
 import com.google.gwt.safehtml.shared.SafeHtmlUtils;
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.core.client.Scheduler.RepeatingCommand;
+import com.google.gwt.core.client.Scheduler.ScheduledCommand;
 import org.rstudio.studio.client.workbench.views.ai.events.AiStreamDataEvent;
 import org.rstudio.studio.client.workbench.views.ai.events.AiStartConversationEvent;
 import org.rstudio.studio.client.application.events.EventBus;
@@ -59,6 +60,10 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       final boolean skipDiffHighlighting;
       final com.google.gwt.core.client.JavaScriptObject diffData;
       final String functionCallType;
+      final boolean autoAccept;
+      final String extractedFunctions;
+      final String extractedCommands;
+      final String extractedFiles;
       
       // Constructor for stream events
       QueuedEvent(AiStreamDataEvent event)
@@ -75,10 +80,14 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          this.skipDiffHighlighting = false;
          this.diffData = null;
          this.functionCallType = null;
+         this.autoAccept = false;
+         this.extractedFunctions = null;
+         this.extractedCommands = null;
+         this.extractedFiles = null;
       }
       
       // Constructor for operation events
-      QueuedEvent(String operationType, String messageId, String command, String explanation, String requestId, String filename, String content, boolean skipDiffHighlighting, com.google.gwt.core.client.JavaScriptObject diffData, String functionCallType)
+      QueuedEvent(String operationType, String messageId, String command, String explanation, String requestId, String filename, String content, boolean skipDiffHighlighting, com.google.gwt.core.client.JavaScriptObject diffData, String functionCallType, boolean autoAccept, String extractedFunctions, String extractedCommands, String extractedFiles)
       {
          this.type = "operation";
          this.streamEvent = null;
@@ -92,6 +101,10 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          this.skipDiffHighlighting = skipDiffHighlighting;
          this.diffData = diffData;
          this.functionCallType = functionCallType;
+         this.autoAccept = autoAccept;
+         this.extractedFunctions = extractedFunctions;
+         this.extractedCommands = extractedCommands;
+         this.extractedFiles = extractedFiles;
       }
    }
 
@@ -103,8 +116,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       String aiConsolePrompt();
       String aiConsoleEditor();
       String aiConsoleButtons();
-      String aiConsoleRunButton();
-      String aiConsoleCancelButton();
+      String aiVerticalButtonStack();
       String consoleCommand();
       String consoleWidgetContainer();
       
@@ -115,8 +127,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       String aiTerminalPrompt();
       String aiTerminalEditor();
       String aiTerminalButtons();
-      String aiTerminalRunButton();
-      String aiTerminalCancelButton();
       String terminalCommand();
       String terminalWidgetContainer();
       
@@ -124,8 +134,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       String aiEditFileHeader();
       String aiEditFileEditor();
       String aiEditFileButtons();
-      String aiEditFileAcceptButton();
-      String aiEditFileCancelButton();
       String editFileCommand();
       String editFileWidgetContainer();
       
@@ -329,9 +337,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    /**
     * Add a sequence-ordered operation event to the processing queue
     */
-   public void addOperationEvent(int sequence, String operationType, String messageId, String command, String explanation, String requestId, String filename, String content, boolean skipDiffHighlighting, com.google.gwt.core.client.JavaScriptObject diffData, String functionCallType)
+   public void addOperationEvent(int sequence, String operationType, String messageId, String command, String explanation, String requestId, String filename, String content, boolean skipDiffHighlighting, com.google.gwt.core.client.JavaScriptObject diffData, String functionCallType, boolean autoAccept, String extractedFunctions, String extractedCommands, String extractedFiles)
    {
-      QueuedEvent queuedEvent = new QueuedEvent(operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting, diffData, functionCallType);
+      QueuedEvent queuedEvent = new QueuedEvent(operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting, diffData, functionCallType, autoAccept, extractedFunctions, extractedCommands, extractedFiles);
       
       // Special cases: both start_background_recreation and clear_conversation 
       // always process immediately regardless of sequence because they signal 
@@ -375,10 +383,10 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       switch (event.operationType)
       {
          case "create_console_command":
-            createConsoleCommandSynchronously(event.messageId, event.command, event.explanation, event.requestId, event.functionCallType);
+            createConsoleCommandSynchronously(event.messageId, event.command, event.explanation, event.requestId, event.functionCallType, event.extractedFunctions);
             break;
          case "create_terminal_command":
-            createTerminalCommandSynchronously(event.messageId, event.command, event.explanation, event.requestId, event.functionCallType);
+            createTerminalCommandSynchronously(event.messageId, event.command, event.explanation, event.requestId, event.functionCallType, event.extractedCommands);
             break;
          case "edit_file_command":  // Handle both formats from R
             createEditFileCommandSynchronously(event.messageId, event.filename, event.content, event.explanation, event.requestId, event.skipDiffHighlighting, event.diffData);
@@ -416,7 +424,8 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
             break;
          case "create_widget_buttons":
             // Create buttons for restored widgets that haven't been clicked yet
-            createWidgetButtonsSynchronously(event.messageId, event.content); // content contains widget_type
+            // Check if this should be auto-accepted
+            createWidgetButtonsSynchronously(event.messageId, event.content, event.autoAccept, event.extractedFunctions, event.extractedCommands, event.extractedFiles); // content contains widget_type
             break;
          case "create_function_call_message":
             // Create permanent function call message
@@ -488,7 +497,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          if (!consoleWidgets_.containsKey(messageId))
          {
             String requestId = event.getRequestId();
-            createConsoleCommandSynchronously(messageId, "", "Console command", requestId, null);
+            createConsoleCommandSynchronously(messageId, "", "Console command", requestId, null, "");
          }
          
          // Add content to console widget
@@ -501,7 +510,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          if (!terminalWidgets_.containsKey(messageId))
          {
             String requestId = event.getRequestId();
-            createTerminalCommandSynchronously(messageId, "", "Terminal command", requestId, null);
+            createTerminalCommandSynchronously(messageId, "", "Terminal command", requestId, null, "");
          }
          
          // Add content to terminal widget
@@ -859,7 +868,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    /**
     * Create console command widget synchronously
     */
-   private void createConsoleCommandSynchronously(String messageId, String command, String explanation, String requestId, String functionCallType)
+   private void createConsoleCommandSynchronously(String messageId, String command, String explanation, String requestId, String functionCallType, String extractedFunctions)
    {
       // Check if console widget already exists
       if (consoleWidgets_.containsKey(messageId))
@@ -888,6 +897,11 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       // Create the console widget with correct constructor
       AiConsoleWidget consoleWidget = new AiConsoleWidget(messageId, command, explanation, requestId, true, handler, functionCallType);
       
+      // Set extracted functions from R
+      if (extractedFunctions != null && !extractedFunctions.isEmpty()) {
+         consoleWidget.setExtractedFunctions(extractedFunctions);
+      }
+      
       // Store widget in map BEFORE injecting into DOM
       consoleWidgets_.put(messageId, consoleWidget);
       
@@ -897,7 +911,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    /**
     * Create terminal command widget synchronously
     */
-   private void createTerminalCommandSynchronously(String messageId, String command, String explanation, String requestId, String functionCallType)
+   private void createTerminalCommandSynchronously(String messageId, String command, String explanation, String requestId, String functionCallType, String extractedCommands)
    {
       // Hide thinking message when AI response (function call) starts
       hideThinkingMessage();
@@ -919,6 +933,12 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       
       // Create the terminal widget
       AiTerminalWidget terminalWidget = new AiTerminalWidget(messageId, command, explanation, requestId, handler);
+      
+      // Set extracted commands from R
+      if (extractedCommands != null && !extractedCommands.isEmpty()) {
+         terminalWidget.setExtractedCommands(extractedCommands);
+      }
+      
       terminalWidgets_.put(messageId, terminalWidget);
       
       createAndInjectWidgetSynchronously(messageId, terminalWidget, styles_.terminalCommand(), styles_.terminalWidgetContainer());
@@ -1445,12 +1465,145 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
     */
    private void createWidgetButtonsSynchronously(String messageId, String widgetType)
    {
+      createWidgetButtonsSynchronously(messageId, widgetType, false);
+   }
+   
+   /**
+    * Create buttons for the specified widget type by message ID with auto-accept option and extracted data
+    */
+   private void createWidgetButtonsSynchronously(String messageId, String widgetType, boolean autoAccept, String extractedFunctions, String extractedCommands, String extractedFiles)
+   {
+      if ("console".equals(widgetType))
+      {
+         AiConsoleWidget consoleWidget = consoleWidgets_.get(messageId);
+         if (consoleWidget != null)
+         {
+            // Set extracted functions or files before creating buttons
+            if (extractedFunctions != null && !extractedFunctions.isEmpty()) {
+               consoleWidget.setExtractedFunctions(extractedFunctions);
+            }
+            if (extractedFiles != null && !extractedFiles.isEmpty()) {
+               consoleWidget.setExtractedFiles(extractedFiles);
+            }
+            
+            // Always create buttons
+            consoleWidget.createButtons();
+            
+            // Auto-accept if requested
+            if (autoAccept) {
+               Scheduler.get().scheduleDeferred(new ScheduledCommand() {
+                  @Override
+                  public void execute() {
+                     // Trigger the accept button click
+                     AiPane aiPane = AiPane.getCurrentInstance();
+                     if (aiPane != null) {
+                        aiPane.handleAcceptConsoleCommand(messageId, consoleWidget.getCommand());
+                     }
+                  }
+               });
+            }
+         }
+      }
+      else if ("terminal".equals(widgetType))
+      {
+         AiTerminalWidget terminalWidget = terminalWidgets_.get(messageId);
+         if (terminalWidget != null)
+         {
+            // Set extracted commands before creating buttons  
+            if (extractedCommands != null && !extractedCommands.isEmpty()) {
+               terminalWidget.setExtractedCommands(extractedCommands);
+            }
+            terminalWidget.createButtons();
+            
+            // Auto-accept if requested
+            if (autoAccept) {
+               Scheduler.get().scheduleDeferred(new ScheduledCommand() {
+                  @Override
+                  public void execute() {
+                     // Trigger the accept button click
+                     AiPane aiPane = AiPane.getCurrentInstance();
+                     if (aiPane != null) {
+                        aiPane.handleAcceptTerminalCommand(messageId, terminalWidget.getCommand());
+                     }
+                  }
+               });
+            }
+         }
+      }
+      else if ("edit_file".equals(widgetType))
+      {
+         org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget = editFileWidgets_.get(messageId);
+         if (editFileWidget != null)
+         {
+            // For edit_file widgets, we need to create the button container manually
+            // since they don't have a createButtons() method like console/terminal widgets
+            createEditFileButtons(editFileWidget);
+            
+            // Auto-accept if requested
+            if (autoAccept) {
+               Scheduler.get().scheduleDeferred(new ScheduledCommand() {
+                  @Override
+                  public void execute() {
+                     // Trigger the accept button click
+                     AiPane aiPane = AiPane.getCurrentInstance();
+                     if (aiPane != null) {
+                        aiPane.handleAcceptEditFileCommand(messageId, editFileWidget.getContent());
+                     }
+                  }
+               });
+            }
+         }
+      }
+      else if ("search_replace".equals(widgetType))
+      {
+         AiSearchReplaceWidget searchReplaceWidget = searchReplaceWidgets_.get(messageId);
+         if (searchReplaceWidget != null)
+         {
+            // For search_replace widgets, we need to create the button container manually
+            createSearchReplaceButtons(searchReplaceWidget);
+            
+            // Auto-accept if requested
+            if (autoAccept) {
+               Scheduler.get().scheduleDeferred(new ScheduledCommand() {
+                  @Override
+                  public void execute() {
+                     // Trigger the accept button click
+                     AiPane aiPane = AiPane.getCurrentInstance();
+                     if (aiPane != null) {
+                        aiPane.handleAcceptSearchReplaceCommand(messageId, searchReplaceWidget.getContent());
+                     }
+                  }
+               });
+            }
+         }
+      }
+   }
+   
+   /**
+    * Create buttons for the specified widget type by message ID with auto-accept option
+    */
+   private void createWidgetButtonsSynchronously(String messageId, String widgetType, boolean autoAccept)
+   {
       if ("console".equals(widgetType))
       {
          AiConsoleWidget consoleWidget = consoleWidgets_.get(messageId);
          if (consoleWidget != null)
          {
             consoleWidget.createButtons();
+            
+            // Auto-accept if requested
+            if (autoAccept) {
+               Scheduler.get().scheduleDeferred(new ScheduledCommand() {
+                  @Override
+                  public void execute() {
+                     // Trigger the accept button click
+                     AiPane aiPane = AiPane.getCurrentInstance();
+                     if (aiPane != null) {
+                        aiPane.handleAcceptConsoleCommand(messageId, consoleWidget.getCommand());
+                     }
+                  }
+               });
+            }
          }
       }
       else if ("terminal".equals(widgetType))
@@ -1459,6 +1612,20 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          if (terminalWidget != null)
          {
             terminalWidget.createButtons();
+            
+            // Auto-accept if requested
+            if (autoAccept) {
+               Scheduler.get().scheduleDeferred(new ScheduledCommand() {
+                  @Override
+                  public void execute() {
+                     // Trigger the accept button click
+                     AiPane aiPane = AiPane.getCurrentInstance();
+                     if (aiPane != null) {
+                        aiPane.handleAcceptTerminalCommand(messageId, terminalWidget.getCommand());
+                     }
+                  }
+               });
+            }
          }
       }
       else if ("edit_file".equals(widgetType))
@@ -1466,8 +1633,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget = editFileWidgets_.get(messageId);
          if (editFileWidget != null)
          {
-            // Check if we should auto-accept this edit file command
-            checkEditFileAutoAccept(messageId, editFileWidget);
+            // For edit_file widgets, we need to create the button container manually
+            // since they don't have a createButtons() method like console/terminal widgets
+            createEditFileButtons(editFileWidget);
          }
       }
       else if ("search_replace".equals(widgetType))
@@ -1475,132 +1643,11 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          AiSearchReplaceWidget searchReplaceWidget = searchReplaceWidgets_.get(messageId);
          if (searchReplaceWidget != null)
          {
-            // Check if we should auto-accept this search replace command
-            checkSearchReplaceAutoAccept(messageId, searchReplaceWidget);
+            // For search_replace widgets, we need to create the button container manually
+            createSearchReplaceButtons(searchReplaceWidget);
          }
       }
    }
-   
-   /**
-    * Check if an edit file should be auto-accepted and either create buttons or auto-accept
-    */
-   private void checkEditFileAutoAccept(String messageId, org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget)
-   {
-      // Access the AiPane through JavaScript to get server operations
-      callAiCheckAutoAcceptEditFile(messageId, editFileWidget);
-   }
-   
-   /**
-    * Call the AI pane to check auto accept edit settings and either auto-accept or create buttons
-    */
-   private native void callAiCheckAutoAcceptEditFile(String messageId, org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget) /*-{
-      // Get the AiPane instance through the window object
-      var aiPane = $wnd.aiPaneInstance;
-      if (!aiPane) {
-         // Fallback: create buttons if we can't access AiPane
-         editFileWidget.@org.rstudio.studio.client.workbench.views.ai.widgets.AiFileEditorWidgetBase::createButtonsIfNeeded()();
-         return;
-      }
-      
-      var thiz = this;
-      
-      // Get server operations from AiPane
-      var server = aiPane.@org.rstudio.studio.client.workbench.views.ai.AiPane::getAiServerOperations()();
-      
-      // Check if auto_accept_edits is enabled
-      server.@org.rstudio.studio.client.workbench.views.ai.model.AiServerOperations::getAutoAcceptEdits(Lorg/rstudio/studio/client/server/ServerRequestCallback;)(
-         @org.rstudio.studio.client.server.ServerRequestCallback::new()(
-            function(autoAcceptEnabled) {
-               if (!autoAcceptEnabled) {
-                  // Auto-accept is disabled, create buttons
-                  editFileWidget.@org.rstudio.studio.client.workbench.views.ai.widgets.AiFileEditorWidgetBase::createButtonsIfNeeded()();
-                  return;
-               }
-               
-               // Auto-accept is enabled, automatically accept the edit
-               thiz.@org.rstudio.studio.client.workbench.views.ai.widgets.AiStreamingPanel::autoAcceptEditFile(Ljava/lang/String;Lorg/rstudio/studio/client/workbench/views/ai/widgets/AiEditFileWidget;)(messageId, editFileWidget);
-            },
-            function(error) {
-               // Error checking auto-accept setting, create buttons
-               editFileWidget.@org.rstudio.studio.client.workbench.views.ai.widgets.AiFileEditorWidgetBase::createButtonsIfNeeded()();
-            }
-         )
-      );
-   }-*/;
-   
-   /**
-    * Check if a search replace should be auto-accepted and either create buttons or auto-accept
-    */
-   private void checkSearchReplaceAutoAccept(String messageId, AiSearchReplaceWidget searchReplaceWidget)
-   {
-      // Access the AiPane through JavaScript to get server operations
-      callAiCheckAutoAcceptSearchReplace(messageId, searchReplaceWidget);
-   }
-   
-   /**
-    * Call the AI pane to check auto accept edit settings and either auto-accept or create buttons
-    */
-   private native void callAiCheckAutoAcceptSearchReplace(String messageId, AiSearchReplaceWidget searchReplaceWidget) /*-{
-      // Get the AiPane instance through the window object
-      var aiPane = $wnd.aiPaneInstance;
-      if (!aiPane) {
-         // Fallback: create buttons if we can't access AiPane
-         searchReplaceWidget.@org.rstudio.studio.client.workbench.views.ai.widgets.AiFileEditorWidgetBase::createButtonsIfNeeded()();
-         return;
-      }
-      
-      var thiz = this;
-      
-      // Get server operations from AiPane
-      var server = aiPane.@org.rstudio.studio.client.workbench.views.ai.AiPane::getAiServerOperations()();
-      
-      // Check if auto_accept_edits is enabled
-      server.@org.rstudio.studio.client.workbench.views.ai.model.AiServerOperations::getAutoAcceptEdits(Lorg/rstudio/studio/client/server/ServerRequestCallback;)(
-         @org.rstudio.studio.client.server.ServerRequestCallback::new()(
-            function(autoAcceptEnabled) {
-               if (!autoAcceptEnabled) {
-                  // Auto-accept is disabled, create buttons
-                  searchReplaceWidget.@org.rstudio.studio.client.workbench.views.ai.widgets.AiFileEditorWidgetBase::createButtonsIfNeeded()();
-                  return;
-               }
-               
-               // Auto-accept is enabled, automatically accept the search replace
-               thiz.@org.rstudio.studio.client.workbench.views.ai.widgets.AiStreamingPanel::autoAcceptSearchReplace(Ljava/lang/String;Lorg/rstudio/studio/client/workbench/views/ai/widgets/AiSearchReplaceWidget;)(messageId, searchReplaceWidget);
-            },
-            function(error) {
-               // Error checking auto-accept setting, create buttons
-               searchReplaceWidget.@org.rstudio.studio.client.workbench.views.ai.widgets.AiFileEditorWidgetBase::createButtonsIfNeeded()();
-            }
-         )
-      );
-   }-*/;
-   
-   /**
-    * Automatically accept an edit file command without showing buttons
-    */
-   private void autoAcceptEditFile(String messageId, org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget)
-   {
-      // Get the edited content from the widget and trigger acceptance
-      String editedContent = editFileWidget.getContent();
-      
-      // Call the existing accept handler directly (same logic as clicking accept button)
-      handleAcceptEditFileCommand(messageId, editedContent);
-      onFunctionCallCompleted(messageId);
-   }
-   
-   /**
-    * Automatically accept a search replace command without showing buttons
-    */
-   private void autoAcceptSearchReplace(String messageId, AiSearchReplaceWidget searchReplaceWidget)
-   {
-      // Get the edited content from the widget and trigger acceptance
-      String editedContent = searchReplaceWidget.getContent();
-      
-      // Call the existing accept handler directly (same logic as clicking accept button)
-      handleAcceptSearchReplaceCommand(messageId, editedContent);
-      onFunctionCallCompleted(messageId);
-   }
-
    
    /**
     * Create buttons for edit_file widgets that were restored without buttons

@@ -30,6 +30,7 @@ import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
 import com.google.gwt.user.client.ui.FlowPanel;
 import com.google.gwt.user.client.ui.Label;
+import com.google.gwt.user.client.ui.HTML;
 import com.google.gwt.user.client.ui.RootPanel;
 import com.google.gwt.user.client.ui.Widget;
 import com.google.inject.Inject;
@@ -76,7 +77,7 @@ public class AiContext
                for (int i = 0; i < contextItems.length(); i++) {
                   String pathWithDisplay = contextItems.get(i);
                   
-                  // Check if this has line number information (format: path|displayName)
+                  // Check if this has line number information (format: path|displayName) 
                   String filePath;
                   String displayName;
                   
@@ -89,9 +90,15 @@ public class AiContext
                      displayName = null; // Will use basename from FileSystemItem
                   }
                   
-                  FileSystemItem fileItem = FileSystemItem.createFile(filePath);
-                  if (fileItem != null) {
-                     createFileItemElement(fileItem, displayName, effectivePanel);
+                  // Handle docs, chat, and directory context items (which use special encoding)
+                  if (filePath.startsWith("chat:") || filePath.startsWith("docs:") || filePath.startsWith("dir:")) {
+                     createNonFileItemElement(filePath, displayName != null ? displayName : filePath, pathWithDisplay, effectivePanel);
+                  } else {
+                     // Handle regular file context items
+                     FileSystemItem fileItem = FileSystemItem.createFile(filePath);
+                     if (fileItem != null) {
+                        createFileItemElement(fileItem, displayName, effectivePanel);
+                     }
                   }
                }
                
@@ -604,6 +611,142 @@ public class AiContext
    }-*/;
 
    /**
+    * Creates a styled container for context items (files, docs, chat)
+    */
+   private FlowPanel createContextItemContainer(String dataPath, String uniqueId, String backgroundColor) {
+      FlowPanel container = new FlowPanel();
+      container.setStyleName("ai-context-item");
+      container.getElement().setAttribute("data-path", dataPath);
+      container.getElement().setAttribute("data-unique-id", uniqueId);
+      
+      // Apply common container styles
+      Element containerElement = container.getElement();
+      containerElement.getStyle().setProperty("display", "inline-flex");
+      containerElement.getStyle().setProperty("alignItems", "center");
+      // Always white background per spec
+      containerElement.getStyle().setProperty("backgroundColor", "white");
+      containerElement.getStyle().setProperty("border", "1px solid #cccccc");
+      containerElement.getStyle().setProperty("borderRadius", "3px");
+      containerElement.getStyle().setProperty("padding", "1px 4px");
+      containerElement.getStyle().setProperty("margin", "0 4px 3px 0");
+      containerElement.getStyle().setProperty("maxWidth", "175px");
+      containerElement.getStyle().setProperty("height", "18px");
+      containerElement.getStyle().setProperty("overflow", "hidden");
+      containerElement.getStyle().setProperty("whiteSpace", "nowrap");
+      containerElement.getStyle().setProperty("fontSize", "11px");
+      containerElement.getStyle().setProperty("verticalAlign", "middle");
+      containerElement.getStyle().setProperty("flexShrink", "0");
+      
+      return container;
+   }
+
+   /**
+    * Creates an icon element matching menu icons for file/folder/chat/docs
+    */
+   private HTML createIconElement(String type, boolean isDirectory) {
+      String svg;
+      if (isDirectory) {
+         // Folder icon
+         svg = "<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
+             + "<path d='M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'/>"
+             + "</svg>";
+      } else if ("file".equals(type)) {
+         // File icon (page with folded corner)
+         svg = "<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
+             + "<path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/>"
+             + "<polyline points='14 2 14 8 20 8'/>"
+             + "</svg>";
+      } else if ("chat".equals(type)) {
+         // Chat bubble
+         svg = "<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
+             + "<path d='M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z'/>"
+             + "</svg>";
+      } else { // docs
+         // Open book (Docs)
+         svg = "<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
+             + "<path d='M12 7 A9 9 0 0 0 3 7'/>"
+             + "<path d='M12 7 A9 9 0 0 1 21 7'/>"
+             + "<path d='M3 7 L3 19'/>"
+             + "<path d='M21 7 L21 19'/>"
+             + "<path d='M3 19 Q7 16 12 19'/>"
+             + "<path d='M21 19 Q17 16 12 19'/>"
+             + "<path d='M12 8 L12 19'/>"
+             + "</svg>";
+      }
+      HTML icon = new HTML(svg, false);
+      icon.getElement().getStyle().setProperty("display", "inline-block");
+      icon.getElement().getStyle().setProperty("verticalAlign", "middle");
+      icon.getElement().getStyle().setProperty("marginRight", "6px");
+      return icon;
+   }
+
+   /**
+    * Creates a styled label for context items
+    */
+   private Label createContextItemLabel(String displayName, String maxWidth) {
+      Label label = new Label(displayName);
+      label.setStyleName("ai-context-filename");
+      
+      // Apply common label styles
+      Element labelElement = label.getElement();
+      labelElement.getStyle().setProperty("overflow", "hidden");
+      labelElement.getStyle().setProperty("textOverflow", "ellipsis");
+      labelElement.getStyle().setProperty("whiteSpace", "nowrap");
+      labelElement.getStyle().setProperty("maxWidth", maxWidth);
+      labelElement.getStyle().setProperty("lineHeight", "16px");
+      labelElement.getStyle().setProperty("paddingTop", "0");
+      labelElement.getStyle().setProperty("fontSize", "11px");
+      
+      return label;
+   }
+
+   /**
+    * Creates a styled remove button with click handler
+    */
+   private Label createRemoveButton(final String uniqueId, final FlowPanel container) {
+      Label removeButton = new Label("×");
+      removeButton.setStyleName("ai-context-remove-button");
+      
+      // Apply common remove button styles
+      Element removeElement = removeButton.getElement();
+      removeElement.getStyle().setProperty("marginLeft", "3px");
+      removeElement.getStyle().setProperty("cursor", "pointer");
+      removeElement.getStyle().setProperty("color", "#999999");
+      removeElement.getStyle().setProperty("fontWeight", "bold");
+      removeElement.getStyle().setProperty("fontSize", "12px");
+      removeElement.getStyle().setProperty("lineHeight", "16px");
+      removeElement.getStyle().setProperty("width", "12px");
+      removeElement.getStyle().setProperty("textAlign", "center");
+      
+      // Add click handler
+      removeButton.addClickHandler(new ClickHandler() {
+         @Override
+         public void onClick(ClickEvent event) {
+            container.removeFromParent();
+            removeContextItem(uniqueId);
+            updateAttachButtonText();
+         }
+      });
+      
+      return removeButton;
+   }
+
+   /**
+    * Checks if an item with the given unique ID already exists to prevent duplicates
+    */
+   private boolean isDuplicateItem(String uniqueId, FlowPanel selectedFilesPanel) {
+      for (int i = 0; i < selectedFilesPanel.getWidgetCount(); i++) {
+         Widget widget = selectedFilesPanel.getWidget(i);
+         Element element = widget.getElement();
+         String existingId = element.getAttribute("data-unique-id");
+         if (existingId != null && existingId.equals(uniqueId)) {
+            return true;
+         }
+      }
+      return false;
+   }
+
+   /**
     * Creates a file item UI element without duplicate checking
     * This is used by loadContextItems to directly create items from the server list
     */
@@ -620,90 +763,65 @@ public class AiContext
          uniqueId = itemPath; // For regular files, just use the path
       }
       
-      // Check if an item with this exact unique ID already exists to prevent duplicates
-      for (int i = 0; i < selectedFilesPanel.getWidgetCount(); i++) {
-         Widget widget = selectedFilesPanel.getWidget(i);
-         Element element = widget.getElement();
-         String existingId = element.getAttribute("data-unique-id");
-         if (existingId != null && existingId.equals(uniqueId)) {
-            // Exact item already exists, don't add duplicate
-            return;
-         }
+      // Check for duplicates
+      if (isDuplicateItem(uniqueId, selectedFilesPanel)) {
+         return;
       }
       
       // Determine if this is a directory
       boolean isDirectory = item.isDirectory();
       
-      // Create a container for the file item
-      FlowPanel fileItemContainer = new FlowPanel();
-      fileItemContainer.setStyleName("ai-context-item");
-      fileItemContainer.getElement().setAttribute("data-path", itemPath);
-      fileItemContainer.getElement().setAttribute("data-unique-id", uniqueId);
+      // Create container using shared utility
+      FlowPanel fileItemContainer = createContextItemContainer(itemPath, uniqueId, "white");
+
+      // Add icon (folder for directories, file for files)
+      HTML icon = createIconElement("file", isDirectory);
+      fileItemContainer.add(icon);
       
-      // Use explicit styles for better visibility but more compact
-      Element containerElement = fileItemContainer.getElement();
-      containerElement.getStyle().setProperty("display", "inline-flex");
-      containerElement.getStyle().setProperty("alignItems", "center");
-      containerElement.getStyle().setProperty("backgroundColor", isDirectory ? "#F0F5FF" : "white");
-      containerElement.getStyle().setProperty("border", "1px solid #cccccc");
-      containerElement.getStyle().setProperty("borderRadius", "3px");
-      containerElement.getStyle().setProperty("padding", "1px 4px");
-      containerElement.getStyle().setProperty("margin", "0 4px 3px 0");
-      containerElement.getStyle().setProperty("maxWidth", "175px");
-      containerElement.getStyle().setProperty("height", "18px");
-      containerElement.getStyle().setProperty("overflow", "hidden");
-      containerElement.getStyle().setProperty("whiteSpace", "nowrap");
-      containerElement.getStyle().setProperty("fontSize", "11px");
-      containerElement.getStyle().setProperty("verticalAlign", "middle");
-      containerElement.getStyle().setProperty("flexShrink", "0"); // Prevent file items from shrinking in the scroll container
-            
-      // Create label for file name
-      Label fileNameLabel = new Label(effectiveDisplayName);
-      fileNameLabel.setStyleName("ai-context-filename");
-      
-      // Style the filename label
-      Element fileNameElement = fileNameLabel.getElement();
-      fileNameElement.getStyle().setProperty("overflow", "hidden");
-      fileNameElement.getStyle().setProperty("textOverflow", "ellipsis");
-      fileNameElement.getStyle().setProperty("whiteSpace", "nowrap");
-      fileNameElement.getStyle().setProperty("maxWidth", isDirectory ? "130px" : "150px");
-      fileNameElement.getStyle().setProperty("lineHeight", "16px");
-      fileNameElement.getStyle().setProperty("paddingTop", "0");
-      fileNameElement.getStyle().setProperty("fontSize", "11px");
-      
+      // Create label using shared utility
+      String labelMaxWidth = isDirectory ? "130px" : "150px";
+      Label fileNameLabel = createContextItemLabel(effectiveDisplayName, labelMaxWidth);
       fileItemContainer.add(fileNameLabel);
       
-      // Create remove button - make it smaller
-      Label removeButton = new Label("×");
-      removeButton.setStyleName("ai-context-remove-button");
-      
-      // Style the remove button
-      Element removeElement = removeButton.getElement();
-      removeElement.getStyle().setProperty("marginLeft", "3px");
-      removeElement.getStyle().setProperty("cursor", "pointer");
-      removeElement.getStyle().setProperty("color", "#999999");
-      removeElement.getStyle().setProperty("fontWeight", "bold");
-      removeElement.getStyle().setProperty("fontSize", "12px");
-      removeElement.getStyle().setProperty("lineHeight", "16px");
-      removeElement.getStyle().setProperty("width", "12px");
-      removeElement.getStyle().setProperty("textAlign", "center");
-      
-      // Add click handler to remove the file item
-      final String finalUniqueId = uniqueId; // Use the unique ID instead of just path
-      removeButton.addClickHandler(new ClickHandler() {
-         @Override
-         public void onClick(ClickEvent event) {
-            fileItemContainer.removeFromParent();
-            removeContextItem(finalUniqueId); // Pass unique ID instead of path
-            // Update button text after removing item
-            updateAttachButtonText();
-         }
-      });
-      
+      // Create remove button using shared utility
+      Label removeButton = createRemoveButton(uniqueId, fileItemContainer);
       fileItemContainer.add(removeButton);
       
-      // Add the file item to the selected files panel
+      // Add to panel
       selectedFilesPanel.add(fileItemContainer);
+   }
+
+   /**
+    * Creates a context item UI element for non-file context items (docs, chat)
+    * This follows the exact same pattern as createFileItemElement
+    */
+   private void createNonFileItemElement(String itemId, String displayName, String uniqueId, FlowPanel selectedFilesPanel) {
+      
+      // Check for duplicates
+      if (isDuplicateItem(uniqueId, selectedFilesPanel)) {
+         return;
+      }
+      
+      // Create container using shared utility
+      FlowPanel itemContainer = createContextItemContainer(itemId, uniqueId, "white");
+
+      // Add icon based on type
+      String type = itemId.startsWith("chat:") ? "chat" : 
+                   (itemId.startsWith("docs:") ? "docs" : "file");
+      boolean isDirectory = itemId.startsWith("dir:");
+      HTML icon = createIconElement(type, isDirectory);
+      itemContainer.add(icon);
+      
+      // Create label using shared utility (non-file items use standard 150px max width)
+      Label nameLabel = createContextItemLabel(displayName, "150px");
+      itemContainer.add(nameLabel);
+      
+      // Create remove button using shared utility
+      Label removeButton = createRemoveButton(uniqueId, itemContainer);
+      itemContainer.add(removeButton);
+      
+      // Add to panel
+      selectedFilesPanel.add(itemContainer);
    }
 
    /**

@@ -312,12 +312,11 @@ public class AiViewManager
             server_.setAutoAcceptEdits(enabled, new ServerRequestCallback<java.lang.Void>() {
                @Override
                public void onResponseReceived(java.lang.Void response) {
-                  Debug.log("Auto-accept edits set to: " + enabled);
                }
                
                @Override
                public void onError(ServerError error) {
-                  Debug.log("setAutoAcceptEdits failed: " + error.getMessage());
+                  // setAutoAcceptEdits failed
                   RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
                      "Error", "Failed to set auto-accept edits: " + error.getMessage());
                }
@@ -329,12 +328,11 @@ public class AiViewManager
             server_.setAutoAcceptConsole(enabled, new ServerRequestCallback<java.lang.Void>() {
                @Override
                public void onResponseReceived(java.lang.Void response) {
-                  Debug.log("Auto-accept console set to: " + enabled);
                }
                
                @Override
                public void onError(ServerError error) {
-                  Debug.log("setAutoAcceptConsole failed: " + error.getMessage());
+                  // setAutoAcceptConsole failed
                   RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
                      "Error", "Failed to set auto-accept console: " + error.getMessage());
                }
@@ -346,12 +344,11 @@ public class AiViewManager
             server_.setAutoAcceptTerminal(enabled, new ServerRequestCallback<java.lang.Void>() {
                @Override
                public void onResponseReceived(java.lang.Void response) {
-                  Debug.log("Auto-accept terminal set to: " + enabled);
                }
                
                @Override
                public void onError(ServerError error) {
-                  Debug.log("setAutoAcceptTerminal failed: " + error.getMessage());
+                  // setAutoAcceptTerminal failed
                   RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
                      "Error", "Failed to set auto-accept terminal: " + error.getMessage());
                }
@@ -363,7 +360,6 @@ public class AiViewManager
             server_.setAutoRunFiles(enabled, new ServerRequestCallback<java.lang.Void>() {
                @Override
                public void onResponseReceived(java.lang.Void response) {
-                  Debug.log("Auto-run files set to: " + enabled);
                }
                
                @Override
@@ -380,7 +376,6 @@ public class AiViewManager
             server_.setAutoDeleteFiles(enabled, new ServerRequestCallback<java.lang.Void>() {
                @Override
                public void onResponseReceived(java.lang.Void response) {
-                  Debug.log("Auto-delete files set to: " + enabled);
                }
                
                @Override
@@ -397,12 +392,11 @@ public class AiViewManager
             server_.setAutoAcceptConsoleAllowAnything(enabled, new ServerRequestCallback<java.lang.Void>() {
                @Override
                public void onResponseReceived(java.lang.Void response) {
-                  Debug.log("Auto-accept console allow anything set to: " + enabled);
                }
                
                @Override
                public void onError(ServerError error) {
-                  Debug.log("setAutoAcceptConsoleAllowAnything failed: " + error.getMessage());
+                  // setAutoAcceptConsoleAllowAnything failed
                   RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
                      "Error", "Failed to set auto-accept console allow anything: " + error.getMessage());
                }
@@ -414,12 +408,11 @@ public class AiViewManager
             server_.setAutoAcceptTerminalAllowAnything(enabled, new ServerRequestCallback<java.lang.Void>() {
                @Override
                public void onResponseReceived(java.lang.Void response) {
-                  Debug.log("Auto-accept terminal allow anything set to: " + enabled);
                }
                
                @Override
                public void onError(ServerError error) {
-                  Debug.log("setAutoAcceptTerminalAllowAnything failed: " + error.getMessage());
+                  // setAutoAcceptTerminalAllowAnything failed
                   RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
                      "Error", "Failed to set auto-accept terminal allow anything: " + error.getMessage());
                }
@@ -431,7 +424,6 @@ public class AiViewManager
             server_.setAutoRunFilesAllowAnything(enabled, new ServerRequestCallback<java.lang.Void>() {
                @Override
                public void onResponseReceived(java.lang.Void response) {
-                  Debug.log("Auto-run files allow anything set to: " + enabled);
                }
                
                @Override

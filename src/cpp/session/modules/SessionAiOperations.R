@@ -1994,8 +1994,60 @@
       }
    }
    
-   # Execute the console command directly - let Java handle output tracking
-   .rs.api.sendToConsole(script, execute = TRUE)
+   # Check if this is a run_file command by looking up the original function call
+   original_function_name <- NULL
+   if (!is.null(message_id) && message_id != 0) {
+      conversation_log <- .rs.read_conversation_log()
+      for (i in seq_along(conversation_log)) {
+         if (conversation_log[[i]]$id == message_id) {
+            # Check if this message has a function_call with name "run_file"
+            if (!is.null(conversation_log[[i]]$function_call) && 
+                !is.null(conversation_log[[i]]$function_call$name)) {
+               original_function_name <- conversation_log[[i]]$function_call$name
+            }
+            break
+         }
+      }
+   }
+   
+   # Handle run_file commands differently
+   if (!is.null(original_function_name) && original_function_name == "run_file") {
+      # For run_file, we need to extract the original function call and related data
+      # The 'script' parameter contains the file content, not the filename
+      original_function_call <- NULL
+      original_related_to <- NULL
+      if (!is.null(message_id) && message_id != 0) {
+         conversation_log <- .rs.read_conversation_log()
+         for (i in seq_along(conversation_log)) {
+            if (conversation_log[[i]]$id == message_id) {
+               if (!is.null(conversation_log[[i]]$function_call)) {
+                  original_function_call <- conversation_log[[i]]$function_call
+                  original_related_to <- conversation_log[[i]]$related_to
+               }
+               break
+            }
+         }
+      }
+      
+      if (!is.null(original_function_call)) {
+         args <- .rs.safe_parse_function_arguments(original_function_call)
+         # Use the existing R function to handle file execution with correct parameters
+         tryCatch({
+            .rs.handle_run_file(original_function_call, conversation_log, original_related_to, request_id)
+         }, error = function(e) {
+            cat("DEBUG accept_console_command: Error executing file:", e$message, "\n")
+         })
+      } else {
+         cat("DEBUG accept_console_command: Could not extract function call from conversation log\n")
+      }
+      
+      # CRITICAL FIX: Actually execute the code like console commands do
+      # The 'script' parameter contains the extracted code that should be executed
+      .rs.api.sendToConsole(script, execute = TRUE)
+   } else {
+      # Execute the console command directly - let Java handle output tracking
+      .rs.api.sendToConsole(script, execute = TRUE)
+   }
    
    return(list(
       success = TRUE,
@@ -2512,6 +2564,7 @@
 
 .rs.addFunction("process_single_function_call", function(function_call, related_to_id, request_id, response_id = NULL, message_id = NULL) {
    function_name <- if (is.list(function_call$name)) function_call$name[[1]] else function_call$name
+   function_name <- trimws(function_name)  # Remove any leading/trailing whitespace
    call_id <- if (is.list(function_call$call_id)) function_call$call_id[[1]] else function_call$call_id
    
    if (.rs.get_conversation_var("ai_cancelled")) {
@@ -2661,6 +2714,26 @@
          # Create widget for this function call
          is_console <- (function_name %in% c("run_console_cmd"))
          
+         # Extract functions/commands for allow list
+         extracted_items <- ""
+         if (is_console) {
+            # Extract R functions from the console command
+            if (!is.null(cmd_info$command) && nchar(cmd_info$command) > 0) {
+               extracted_functions <- .rs.extract_r_functions(cmd_info$command)
+               if (length(extracted_functions) > 0) {
+                  extracted_items <- paste(extracted_functions, collapse = ", ")
+               }
+            }
+         } else {
+            # Extract bash commands from the terminal command
+            if (!is.null(cmd_info$command) && nchar(cmd_info$command) > 0) {
+               extracted_commands <- .rs.extract_bash_functions(cmd_info$command)
+               if (length(extracted_commands) > 0) {
+                  extracted_items <- paste(extracted_commands, collapse = ", ")
+               }
+            }
+         }
+         
          # Send widget creation event
          if (is_console) {
             .rs.send_ai_operation("create_console_command", list(
@@ -2668,7 +2741,8 @@
                command = cmd_info$command,
                explanation = cmd_info$explanation,
                request_id = request_id,
-               function_call_type = function_name
+               function_call_type = function_name,
+               extracted_functions = extracted_items
             ))
          } else {
             .rs.send_ai_operation("create_terminal_command", list(
@@ -2676,7 +2750,8 @@
                command = cmd_info$command,
                explanation = cmd_info$explanation,
                request_id = request_id,
-               function_call_type = function_name
+               function_call_type = function_name,
+               extracted_commands = extracted_items
             ))
          }
          
@@ -2772,7 +2847,7 @@
       }
    }
    
-   # Handle breakout_of_function_calls for run_console_cmd/run_terminal_cmd/delete_file/search_replace  
+   # Handle breakout_of_function_calls for run_console_cmd/run_terminal_cmd/delete_file/search_replace/edit_file  
    if (function_name == "run_console_cmd" || function_name == "run_terminal_cmd") {
       # Find the function call entry using shared function
       conversation_log <- .rs.read_conversation_log()
@@ -2830,7 +2905,6 @@
          ))
       }
 
-      # Find the function call entry 
       conversation_log <- .rs.read_conversation_log()
       function_call_entry <- .rs.find_function_call_by_call_id(conversation_log, call_id)
       
@@ -2862,10 +2936,56 @@
                function_call_type = widget_op$function_call_type
             ))
 
-            .rs.send_ai_operation("create_widget_buttons", list(
-               message_id = as.character(widget_op$message_id),
-               content = "console"
-            ))
+            # Check if we should auto-accept this command
+            if (widget_op$function_call_type == "delete_file") {
+               # Get the filename from the function call arguments for auto-accept check
+               args <- .rs.safe_parse_function_arguments(function_call_entry$function_call)
+               filename <- args$filename
+               
+               # Check if this file should be auto-deleted
+               should_auto_accept <- .rs.should_auto_accept_delete_file(filename)
+               
+               if (should_auto_accept) {
+                  .rs.send_ai_operation("create_widget_buttons", list(
+                     message_id = as.character(widget_op$message_id),
+                     content = "console",
+                     auto_accept = TRUE  # Flag for orchestrator to auto-accept
+                  ))
+               } else {
+                  .rs.send_ai_operation("create_widget_buttons", list(
+                     message_id = as.character(widget_op$message_id),
+                     content = "console"
+                  ))
+               }
+            } else if (widget_op$function_call_type == "run_file") {
+               # Get the filename from the function call arguments for auto-accept check
+               args <- .rs.safe_parse_function_arguments(function_call_entry$function_call)
+               filename <- args$filename
+               
+               # Check if this file should be auto-run
+               should_auto_accept <- .rs.should_auto_accept_run_file(filename)
+               
+               if (should_auto_accept) {
+                  .rs.send_ai_operation("create_widget_buttons", list(
+                     message_id = as.character(widget_op$message_id),
+                     content = "console",
+                     auto_accept = TRUE,  # Flag for orchestrator to auto-accept
+                     extracted_files = filename
+                  ))
+               } else {
+                  .rs.send_ai_operation("create_widget_buttons", list(
+                     message_id = as.character(widget_op$message_id),
+                     content = "console",
+                     extracted_files = filename
+                  ))
+               }
+            } else {
+               # For other commands, use default behavior
+               .rs.send_ai_operation("create_widget_buttons", list(
+                  message_id = as.character(widget_op$message_id),
+                  content = "console"
+               ))
+            }
             
             # Determine command type for return value
             command_type <- if (widget_op$is_console) "Console" else "Terminal"
@@ -3066,6 +3186,8 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
          data = list(message = "Request cancelled by user")
       ))
    }
+
+
 
    # Input validation and defaults
    conversation_index <- .rs.get_current_conversation_index()

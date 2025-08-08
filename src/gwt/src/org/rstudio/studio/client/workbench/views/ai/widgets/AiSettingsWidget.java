@@ -1074,7 +1074,7 @@ public class AiSettingsWidget extends Composite
       
       securityModeToggle_ = new HTML();
       securityModeToggle_.getElement().setInnerHTML(
-         "<div style='position: relative; width: 32px; height: 16px; background: #4CAF50; border-radius: 8px; cursor: pointer; transition: background 0.3s;' data-value=''>" +
+         "<div style='position: relative; width: 32px; height: 16px; background: #4CAF50; border-radius: 8px; cursor: pointer; transition: background 0.3s; display: none;' data-setting='security_mode'>" +
          "<div style='position: absolute; top: 1px; right: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.2);'></div>" +
          "</div>"
       );
@@ -1114,7 +1114,7 @@ public class AiSettingsWidget extends Composite
       
       webSearchToggle_ = new HTML();
       webSearchToggle_.getElement().setInnerHTML(
-         "<div style='position: relative; width: 32px; height: 16px; background: #ccc; border-radius: 8px; cursor: pointer; transition: background 0.3s;' data-value='false'>" +
+         "<div style='position: relative; width: 32px; height: 16px; background: #ccc; border-radius: 8px; cursor: pointer; transition: background 0.3s; display: none;' data-setting='web_search'>" +
          "<div style='position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.2);'></div>" +
          "</div>"
       );
@@ -1143,6 +1143,8 @@ public class AiSettingsWidget extends Composite
    
    private void buildAutomationSection()
    {
+      automationListContainers_.clear(); // Clear stale container references BEFORE creating new ones
+      
       VerticalPanel section = new VerticalPanel();
       section.setWidth("100%");
       
@@ -1165,17 +1167,15 @@ public class AiSettingsWidget extends Composite
       // Auto-accept edits setting
       contentPanel.add(createAutomationToggle(
          "Auto-accept edits",
-         "When enabled, edits proposed by the modelwill be automatically accepted without user confirmation.",
-         "autoAcceptEdits",
-         false
+         "When enabled, edits proposed by the model will be automatically accepted without user confirmation.",
+         "autoAcceptEdits"
       ));
       
       // Auto-accept console commands setting
       contentPanel.add(createAutomationToggle(
          "Auto-accept console commands",
          "When enabled, if the model proposes console commands, those on an allow list will be automatically executed without user confirmation. Commands to not run can be specified in a deny list.",
-         "autoAcceptConsole",
-         false
+         "autoAcceptConsole"
       ));
       // Add allow/deny panel at the same level to avoid table layout constraints
       VerticalPanel consoleAllowDenyPanel = createAllowDenyListPanel("auto_accept_console");
@@ -1187,8 +1187,7 @@ public class AiSettingsWidget extends Composite
       contentPanel.add(createAutomationToggle(
          "Auto-accept terminal commands",
          "When enabled, if the model proposes terminal commands, those on an allow list will be automatically executed without user confirmation. Commands to not run can be specified in a deny list.",
-         "autoAcceptTerminal",
-         false
+         "autoAcceptTerminal"
       ));
       // Add allow/deny panel at the same level to avoid table layout constraints
       VerticalPanel terminalAllowDenyPanel = createAllowDenyListPanel("auto_accept_terminal");
@@ -1200,8 +1199,7 @@ public class AiSettingsWidget extends Composite
       contentPanel.add(createAutomationToggle(
          "Auto-run code from files",
          "When enabled, if the model proposes to run code from allowed files, that code will be automatically executed without user confirmation. Files to not run can be specified in a deny list.",
-         "autoRunFiles",
-         false
+         "autoRunFiles"
       ));
       // Add allow/deny panel at the same level to avoid table layout constraints
       VerticalPanel runFilesAllowDenyPanel = createAllowDenyListPanel("auto_run_files");
@@ -1213,8 +1211,7 @@ public class AiSettingsWidget extends Composite
       contentPanel.add(createAutomationToggle(
          "Auto-delete files",
          "When enabled, if the model proposes to delete files, those deletions will be automatically executed without user confirmation.",
-         "autoDeleteFiles",
-         false
+         "autoDeleteFiles"
       ));
       
       // Add content panel to section
@@ -1233,7 +1230,7 @@ public class AiSettingsWidget extends Composite
       }
    }
    
-   private VerticalPanel createAutomationToggle(String title, String description, String settingName, boolean defaultValue)
+   private VerticalPanel createAutomationToggle(String title, String description, String settingName)
    {
       // Create main container with ruleContainer styling to match rules section
       VerticalPanel mainContainer = new VerticalPanel();
@@ -1250,13 +1247,11 @@ public class AiSettingsWidget extends Composite
       titleLabel.addStyleName(styles_.settingLabel());
       titleRow.add(titleLabel);
       
-      // Toggle switch
+      // Toggle switch - completely hidden until R values are loaded
       HTML toggle = new HTML();
-      String backgroundColor = defaultValue ? "#4CAF50" : "#ccc";
-      String sliderPosition = defaultValue ? "right: 1px;" : "left: 1px;";
       toggle.getElement().setInnerHTML(
-         "<div style='position: relative; width: 32px; height: 16px; background: " + backgroundColor + "; border-radius: 8px; cursor: pointer; transition: background 0.3s;' data-value='" + defaultValue + "' data-setting='" + settingName + "'>" +
-         "<div style='position: absolute; top: 1px; " + sliderPosition + " width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.2);'></div>" +
+         "<div style='position: relative; width: 32px; height: 16px; background: #ccc; border-radius: 8px; cursor: pointer; transition: background 0.3s; display: none;' data-setting='" + settingName + "'>" +
+         "<div style='position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.2);'></div>" +
          "</div>"
       );
       
@@ -1310,16 +1305,17 @@ public class AiSettingsWidget extends Composite
       allowAnythingRow.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
       allowAnythingRow.getElement().getStyle().setProperty("marginBottom", "8px");
       
-      // Create descriptive label based on setting type
-      HTML allowAnythingLabel = new HTML(getAllowAnythingMessage(settingName, false)); // Start with "allow list" mode
+      // Create descriptive label - hidden until R settings are loaded
+      HTML allowAnythingLabel = new HTML("");
       allowAnythingLabel.addStyleName(styles_.settingLabel());
       allowAnythingLabel.getElement().getStyle().setProperty("fontSize", "13px");
+      allowAnythingLabel.getElement().getStyle().setProperty("display", "none");
       allowAnythingLabel.getElement().setAttribute("data-allow-anything-label", settingName);
       allowAnythingRow.add(allowAnythingLabel);
       
       HTML allowAnythingToggle = new HTML();
       allowAnythingToggle.getElement().setInnerHTML(
-         "<div style='position: relative; width: 28px; height: 14px; background: #ccc; border-radius: 7px; cursor: pointer; transition: background 0.3s;' data-value='false' data-setting='" + settingName + "_allow_anything'>" +
+         "<div style='position: relative; width: 28px; height: 14px; background: #ccc; border-radius: 7px; cursor: pointer; transition: background 0.3s; display: none;' data-setting='" + settingName + "_allow_anything'>" +
          "<div style='position: absolute; top: 1px; left: 1px; width: 12px; height: 12px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.2);'></div>" +
          "</div>"
       );
@@ -1332,10 +1328,11 @@ public class AiSettingsWidget extends Composite
       
       panel.add(allowAnythingRow);
       
-      // Allow/Deny lists container (shown when "Allow anything" is off)
+      // Allow/Deny lists container - hidden until R settings are loaded
       VerticalPanel listsContainer = new VerticalPanel();
       listsContainer.setWidth("100%");
       listsContainer.getElement().setAttribute("data-lists-container", settingName);
+      listsContainer.getElement().getStyle().setProperty("display", "none");
       
       // Allow list section
       FlowPanel allowListSection = createListSection("Allow list", settingName + "_allow_list");
@@ -1398,6 +1395,29 @@ public class AiSettingsWidget extends Composite
    }
    
    private void addListItem(FlowPanel container, String text, String listType) {
+      // Check for duplicates before adding
+      if (container != null) {
+         com.google.gwt.dom.client.Element automationElement = automationSection_.getElement();
+         com.google.gwt.dom.client.Element itemsContainer = findElementByAttribute(automationElement, "data-items-container", listType);
+         if (itemsContainer != null) {
+            String[] existingItems = collectListItems(itemsContainer);
+            for (String existingItem : existingItems) {
+               if (existingItem != null && existingItem.equals(text)) {
+                  return; // Don't add duplicate
+               }
+            }
+         }
+      }
+      
+      // Add visually and save to R
+      addListItemVisualOnly(container, text, listType);
+      
+      // Save to settings
+      saveListToSettings(listType);
+   }
+   
+   private void addListItemVisualOnly(FlowPanel container, String text, String listType) {
+      
       // Create item container similar to context items
       FlowPanel itemContainer = new FlowPanel();
       itemContainer.getElement().getStyle().setProperty("display", "inline-flex");
@@ -1434,9 +1454,6 @@ public class AiSettingsWidget extends Composite
       
       // Sort items alphabetically
       sortListItems(container);
-      
-      // Save to settings
-      saveListToSettings(listType);
    }
    
    private void sortListItems(FlowPanel container) {
@@ -1492,12 +1509,12 @@ public class AiSettingsWidget extends Composite
          server_.setAutomationList(listType, jsArray, new ServerRequestCallback<java.lang.Void>() {
             @Override
             public void onResponseReceived(java.lang.Void result) {
-               Debug.log("Successfully saved " + items.length + " items for " + listType);
+               // Success - no action needed
             }
             
             @Override
             public void onError(ServerError error) {
-               Debug.log("Error saving list items for " + listType + ": " + error.getMessage());
+               // TODO: Handle error appropriately
             }
          });
       }
@@ -1532,7 +1549,8 @@ public class AiSettingsWidget extends Composite
    private native void removeListItemByText(com.google.gwt.dom.client.Element itemsContainer, String text) /*-{
       var itemElements = itemsContainer.querySelectorAll("div[style*='display: inline-flex']");
       
-      for (var i = 0; i < itemElements.length; i++) {
+      // Remove ALL matching items, not just the first one
+      for (var i = itemElements.length - 1; i >= 0; i--) { // Iterate backwards to avoid index issues
          var itemElement = itemElements[i];
          var labelElement = itemElement.firstElementChild;
          if (labelElement) {
@@ -1540,7 +1558,6 @@ public class AiSettingsWidget extends Composite
             if (itemText === text) {
                // Remove this item from the DOM
                itemElement.parentNode.removeChild(itemElement);
-               break;
             }
          }
       }
@@ -1554,7 +1571,8 @@ public class AiSettingsWidget extends Composite
          var itemElement = itemElements[i];
          var labelElement = itemElement.firstElementChild;
          if (labelElement) {
-            items[i] = labelElement.innerText || labelElement.textContent || '';
+            var text = labelElement.innerText || labelElement.textContent || '';
+            items[i] = text;
          } else {
             items[i] = '';
          }
@@ -2169,12 +2187,12 @@ public class AiSettingsWidget extends Composite
       }, false);
       }-*/;
    
-   // Add native DOM event handler for security mode toggle
+      // Add native DOM event handler for security mode toggle  
    private native void addNativeSecurityModeChangeHandler(com.google.gwt.dom.client.Element element) /*-{
       var self = this;
       
       element.addEventListener('click', function(event) {
-         var toggleDiv = element.querySelector('div[data-value]');
+         var toggleDiv = element.querySelector('div[data-setting]');
          if (toggleDiv) {
             var currentValue = toggleDiv.getAttribute('data-value');
             var newValue = currentValue === 'secure' ? 'improve' : 'secure';
@@ -2209,7 +2227,7 @@ public class AiSettingsWidget extends Composite
       var self = this;
       
       element.addEventListener('click', function(event) {
-         var toggleDiv = element.querySelector('div[data-value]');
+         var toggleDiv = element.querySelector('div[data-setting]');
          if (toggleDiv) {
             var currentValue = toggleDiv.getAttribute('data-value');
             var newValue = currentValue === 'false' ? 'true' : 'false';
@@ -2236,27 +2254,9 @@ public class AiSettingsWidget extends Composite
       var self = this;
       
       element.addEventListener('click', function(event) {
-         var toggleDiv = element.querySelector('div[data-value]');
+         var toggleDiv = element.querySelector('div[data-setting]');
          if (toggleDiv) {
-            var currentValue = toggleDiv.getAttribute('data-value');
-            var newValue = currentValue === 'false' ? 'true' : 'false';
-            toggleDiv.setAttribute('data-value', newValue);
-            
-            // Update visual state
-            var slider = toggleDiv.querySelector('div');
-            var isEnabled = newValue === 'true';
-            toggleDiv.style.background = isEnabled ? '#4CAF50' : '#ccc';
-            
-            // Use right positioning for enabled (green), left for disabled (grey)
-            if (isEnabled) {
-               slider.style.left = '';
-               slider.style.right = '1px';
-            } else {
-               slider.style.right = '';
-               slider.style.left = '1px';
-            }
-            
-            // Call appropriate handler based on setting name
+            // Just call the appropriate handler - let Java handle all state management
             if (settingName === 'autoAcceptEdits') {
                self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleAutoAcceptEditsChange()();
             } else if (settingName === 'autoAcceptConsole') {
@@ -2269,11 +2269,9 @@ public class AiSettingsWidget extends Composite
                self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleAutoDeleteFilesChange()();
             }
             
-            // Only prevent default when actually handling the toggle
             event.preventDefault();
             event.stopPropagation();
          }
-         // If not a toggle click, let it bubble normally (allows text selection)
       }, false);
    }-*/;
    
@@ -2282,30 +2280,11 @@ public class AiSettingsWidget extends Composite
       var self = this;
       
       element.addEventListener('click', function(event) {
-         var toggleDiv = element.querySelector('div[data-value]');
+         var toggleDiv = element.querySelector('div[data-setting]');
          if (toggleDiv) {
-            var currentValue = toggleDiv.getAttribute('data-value');
-            var newValue = currentValue === 'false' ? 'true' : 'false';
-            toggleDiv.setAttribute('data-value', newValue);
+            // Just call the appropriate handler - let Java handle all state management
+            self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleAllowAnythingToggleChange(Ljava/lang/String;)(settingName);
             
-            // Update visual state
-            var slider = toggleDiv.querySelector('div');
-            var isEnabled = newValue === 'true';
-            toggleDiv.style.background = isEnabled ? '#4CAF50' : '#ccc';
-            
-            // Use right positioning for enabled (green), left for disabled (grey)
-            if (isEnabled) {
-               slider.style.left = '';
-               slider.style.right = '1px';
-            } else {
-               slider.style.right = '';
-               slider.style.left = '1px';
-            }
-            
-            // Call handler to save setting
-            self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleAllowAnythingToggle(Ljava/lang/String;Z)(settingName, isEnabled);
-            
-            // Only prevent default when actually handling the toggle
             event.preventDefault();
             event.stopPropagation();
          }
@@ -2394,7 +2373,7 @@ public class AiSettingsWidget extends Composite
    }
    
    private void handleRemoveListItem(String listType, String text) {
-      Debug.log("Remove button clicked for: " + text + " from list: " + listType);
+      FlowPanel container = automationListContainers_.get(listType);
       
       // Find the items container for this list type
       com.google.gwt.dom.client.Element automationElement = automationSection_.getElement();
@@ -2404,10 +2383,28 @@ public class AiSettingsWidget extends Composite
          // Find and remove the specific item by text content
          removeListItemByText(itemsContainer, text);
          
+         // CRITICAL FIX: Rebuild FlowPanel from DOM state after removal
+         if (container != null) {
+            // Get current DOM state (after removal)
+            String[] remainingItems = collectListItems(itemsContainer);
+            
+            // Deduplicate remaining items
+            java.util.Set<String> uniqueItems = new java.util.LinkedHashSet<String>();
+            for (String item : remainingItems) {
+               if (item != null && !item.trim().isEmpty()) {
+                  uniqueItems.add(item);
+               }
+            }
+            
+            // Clear FlowPanel and rebuild from deduplicated items
+            container.clear();
+            for (String item : uniqueItems) {
+               addListItemVisualOnly(container, item, listType);
+            }
+         }
+         
          // Save updated list to settings
          saveListToSettings(listType);
-      } else {
-         Debug.log("Items container not found for list type: " + listType);
       }
    }
    
@@ -2463,14 +2460,15 @@ public class AiSettingsWidget extends Composite
    
    // Native method to get toggle value
    private native String getToggleValue(com.google.gwt.dom.client.Element element) /*-{
-      var toggleDiv = element.querySelector('div[data-value]');
+      var toggleDiv = element.querySelector('div[data-setting]');
       return toggleDiv ? toggleDiv.getAttribute('data-value') : null;
    }-*/;
    
    // Native method to update toggle display
    private native void updateToggleDisplay(com.google.gwt.dom.client.Element element, String value, String offValue) /*-{
-      var toggleDiv = element.querySelector('div[data-value]');
+      var toggleDiv = element.querySelector('div[data-setting]');
       if (toggleDiv) {
+         toggleDiv.style.display = 'block';
          toggleDiv.setAttribute('data-value', value);
          var slider = toggleDiv.querySelector('div');
          
@@ -2487,7 +2485,7 @@ public class AiSettingsWidget extends Composite
                slider.style.left = '1px';
             }
          } else {
-            // Web search toggle  
+            // Automation toggle  
             var isEnabled = value === 'true';
             toggleDiv.style.background = isEnabled ? '#4CAF50' : '#ccc';
             slider.style.left = isEnabled ? '17px' : '1px';
@@ -2742,7 +2740,6 @@ public class AiSettingsWidget extends Composite
          public void onResponseReceived(Boolean currentValue) {
             boolean current = currentValue != null ? currentValue : false;
             boolean newValue = !current;
-            Debug.log("Auto-accept edits set to: " + newValue);
             
             // Update visual state to match the new server value
             if (autoAcceptEditsToggle_ != null) {
@@ -2754,7 +2751,7 @@ public class AiSettingsWidget extends Composite
          
          @Override
          public void onError(ServerError error) {
-            Debug.log("Error getting auto accept edits: " + error.getMessage());
+            // Error getting auto accept edits
          }
       });
    }
@@ -2766,7 +2763,6 @@ public class AiSettingsWidget extends Composite
          public void onResponseReceived(Boolean currentValue) {
             boolean current = currentValue != null ? currentValue : false;
             boolean newValue = !current;
-            Debug.log("Auto-accept console set to: " + newValue);
             
             // Update visual state to match the new server value
             if (autoAcceptConsoleToggle_ != null) {
@@ -2776,12 +2772,17 @@ public class AiSettingsWidget extends Composite
             // Update panel visibility to match the new server value
             toggleAllowDenyPanel("autoAcceptConsole", newValue);
             
+            // Load allow/deny lists data when enabling the feature
+            if (newValue) {
+               loadAutomationLists("auto_accept_console");
+            }
+            
             handler_.onAutoAcceptConsoleChange(newValue);
          }
          
          @Override
          public void onError(ServerError error) {
-            Debug.log("Error getting auto accept console: " + error.getMessage());
+            // Error getting auto accept console
          }
       });
    }
@@ -2793,7 +2794,6 @@ public class AiSettingsWidget extends Composite
          public void onResponseReceived(Boolean currentValue) {
             boolean current = currentValue != null ? currentValue : false;
             boolean newValue = !current;
-            Debug.log("Auto-accept terminal set to: " + newValue);
             
             // Update visual state to match the new server value
             if (autoAcceptTerminalToggle_ != null) {
@@ -2803,12 +2803,17 @@ public class AiSettingsWidget extends Composite
             // Update panel visibility to match the new server value
             toggleAllowDenyPanel("autoAcceptTerminal", newValue);
             
+            // Load allow/deny lists data when enabling the feature
+            if (newValue) {
+               loadAutomationLists("auto_accept_terminal");
+            }
+            
             handler_.onAutoAcceptTerminalChange(newValue);
          }
          
          @Override
          public void onError(ServerError error) {
-            Debug.log("Error getting auto accept terminal: " + error.getMessage());
+            // Error getting auto accept terminal
          }
       });
    }
@@ -2820,7 +2825,6 @@ public class AiSettingsWidget extends Composite
          public void onResponseReceived(Boolean currentValue) {
             boolean current = currentValue != null ? currentValue : false;
             boolean newValue = !current;
-            Debug.log("Auto-run files set to: " + newValue);
             
             // Update visual state to match the new server value
             if (autoRunFilesToggle_ != null) {
@@ -2829,6 +2833,11 @@ public class AiSettingsWidget extends Composite
             
             // Update panel visibility to match the new server value
             toggleAllowDenyPanel("autoRunFiles", newValue);
+            
+            // Load allow/deny lists data when enabling the feature
+            if (newValue) {
+               loadAutomationLists("auto_run_files");
+            }
             
             handler_.onAutoRunFilesChange(newValue);
          }
@@ -2847,7 +2856,6 @@ public class AiSettingsWidget extends Composite
          public void onResponseReceived(Boolean currentValue) {
             boolean current = currentValue != null ? currentValue : false;
             boolean newValue = !current;
-            Debug.log("Auto-delete files set to: " + newValue);
             
             // Update visual state to match the new server value
             if (autoDeleteFilesToggle_ != null) {
@@ -2864,9 +2872,81 @@ public class AiSettingsWidget extends Composite
       });
    }
    
+   private void handleAllowAnythingToggleChange(String settingName) {
+      // Query server for current state, then toggle
+      if ("auto_accept_console_allow_anything".equals(settingName)) {
+         server_.getAutoAcceptConsoleAllowAnything(new ServerRequestCallback<Boolean>() {
+            @Override
+            public void onResponseReceived(Boolean currentValue) {
+               boolean current = currentValue != null ? currentValue : false;
+               boolean newValue = !current;
+               
+               // Update visual state
+               updateAllowAnythingToggleDisplay(settingName, newValue);
+               
+               // Update list visibility
+               String baseSettingName = settingName.replace("_allow_anything", "");
+               updateListsVisibility(baseSettingName, !newValue);
+               
+               // Save to server
+               handler_.onAutoAcceptConsoleAllowAnythingChange(newValue);
+            }
+            
+            @Override
+            public void onError(ServerError error) {
+               Debug.log("Error getting " + settingName + ": " + error.getMessage());
+            }
+         });
+      } else if ("auto_accept_terminal_allow_anything".equals(settingName)) {
+         server_.getAutoAcceptTerminalAllowAnything(new ServerRequestCallback<Boolean>() {
+            @Override
+            public void onResponseReceived(Boolean currentValue) {
+               boolean current = currentValue != null ? currentValue : false;
+               boolean newValue = !current;
+               
+               // Update visual state
+               updateAllowAnythingToggleDisplay(settingName, newValue);
+               
+               // Update list visibility
+               String baseSettingName = settingName.replace("_allow_anything", "");
+               updateListsVisibility(baseSettingName, !newValue);
+               
+               // Save to server
+               handler_.onAutoAcceptTerminalAllowAnythingChange(newValue);
+            }
+            
+            @Override
+            public void onError(ServerError error) {
+               Debug.log("Error getting " + settingName + ": " + error.getMessage());
+            }
+         });
+      } else if ("auto_run_files_allow_anything".equals(settingName)) {
+         server_.getAutoRunFilesAllowAnything(new ServerRequestCallback<Boolean>() {
+            @Override
+            public void onResponseReceived(Boolean currentValue) {
+               boolean current = currentValue != null ? currentValue : false;
+               boolean newValue = !current;
+               
+               // Update visual state
+               updateAllowAnythingToggleDisplay(settingName, newValue);
+               
+               // Update list visibility
+               String baseSettingName = settingName.replace("_allow_anything", "");
+               updateListsVisibility(baseSettingName, !newValue);
+               
+               // Save to server
+               handler_.onAutoRunFilesAllowAnythingChange(newValue);
+            }
+            
+            @Override
+            public void onError(ServerError error) {
+               Debug.log("Error getting " + settingName + ": " + error.getMessage());
+            }
+         });
+      }
+   }
+   
    private void handleAllowAnythingToggle(String settingName, boolean enabled) {
-      Debug.log("Allow anything toggle for " + settingName + " set to: " + enabled);
-      
       // Update the message text immediately
       updateAllowAnythingLabelText(settingName, enabled);
       
@@ -2879,11 +2959,11 @@ public class AiSettingsWidget extends Composite
       updateListsVisibility(baseSettingName, !enabled);
       
       // Handle different settings based on setting name
-      if ("autoAcceptConsole_allow_anything".equals(settingName)) {
+      if ("auto_accept_console_allow_anything".equals(settingName)) {
          handler_.onAutoAcceptConsoleAllowAnythingChange(enabled);
-      } else if ("autoAcceptTerminal_allow_anything".equals(settingName)) {
+      } else if ("auto_accept_terminal_allow_anything".equals(settingName)) {
          handler_.onAutoAcceptTerminalAllowAnythingChange(enabled);
-      } else if ("autoRunFiles_allow_anything".equals(settingName)) {
+      } else if ("auto_run_files_allow_anything".equals(settingName)) {
          handler_.onAutoRunFilesAllowAnythingChange(enabled);
       }
    }
@@ -2919,7 +2999,6 @@ public class AiSettingsWidget extends Composite
          
          @Override
          public void onError(ServerError error) {
-            Debug.log("Error loading security mode for display: " + error.getMessage());
             // Use secure as default on error
             if (securityModeToggle_ != null) {
                updateToggleDisplay(securityModeToggle_.getElement(), "secure", "secure");
@@ -2947,10 +3026,8 @@ public class AiSettingsWidget extends Composite
          
          @Override
          public void onError(ServerError error) {
-            Debug.log("Error loading auto accept edits for display: " + error.getMessage());
-            if (autoAcceptEditsToggle_ != null) {
-               updateToggleDisplay(autoAcceptEditsToggle_.getElement(), "false", "true");
-            }
+            // Error loading auto accept edits for display
+            // No fallback - let R handle defaults
          }
       });
       
@@ -2973,11 +3050,8 @@ public class AiSettingsWidget extends Composite
          
          @Override
          public void onError(ServerError error) {
-            Debug.log("Error loading auto accept console for display: " + error.getMessage());
-            if (autoAcceptConsoleToggle_ != null) {
-               updateToggleDisplay(autoAcceptConsoleToggle_.getElement(), "false", "true");
-            }
-            toggleAllowDenyPanel("autoAcceptConsole", false);
+            // Error loading auto accept console for display
+            // No fallback - let R handle defaults
          }
       });
       
@@ -3000,11 +3074,8 @@ public class AiSettingsWidget extends Composite
          
          @Override
          public void onError(ServerError error) {
-            Debug.log("Error loading auto accept terminal for display: " + error.getMessage());
-            if (autoAcceptTerminalToggle_ != null) {
-               updateToggleDisplay(autoAcceptTerminalToggle_.getElement(), "false", "true");
-            }
-            toggleAllowDenyPanel("autoAcceptTerminal", false);
+            // Error loading auto accept terminal for display
+            // No fallback - let R handle defaults
          }
       });
       
@@ -3028,10 +3099,7 @@ public class AiSettingsWidget extends Composite
          @Override
          public void onError(ServerError error) {
             Debug.log("Error loading auto run files for display: " + error.getMessage());
-            if (autoRunFilesToggle_ != null) {
-               updateToggleDisplay(autoRunFilesToggle_.getElement(), "false", "true");
-            }
-            toggleAllowDenyPanel("autoRunFiles", false);
+            // No fallback - let R handle defaults
          }
       });
       
@@ -3048,9 +3116,7 @@ public class AiSettingsWidget extends Composite
          @Override
          public void onError(ServerError error) {
             Debug.log("Error loading auto delete files for display: " + error.getMessage());
-            if (autoDeleteFilesToggle_ != null) {
-               updateToggleDisplay(autoDeleteFilesToggle_.getElement(), "false", "true");
-            }
+            // No fallback - let R handle defaults
          }
       });
    }
@@ -3470,8 +3536,6 @@ public class AiSettingsWidget extends Composite
       String denyListType = settingPrefix + "_deny_list";
       String allowAnythingType = settingPrefix + "_allow_anything";
       
-      Debug.log("Loading automation lists for: " + settingPrefix);
-      
       // Load "Allow anything" toggle state first
       loadAllowAnythingToggle(settingPrefix, allowAnythingType);
       
@@ -3482,13 +3546,12 @@ public class AiSettingsWidget extends Composite
             if (result != null) {
                String[] items = convertJavaScriptArrayToStringArray(result);
                loadListItems(allowListType, items);
-               Debug.log("Loaded " + items.length + " items for " + allowListType);
             }
          }
          
          @Override
          public void onError(ServerError error) {
-            Debug.log("Error loading " + allowListType + ": " + error.getMessage());
+            // TODO: Handle error appropriately
          }
       });
       
@@ -3499,35 +3562,29 @@ public class AiSettingsWidget extends Composite
             if (result != null) {
                String[] items = convertJavaScriptArrayToStringArray(result);
                loadListItems(denyListType, items);
-               Debug.log("Loaded " + items.length + " items for " + denyListType);
             }
          }
          
          @Override
          public void onError(ServerError error) {
-            Debug.log("Error loading " + denyListType + ": " + error.getMessage());
+            // TODO: Handle error appropriately
          }
       });
    }
    
    private void loadListItems(String listType, String[] items) {
-      // Get the FlowPanel reference from our stored map
       FlowPanel container = automationListContainers_.get(listType);
       
       if (container != null) {
          // Clear existing items
          container.clear();
          
-         // Add each item using the existing addListItem method
+         // Add each item visually only (don't save back to R)
          for (String item : items) {
             if (item != null && !item.trim().isEmpty()) {
-               addListItem(container, item, listType);
+               addListItemVisualOnly(container, item, listType);
             }
          }
-         
-         Debug.log("Loaded " + items.length + " items into container for " + listType);
-      } else {
-         Debug.log("FlowPanel container not found for list type: " + listType);
       }
    }
    
@@ -3553,6 +3610,8 @@ public class AiSettingsWidget extends Composite
             public void onResponseReceived(Boolean enabled) {
                boolean isEnabled = enabled != null ? enabled : false;
                updateAllowAnythingToggleDisplay(allowAnythingType, isEnabled);
+               // Show the lists container now that we have R data
+               showListsContainer(settingPrefix);
                // Update lists visibility based on "Allow anything" state
                updateListsVisibility(settingPrefix, !isEnabled);
             }
@@ -3560,8 +3619,7 @@ public class AiSettingsWidget extends Composite
             @Override
             public void onError(ServerError error) {
                Debug.log("Error loading " + allowAnythingType + ": " + error.getMessage());
-               updateAllowAnythingToggleDisplay(allowAnythingType, false);
-               updateListsVisibility(settingPrefix, true); // Default to show lists
+               // No fallback - let R handle defaults
             }
          });
       } else if ("auto_accept_terminal".equals(settingPrefix)) {
@@ -3570,14 +3628,14 @@ public class AiSettingsWidget extends Composite
             public void onResponseReceived(Boolean enabled) {
                boolean isEnabled = enabled != null ? enabled : false;
                updateAllowAnythingToggleDisplay(allowAnythingType, isEnabled);
+               showListsContainer(settingPrefix);
                updateListsVisibility(settingPrefix, !isEnabled);
             }
             
             @Override
             public void onError(ServerError error) {
                Debug.log("Error loading " + allowAnythingType + ": " + error.getMessage());
-               updateAllowAnythingToggleDisplay(allowAnythingType, false);
-               updateListsVisibility(settingPrefix, true);
+               // No fallback - let R handle defaults
             }
          });
       } else if ("auto_run_files".equals(settingPrefix)) {
@@ -3586,16 +3644,28 @@ public class AiSettingsWidget extends Composite
             public void onResponseReceived(Boolean enabled) {
                boolean isEnabled = enabled != null ? enabled : false;
                updateAllowAnythingToggleDisplay(allowAnythingType, isEnabled);
+               // Show the lists container now that we have R data
+               showListsContainer(settingPrefix);
                updateListsVisibility(settingPrefix, !isEnabled);
             }
             
             @Override
             public void onError(ServerError error) {
                Debug.log("Error loading " + allowAnythingType + ": " + error.getMessage());
-               updateAllowAnythingToggleDisplay(allowAnythingType, false);
-               updateListsVisibility(settingPrefix, true);
+               // No fallback - let R handle defaults
             }
          });
+      }
+   }
+   
+   private void showListsContainer(String settingPrefix) {
+      com.google.gwt.dom.client.Element automationElement = automationSection_.getElement();
+      com.google.gwt.dom.client.Element listsContainer = findElementByAttribute(automationElement, "data-lists-container", settingPrefix);
+      
+      if (listsContainer != null) {
+         listsContainer.getStyle().setProperty("display", "block");
+      } else {
+         Debug.log("Lists container not found for: " + settingPrefix);
       }
    }
    
@@ -3604,15 +3674,30 @@ public class AiSettingsWidget extends Composite
       com.google.gwt.dom.client.Element toggleElement = findElementByAttribute(automationElement, "data-setting", settingName);
       
       if (toggleElement != null) {
-         updateToggleDisplay(toggleElement, enabled ? "true" : "false", "true");
-         Debug.log("Updated " + settingName + " toggle display to: " + enabled);
+         // Show the toggle now that we have R data
+         toggleElement.getStyle().setProperty("display", "block");
+         updateAllowAnythingToggleDisplayStyle(toggleElement, enabled);
       } else {
          Debug.log("Toggle element not found for: " + settingName);
       }
       
-      // Also update the descriptive label text
+      // Also update the descriptive label text and show it
       updateAllowAnythingLabelText(settingName, enabled);
    }
+   
+   // Native method to update allow-anything toggle display (smaller toggles with different dimensions)
+   private native void updateAllowAnythingToggleDisplayStyle(com.google.gwt.dom.client.Element element, boolean enabled) /*-{
+      element.setAttribute('data-value', enabled ? 'true' : 'false');
+      var slider = element.querySelector('div');
+      
+      // Allow-anything toggles: 28x14px with 12px slider
+      element.style.background = enabled ? '#4CAF50' : '#ccc';
+      
+      // For allow-anything toggles, use simple left positioning (14px when enabled, 1px when disabled)
+      if (slider) {
+         slider.style.left = enabled ? '14px' : '1px';
+      }
+   }-*/;
    
    private void updateAllowAnythingLabelText(String settingName, boolean allowAnythingEnabled) {
       com.google.gwt.dom.client.Element automationElement = automationSection_.getElement();
@@ -3621,9 +3706,10 @@ public class AiSettingsWidget extends Composite
       com.google.gwt.dom.client.Element labelElement = findElementByAttribute(automationElement, "data-allow-anything-label", baseSettingName);
       
       if (labelElement != null) {
+         // Show the label now that we have R data
+         labelElement.getStyle().setProperty("display", "block");
          String newMessage = getAllowAnythingMessage(baseSettingName, allowAnythingEnabled);
          labelElement.setInnerHTML(newMessage);
-         Debug.log("Updated label text for " + baseSettingName + " to mode: " + (allowAnythingEnabled ? "deny list" : "allow list"));
       } else {
          Debug.log("Label element not found for: " + baseSettingName);
       }
@@ -3641,7 +3727,6 @@ public class AiSettingsWidget extends Composite
       if (allowContainer != null) {
          com.google.gwt.dom.client.Element allowSection = allowContainer.getParent().getElement();
          allowSection.getStyle().setProperty("display", allowMode ? "block" : "none");
-         Debug.log("Updated allow list visibility for " + settingPrefix + " to: " + (allowMode ? "visible" : "hidden"));
       }
       
       // Find deny list section  
@@ -3650,7 +3735,6 @@ public class AiSettingsWidget extends Composite
       if (denyContainer != null) {
          com.google.gwt.dom.client.Element denySection = denyContainer.getParent().getElement();
          denySection.getStyle().setProperty("display", allowMode ? "none" : "block");
-         Debug.log("Updated deny list visibility for " + settingPrefix + " to: " + (allowMode ? "hidden" : "visible"));
       }
    }
    

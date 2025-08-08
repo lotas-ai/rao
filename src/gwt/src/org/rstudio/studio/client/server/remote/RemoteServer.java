@@ -7869,6 +7869,8 @@ public class RemoteServer implements Server, AiServerOperations
    private static final String SET_AUTO_RUN_FILES_ALLOW_ANYTHING = "set_auto_run_files_allow_anything";
    private static final String GET_AUTOMATION_LIST = "get_automation_list";
    private static final String SET_AUTOMATION_LIST = "set_automation_list";
+   private static final String EXTRACT_R_FUNCTIONS = "extract_r_functions";
+   private static final String EXTRACT_BASH_FUNCTIONS = "extract_bash_functions";
 
    private static final String CHECK_IMAGE_CONTENT_DUPLICATE = "check_image_content_duplicate";
    private static final String GET_PERSISTENT_DIFF_DATA = "get_persistent_diff_data";
@@ -8064,6 +8066,24 @@ public class RemoteServer implements Server, AiServerOperations
    public void clearContextItems(ServerRequestCallback<java.lang.Void> requestCallback)
    {
       sendRequest(RPC_SCOPE, "clear_context_items", requestCallback);
+   }
+
+   @Override
+   public void addDocsContext(String topic, String name, ServerRequestCallback<Boolean> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(topic));
+      params.set(1, new JSONString(name));
+      sendRequest(RPC_SCOPE, "add_docs_context", params, requestCallback);
+   }
+
+   @Override
+   public void addChatContext(int conversationId, String name, ServerRequestCallback<Boolean> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONNumber(conversationId));
+      params.set(1, new JSONString(name));
+      sendRequest(RPC_SCOPE, "add_chat_context", params, requestCallback);
    }
 
    @Override

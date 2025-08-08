@@ -785,12 +785,11 @@
   # Convert to list for JSON response
   list_items <- as.list(list_items)
   
-  cat("get_automation_list: list_type =", list_type, "returning", length(list_items), "items:", paste(unlist(list_items), collapse=", "), "\n")
-  
   return(list_items)
 })
 
 .rs.addFunction("set_automation_list_action", function(list_type, items) {
+  
   if (is.null(list_type) || !is.character(list_type)) {
     return(FALSE)
   }
@@ -800,9 +799,6 @@
   }
   
   # list_type should now be correct (e.g., "auto_accept_console_allow_list")
-  cat("set_automation_list_action received - list_type:", list_type, "class:", class(items), "length:", length(items), "\n")
-  cat("items structure:", str(items), "\n")
-  
   # C++ json::Array is passed as a list directly to R - no JSON string conversion needed
   if (is.list(items)) {
     # Convert list elements to character vector
@@ -815,7 +811,10 @@
   # Remove any empty strings
   items <- items[nzchar(items)]
   
-  cat("set_automation_list_action: list_type =", list_type, "final items =", paste(items, collapse=", "), "\n")
+  # Remove duplicates while preserving order
+  if (length(items) > 0) {
+    items <- items[!duplicated(items)]
+  }
   
   # Save as character vector (not list) to avoid nested structure
   # Empty vector for no items, character vector for items
@@ -824,12 +823,11 @@
   }
   # items is already a character vector from the conversion above
   
-  cat("set_automation_list_action: saving as", class(items), "with length =", length(items), "\n")
-  
   # Save as a list to ensure consistent JSON array format (prevents auto_unbox issues)
   # This ensures both single and multi-item lists are stored as JSON arrays
   items_list <- as.list(items)
-  result <- .rs.update_ai_setting(list_type, items_list)  
+  
+  result <- .rs.update_ai_setting(list_type, items_list)
   return(result)
 })
 
@@ -1278,6 +1276,9 @@
   # Extract R functions from the code
   functions_in_code <- .rs.extract_r_functions(r_code)
   
+  # Trim whitespace from extracted functions
+  functions_in_code <- trimws(functions_in_code)
+  
   # If no functions were extracted, don't auto-accept
   if (length(functions_in_code) == 0) {
     return(FALSE)
@@ -1285,11 +1286,16 @@
   
   # Check allow_anything setting
   allow_anything <- .rs.get_auto_accept_console_allow_anything()
+
   
   if (allow_anything) {
     # If allow_anything is TRUE, check that none of the functions are in the deny list
     deny_list <- .rs.get_automation_list("auto_accept_console_deny_list")
     deny_list <- unlist(deny_list)  # Convert from list to character vector
+    # Normalize whitespace
+    deny_list <- trimws(deny_list)
+    deny_list <- deny_list[nzchar(deny_list)]
+
     
     # Check if any function in the code is in the deny list
     for (func in functions_in_code) {
@@ -1303,14 +1309,171 @@
     # If allow_anything is FALSE, check that ALL functions are in the allow list
     allow_list <- .rs.get_automation_list("auto_accept_console_allow_list")
     allow_list <- unlist(allow_list)  # Convert from list to character vector
+    # Normalize whitespace
+    allow_list <- trimws(allow_list)
+    allow_list <- allow_list[nzchar(allow_list)]
+
     
     # Check if all functions in the code are in the allow list
     for (func in functions_in_code) {
       if (!func %in% allow_list) {
+
         return(FALSE)  # Found a function not in allow list, don't auto-accept
       }
     }
     
+
     return(TRUE)  # All functions are in allow list, auto-accept
+  }
+})
+
+# Run file auto-accept checking function (internal use only)
+.rs.addFunction("should_auto_accept_run_file", function(filename) {
+  # Check if auto_run_files is enabled
+  auto_run_enabled <- .rs.get_auto_run_files()
+  
+  if (!auto_run_enabled) {
+    return(FALSE)
+  }
+  
+  # Get both basename and full normalized path for matching (same logic as handle_run_file)
+  file_basename <- basename(filename)
+  
+  # Construct the full normalized path like handle_run_file does
+  cwd <- getwd()
+  full_path <- file.path(cwd, filename)
+  normalized_path <- normalizePath(full_path, winslash = "/", mustWork = FALSE)
+  
+  # Check allow_anything setting
+  allow_anything <- .rs.get_auto_run_files_allow_anything()
+  
+  if (allow_anything) {
+    # If allow_anything is TRUE, check that the file is not in the deny list
+    deny_list <- .rs.get_automation_list("auto_run_files_deny_list")
+    deny_list <- unlist(deny_list)  # Convert from list to character vector
+
+    
+    # Expand tildes in deny list entries for comparison
+    expanded_deny_list <- sapply(deny_list, function(path) {
+      if (startsWith(path, "~")) {
+        # Expand tilde using normalizePath
+        tryCatch({
+          normalizePath(path, winslash = "/", mustWork = FALSE)
+        }, error = function(e) {
+          path  # Return original if expansion fails
+        })
+      } else {
+        path  # Return as-is if no tilde
+      }
+    }, USE.NAMES = FALSE)
+
+    
+    # Check if the file (basename, original filename, or full normalized path) is in the deny list
+    if (file_basename %in% deny_list || filename %in% deny_list || normalized_path %in% deny_list ||
+        file_basename %in% expanded_deny_list || filename %in% expanded_deny_list || normalized_path %in% expanded_deny_list) {
+      return(FALSE)  # File is in deny list, don't auto-accept
+    }
+    
+    return(TRUE)  # File not in deny list, auto-accept
+  } else {
+    # If allow_anything is FALSE, check that the file is in the allow list
+    allow_list <- .rs.get_automation_list("auto_run_files_allow_list")
+    allow_list <- unlist(allow_list)  # Convert from list to character vector
+    
+    # Expand tildes in allow list entries for comparison
+    expanded_allow_list <- sapply(allow_list, function(path) {
+      if (startsWith(path, "~")) {
+        # Expand tilde using normalizePath
+        tryCatch({
+          normalizePath(path, winslash = "/", mustWork = FALSE)
+        }, error = function(e) {
+          path  # Return original if expansion fails
+        })
+      } else {
+        path  # Return as-is if no tilde
+      }
+    }, USE.NAMES = FALSE)
+    
+    # Check exact matches against both original and expanded lists
+    basename_match <- file_basename %in% allow_list || file_basename %in% expanded_allow_list
+    filename_match <- filename %in% allow_list || filename %in% expanded_allow_list
+    normalized_match <- normalized_path %in% allow_list || normalized_path %in% expanded_allow_list
+    
+    # Check if the file (basename, original filename, or full normalized path) is in the allow list
+    if (!basename_match && !filename_match && !normalized_match) {
+      return(FALSE)  # File not in allow list, don't auto-accept
+    }
+    
+    return(TRUE)  # File is in allow list, auto-accept
+  }
+})
+
+# Delete file auto-accept checking function (internal use only)
+.rs.addFunction("should_auto_accept_delete_file", function(filename) {
+  # Check if auto_delete_files is enabled
+  auto_delete_enabled <- .rs.get_auto_delete_files()
+  
+  if (!auto_delete_enabled) {
+    return(FALSE)
+  }
+  
+  # If auto-delete is enabled, always auto-accept (no allow/deny lists for delete files)
+  return(TRUE)
+})
+
+# Terminal command auto-accept checking function (internal use only)
+.rs.addFunction("should_auto_accept_terminal_command", function(terminal_command) {
+  # Check if auto_accept_terminal is enabled
+  auto_accept_enabled <- .rs.get_auto_accept_terminal()
+  if (!auto_accept_enabled) {
+    return(FALSE)
+  }
+  
+  # Extract terminal commands from the command
+  commands_in_code <- .rs.extract_bash_functions(terminal_command)
+  
+  # Trim whitespace from extracted commands
+  commands_in_code <- trimws(commands_in_code)
+  
+  # If no commands were extracted, don't auto-accept
+  if (length(commands_in_code) == 0) {
+    return(FALSE)
+  }
+  
+  # Check allow_anything setting
+  allow_anything <- .rs.get_auto_accept_terminal_allow_anything()
+  
+  if (allow_anything) {
+    # If allow_anything is TRUE, check that none of the commands are in the deny list
+    deny_list <- .rs.get_automation_list("auto_accept_terminal_deny_list")
+    deny_list <- unlist(deny_list)  # Convert from list to character vector
+    # Normalize whitespace
+    deny_list <- trimws(deny_list)
+    deny_list <- deny_list[nzchar(deny_list)]
+    
+    # Check if any command in the code is in the deny list
+    for (cmd in commands_in_code) {
+      if (cmd %in% deny_list) {
+        return(FALSE)  # Found a command in deny list, don't auto-accept
+      }
+    }
+    
+    return(TRUE)  # No commands in deny list, auto-accept
+  } else {
+    # If allow_anything is FALSE, check that ALL commands are in the allow list
+    allow_list <- .rs.get_automation_list("auto_accept_terminal_allow_list")
+    allow_list <- unlist(allow_list)  # Convert from list to character vector
+    # Normalize whitespace
+    allow_list <- trimws(allow_list)
+    allow_list <- allow_list[nzchar(allow_list)]
+    
+    # Check if all commands in the code are in the allow list
+    for (cmd in commands_in_code) {
+      if (!cmd %in% allow_list) {
+        return(FALSE)  # Found a command not in allow list, don't auto-accept
+      }
+    }
+    
+    return(TRUE)  # All commands are in allow list, auto-accept
   }
 })

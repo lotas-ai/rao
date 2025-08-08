@@ -127,6 +127,12 @@ public interface AiServerOperations
    void removeContextItem(String path, ServerRequestCallback<Boolean> requestCallback);
    
    void clearContextItems(ServerRequestCallback<Void> requestCallback);
+   
+   void suggestTopics(String prefix, ServerRequestCallback<JsArrayString> requestCallback);
+   
+   void addDocsContext(String topic, String name, ServerRequestCallback<Boolean> requestCallback);
+   
+   void addChatContext(int conversationId, String name, ServerRequestCallback<Boolean> requestCallback);
 
    void getTerminalWebsocketPort(ServerRequestCallback<Double> requestCallback);
    
@@ -229,7 +235,6 @@ public interface AiServerOperations
    
    void setAutoDeleteFiles(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback);
    
-   // Allow/deny list settings
    void getAutoAcceptConsoleAllowAnything(ServerRequestCallback<Boolean> requestCallback);
    
    void setAutoAcceptConsoleAllowAnything(boolean enabled, ServerRequestCallback<java.lang.Void> requestCallback);

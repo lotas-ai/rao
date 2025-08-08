@@ -578,6 +578,33 @@
                         message_id = as.numeric(entry$id),
                         content = "edit_file"
                      ))
+                  } else {
+                     # Create buttons for restored edit_file widgets
+                     auto_accept_enabled <- tryCatch({
+                        .rs.get_auto_accept_edits()
+                     }, error = function(e) {
+                        FALSE
+                     })
+                     
+                     # DEBUG: Check for pending message with auto_accept = TRUE
+                     pending_auto_accept <- FALSE
+                     for (log_entry in conversation_log) {
+                        if (!is.null(log_entry$role) && log_entry$role == "user" && 
+                            !is.null(log_entry$content) && log_entry$content == "Response pending..." &&
+                            !is.null(log_entry$related_to) && log_entry$related_to == entry$id &&
+                            !is.null(log_entry$auto_accept) && log_entry$auto_accept == TRUE) {
+                           pending_auto_accept <- TRUE
+                           break
+                        }
+                     }
+                     
+                     final_auto_accept <- auto_accept_enabled || pending_auto_accept
+                     
+                     .rs.send_ai_operation("create_widget_buttons", list(
+                        message_id = as.numeric(entry$id),
+                        content = "edit_file",
+                        auto_accept = final_auto_accept
+                     ))
                   }
                }
                
@@ -768,11 +795,38 @@
                   ))
                   items_created <- items_created + 1
                   
-                  # Check if buttons should be hidden
+                  # Check if buttons should be hidden or create buttons for search_replace
                   if (.rs.should_hide_buttons_for_restored_widget(entry$id)) {
                      .rs.send_ai_operation("hide_widget_buttons", list(
                         message_id = as.numeric(entry$id),
                         content = "search_replace"
+                     ))
+                  } else {
+                     # Create buttons for restored search_replace widgets
+                     auto_accept_enabled <- tryCatch({
+                        .rs.get_auto_accept_edits()
+                     }, error = function(e) {
+                        FALSE
+                     })
+                     
+                     # DEBUG: Check for pending message with auto_accept = TRUE
+                     pending_auto_accept <- FALSE
+                     for (log_entry in conversation_log) {
+                        if (!is.null(log_entry$role) && log_entry$role == "user" && 
+                            !is.null(log_entry$content) && log_entry$content == "Response pending..." &&
+                            !is.null(log_entry$related_to) && log_entry$related_to == entry$id &&
+                            !is.null(log_entry$auto_accept) && log_entry$auto_accept == TRUE) {
+                           pending_auto_accept <- TRUE
+                           break
+                        }
+                     }
+                     
+                     final_auto_accept <- auto_accept_enabled || pending_auto_accept
+                     
+                     .rs.send_ai_operation("create_widget_buttons", list(
+                        message_id = as.numeric(entry$id),
+                        content = "search_replace",
+                        auto_accept = final_auto_accept
                      ))
                   }
                } 

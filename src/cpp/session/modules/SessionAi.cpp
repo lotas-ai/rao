@@ -1596,6 +1596,114 @@ Error clearContextItems(const json::JsonRpcRequest& request,
    
    return Success();
 }
+
+Error addDocsContext(const json::JsonRpcRequest& request,
+                    json::JsonRpcResponse* p_response)
+{
+   std::string topic, name;
+   Error error = json::readParam(request.params, 0, &topic);
+   if (error)
+      return error;
+   error = json::readParam(request.params, 1, &name);
+   if (error)
+      return error;
+
+   r::sexp::Protect r_protect;
+   SEXP result;
+   error = r::exec::RFunction(".rs.add_docs_context", topic, name).call(&result, &r_protect);
+   if (error)
+      return error;
+   
+   bool success = r::sexp::asLogical(result);
+   p_response->setResult(success);
+   
+   return Success();
+}
+
+Error addChatContext(const json::JsonRpcRequest& request,
+                    json::JsonRpcResponse* p_response)
+{
+   int conversationId;
+   std::string name;
+   Error error = json::readParam(request.params, 0, &conversationId);
+   if (error)
+      return error;
+   error = json::readParam(request.params, 1, &name);
+   if (error)
+      return error;
+
+   r::sexp::Protect r_protect;
+   SEXP result;
+   error = r::exec::RFunction(".rs.add_chat_context", conversationId, name).call(&result, &r_protect);
+   if (error)
+      return error;
+   
+   bool success = r::sexp::asLogical(result);
+   p_response->setResult(success);
+   
+   return Success();
+}
+
+// Function extraction handlers
+Error extractRFunctions(const json::JsonRpcRequest& request,
+                       json::JsonRpcResponse* p_response)
+{
+   std::string r_code;
+   Error error = json::readParam(request.params, 0, &r_code);
+   if (error)
+      return error;
+   
+   r::sexp::Protect r_protect;
+   SEXP result;
+   error = r::exec::RFunction(".rs.extract_r_functions", r_code).call(&result, &r_protect);
+   if (error)
+      return error;
+   
+   // Convert character vector result to JSON array
+   core::json::Array functions_array;
+   if (TYPEOF(result) == STRSXP)
+   {
+      int len = r::sexp::length(result);
+      for (int i = 0; i < len; i++)
+      {
+         std::string func_name = r::sexp::asString(STRING_ELT(result, i));
+         functions_array.push_back(func_name);
+      }
+   }
+   
+   p_response->setResult(functions_array);
+   return Success();
+}
+
+Error extractBashFunctions(const json::JsonRpcRequest& request,
+                          json::JsonRpcResponse* p_response)
+{
+   std::string bash_code;
+   Error error = json::readParam(request.params, 0, &bash_code);
+   if (error)
+      return error;
+   
+   r::sexp::Protect r_protect;
+   SEXP result;
+   error = r::exec::RFunction(".rs.extract_bash_functions", bash_code).call(&result, &r_protect);
+   if (error)
+      return error;
+   
+   // Convert character vector result to JSON array
+   core::json::Array commands_array;
+   if (TYPEOF(result) == STRSXP)
+   {
+      int len = r::sexp::length(result);
+      for (int i = 0; i < len; i++)
+      {
+         std::string cmd_name = r::sexp::asString(STRING_ELT(result, i));
+         commands_array.push_back(cmd_name);
+      }
+   }
+   
+   p_response->setResult(commands_array);
+   return Success();
+}
    
 
 Error getCurrentConversationIndex(const json::JsonRpcRequest& request,
@@ -3645,6 +3753,10 @@ Error initialize()
       (bind(module_context::registerRpcMethod, "get_all_open_documents", getAllOpenDocuments))
       (bind(module_context::registerRpcMethod, "remove_context_item", removeContextItem))
       (bind(module_context::registerRpcMethod, "clear_context_items", clearContextItems))
+      (bind(module_context::registerRpcMethod, "add_docs_context", addDocsContext))
+      (bind(module_context::registerRpcMethod, "add_chat_context", addChatContext))
+      (bind(module_context::registerRpcMethod, "extract_r_functions", extractRFunctions))
+      (bind(module_context::registerRpcMethod, "extract_bash_functions", extractBashFunctions))
       (bind(module_context::registerRpcMethod, "create_new_conversation", createNewConversation))
       (bind(module_context::registerRpcMethod, "list_attachments", listAttachments))
       (bind(module_context::registerRpcMethod, "delete_attachment", 

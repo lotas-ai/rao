@@ -237,12 +237,17 @@
   # 1. Direct context attached by the user (with full file content for files)
   context_files <- character(0)
   
-  tryCatch({
-    context_items <- .rs.getVar("context_items")
+  context_items <- .rs.getVar("context_items")
     
     if (!is.null(context_items) && length(context_items) > 0) {
-      # Collect all context paths for duplicate detection
-      all_context_paths <- sapply(context_items, function(item) item$path)
+      # Collect all context paths for duplicate detection (exclude NULL paths)
+      all_context_paths <- character(0)
+      for (item in context_items) {
+        if (!is.null(item$path)) {
+          all_context_paths <- c(all_context_paths, item$path)
+        }
+      }
+
       
       for (i in seq_along(context_items)) {
         item <- context_items[[i]]
@@ -255,10 +260,7 @@
             # Ensure symbol index for this directory (only for disk files)
             if (file.exists(path)) {
               file_dir <- dirname(path)
-              tryCatch({
-                .rs.ensure_symbol_index_for_ai_search(file_dir)
-              }, error = function(e) {
-              })
+              .rs.ensure_symbol_index_for_ai_search(file_dir)
             }
             
             is_directory <- !is.null(item$type) && item$type == "directory"
@@ -268,35 +270,33 @@
             
             if (is_directory) {
               # For directories, list contents and find symbols
-              dir_files <- tryCatch(list.files(path, full.names = FALSE), error = function(e) character(0))
+              dir_files <- list.files(path, full.names = FALSE)
               
               # Get complete symbols for the directory using find_symbol
-              dir_symbols <- tryCatch({
-                search_term <- basename(path)
-                symbol_result <- .rs.find_symbol(search_term)
-                if (!is.null(symbol_result) && length(symbol_result) > 0) {
-                  # Filter results to only include symbols from the exact directory path
-                  filtered_symbols <- list()
-                  for (sym in symbol_result) {
-                    if (!is.null(sym$file) && !is.null(sym$parent) && sym$parent == path) {
-                      filtered_symbols[[length(filtered_symbols) + 1]] <- sym
-                    }
-                  }
-                  filtered_symbols
-                } else {
-                  list()
-                }
-              }, error = function(e) {
-                list()
-              })
+              search_term <- basename(path)
+              symbol_result <- .rs.find_symbol(search_term)
               
-              result$direct_context[[length(result$direct_context) + 1]] <- list(
+              dir_symbols <- list()
+              if (!is.null(symbol_result) && length(symbol_result) > 0) {
+                # Filter results to only include symbols from the exact directory path
+                for (sym in symbol_result) {
+                  if (!is.null(sym$file) && !is.null(sym$parent) && sym$parent == path) {
+                    dir_symbols[[length(dir_symbols) + 1]] <- sym
+                  }
+                }
+              }
+
+              
+              display_name <- .rs.get_unique_display_name(path, all_context_paths)
+              
+              directory_item <- list(
                 type = "directory",
-                name = .rs.get_unique_display_name(path, all_context_paths),
+                name = display_name,
                 path = path,
                 contents = dir_files,
                 symbols = dir_symbols
               )
+              result$direct_context[[length(result$direct_context) + 1]] <- directory_item
             } else {
               # For files, handle differently based on whether line numbers are specified
               has_line_numbers <- !is.null(item$start_line) && !is.null(item$end_line)
@@ -355,11 +355,43 @@
             }
           }
         }
+        
+        # Handle chat and docs context items (don't have path field)
+        if (!is.null(item$type) && item$type == "chat") {
+          # Get conversation summary for chat context items
+            summary_text <- .rs.get_conversation_summary_for_context(item$id)
+            
+            if (!is.null(summary_text) && nchar(summary_text) > 0) {
+              context_item <- list(
+                type = "chat",
+                name = item$name,
+                id = item$id,
+                summary = summary_text
+              )
+              result$direct_context[[length(result$direct_context) + 1]] <- context_item
+            }
+        }
+        if (!is.null(item$type) && item$type == "docs") {
+          # Convert docs to markdown for docs context items
+            
+            # Validate topic is not NULL and not empty
+            if (!is.null(item$topic) && is.character(item$topic) && nchar(item$topic) > 0) {
+              markdown_content <- .rs.get_help_as_md(item$topic, "")
+              if (!is.null(markdown_content) && nchar(markdown_content) > 0) {
+                context_item <- list(
+                  type = "docs",
+                  name = item$name,
+                  topic = item$topic,
+                  markdown = markdown_content
+                )
+                result$direct_context[[length(result$direct_context) + 1]] <- context_item
+              }
+            }
+        }
+
       }
     }
-  }, error = function(e) {
-    # Continue on error
-  })
+
   
   # 2. Keywords picked up from the query (exclude context files)
   if (length(words) > 0) {
@@ -487,6 +519,8 @@
   }, error = function(e) {
     result$attached_images <- list()
   })
+  
+
   
   # Return the structured result (or NULL if everything is empty)
   if (length(result$direct_context) == 0 && 
@@ -2483,20 +2517,127 @@
           widget_message_id <- entry$id
           
           # Determine widget type
-          widget_type <- if (function_name == "run_console_cmd") "console" else if (function_name == "run_terminal_cmd") "terminal" else "interactive"
+          widget_type <- if (function_name == "run_console_cmd" || function_name == "run_file") "console" else if (function_name == "run_terminal_cmd") "terminal" else "interactive"
           
-          # For console commands, check if we should auto-accept instead of creating buttons
-          if (function_name == "run_console_cmd") {
+          # For console commands and run_file commands, check if we should auto-accept instead of creating buttons
+          if (function_name == "run_console_cmd" || function_name == "run_file") {
+            
+            if (function_name == "run_console_cmd") {
+              # Get the command from the function call arguments
+              command <- .rs.safe_parse_function_arguments(entry$function_call)$command
+              
+              # Extract R functions from the console command for allow list
+              extracted_functions <- ""
+              if (!is.null(command) && nchar(command) > 0) {
+                extracted_r_functions <- .rs.extract_r_functions(command)
+                # Sanitize tokens
+                extracted_r_functions <- unique(trimws(extracted_r_functions))
+                extracted_r_functions <- extracted_r_functions[nzchar(extracted_r_functions)]
+                if (length(extracted_r_functions) > 0) {
+                  extracted_functions <- paste(extracted_r_functions, collapse = ", ")
+                  extracted_functions <- trimws(extracted_functions)
+                }
+              }
+              
+              # Check if this command should be auto-accepted
+              should_auto_accept <- .rs.should_auto_accept_console_command(command)
+              
+            } else if (function_name == "run_file") {
+              # Get the filename from the function call arguments
+              args <- .rs.safe_parse_function_arguments(entry$function_call)
+              filename <- args$filename
+              
+              # Extract filename for allow list (use just the filename for display)
+              extracted_files <- ""
+              if (!is.null(filename) && nchar(filename) > 0) {
+                # For run_file, we want to show the full filepath in the allow list
+                extracted_files <- filename
+              }
+              
+              # Check if this file should be auto-run
+              should_auto_accept <- .rs.should_auto_accept_run_file(filename)
+            }
+            
+            if (should_auto_accept) {
+              # For auto-accept: create buttons but mark for immediate auto-execution
+              if (function_name == "run_console_cmd") {
+                .rs.send_ai_operation("create_widget_buttons", list(
+                  message_id = as.character(widget_message_id),
+                  content = widget_type,
+                  auto_accept = TRUE,  # Flag for orchestrator to auto-accept
+                  extracted_functions = extracted_functions
+                ))
+              } else if (function_name == "run_file") {
+                .rs.send_ai_operation("create_widget_buttons", list(
+                  message_id = as.character(widget_message_id),
+                  content = widget_type,
+                  auto_accept = TRUE,  # Flag for orchestrator to auto-accept
+                  extracted_files = extracted_files
+                ))
+              }
+            } else {
+              # Send create_widget_buttons operation for manual acceptance
+              if (function_name == "run_console_cmd") {
+                .rs.send_ai_operation("create_widget_buttons", list(
+                  message_id = as.character(widget_message_id),
+                  content = widget_type,
+                  extracted_functions = extracted_functions
+                ))
+              } else if (function_name == "run_file") {
+                .rs.send_ai_operation("create_widget_buttons", list(
+                  message_id = as.character(widget_message_id),
+                  content = widget_type,
+                  extracted_files = extracted_files
+                ))
+              }
+            }
+          } else if (function_name == "run_terminal_cmd") {
             # Get the command from the function call arguments
             command <- .rs.safe_parse_function_arguments(entry$function_call)$command
             
+            # Extract bash commands from the terminal command for allow list
+            extracted_commands <- ""
+            if (!is.null(command) && nchar(command) > 0) {
+              extracted_bash_commands <- .rs.extract_bash_functions(command)
+              if (length(extracted_bash_commands) > 0) {
+                extracted_commands <- paste(extracted_bash_commands, collapse = ", ")
+              }
+            }
+            
             # Check if this command should be auto-accepted
-            should_auto_accept <- .rs.should_auto_accept_console_command(command)
+            should_auto_accept <- .rs.should_auto_accept_terminal_command(command)
             
             if (should_auto_accept) {
-              # Auto-accept the command by directly calling the accept function
-              # This follows the same flow as if the user clicked accept
-              .rs.accept_console_command(as.character(widget_message_id), command, first_function_call_id)
+              # For auto-accept: create buttons but mark for immediate auto-execution
+              .rs.send_ai_operation("create_widget_buttons", list(
+                message_id = as.character(widget_message_id),
+                content = widget_type,
+                auto_accept = TRUE,  # Flag for orchestrator to auto-accept
+                extracted_commands = extracted_commands
+              ))
+            } else {
+              # Send create_widget_buttons operation for manual acceptance
+              .rs.send_ai_operation("create_widget_buttons", list(
+                message_id = as.character(widget_message_id),
+                content = widget_type,
+                extracted_commands = extracted_commands
+              ))
+            }
+          } else if (function_name == "delete_file") {
+            # Get the filename from the function call arguments
+            args <- .rs.safe_parse_function_arguments(entry$function_call)
+            filename <- args$filename
+            
+            # Check if this file should be auto-deleted
+            should_auto_accept <- .rs.should_auto_accept_delete_file(filename)
+            
+            if (should_auto_accept) {
+              # For auto-accept: create buttons but mark for immediate auto-execution
+              .rs.send_ai_operation("create_widget_buttons", list(
+                message_id = as.character(widget_message_id),
+                content = widget_type,
+                auto_accept = TRUE  # Flag for orchestrator to auto-accept
+              ))
             } else {
               # Send create_widget_buttons operation for manual acceptance
               .rs.send_ai_operation("create_widget_buttons", list(

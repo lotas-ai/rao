@@ -405,6 +405,10 @@ public class ClientEventDispatcher
             boolean skipDiffHighlighting = getBooleanFromRData(jsData, "skip_diff_highlighting");
             com.google.gwt.core.client.JavaScriptObject diffData = getJavaScriptObjectFromRData(jsData, "diff_data");
             String functionCallType = getStringFromRData(jsData, "function_call_type", "");
+            boolean autoAccept = getBooleanFromRData(jsData, "auto_accept");
+            String extractedFunctions = getStringFromRData(jsData, "extracted_functions", "");
+            String extractedCommands = getStringFromRData(jsData, "extracted_commands", "");
+            String extractedFiles = getStringFromRData(jsData, "extracted_files", "");
             
             // Clean up filename to remove HTML diff markup
             if (filename != null && filename.contains("<span")) {
@@ -439,7 +443,7 @@ public class ClientEventDispatcher
                 "finish_background_recreation".equals(operationType) ||
                 "create_error_message".equals(operationType)) {
                
-               callAddOperationEvent(sequence, operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting, diffData, functionCallType);
+               callAddOperationEvent(sequence, operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting, diffData, functionCallType, autoAccept, extractedFunctions, extractedCommands, extractedFiles);
             } else {
                Debug.log("DEBUG ClientEventDispatcher: Unknown operation type, skipping: " + operationType);
             }
@@ -1505,9 +1509,9 @@ public class ClientEventDispatcher
       return null;
    }
      
-   private native void callAddOperationEvent(int sequence, String operationType, String messageId, String command, String explanation, String requestId, String filename, String content, boolean skipDiffHighlighting, com.google.gwt.core.client.JavaScriptObject diffData, String functionCallType) /*-{
+   private native void callAddOperationEvent(int sequence, String operationType, String messageId, String command, String explanation, String requestId, String filename, String content, boolean skipDiffHighlighting, com.google.gwt.core.client.JavaScriptObject diffData, String functionCallType, boolean autoAccept, String extractedFunctions, String extractedCommands, String extractedFiles) /*-{
       if ($wnd.aiAddOperationEvent) {
-         $wnd.aiAddOperationEvent(sequence, operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting, diffData, functionCallType);
+         $wnd.aiAddOperationEvent(sequence, operationType, messageId, command, explanation, requestId, filename, content, skipDiffHighlighting, diffData, functionCallType, autoAccept, extractedFunctions, extractedCommands, extractedFiles);
       }
    }-*/;
    
