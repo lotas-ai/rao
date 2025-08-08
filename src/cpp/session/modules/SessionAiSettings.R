@@ -41,7 +41,7 @@
 
 .rs.addFunction("get_provider_from_model", function(model) {
   # OpenAI models
-  openai_models <- c("gpt-4.1") # "o4-mini", "o3")
+  openai_models <- c("gpt-5-mini")
   
   # Anthropic models  
   anthropic_models <- c("claude-sonnet-4-20250514")
@@ -72,9 +72,9 @@
 .rs.addFunction("get_available_models", function(provider = NULL) {
   if (is.null(provider)) {
     # Return all available models if no provider specified
-    return(c("claude-sonnet-4-20250514", "gpt-4.1")) # "o4-mini", "o3"))
+    return(c("claude-sonnet-4-20250514", "gpt-5-mini"))
   } else if (provider == "openai") {
-    return(c("gpt-4.1")) # "o4-mini", "o3"))
+    return(c("gpt-5-mini"))
   } else if (provider == "anthropic") {
     return(c("claude-sonnet-4-20250514"))
   }
@@ -85,9 +85,7 @@
   models <- .rs.get_available_models()
   display_names <- c(
     "claude-sonnet-4-20250514 (Superior coding and analysis - recommended)",
-    "gpt-4.1 (Quick coding and analysis)"
-    # "o4-mini (Fast reasoning and coding)",
-    # "o3 (Advanced reasoning - slower)"
+    "gpt-5-mini (Reasoning tier)"
   )
   names(display_names) <- models
   return(display_names)

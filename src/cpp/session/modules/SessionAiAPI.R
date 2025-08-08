@@ -800,7 +800,8 @@
       using_callr = TRUE,
       bg_process = bg_process,
       stream_file = stream_file,
-      request_type = request_type
+      request_type = request_type,
+      model = final_request_data$model
     ))
     
   }, error = function(e) {
@@ -935,7 +936,7 @@
   console_terminal_message_ids <- list()  # call_id -> message_id
   console_terminal_command_streamed_states <- list()  # "command_streamed_call_id" -> streamed content
   
-  # Timeout configuration - simple 30-second inactivity timeout only
+  # Timeout configuration (restore default timeout)
   activity_timeout_seconds <- 30
   
   # Debugging variables to track what went wrong
@@ -965,17 +966,10 @@
       return(NULL)  # No result yet, return NULL immediately
     }
     
-    # Check timeout - only timeout if no activity for the specified time
+    # Check timeout
     time_since_activity <- difftime(current_time, last_activity_time, units = "secs")
-    
-    if (time_since_activity >= activity_timeout_seconds) {      
-      # Kill the background process to close the httr streaming request
-      tryCatch({
-        bg_process$kill()
-      }, error = function(e) {
-        cat("DEBUG: Error killing background process:", e$message, "\n")
-      })
-      
+    if (time_since_activity >= activity_timeout_seconds) {
+      tryCatch({ bg_process$kill() }, error = function(e) { })
       break
     }
     
