@@ -6,6 +6,10 @@ const copyWebpackPlugin = new CopyWebpackPlugin({
       from: path.resolve(__dirname, 'src', 'assets'),
       to: path.resolve(__dirname, '.webpack/main', 'assets'),
     },
+    {
+      from: path.resolve(__dirname, 'resources'),
+      to: path.resolve(__dirname, '.webpack/main', 'resources'),
+    },
   ],
 });
 

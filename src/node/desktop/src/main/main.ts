@@ -236,6 +236,34 @@ if (!handlingSquirrelEvent) {
 
         await app.whenReady();
 
+        // Set Dock icon based on system appearance (macOS only).
+        // Default mapping:
+        // - Light: RaoDefault.icns
+        // - Dark: RaoDark.icns
+        // Optional "clear" variants can be enabled via RAO_CLEAR_ICONS=true.
+        if (process.platform === 'darwin') {
+          const { nativeImage, nativeTheme } = await import('electron');
+          const path = await import('path');
+          const useClear = (process.env.RAO_CLEAR_ICONS || '').toLowerCase() === 'true';
+
+          const applyDockIcon = () => {
+            const isDark = nativeTheme.shouldUseDarkColors;
+            let file = 'RaoDefault.icns';
+            if (isDark && useClear) file = 'RaoClearDark.icns';
+            else if (isDark) file = 'RaoDark.icns';
+            else if (useClear) file = 'RaoClearLight.icns';
+
+            const iconPath = path.join(__dirname, '../resources/icons', file);
+            const image = nativeImage.createFromPath(iconPath);
+            if (!image.isEmpty()) {
+              app.dock.setIcon(image);
+            }
+          };
+
+          applyDockIcon();
+          nativeTheme.on('updated', applyDockIcon);
+        }
+
         if (!parseStatus(await rstudio.run())) {
           return;
         }

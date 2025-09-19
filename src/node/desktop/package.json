@@ -1,7 +1,7 @@
 {
   "name": "rao",
   "productName": "Rao",
-  "version": "9999.99.9-dev+1",
+  "version": "0.3.0",
   "description": "Rao",
   "main": "./.webpack/main",
   "repository": "https://github.com/lotas-ai/rao",
