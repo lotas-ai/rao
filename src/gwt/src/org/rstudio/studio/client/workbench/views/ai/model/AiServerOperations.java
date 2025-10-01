@@ -50,8 +50,6 @@ public interface AiServerOperations
 
    void showVignette(String topic, String pkgName);
 
-   void acceptEditFileCommand(String editedCode, String messageId, String requestId, ServerRequestCallback<JavaScriptObject> requestCallback);
-      
    void acceptSearchReplaceCommand(String editedCode, String messageId, String requestId, ServerRequestCallback<JavaScriptObject> requestCallback);
    
    void cancelSearchReplaceCommand(String messageId, String requestId, ServerRequestCallback<JavaScriptObject> requestCallback);
@@ -149,8 +147,6 @@ public interface AiServerOperations
    void acceptConsoleCommand(String messageId, String script, String requestId, ServerRequestCallback<java.lang.Void> requestCallback);
    
    void cancelConsoleCommand(String messageId, String requestId, ServerRequestCallback<java.lang.Void> requestCallback);
-
-   void cancelEditFileCommand(String messageId, String requestId, ServerRequestCallback<JavaScriptObject> requestCallback);
 
    void runScriptInConsole(String script, int messageId, ServerRequestCallback<Void> requestCallback);
    

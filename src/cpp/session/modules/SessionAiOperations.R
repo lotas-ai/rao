@@ -9,13 +9,13 @@
 # AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
 #
 
-.rs.addFunction("filter_edited_code_using_diff_data", function(edited_code, edit_file_message_id) {
+.rs.addFunction("filter_edited_code_using_diff_data", function(edited_code, message_id) {
    # Filter the edited_code to only include lines that should be in the final file
    # (unchanged and added lines, excluding deleted lines)
    
    # Get the diff data from conversation_diffs.json
    diffs_data <- .rs.read_conversation_diffs()
-   msg_id_char <- as.character(edit_file_message_id)
+   msg_id_char <- as.character(message_id)
    
    if (is.null(diffs_data$diffs) || is.null(diffs_data$diffs[[msg_id_char]])) {
       # No diff data found, return the edited_code as-is
@@ -166,11 +166,31 @@
          }
       },
       "view_image" = {
-         image_path <- if (!is.null(arguments$image_path)) basename(arguments$image_path) else "unknown"
-         if (is_thinking) {
-            paste0("Viewing image: ", image_path, suffix)
+         # Handle both image_path and image_index (match erdosAi format)
+         if (!is.null(arguments$image_index)) {
+            index <- as.integer(arguments$image_index)
+            if (index == 1) {
+               if (is_thinking) {
+                  paste0("Viewing the most recent plot", suffix)
+               } else {
+                  "Viewed the most recent plot"
+               }
+            } else {
+               plots_ago <- index - 1
+               plot_word <- if (plots_ago == 1) "plot" else "plots"
+               if (is_thinking) {
+                  paste0("Viewing the plot ", plots_ago, " ", plot_word, " ago", suffix)
+               } else {
+                  paste0("Viewed the plot ", plots_ago, " ", plot_word, " ago")
+               }
+            }
          } else {
-            paste0("Viewed image: ", image_path)
+            image_name <- if (!is.null(arguments$image_path)) basename(arguments$image_path) else "image"
+            if (is_thinking) {
+               paste0("Viewing ", image_name, suffix)
+            } else {
+               paste0("Viewed ", image_name)
+            }
          }
       },
       "search_for_file" = {
@@ -188,6 +208,14 @@
             paste0("Listing contents of ", display_path, suffix)
          } else {
             paste0("Listed contents of ", display_path)
+         }
+      },
+      "retrieve_documentation" = {
+         query <- if (!is.null(arguments$query)) arguments$query else "unknown"
+         if (is_thinking) {
+            paste0("Retrieving documentation for ", query, suffix)
+         } else {
+            paste0("Retrieved documentation for ", query)
          }
       },
       "web_search" = {
@@ -358,7 +386,7 @@
 })
 
 .rs.addFunction("create_function_call_widget_operation", function(function_call_entry, function_result = NULL) {
-   # Create widget operation for console/terminal/edit_file function calls
+   # Create widget operation for console/terminal/search_replace function calls
    # Returns list with operation_type, message_id, command, explanation, is_console
    
    if (is.null(function_call_entry) || is.null(function_call_entry$function_call)) {
@@ -473,255 +501,6 @@
    return(result)
 })
 
-.rs.addFunction("accept_edit_file_command", function(edited_code, message_id, request_id) {
-   
-   conversation_index <- .rs.get_current_conversation_index()
-   
-   modification_made <- FALSE
-   file_written <- FALSE
-   
-   latest_message_id <- as.numeric(message_id)
-   
-   conversation_log <- .rs.read_conversation_log()
-   
-   .rs.update_conversation_display()
-   
-   # The message_id passed in should be the edit_file function call ID directly
-   edit_file_message_id <- latest_message_id
-   
-   # Verify this is actually an edit_file function call and extract filename
-   edit_file_entry <- NULL
-   for (entry in conversation_log) {
-      if (!is.null(entry$id) && entry$id == edit_file_message_id && 
-         !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
-         entry$function_call$name == "edit_file") {
-      edit_file_entry <- entry
-      break
-      }
-   }
-   
-   if (is.null(edit_file_entry)) {
-      cat("DEBUG accept_edit_file_command: No edit_file function call found for message ID:", latest_message_id, "\n")
-      return(FALSE)
-   }
-
-   # Extract filename from edit_file arguments
-   edit_args <- tryCatch({
-      if (is.character(edit_file_entry$function_call$arguments)) {
-      jsonlite::fromJSON(edit_file_entry$function_call$arguments, simplifyVector = FALSE)
-      } else {
-      edit_file_entry$function_call$arguments
-      }
-   }, error = function(e) {
-      return(NULL)
-   })
-
-   if (is.null(edit_args) || is.null(edit_args$filename)) {
-      cat("DEBUG accept_edit_file_command: No filename found in edit_file arguments\n")
-      return(FALSE)
-   }
-
-   filename <- edit_args$filename
-
-   if (is.null(filename) || filename == "" || is.na(filename)) {
-      return(FALSE)
-   }
-   
-   # Determine if the original file was saved or unsaved BEFORE any edits
-   original_was_unsaved <- FALSE
-   if (.rs.is_file_open_in_editor(filename)) {
-      # File is open in editor
-      doc_info <- .rs.get_open_document_by_path(filename)
-      if (!is.null(doc_info) && !is.null(doc_info$dirty)) {
-      original_was_unsaved <- as.logical(doc_info$dirty)
-      }
-   }
-
-   # Get original content using effective file content (editor if open, otherwise disk)
-   original_file_content <- .rs.get_effective_file_content(filename)
-   if (is.null(original_file_content)) {
-      original_file_content <- ""  # Empty string for non-existent files
-   }
-   file_existed <- !is.null(.rs.get_effective_file_content(filename)) || file.exists(filename)
-   
-   # Create directory structure if filename contains slashes
-   # Skip directory creation for special __UNSAVED patterns (these are virtual identifiers, not real paths)
-   if (!startsWith(filename, "__UNSAVED") && (grepl("/", filename) || grepl("\\\\", filename))) {
-      file_dir <- dirname(filename)
-      if (!dir.exists(file_dir)) {
-      dir.create(file_dir, recursive = TRUE, showWarnings = FALSE)
-      }
-   }
-
-   # The edited_code contains the full file content including deleted lines for diff display
-   # Filter out deleted lines using the conversation_diffs.json data
-   final_content <- .rs.filter_edited_code_using_diff_data(edited_code, edit_file_message_id)
-   # Handle different scenarios based on whether original file was saved or unsaved
-   if (original_was_unsaved) {
-      # Original file was unsaved - update editor without saving to disk
-      # For accept operations, always mark_clean = FALSE to keep document marked as dirty
-      success <- tryCatch({
-      .rs.invokeRpc("update_open_document_content", filename, final_content, FALSE)
-      }, error = function(e) {
-      FALSE
-      })
-      
-      if (success) {
-      file_written <- TRUE
-      # Check if this is a file creation (no previous content) or modification
-      if (is.null(original_file_content) || nchar(original_file_content) == 0) {
-         # This is a file creation - record as such
-         .rs.record_file_creation(filename)
-      } else {
-         # This is a file modification - record with was_unsaved flag
-         .rs.record_file_modification_with_diff_with_state(filename, original_file_content, final_content, original_was_unsaved)
-      }
-      
-      # Mark the diff as accepted for persistent display
-      tryCatch({
-         .rs.mark_diff_as_accepted(edit_file_message_id, filename)
-      }, error = function(e) {
-         warning("Error marking diff as accepted:", e$message, "\n")
-      })
-      }
-   } else {
-      # Original file was saved - update both editor and disk
-      # Check if content has actually changed
-      current_content <- .rs.get_effective_file_content(filename)
-      content_changed <- is.null(current_content) || current_content != final_content
-      
-      if (content_changed) {
-      # Apply edit using the routing system (which handles both editor and disk)
-      success <- .rs.apply_file_edit(filename, final_content)
-      if (success) {
-         file_written <- TRUE
-         # Check if this is a file creation (no previous content) or modification
-         if (is.null(original_file_content) || nchar(original_file_content) == 0) {
-            # This is a file creation - record as such
-            .rs.record_file_creation(filename)
-         } else {
-            # This is a file modification - record with was_unsaved flag
-            .rs.record_file_modification_with_diff_with_state(filename, original_file_content, final_content, original_was_unsaved)
-         }
-         
-         # Mark the diff as accepted for persistent display
-         tryCatch({
-            .rs.mark_diff_as_accepted(edit_file_message_id, filename)
-         }, error = function(e) {
-            warning("Error marking diff as accepted:", e$message, "\n")
-         })
-      }
-      }
-   }
-   
-   modification_made <- TRUE
-
-   # Only call documentOpen for actual files, not for unsaved documents with special patterns
-   # For unsaved files, the content was already updated via update_open_document_content RPC
-   if (!original_was_unsaved && !startsWith(filename, "__UNSAVED")) {
-      .rs.api.documentOpen(filename)
-   }
-   .rs.save_script_to_history(filename)
-   
-   # Look for existing "Response pending..." procedural user message and replace it
-   conversation_log <- .rs.read_conversation_log()
-   
-   # Find the unique "Response pending..." procedural user message related to this edit_file
-   pending_entries <- which(sapply(conversation_log, function(entry) {
-      result <- !is.null(entry$role) && entry$role == "user" && 
-      !is.null(entry$related_to) && entry$related_to == edit_file_message_id &&
-      !is.null(entry$content) && entry$content == "Response pending..." &&
-      !is.null(entry$procedural) && entry$procedural == TRUE
-      return(result)
-   }))
-   
-   # Must find exactly one pending message
-   if (length(pending_entries) != 1) {
-      stop("Expected exactly 1 pending user message for edit_file message ID ", edit_file_message_id, ", found ", length(pending_entries))
-   }
-   
-   # Replace the pending message with acceptance
-   pending_entry_index <- pending_entries[1]
-
-   # Count lines in the final file
-   final_lines <- strsplit(final_content, "\n")[[1]]
-   line_count <- length(final_lines)
-   line_info <- if (line_count > 1) paste0("1-", line_count) else "1"
-
-   # Create procedural message with actual line and file information
-   acceptance_message <- paste0("Edit file command accepted by user. The edit now constitutes lines ", 
-                              line_info, " of the file ", basename(filename))
-
-   conversation_log[[pending_entry_index]]$content <- acceptance_message
-   # Keep procedural flag so this remains hidden from UI
-   conversation_log[[pending_entry_index]]$procedural <- TRUE
-   
-   .rs.write_conversation_log(conversation_log)
-   
-   # Check if there are messages after this function call in the conversation
-   # If so, trigger API continuation - similar to console/terminal commands
-   function_call_message_id <- as.numeric(message_id)
-   has_newer_messages <- any(sapply(conversation_log, function(entry) {
-      if (is.null(entry$id) || entry$id <= function_call_message_id) {
-         return(FALSE)
-      }
-      
-      # For edit_file, exclude ALL messages related to this specific edit_file command:
-      # - function_call_output (type = "function_call_output", related_to = function_call_message_id)
-      # - assistant message (role = "assistant", related_to = function_call_message_id) 
-      # - procedural user message (role = "user", procedural = true, related_to = function_call_message_id)
-      # - images related to this function call (role = "user", related_to = function_call_message_id)
-      if (!is.null(entry$related_to) && entry$related_to == function_call_message_id) {
-         return(FALSE)
-      }
-      
-      return(TRUE)
-   }))
-   
-   # Return different status based on whether conversation has moved on
-   # For continuation, we need to return the original user message ID, not the function call ID
-   original_user_message_id <- edit_file_entry$related_to
-   
-   if (has_newer_messages) {
-      result <- .rs.create_ai_operation_result(
-         status = "done",
-         data = list(
-            message = "Edit file command accepted - conversation has moved on, not continuing API",
-            related_to_id = as.integer(original_user_message_id),
-            conversation_index = .rs.get_current_conversation_index(),
-            request_id = request_id
-         )
-      )
-      return(result)
-   } else {
-      # CRITICAL FIX: Check for cancellation before returning continue_silent
-      # If cancelled, return done to stop the conversation chain
-      if (.rs.get_conversation_var("ai_cancelled")) {
-         result <- .rs.create_ai_operation_result(
-            status = "done",
-            data = list(
-               message = "Edit file command accepted - request cancelled, stopping conversation chain",
-               related_to_id = as.integer(original_user_message_id),
-               conversation_index = .rs.get_current_conversation_index(),
-               request_id = request_id
-            )
-         )
-         return(result)
-      }
-      
-      result <- .rs.create_ai_operation_result(
-         status = "continue_silent",
-         data = list(
-            message = "Edit file command accepted - returning control to orchestrator",
-            related_to_id = as.integer(original_user_message_id),
-            conversation_index = .rs.get_current_conversation_index(),
-            request_id = request_id
-         )
-      )
-      return(result)
-   }
-})
-
 .rs.addFunction("accept_search_replace_command", function(edited_code, message_id, request_id) {
    
    conversation_index <- .rs.get_current_conversation_index()
@@ -774,7 +553,7 @@
    new_string <- search_replace_args$new_string
    replace_all <- if (!is.null(search_replace_args$replace_all)) search_replace_args$replace_all else FALSE
    
-   # Trim line numbers from old_string and new_string (like edit_file does)
+   # Trim line numbers from old_string and new_string
    old_string <- .rs.remove_line_numbers(old_string)
    new_string <- .rs.remove_line_numbers(new_string)
 
@@ -845,7 +624,7 @@
       }
    }
    
-   # Apply the edit using the same system as edit_file
+   # Apply the file edit
    success <- .rs.apply_file_edit(file_path, new_content)
    
    if (success) {
@@ -868,7 +647,7 @@
          warning("Error marking diff as accepted:", e$message, "\n")
       })
       
-      # Update the existing "Response pending..." assistant message (like edit_file)
+      # Update the existing "Response pending..." assistant message
       conversation_log <- .rs.read_conversation_log()
       
       # Find the unique "Response pending..." procedural user message related to this search_replace
@@ -939,7 +718,7 @@
          }
       }
 
-   # Update document (same as edit_file)
+   # Update document
    if (modification_made && file_written) {
       .rs.api.documentOpen(file_path)
       .rs.save_script_to_history(file_path)
@@ -1581,20 +1360,41 @@
    
    plot_files <- list()
    
-   temp_dir <- tempdir()
-   plot_patterns <- c("rs-graphics-", "Rplot")
+   # Get the actual graphics directory path from C++
+   graphics_path <- tryCatch({
+      .rs.getGraphicsPath()
+   }, error = function(e) {
+      NULL
+   })
    
-   for (pattern in plot_patterns) {
-      temp_files <- list.files(
-         path = temp_dir, 
-         pattern = paste0(pattern, ".*\\.(png|jpeg|jpg|bmp|tiff|svg)$"),
-         full.names = TRUE
-      )
-      if (length(temp_files) > 0) {
-         file_times <- file.info(temp_files)$mtime
-         temp_files <- temp_files[order(file_times, decreasing = TRUE)]
-         plot_files <- c(plot_files, temp_files)
+   if (!is.null(graphics_path) && dir.exists(graphics_path)) {
+      # List all image files in the graphics directory
+      all_files <- list.files(graphics_path, full.names = TRUE, all.files = FALSE)
+      
+      if (length(all_files) > 0) {
+         # Filter to only include image files (exclude .snapshot, .manip, INDEX, and empty.*)
+         image_files <- all_files[grepl("\\.(png|jpg|jpeg|svg|tiff|bmp|gif)$", all_files, ignore.case = TRUE)]
+         image_files <- image_files[!grepl("^empty\\.", basename(image_files), ignore.case = TRUE)]
+         image_files <- image_files[basename(image_files) != "INDEX"]
+         
+         if (length(image_files) > 0) {
+            file_times <- file.info(image_files)$mtime
+            plot_files <- image_files[order(file_times, decreasing = TRUE)]
+         }
       }
+   }
+   
+   # Also check for Rplot files in tempdir (for other graphics devices)
+   temp_dir <- tempdir()
+   rplot_files <- list.files(
+      path = temp_dir, 
+      pattern = "Rplot.*\\.(png|jpeg|jpg|bmp|tiff|svg)$",
+      full.names = TRUE
+   )
+   if (length(rplot_files) > 0) {
+      file_times <- file.info(rplot_files)$mtime
+      rplot_files <- rplot_files[order(file_times, decreasing = TRUE)]
+      plot_files <- c(plot_files, rplot_files)
    }
    
    if (length(plot_files) > 0) {
@@ -2714,10 +2514,6 @@
             function_call_entry$response_id <- response_id
          }
          
-         if (function_name == "edit_file") {
-            function_call_entry$source_function <- "edit_file"
-         }
-         
          conversation_log <- c(conversation_log, list(function_call_entry))
       }
       
@@ -2810,8 +2606,6 @@
       function_result <- .rs.handle_run_console_cmd(normalized_function_call, conversation_log, related_to_id, request_id)
    } else if (function_name == "run_terminal_cmd") {
       function_result <- .rs.handle_run_terminal_cmd(normalized_function_call, conversation_log, related_to_id, request_id)
-   } else if (function_name == "edit_file") {
-      function_result <- .rs.handle_edit_file(normalized_function_call, conversation_log, related_to_id, request_id)
    } else if (function_name == "search_replace") {
       function_result <- .rs.handle_search_replace(normalized_function_call, conversation_log, related_to_id, request_id)
    } else if (function_name == "find_keyword_context") {
@@ -2830,6 +2624,8 @@
       function_result <- .rs.handle_delete_file(normalized_function_call, conversation_log, related_to_id, request_id)
    } else if (function_name == "run_file") {
       function_result <- .rs.handle_run_file(normalized_function_call, conversation_log, related_to_id, request_id)
+   } else if (function_name == "retrieve_documentation") {
+      function_result <- .rs.handle_retrieve_documentation(normalized_function_call, conversation_log, related_to_id, request_id)
    } else {
       # Fallback for unknown function calls
       # Try to use pre-allocated ID (index 2), fall back to new ID if not available
@@ -2851,7 +2647,7 @@
    
    # Create function call message for functions that don't have dedicated widgets  
    # For search_replace, only create message when validation fails (continue_silent status)
-   should_create_message <- function_name %in% c("find_keyword_context", "grep", "read_file", "view_image", "search_for_file", "list_dir") ||
+   should_create_message <- function_name %in% c("find_keyword_context", "grep", "read_file", "view_image", "search_for_file", "list_dir", "retrieve_documentation") ||
                            (function_name == "search_replace" && !is.null(function_result$status) && function_result$status == "continue_silent")
    
    if (should_create_message) {
@@ -2882,7 +2678,7 @@
       }
    }
    
-   # Handle breakout_of_function_calls for run_console_cmd/run_terminal_cmd/delete_file/search_replace/edit_file  
+   # Handle breakout_of_function_calls for run_console_cmd/run_terminal_cmd/delete_file/search_replace  
    if (function_name == "run_console_cmd" || function_name == "run_terminal_cmd") {
       # Find the function call entry using shared function
       conversation_log <- .rs.read_conversation_log()
@@ -3050,17 +2846,14 @@
       
       # Only call update_conversation_display() for functions that create UI elements
       # Skip for simple text output functions to avoid clearing thinking messages
-      needs_ui_update <- function_name %in% c("edit_file", "view_image")
+      needs_ui_update <- function_name %in% c("view_image")
       if (needs_ui_update) {
          .rs.update_conversation_display()
       }
       
-      # CRITICAL FIX: For edit_file, the continue status should pass the function call message ID
-      # as related_to_id so the assistant response relates to the function call, not the user message
+      # For certain functions, use special related_to_id handling
       continue_related_to_id <- related_to_id  # default fallback
-      if (function_name == "edit_file" && !is.null(function_result$function_call_output$related_to)) {
-         continue_related_to_id <- function_result$function_call_output$related_to
-      } else if (function_name == "view_image" && !is.null(function_result$image_msg_id)) {
+      if (function_name == "view_image" && !is.null(function_result$image_msg_id)) {
          # For view_image, the assistant should respond to the image message
          continue_related_to_id <- function_result$image_msg_id
       }
@@ -3264,25 +3057,9 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
       .rs.set_conversation_var("current_related_to_id", related_to_id)
       
       # CRITICAL: Check for buffered function calls BEFORE making API call
-      # EXCEPT: Skip this check if we're processing an edit_file continuation (morph response)
-      # We can detect edit_file continuation by checking if related_to_id points to an edit_file function call
-      is_edit_file_continuation <- FALSE
-      if (!is.null(related_to_id)) {
-         conversation_log <- .rs.read_conversation_log()
-         for (entry in conversation_log) {
-            if (!is.null(entry$id) && entry$id == related_to_id && 
-                !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
-                entry$function_call$name == "edit_file") {
-               is_edit_file_continuation <- TRUE
-               break
-            }
-         }
-      }
-      
-      # If there are buffered function calls AND this is NOT an edit_file continuation,
-      # process the next buffered function call instead of calling API
+      # If there are buffered function calls, process the next one instead of calling API
       has_buffered_calls <- .rs.has_buffered_function_calls()      
-      if (has_buffered_calls && !is_edit_file_continuation) {
+      if (has_buffered_calls) {
          
          next_call <- .rs.get_next_buffered_function_call()
          if (!is.null(next_call)) {
@@ -3393,7 +3170,7 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
          ))
       }
       
-      # For text responses - check if this is edit_file related (needs post-streaming save)
+      # For text responses - check if this is file editing related (needs post-streaming save)
       # Note: end_turn signals are handled within the response processing logic below
       if (is.list(streaming_result) && !is.null(streaming_result$response)) {
          
@@ -3401,83 +3178,6 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
          
          # Only process if we have content to work with
          if (!is.null(response_content)) {
-         # Check if this response is edit_file or search_replace related and needs to be saved here
-         # edit_file and search_replace responses are intentionally NOT saved during streaming to prevent duplicates
-         conversation_log <- .rs.read_conversation_log()
-         is_file_editing_related <- FALSE
-         related_function_name <- NULL
-         
-         # related_to_id should always be present at this point
-         if (is.null(related_to_id)) {
-            stop("related_to_id is required but was NULL when checking for file editing relation")
-         }
-         
-         for (entry in conversation_log) {
-            if (!is.null(entry$id) && entry$id == related_to_id && 
-                !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
-                entry$function_call$name == "edit_file") {
-               is_file_editing_related <- TRUE
-               related_function_name <- entry$function_call$name
-               break
-            }
-         }
-         
-         if (is_file_editing_related) {
-            # edit_file and search_replace responses need to be saved here since they skip streaming saves
-            assistant_msg_id <- if (!is.null(streaming_result$assistant_message_id)) {
-              streaming_result$assistant_message_id
-            } else {
-              NULL
-            }
-            
-            # Add metadata for cancelled partial responses and response_id
-            message_metadata <- NULL
-            if (!is.null(streaming_result$cancelled) && streaming_result$cancelled) {
-               message_metadata <- list(cancelled = TRUE, partial_content = TRUE)
-            }
-            
-            # Include response_id if available for reasoning model chaining
-            if (!is.null(streaming_result$response_id)) {
-              if (is.null(message_metadata)) {
-                message_metadata <- list()
-              }
-              message_metadata$response_id <- streaming_result$response_id
-            }
-            
-            result <- .rs.process_assistant_response(response_content, assistant_msg_id, related_to_id,
-               conversation_index, "ai_operation", message_metadata, NULL)
-            
-            if (is.list(result) && !is.null(result$limit_exceeded) && result$limit_exceeded) {
-               return(.rs.create_ai_operation_result(
-                  status = "done",
-                  data = list(
-                     message = "Assistant message limit exceeded",
-                     conversation_index = conversation_index
-                  )
-               ))
-            }
-            
-            # Immediately trigger conversation recreation to show file editing widgets with diff format
-            # Instead of sending individual stream events, use the background recreation system
-            # to rebuild the entire conversation with the proper diff formatting
-            .rs.update_conversation_display()
-            
-            response_message <- if (!is.null(streaming_result$cancelled) && streaming_result$cancelled) {
-               "Partial edit_file response preserved after cancellation"
-            } else if (!is.null(streaming_result$end_turn) && streaming_result$end_turn == TRUE) {
-               "edit_file response completed with end_turn signal"
-            } else {
-               "edit_file response processed and saved"
-            }
-            return(.rs.create_ai_operation_result(
-               status = "done",
-               data = list(
-                  message = response_message,
-                  conversation_index = conversation_index,
-                  related_to_id = related_to_id
-               )
-            ))
-         } else {
             # Regular assistant messages are saved during streaming completion in SessionAiAPI.R
             # EXCEPT for cancelled responses - those need to be saved here to preserve partial content
             if (!is.null(streaming_result$cancelled) && streaming_result$cancelled) {
@@ -3576,7 +3276,6 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
                ))
             }
          }
-         }  # Close if (!is.null(response_content))
       }
       
       # Handle end_turn signals without response content
@@ -3638,16 +3337,11 @@ if (exists(".rs.complete_deferred_conversation_init", mode = "function")) {
             related_to_id = related_to_id
          )
       ))
-   }
-   
-   # OPERATION TYPE: FUNCTION_CALL (delegated to process_single_function_call)
-   else if (operation_type == "function_call") {      
-
+   } else if (operation_type == "function_call") {
+      # OPERATION TYPE: FUNCTION_CALL (delegated to process_single_function_call)      
       return(.rs.process_single_function_call(function_call, related_to_id, request_id, NULL))
-   }
-
-   # INVALID OPERATION TYPE
-   else {
+   } else {
+      # INVALID OPERATION TYPE - should never reach here
       stop("DEBUG: Unknown operation_type received:", operation_type)
    }
 })

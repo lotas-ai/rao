@@ -971,10 +971,6 @@ public class AiPane extends WorkbenchPane
    private native void exportJSCallbackMethods() /*-{
       var thiz = this;
       
-      $wnd.aiAcceptEditFileCommand = $entry(function(editedCode, messageId) {
-         thiz.@org.rstudio.studio.client.workbench.views.ai.AiPane::handleAcceptEditFileCommand(Ljava/lang/String;Ljava/lang/String;)(editedCode, messageId);
-      });
-      
       $wnd.aiGetFileNameForMessageId = $entry(function(messageId, callback) {
          thiz.@org.rstudio.studio.client.workbench.views.ai.AiPane::handleGetFileNameForMessageId(Ljava/lang/String;Lcom/google/gwt/core/client/JavaScriptObject;)(messageId, callback);
       });
@@ -1758,7 +1754,7 @@ public class AiPane extends WorkbenchPane
             // Hide the buttons in the widget
             hideButtonsInWidget(messageId, "console");
             
-            // Get the request ID from the console widget (like edit file widgets do)
+            // Get the request ID from the console widget
             String requestId = null;
             AiStreamingPanel streamingPanel = getStreamingPanel();
             if (streamingPanel != null) {
@@ -1810,7 +1806,7 @@ public class AiPane extends WorkbenchPane
          @Override
          public void onResponseReceived(Boolean result) {
             
-            // Get the request ID from the console widget (like edit file widgets do)
+            // Get the request ID from the console widget
             String requestId = null;
             AiStreamingPanel streamingPanel = getStreamingPanel();
             if (streamingPanel != null) {
@@ -1861,7 +1857,7 @@ public class AiPane extends WorkbenchPane
             // Hide the buttons in the widget
             hideButtonsInWidget(messageId, "terminal");
             
-            // Get the request ID from the terminal widget (like edit file widgets do)
+            // Get the request ID from the terminal widget
             String requestId = null;
             AiStreamingPanel streamingPanel = getStreamingPanel();
             if (streamingPanel != null) {
@@ -1911,7 +1907,7 @@ public class AiPane extends WorkbenchPane
          @Override
          public void onResponseReceived(Boolean result) {
             
-            // Get the request ID from the terminal widget (like edit file widgets do)
+            // Get the request ID from the terminal widget
             String requestId = null;
             AiStreamingPanel streamingPanel = getStreamingPanel();
             if (streamingPanel != null) {
@@ -2410,7 +2406,7 @@ public class AiPane extends WorkbenchPane
             server_.acceptSearchReplaceCommand(editedContent, messageId, finalRequestId, new ServerRequestCallback<JavaScriptObject>() {
                @Override
                public void onResponseReceived(JavaScriptObject result) {
-                  // Check if the result contains a status that needs processing (same as edit_file)
+                  // Check if the result contains a status that needs processing
                   if (result != null) {
                      JSONObject resultObj = new JSONObject(result);
                      if (resultObj.containsKey("status")) {
@@ -2511,7 +2507,7 @@ public class AiPane extends WorkbenchPane
             server_.cancelSearchReplaceCommand(messageId, finalRequestId, new ServerRequestCallback<JavaScriptObject>() {
                @Override
                public void onResponseReceived(JavaScriptObject result) {
-                  // Check if the result contains a status that needs processing (same as edit_file)
+                  // Check if the result contains a status that needs processing
                   if (result != null) {
                      JSONObject resultObj = new JSONObject(result);
                      if (resultObj.containsKey("status")) {
@@ -2585,212 +2581,6 @@ public class AiPane extends WorkbenchPane
       });
    }
    
-   public void handleAcceptEditFileCommand(String messageId, String editedContent) {
-      // IMMEDIATELY mark button as run to make it disappear - no advancement, just gone forever
-      server_.markButtonAsRun(messageId, "accept", new ServerRequestCallback<Boolean>() {
-         @Override
-         public void onResponseReceived(Boolean result) {
-            // Hide the buttons in the widget
-            hideButtonsInWidget(messageId, "edit_file");
-            
-            // Now proceed with the actual edit file acceptance
-            // Get the request ID from the edit file widget (like console/terminal widgets do)
-            String requestId = null;
-            AiStreamingPanel streamingPanel = getStreamingPanel();
-            if (streamingPanel != null) {
-               org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget = 
-                  streamingPanel.getEditFileWidget(messageId);
-               if (editFileWidget != null) {
-                  requestId = editFileWidget.getRequestId();
-               }
-            }
-            
-            // requestId must always be present - if it's missing, this indicates a bug
-            if (requestId == null || requestId.isEmpty()) {
-               String errorMessage = "CRITICAL ERROR: Edit file command acceptance failed - missing request_id for messageId: " + messageId;
-               Debug.log(errorMessage);
-               globalDisplay_.showErrorMessage("Edit File Command Error", errorMessage);
-               return;
-            }
-            
-            // Make requestId final for use in the callback
-            final String finalRequestId = requestId;
-            server_.acceptEditFileCommand(editedContent, messageId, finalRequestId, new ServerRequestCallback<JavaScriptObject>() {
-               @Override
-               public void onResponseReceived(JavaScriptObject result) {
-                  // Check if the result contains a status that needs processing
-                  if (result != null) {
-                     JSONObject resultObj = new JSONObject(result);
-                     if (resultObj.containsKey("status")) {
-                        String status = responses_.getString(resultObj, "status", "");
-                        if ("continue_silent".equals(status)) {
-                           // R wants us to continue the conversation
-                           Integer relatedToId = null;
-                           Integer conversationIndex = null;
-                           
-                           if (resultObj.containsKey("data")) {
-                              JSONObject dataObj = resultObj.get("data").isObject();
-                              if (dataObj != null) {
-                                 if (dataObj.containsKey("related_to_id")) {
-                                    relatedToId = responses_.getInteger(dataObj, "related_to_id", null);
-                                 }
-                                 if (dataObj.containsKey("conversation_index")) {
-                                    conversationIndex = responses_.getInteger(dataObj, "conversation_index", null);
-                                 }
-                              }
-                           }
-                           
-                           // Validate required parameters
-                           if (conversationIndex == null) {
-                              globalDisplay_.showErrorMessage("Error", "Edit file command response missing conversation_index");
-                              return;
-                           }
-                           
-                           if (relatedToId == null) {
-                              globalDisplay_.showErrorMessage("Error", "Edit file command response missing related_to_id");
-                              return;
-                           }
-                           
-                           // Use orchestrator to continue the conversation
-                           if (aiOrchestrator_ != null) {
-                              aiOrchestrator_.continueConversation(relatedToId, conversationIndex, finalRequestId);
-                           } else {
-                              Debug.log("DEBUG handleAcceptEditFileCommand: aiOrchestrator_ is null!");
-                           }
-                           return;
-                        }
-                        else if ("done".equals(status)) {
-                           // Processing is complete - no further action needed
-                           return;
-                        } else {
-                           Debug.log("DEBUG handleAcceptEditFileCommand: status is not continue_silent or done, it is: " + status);
-                        }
-                     } else {
-                        Debug.log("DEBUG handleAcceptEditFileCommand: result does not contain status key");
-                     }
-                  } else {
-                     Debug.log("DEBUG handleAcceptEditFileCommand: result is null");
-                  }
-                  // No recognized status or null result - no further action needed
-               }
-               
-               @Override
-               public void onError(ServerError error) {
-                  Debug.log("DEBUG: accept_edit_file_command server call failed: " + error.getMessage());
-               }
-            });
-         }
-         
-         @Override
-         public void onError(ServerError error) {
-            globalDisplay_.showErrorMessage("Error", "Failed to mark button as run: " + error.getMessage());
-         }
-      });
-   }
-   
-   public void handleCancelEditFileCommand(String messageId) {
-      // IMMEDIATELY mark button as run to make it disappear - no advancement, just gone forever
-      server_.markButtonAsRun(messageId, "cancel", new ServerRequestCallback<Boolean>() {
-         @Override
-         public void onResponseReceived(Boolean result) {
-            // Hide the buttons in the widget
-            hideButtonsInWidget(messageId, "edit_file");
-            
-            // Now proceed with the actual edit file cancellation
-            // Get the request ID from the edit file widget (like console/terminal widgets do)
-            String requestId = null;
-            AiStreamingPanel streamingPanel = getStreamingPanel();
-            if (streamingPanel != null) {
-               org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget = 
-                  streamingPanel.getEditFileWidget(messageId);
-               if (editFileWidget != null) {
-                  requestId = editFileWidget.getRequestId();
-               }
-            }
-            
-            // requestId must always be present - if it's missing, this indicates a bug
-            if (requestId == null || requestId.isEmpty()) {
-               String errorMessage = "CRITICAL ERROR: Edit file command cancellation failed - missing request_id for messageId: " + messageId;
-               Debug.log(errorMessage);
-               globalDisplay_.showErrorMessage("Edit File Command Error", errorMessage);
-               return;
-            }
-            
-            // Make requestId final for use in the callback
-            final String finalRequestId = requestId;
-            server_.cancelEditFileCommand(messageId, finalRequestId, new ServerRequestCallback<JavaScriptObject>() {
-               @Override
-               public void onResponseReceived(JavaScriptObject result) {
-                  // Check if the result contains a status that needs processing
-                  if (result != null) {
-                     JSONObject resultObj = new JSONObject(result);
-                     if (resultObj.containsKey("status")) {
-                        String status = responses_.getString(resultObj, "status", "");
-                        if ("continue_silent".equals(status)) {
-                           // R wants us to continue the conversation
-                           Integer relatedToId = null;
-                           Integer conversationIndex = null;
-                           
-                           if (resultObj.containsKey("data")) {
-                              JSONObject dataObj = resultObj.get("data").isObject();
-                              if (dataObj != null) {
-                                 if (dataObj.containsKey("related_to_id")) {
-                                    relatedToId = responses_.getInteger(dataObj, "related_to_id", null);
-                                 }
-                                 if (dataObj.containsKey("conversation_index")) {
-                                    conversationIndex = responses_.getInteger(dataObj, "conversation_index", null);
-                                 }
-                              }
-                           }
-                           
-                           // Validate required parameters
-                           if (conversationIndex == null) {
-                              globalDisplay_.showErrorMessage("Error", "Edit file command response missing conversation_index");
-                              return;
-                           }
-                           
-                           if (relatedToId == null) {
-                              globalDisplay_.showErrorMessage("Error", "Edit file command response missing related_to_id");
-                              return;
-                           }
-                           
-                           // Use orchestrator to continue the conversation
-                           if (aiOrchestrator_ != null) {
-                              aiOrchestrator_.continueConversation(relatedToId, conversationIndex, finalRequestId);
-                           } else {
-                              Debug.log("DEBUG handleCancelEditFileCommand: aiOrchestrator_ is null!");
-                           }
-                           return;
-                        }
-                        else if ("done".equals(status)) {
-                           // Processing is complete - no further action needed
-                           return;
-                        } else {
-                           Debug.log("DEBUG handleCancelEditFileCommand: status is not continue_silent or done, it is: " + status);
-                        }
-                     } else {
-                        Debug.log("DEBUG handleCancelEditFileCommand: result does not contain status key");
-                     }
-                  } else {
-                     Debug.log("DEBUG handleCancelEditFileCommand: result is null");
-                  }
-                  // No recognized status or null result - no further action needed
-               }
-               
-               @Override
-               public void onError(ServerError error) {
-                  globalDisplay_.showErrorMessage("Error", "Failed to cancel edit file command: " + error.getMessage());
-               }
-            });
-         }
-         
-         @Override
-         public void onError(ServerError error) {
-            globalDisplay_.showErrorMessage("Error", "Failed to mark button as run: " + error.getMessage());
-         }
-      });
-   }
-   
    /**
     * Hides buttons in the specified widget type by message ID
     */
@@ -2809,12 +2599,6 @@ public class AiPane extends WorkbenchPane
          AiTerminalWidget terminalWidget = streamingPanel.getTerminalWidget(messageId);
          if (terminalWidget != null) {
             terminalWidget.hideButtons();
-         }
-      } else if ("edit_file".equals(widgetType)) {
-         org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget = 
-            streamingPanel.getEditFileWidget(messageId);
-         if (editFileWidget != null) {
-            editFileWidget.hideButtons();
          }
       } else if ("search_replace".equals(widgetType)) {
          org.rstudio.studio.client.workbench.views.ai.widgets.AiSearchReplaceWidget searchReplaceWidget = 

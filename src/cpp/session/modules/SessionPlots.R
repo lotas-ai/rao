@@ -36,4 +36,8 @@ setHook(
   },
   action = "append")
 
+# Function to get the actual graphics path from C++
+.rs.addFunction("getGraphicsPath", function() {
+  .rs.invokeRpc("get_graphics_path")
+})
 

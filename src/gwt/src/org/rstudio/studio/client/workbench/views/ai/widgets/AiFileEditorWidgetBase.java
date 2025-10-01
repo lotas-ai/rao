@@ -21,7 +21,7 @@ import org.rstudio.core.client.Debug;
 import org.rstudio.core.client.widget.FontSizer;
 
 /**
- * Abstract base class for AI widgets that edit files (edit_file and search_replace)
+ * Abstract base class for AI widgets that edit files using search_replace
  * Contains all common functionality: diff highlighting, editor management, content handling
  */
 public abstract class AiFileEditorWidgetBase extends AiWidgetBase
@@ -48,7 +48,7 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
    }
    
    /**
-    * Create the main widget structure - common to both edit_file and search_replace
+    * Create the main widget structure - common to search_replace widgets
     */
    protected Widget createWidget(String content, String filename)
    {
@@ -176,7 +176,7 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
     */
    private void createButtonContainer(VerticalPanel container)
    {
-      // Create the new vertical button stack (no extracted items needed for edit file)
+      // Create the new vertical button stack (no extracted items needed for file editing)
       verticalButtonStack_ = createVerticalButtonStack(functionCallType_, "");
       
       // Create a horizontal panel to hold the button stack on the right (same as console widgets)

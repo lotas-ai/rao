@@ -370,7 +370,7 @@ public class AiConsoleWidget extends AiWidgetBase
       // Set console-like styling
       editor.getWidget().addStyleName("aiConsoleEditor");
       
-      // Apply proper font sizing using FontSizer system (same as edit_file widgets)
+      // Apply proper font sizing using FontSizer system
       FontSizer.applyNormalFontSize(editor.getWidget());
       
       return editor;

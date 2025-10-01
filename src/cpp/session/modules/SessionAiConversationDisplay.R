@@ -91,7 +91,7 @@
   # Read conversation_log for widget recreation
   conversation_log <- .rs.read_conversation_log()
   
-  # Recreate console/terminal/edit_file widgets for this conversation
+  # Recreate console/terminal widgets for this conversation
   .rs.recreate_console_widgets_for_conversation(conversation_log)
   
   # Create revert buttons for user messages
@@ -155,13 +155,13 @@
       }
    }
    
-   # Check if it's an assistant message with related_to pointing to edit_file or search_replace
+   # Check if it's an assistant message with related_to pointing to search_replace
    if (!is.null(message$role) && message$role == "assistant" && !is.null(message$related_to)) {
-      # Find the related edit_file or search_replace function call
+      # Find the related search_replace function call
       for (entry in conversation_log) {
          if (!is.null(entry$id) && entry$id == message$related_to && 
              !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
-             (entry$function_call$name == "edit_file" || entry$function_call$name == "search_replace")) {
+             entry$function_call$name == "search_replace") {
             
             # Extract filename from the function call
             args <- tryCatch({
@@ -178,16 +178,14 @@
                # Get filename from appropriate field based on function type
                filename <- if (entry$function_call$name == "search_replace" && !is.null(args$file_path)) {
                   basename(args$file_path)
-               } else if (entry$function_call$name == "edit_file" && !is.null(args$filename)) {
-                  basename(args$filename)
                } else {
                   NULL
                }
                
                if (!is.null(filename)) {
                
-                  # Calculate diff statistics
-                  diff_stats <- .rs.get_edit_file_diff_stats(message_id, conversation_log)
+                  # Calculate diff statistics from conversation_diffs.json
+                  diff_stats <- .rs.get_diff_stats_from_diffs_file(message_id, conversation_log)
                   
                   if (!is.null(diff_stats) && (diff_stats$added > 0 || diff_stats$deleted > 0)) {
                      # Format diff stats with CSS classes for proper styling
@@ -208,7 +206,7 @@
    return(NULL)
 })
 
-.rs.addFunction("get_edit_file_diff_stats", function(message_id, conversation_log) {
+.rs.addFunction("get_diff_stats_from_diffs_file", function(message_id, conversation_log) {
    # Find the assistant message
    assistant_message <- NULL
    for (entry in conversation_log) {
@@ -223,9 +221,6 @@
       return(NULL)
    }
    
-   # Always use the conversation_diffs.json file to get diff statistics
-   # Never use raw files since they might change
-   
    # Read the conversation diffs data
    diffs_data <- .rs.read_conversation_diffs()
    
@@ -233,11 +228,11 @@
       return(NULL)
    }
    
-   # Look for the related_to ID in the diffs data (edit_file function call ID)
-   edit_file_id_str <- as.character(assistant_message$related_to)
+   # Look for the related_to ID in the diffs data (function call ID)
+   function_call_id_str <- as.character(assistant_message$related_to)
    
-   if (!is.null(diffs_data$diffs[[edit_file_id_str]])) {
-      diff_entry <- diffs_data$diffs[[edit_file_id_str]]
+   if (!is.null(diffs_data$diffs[[function_call_id_str]])) {
+      diff_entry <- diffs_data$diffs[[function_call_id_str]]
       
       if (!is.null(diff_entry$diff_data) && length(diff_entry$diff_data) > 0) {
          # Count lines added and deleted from the diff_data array
@@ -426,7 +421,7 @@
          function_name <- entry$function_call$name
          
          # Handle function calls that should show as permanent messages (no widgets)
-         if (function_name %in% c("find_keyword_context", "grep", "read_file", "view_image", "search_for_file", "list_dir")) {
+         if (function_name %in% c("find_keyword_context", "grep", "read_file", "view_image", "search_for_file", "list_dir", "retrieve_documentation")) {
             # Parse function call arguments using safe function
             args <- .rs.safe_parse_function_arguments(entry$function_call)
             
@@ -441,7 +436,7 @@
             ))
             items_created <- items_created + 1
          } 
-         # Handle function calls that create widgets (console/terminal/edit_file)
+         # Handle function calls that create widgets (console/terminal)
          else if (function_name == "run_console_cmd" || function_name == "run_terminal_cmd" || function_name == "delete_file" || function_name == "run_file") {
             # Re-run handle_run_file to get the current file content for the widget
             function_result <- NULL
@@ -484,135 +479,6 @@
                   .rs.send_ai_operation("hide_widget_buttons", list(
                      message_id = as.character(entry$id),
                      content = widget_type
-                  ))
-               }
-            }
-         } else if (function_name == "edit_file") {
-            # Look for related assistant message to get the content
-            assistant_content <- NULL
-            assistant_request_id <- NULL
-            is_cancelled_edit <- FALSE
-            
-            for (check_entry in conversation_log) {
-               if (!is.null(check_entry$role) && check_entry$role == "assistant" && 
-                     !is.null(check_entry$related_to) && check_entry$related_to == entry$id) {
-                  assistant_content <- check_entry$content
-                  # Check if this is a cancelled edit
-                  is_cancelled_edit <- (!is.null(check_entry$content) && check_entry$content == "The model chose to cancel the edit.")
-                  break
-               }
-            }
-            
-            # Use the function call's request_id
-            if (!is.null(entry$request_id)) {
-               assistant_request_id <- entry$request_id
-            }
-            
-            # Always create widget (whether or not there's an assistant response)
-            # Parse function call arguments to get filename
-            args <- .rs.safe_parse_function_arguments(entry$function_call)
-            
-            if (!is.null(args)) {
-               filename <- "unknown"
-               if (!is.null(args$filename)) {
-                  filename <- args$filename
-               }
-               
-               # Determine content and display settings based on whether we have assistant content
-               if (!is.null(assistant_content)) {
-                  # Use assistant content (like the old logic in assistant message processing)
-                  if (is_cancelled_edit) {
-                     # Cancelled edit
-                     widget_content <- paste0("CANCELLED:", assistant_content)
-                     explanation <- paste("Edit", basename(filename), "(cancelled)")
-                     skip_diff <- TRUE
-                  } else {
-                     # Normal edit with assistant content
-                     cleaned_content <- .rs.parse_code_block_content(assistant_content, filename)
-                     widget_content <- cleaned_content
-                     explanation <- paste("Edit", basename(filename))
-                     skip_diff <- FALSE
-                  }
-                  
-                  # Get filename with diff stats for completed edits
-                  filename_with_stats <- .rs.get_message_title(entry$id, conversation_log)
-                  if (is.null(filename_with_stats)) {
-                     filename_with_stats <- basename(filename)
-                  }
-                  filename_display <- filename_with_stats
-               } else {
-                  # No assistant content - use code_edit from function call (like the old logic)
-                  widget_content <- ""
-                  if (!is.null(args$code_edit)) {
-                     widget_content <- args$code_edit
-                  }
-                  filename_display <- basename(filename)
-                  explanation <- paste("Edit", basename(filename))
-                  skip_diff <- TRUE
-               }
-               
-               # Add diff data for completed edits with assistant content
-               widget_params <- list(
-                  message_id = as.numeric(entry$id),  # Use function call ID
-                  filename = filename_display,
-                  content = widget_content,
-                  explanation = explanation,
-                  request_id = assistant_request_id,
-                  skip_diff_highlighting = skip_diff
-               )
-               
-               # Add diff data for completed edits
-               if (!is.null(assistant_content) && !is_cancelled_edit) {
-                  diff_data <- .rs.get_diff_data_for_file_editing(entry$id)
-                  widget_params$diff_data <- diff_data
-               }
-               
-               # Create the widget
-               .rs.send_ai_operation("edit_file_command", widget_params)
-               items_created <- items_created + 1
-               
-               # Check if buttons should be hidden for completed edits
-               if (!is.null(assistant_content) && !is_cancelled_edit) {
-                  if (.rs.should_hide_buttons_for_restored_widget(entry$id)) {
-                     .rs.send_ai_operation("hide_widget_buttons", list(
-                        message_id = as.numeric(entry$id),
-                        content = "edit_file"
-                     ))
-                  } else {
-                     # Create buttons for restored edit_file widgets
-                     auto_accept_enabled <- tryCatch({
-                        .rs.get_auto_accept_edits()
-                     }, error = function(e) {
-                        FALSE
-                     })
-                     
-                     # DEBUG: Check for pending message with auto_accept = TRUE
-                     pending_auto_accept <- FALSE
-                     for (log_entry in conversation_log) {
-                        if (!is.null(log_entry$role) && log_entry$role == "user" && 
-                            !is.null(log_entry$content) && log_entry$content == "Response pending..." &&
-                            !is.null(log_entry$related_to) && log_entry$related_to == entry$id &&
-                            !is.null(log_entry$auto_accept) && log_entry$auto_accept == TRUE) {
-                           pending_auto_accept <- TRUE
-                           break
-                        }
-                     }
-                     
-                     final_auto_accept <- auto_accept_enabled || pending_auto_accept
-                     
-                     .rs.send_ai_operation("create_widget_buttons", list(
-                        message_id = as.numeric(entry$id),
-                        content = "edit_file",
-                        auto_accept = final_auto_accept
-                     ))
-                  }
-               }
-               
-               # Check if buttons should be hidden
-               if (.rs.should_hide_buttons_for_restored_widget(entry$id)) {
-                  .rs.send_ai_operation("hide_widget_buttons", list(
-                     message_id = as.numeric(entry$id),
-                     content = "edit_file"
                   ))
                }
             }
@@ -687,7 +553,7 @@
                      diff_data$added <- as.integer(added_count)
                      diff_data$deleted <- as.integer(deleted_count)
                      
-                     # Filter diff for display (show only changed lines plus context like edit_file)
+                     # Filter diff for display (show only changed lines plus context)
                      filtered_diff <- .rs.filter_diff_for_display(stored_diff$diff)
                      
                      # Get the filtered content from the diff data (for widget display)
@@ -730,7 +596,7 @@
                      
                      # Get diff data for widget display
                      diff_data <- tryCatch({
-                        diff_result <- .rs.compute_line_diff(old_lines, new_lines, is_from_edit_file = TRUE)
+                        diff_result <- .rs.compute_line_diff(old_lines, new_lines, use_unified_diff_format = TRUE)
                         
                         # For append operations, adjust line numbers to start from current file length + 1
                         if (is_append_mode && old_string == "") {
@@ -862,33 +728,16 @@
          items_created <- items_created + 1
       }
       
-      # Handle assistant messages (but skip edit_file related ones as they become widgets)
+      # Handle assistant messages
       if (!is.null(entry$role) && entry$role == "assistant" && !is.null(entry$content)) {
-         # Check if this is related to an edit_file function call
-         is_edit_file_related <- FALSE
-         if (!is.null(entry$related_to)) {
-            for (related_entry in conversation_log) {
-               if (!is.null(related_entry$id) && related_entry$id == entry$related_to && 
-                   !is.null(related_entry$function_call) && !is.null(related_entry$function_call$name) &&
-                   related_entry$function_call$name == "edit_file") {
-                  is_edit_file_related <- TRUE
-                  break
-               }
-            }
-         }
+         # Do NOT clean triple backticks from regular assistant messages
+         # The markdown renderer will properly convert them to code blocks
          
-         # Only create assistant message if it's not file editing related
-         if (!is_edit_file_related) {
-            # Do NOT clean triple backticks from regular assistant messages
-            # The markdown renderer will properly convert them to code blocks
-            # Only edit_file content should have backticks stripped (handled in Java parseCodeBlockContent)
-            
-            .rs.send_ai_operation("create_assistant_message", list(
-               message_id = as.numeric(entry$id),
-               content = entry$content
-            ))
-            items_created <- items_created + 1
-         }
+         .rs.send_ai_operation("create_assistant_message", list(
+            message_id = as.numeric(entry$id),
+            content = entry$content
+         ))
+         items_created <- items_created + 1
       }
    }
    
@@ -958,110 +807,5 @@
       }
    }
    
-   # Case 3: Check if this is an assistant message related to an edit_file function call
-   # Only edit_file results should be treated specially - other assistant messages should remain as text
-   if (!is.null(message$role) && message$role == "assistant" && !is.null(message$related_to)) {
-      # Look for edit_file function calls that this message is related to
-      for (entry in conversation_log) {
-         if (!is.null(entry$function_call) && 
-             !is.null(entry$function_call$name) &&
-             entry$function_call$name == "edit_file" &&
-             !is.null(entry$id) &&
-             entry$id == message$related_to) {
-            return("edit_file")
-         }
-      }
-   }
-   
    return(NULL)
-})
-
-.rs.addFunction("get_filename_from_edit_file_message", function(message_id, conversation_log = NULL) {
-   if (is.null(conversation_log)) {
-      conversation_log <- .rs.read_conversation_log()
-   }
-   
-   message <- NULL
-   for (entry in conversation_log) {
-      if (!is.null(entry$id) && entry$id == message_id) {
-         message <- entry
-         break
-      }
-   }
-   
-   if (is.null(message)) {
-      return(NULL)
-   }
-   
-   # This function should only work for assistant messages related to an edit_file function call
-   if (!is.null(message$role) && message$role == "assistant" && !is.null(message$related_to)) {
-      # Look for edit_file function calls that this message is related to
-      for (entry in conversation_log) {
-         if (!is.null(entry$function_call) && 
-             !is.null(entry$function_call$name) &&
-             entry$function_call$name == "edit_file" &&
-             !is.null(entry$id) &&
-             entry$id == message$related_to) {
-            # Extract filename from the function call arguments
-            if (!is.null(entry$function_call$arguments)) {
-               tryCatch({
-                  args <- jsonlite::fromJSON(entry$function_call$arguments)
-                  if (!is.null(args$filename)) {
-                     return(args$filename)
-                  }
-               }, error = function(e) {
-                  stop("DEBUG: Error parsing edit_file arguments:", e$message)
-               })
-            }
-         }
-      }
-   }
-   
-   return(NULL)
-})
-                           
-.rs.addFunction("is_last_function_edit_file", function() {
-   conversation_log <- .rs.read_conversation_log()
-   
-   if (is.null(conversation_log) || length(conversation_log) == 0) {
-      return(FALSE)
-   }
-   
-   # Find the most recent edit_file function call
-   edit_file_entry_id <- NULL
-   edit_file_entry_index <- NULL
-   
-   for (i in length(conversation_log):1) {
-      entry <- conversation_log[[i]]
-      if (!is.null(entry) && !is.null(entry$function_call) && 
-          !is.null(entry$function_call$name) && 
-          entry$function_call$name == "edit_file") {
-         edit_file_entry_id <- entry$id
-         edit_file_entry_index <- i
-         break
-      }
-   }
-   
-   # If no edit_file found, return FALSE
-   if (is.null(edit_file_entry_id)) {
-      return(FALSE)
-   }
-   
-   # Check if there's an assistant response related to this edit_file call
-   # If so, tools should be restored (return FALSE)
-   for (i in (edit_file_entry_index + 1):length(conversation_log)) {
-      if (i <= length(conversation_log)) {
-         entry <- conversation_log[[i]]
-         if (!is.null(entry) && !is.null(entry$role) && 
-             entry$role == "assistant" && 
-             !is.null(entry$related_to) && 
-             entry$related_to == edit_file_entry_id) {
-            # Found assistant response to this edit_file - tools should be restored
-            return(FALSE)
-         }
-      }
-   }
-   
-   # No assistant response found for the edit_file - tools should still be restricted
-   return(TRUE)
 })

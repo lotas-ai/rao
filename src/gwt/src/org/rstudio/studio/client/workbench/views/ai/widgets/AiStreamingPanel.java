@@ -130,12 +130,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       String terminalCommand();
       String terminalWidgetContainer();
       
-      // Edit file widget styles
-      String aiEditFileHeader();
-      String aiEditFileEditor();
-      String aiEditFileButtons();
-      String editFileCommand();
-      String editFileWidgetContainer();
       
       // Search replace widget styles
       String searchReplaceCommand();
@@ -158,9 +152,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       streamingMessages_ = new HashMap<>();
       consoleWidgets_ = new HashMap<>();
       terminalWidgets_ = new HashMap<>();
-      editFileWidgets_ = new HashMap<>();
       searchReplaceWidgets_ = new HashMap<>();
-      editFileStreamingContent_ = new HashMap<>();
       searchReplaceStreamingContent_ = new HashMap<>();
       
       // Initialize per-conversation sequence tracking
@@ -388,9 +380,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          case "create_terminal_command":
             createTerminalCommandSynchronously(event.messageId, event.command, event.explanation, event.requestId, event.functionCallType, event.extractedCommands);
             break;
-         case "edit_file_command":  // Handle both formats from R
-            createEditFileCommandSynchronously(event.messageId, event.filename, event.content, event.explanation, event.requestId, event.skipDiffHighlighting, event.diffData);
-            break;
          case "search_replace_command":  // Handle search_replace commands from R
             createSearchReplaceCommandSynchronously(event.messageId, event.filename, event.content, event.explanation, event.requestId, event.skipDiffHighlighting, event.diffData);
             break;
@@ -458,25 +447,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       }
       
       // Determine what type of content this is
-      if (event.isEditFile())
+      if (event.isSearchReplace())
       {
-         // Create edit file widget immediately if needed
-         if (!editFileWidgets_.containsKey(messageId))
-         {
-            String filename = event.getFilename();
-            if (filename == null || filename.isEmpty()) {
-               throw new RuntimeException("Edit file event missing required filename for messageId: " + messageId);
-            }
-            String requestId = event.getRequestId();
-            createEditFileCommandSynchronously(messageId, filename, "", "Edit file", requestId, false, (com.google.gwt.core.client.JavaScriptObject) null);
-         }
-         
-         // Add content to widget (or replace if replaceContent flag is set)
-         addContentToEditFileWidget(messageId, event.getDelta(), event.isComplete(), event.isCancelled(), event.getReplaceContent(), (com.google.gwt.core.client.JavaScriptObject) null);
-      }
-      else if (event.isSearchReplace())
-      {
-         // Create search replace widget immediately if needed - same pattern as edit_file
+         // Create search replace widget immediately if needed
          if (!searchReplaceWidgets_.containsKey(messageId))
          {
             String filename = event.getFilename();
@@ -944,54 +917,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       createAndInjectWidgetSynchronously(messageId, terminalWidget, styles_.terminalCommand(), styles_.terminalWidgetContainer());
    }
    
-   /**
-    * Create edit file command widget synchronously
-    */
-   private void createEditFileCommandSynchronously(String messageId, String filename, String content, String explanation, String requestId, boolean skipDiffHighlighting, com.google.gwt.core.client.JavaScriptObject diffData)
-   {
-      // Hide thinking message when AI response (function call) starts
-      hideThinkingMessage();
-      
-      // Check if this is a cancelled edit by looking for special prefix
-      boolean isCancelled = false;
-      String actualContent = content;
-      if (content != null && content.startsWith("CANCELLED:")) {
-         isCancelled = true;
-         actualContent = content.substring("CANCELLED:".length()); // Remove the prefix
-      }
-      
-      // Create edit file command handler
-      org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget.EditFileCommandHandler handler = 
-         new org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget.EditFileCommandHandler() {
-            @Override
-            public void onAccept(String msgId, String editedContent) {
-               handleAcceptEditFileCommand(msgId, editedContent);
-               onFunctionCallCompleted(msgId);
-            }
-            
-            @Override
-            public void onCancel(String msgId) {
-               handleCancelEditFileCommand(msgId);
-               onFunctionCallCompleted(msgId);
-            }
-         };
-      
-      // Create the edit file widget with appropriate cancellation flag and diff highlighting control
-      // For cancelled edits: isEditable = false (no buttons), isCancelled = true
-      org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget = 
-         new org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget(messageId, filename, actualContent, explanation, requestId, !isCancelled, handler, isCancelled, skipDiffHighlighting, diffData);
-      
-      editFileWidgets_.put(messageId, editFileWidget);
-      
-      // For live streaming: hide buttons until diff is ready
-      // For historical restoration: keep buttons visible since diff is already complete
-      if ((!isCancelled && !recreationMode_) || (!isCancelled && skipDiffHighlighting)) {
-         editFileWidget.hideButtons();
-      }
-      
-      createAndInjectWidgetSynchronously(messageId, editFileWidget, styles_.editFileCommand(), styles_.editFileWidgetContainer());
-   }
-   
    private void createSearchReplaceCommandSynchronously(String messageId, String filename, String content, String explanation, String requestId, boolean skipDiffHighlighting, com.google.gwt.core.client.JavaScriptObject diffData)
    {
       // Hide thinking message when AI response (function call) starts
@@ -1128,74 +1053,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       // If user was at bottom before injection, scroll to bottom after injection
       if (wasAtBottom && !recreationMode_) {
          scrollManager_.smartScrollToBottom();
-      }
-   }
-   
-   /**
-    * Add content to edit file widget (backward compatibility)
-    */
-   private void addContentToEditFileWidget(String messageId, String delta, boolean isComplete, boolean isCancelled)
-   {
-      addContentToEditFileWidget(messageId, delta, isComplete, isCancelled, false, (com.google.gwt.core.client.JavaScriptObject) null);
-   }
-
-   /**
-    * Add content to edit file widget with replaceContent option
-    */
-   private void addContentToEditFileWidget(String messageId, String delta, boolean isComplete, boolean isCancelled, boolean replaceContent, com.google.gwt.core.client.JavaScriptObject diffData)
-   {
-      org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget = editFileWidgets_.get(messageId);
-      if (editFileWidget == null)
-      {
-         return;
-      }
-      
-      // Handle content replacement vs appending
-      String newEditContent;
-      if (replaceContent) {
-         newEditContent = delta;
-         editFileStreamingContent_.put(messageId, newEditContent);
-      } else {
-         // Normal streaming: append to existing content
-         String currentEditContent = editFileStreamingContent_.get(messageId);
-         if (currentEditContent == null)
-         {
-            currentEditContent = "";
-            // Update scroll manager streaming status when starting to stream edit file content
-            updateScrollManagerStreamingStatus();
-         }
-      
-         newEditContent = currentEditContent + delta;
-         editFileStreamingContent_.put(messageId, newEditContent);
-      }
-      
-      if (isComplete)
-      {
-         // Parse and clean content on completion
-         String filename = editFileWidget.getFilename();
-         String cleanedContent = parseCodeBlockContent(newEditContent, filename);
-         
-         editFileWidget.setContent(cleanedContent);
-         
-         // Keep tracking content for cancelled responses to preserve them
-         if (!isCancelled) {
-            // Only clean up tracking for normal completion, not cancellation
-            editFileStreamingContent_.remove(messageId);
-         }
-         
-         // Update scroll manager streaming status
-         updateScrollManagerStreamingStatus();
-         
-         // Hide cancel button when edit_file streaming completes
-         AiPane aiPane = AiPane.getCurrentInstance();
-         if (aiPane != null) {
-            aiPane.hideCancelButton();
-         }
-      }
-      else
-      {
-         // Set raw content for streaming effect
-         editFileWidget.setContent(newEditContent);
       }
    }
    
@@ -1372,29 +1229,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       }
    }
    
-   private void handleAcceptEditFileCommand(String messageId, String content)
-   {
-      org.rstudio.studio.client.workbench.views.ai.AiPane aiPane = 
-         org.rstudio.studio.client.workbench.views.ai.AiPane.getCurrentInstance();
-      if (aiPane != null)
-      {
-         aiPane.handleAcceptEditFileCommand(messageId, content);
-      }
-   }
-   
-   /**
-    * Handle cancel edit file command
-    */
-   private void handleCancelEditFileCommand(String messageId)
-   {
-      org.rstudio.studio.client.workbench.views.ai.AiPane aiPane = 
-         org.rstudio.studio.client.workbench.views.ai.AiPane.getCurrentInstance();
-      if (aiPane != null)
-      {
-         aiPane.handleCancelEditFileCommand(messageId);
-      }
-   }
-   
    /**
     * Handle accept search replace command
     */
@@ -1440,14 +1274,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          if (terminalWidget != null)
          {
             terminalWidget.hideButtons();
-         }
-      }
-      else if ("edit_file".equals(widgetType))
-      {
-         org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget = editFileWidgets_.get(messageId);
-         if (editFileWidget != null)
-         {
-            editFileWidget.hideButtons();
          }
       }
       else if ("search_replace".equals(widgetType))
@@ -1530,30 +1356,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
             }
          }
       }
-      else if ("edit_file".equals(widgetType))
-      {
-         org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget = editFileWidgets_.get(messageId);
-         if (editFileWidget != null)
-         {
-            // For edit_file widgets, we need to create the button container manually
-            // since they don't have a createButtons() method like console/terminal widgets
-            createEditFileButtons(editFileWidget);
-            
-            // Auto-accept if requested
-            if (autoAccept) {
-               Scheduler.get().scheduleDeferred(new ScheduledCommand() {
-                  @Override
-                  public void execute() {
-                     // Trigger the accept button click
-                     AiPane aiPane = AiPane.getCurrentInstance();
-                     if (aiPane != null) {
-                        aiPane.handleAcceptEditFileCommand(messageId, editFileWidget.getContent());
-                     }
-                  }
-               });
-            }
-         }
-      }
       else if ("search_replace".equals(widgetType))
       {
          AiSearchReplaceWidget searchReplaceWidget = searchReplaceWidgets_.get(messageId);
@@ -1628,16 +1430,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
             }
          }
       }
-      else if ("edit_file".equals(widgetType))
-      {
-         org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget = editFileWidgets_.get(messageId);
-         if (editFileWidget != null)
-         {
-            // For edit_file widgets, we need to create the button container manually
-            // since they don't have a createButtons() method like console/terminal widgets
-            createEditFileButtons(editFileWidget);
-         }
-      }
       else if ("search_replace".equals(widgetType))
       {
          AiSearchReplaceWidget searchReplaceWidget = searchReplaceWidgets_.get(messageId);
@@ -1650,14 +1442,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    }
    
    /**
-    * Create buttons for edit_file widgets that were restored without buttons
-    */
-   private void createEditFileButtons(org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget widget)
-   {
-      createFileEditorButtons(widget);
-   }
-   
-   /**
     * Create buttons for search_replace widgets that were restored without buttons
     */
    private void createSearchReplaceButtons(AiSearchReplaceWidget widget)
@@ -1666,7 +1450,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    }
    
    /**
-    * Common method to create buttons for file editor widgets (edit_file and search_replace)
+    * Common method to create buttons for file editor widgets (search_replace)
     */
    private void createFileEditorButtons(org.rstudio.studio.client.workbench.views.ai.widgets.AiFileEditorWidgetBase widget)
    {
@@ -1689,14 +1473,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    {
       return consoleWidgets_.get(messageId);
     }
-   
-   /**
-    * Get edit file widget by message ID
-    */
-   public org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget getEditFileWidget(String messageId)
-   {
-      return editFileWidgets_.get(messageId);
-   }
    
    public org.rstudio.studio.client.workbench.views.ai.widgets.AiSearchReplaceWidget getSearchReplaceWidget(String messageId)
    {
@@ -1867,7 +1643,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
             }
          }
       } catch (Exception e) {
-         Debug.log("EDIT_FILE_DEBUG: Error parsing code block content: " + e.getMessage());
+         Debug.log("FILE_EDIT_DEBUG: Error parsing code block content: " + e.getMessage());
          return content;
       }   
       // Return content without trimming to preserve empty lines
@@ -1918,7 +1694,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
     */
    private void updateScrollManagerStreamingStatus()
    {
-      boolean isStreaming = !streamingMessages_.isEmpty() || !editFileStreamingContent_.isEmpty();
+      boolean isStreaming = !streamingMessages_.isEmpty();
       scrollManager_.setActivelyStreaming(isStreaming);
    }
    
@@ -1930,9 +1706,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       streamingMessages_.clear();
       consoleWidgets_.clear();
       terminalWidgets_.clear();
-      editFileWidgets_.clear();
       searchReplaceWidgets_.clear();
-      editFileStreamingContent_.clear();
       searchReplaceStreamingContent_.clear();
       
       // Reset function call processing state
@@ -2114,18 +1888,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          // Force completion but mark as cancelled to preserve content in display
          if (preservedContent != null && !preservedContent.isEmpty()) {
             updateAssistantMessageContentSynchronously(messageId, "", true, true, (com.google.gwt.core.client.JavaScriptObject) null);
-         }
-      }
-      
-      // Preserve edit file content
-      if (editFileStreamingContent_.containsKey(messageId)) {
-         String editFileContent = editFileStreamingContent_.get(messageId);
-         if (editFileContent != null && !editFileContent.isEmpty()) {
-            // Keep the content in the edit file widget but mark as cancelled
-            addContentToEditFileWidget(messageId, "", true, true, false, (com.google.gwt.core.client.JavaScriptObject) null);
-            if (preservedContent == null) {
-               preservedContent = editFileContent;
-            }
          }
       }
       
@@ -2420,9 +2182,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    private final Map<String, String> streamingMessages_;
    private final Map<String, AiConsoleWidget> consoleWidgets_;
    private final Map<String, AiTerminalWidget> terminalWidgets_;
-   private final Map<String, org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget> editFileWidgets_;
    private final Map<String, org.rstudio.studio.client.workbench.views.ai.widgets.AiSearchReplaceWidget> searchReplaceWidgets_;
-   private final Map<String, String> editFileStreamingContent_;
    private final Map<String, String> searchReplaceStreamingContent_;
 
    // Per-conversation sequence tracking

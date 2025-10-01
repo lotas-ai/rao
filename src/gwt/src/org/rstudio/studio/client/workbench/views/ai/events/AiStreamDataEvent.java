@@ -30,7 +30,6 @@ public class AiStreamDataEvent extends GwtEvent<AiStreamDataEvent.Handler>
       private String messageId;
       private String delta;
       private boolean isComplete;
-      private boolean isEditFile;
       private boolean isSearchReplace;
       private boolean isConsoleCmd;
       private boolean isTerminalCmd;
@@ -42,12 +41,11 @@ public class AiStreamDataEvent extends GwtEvent<AiStreamDataEvent.Handler>
       private boolean replaceContent;
       
       // Constructor with console and terminal command flags - the only Data constructor needed
-      public Data(String messageId, String delta, boolean isComplete, boolean isEditFile, boolean isSearchReplace, boolean isConsoleCmd, boolean isTerminalCmd, String filename, int sequence, boolean isCancelled, boolean isFunctionCall, boolean replaceContent)
+      public Data(String messageId, String delta, boolean isComplete, boolean isSearchReplace, boolean isConsoleCmd, boolean isTerminalCmd, String filename, int sequence, boolean isCancelled, boolean isFunctionCall, boolean replaceContent)
       {
          this.messageId = messageId != null ? messageId : "";
          this.delta = delta != null ? delta : "";
          this.isComplete = isComplete;
-         this.isEditFile = isEditFile;
          this.isSearchReplace = isSearchReplace;
          this.isConsoleCmd = isConsoleCmd;
          this.isTerminalCmd = isTerminalCmd;
@@ -72,11 +70,6 @@ public class AiStreamDataEvent extends GwtEvent<AiStreamDataEvent.Handler>
       public boolean isComplete()
       {
          return isComplete;
-      }
-      
-      public boolean isEditFile()
-      {
-         return isEditFile;
       }
       
       public boolean isSearchReplace()
@@ -137,9 +130,9 @@ public class AiStreamDataEvent extends GwtEvent<AiStreamDataEvent.Handler>
    }
    
    // Constructor with console and terminal command flags - used by ClientEventDispatcher
-   public AiStreamDataEvent(String messageId, String delta, boolean isComplete, boolean isEditFile, boolean isSearchReplace, boolean isConsoleCmd, boolean isTerminalCmd, String filename, int sequence, boolean isCancelled, boolean isFunctionCall, boolean replaceContent)
+   public AiStreamDataEvent(String messageId, String delta, boolean isComplete, boolean isSearchReplace, boolean isConsoleCmd, boolean isTerminalCmd, String filename, int sequence, boolean isCancelled, boolean isFunctionCall, boolean replaceContent)
    {
-      data_ = new Data(messageId, delta, isComplete, isEditFile, isSearchReplace, isConsoleCmd, isTerminalCmd, filename, sequence, isCancelled, isFunctionCall, replaceContent);
+      data_ = new Data(messageId, delta, isComplete, isSearchReplace, isConsoleCmd, isTerminalCmd, filename, sequence, isCancelled, isFunctionCall, replaceContent);
    }
 
    public String getMessageId()
@@ -155,11 +148,6 @@ public class AiStreamDataEvent extends GwtEvent<AiStreamDataEvent.Handler>
    public boolean isComplete()
    {
       return data_.isComplete();
-   }
-   
-   public boolean isEditFile()
-   {
-      return data_.isEditFile();
    }
    
    public boolean isSearchReplace()

@@ -70,7 +70,7 @@ public abstract class AiWidgetBase extends Composite
       buttonStack.getElement().getStyle().setProperty("boxShadow", "0 1px 3px rgba(0,0,0,0.1)");
       
       // Determine primary action text based on function type
-      String primaryActionText = functionCallType.equals("edit_file") || functionCallType.equals("search_replace") ? 
+      String primaryActionText = functionCallType.equals("search_replace") ? 
          "Accept" : "Run";
       
       // Create primary action button (Run/Accept) with dark green text (correct color)
@@ -150,7 +150,7 @@ public abstract class AiWidgetBase extends Composite
     */
    private String determineAllowListText(String functionCallType, String extractedItems)
    {
-      if (functionCallType.equals("edit_file") || functionCallType.equals("search_replace")) {
+      if (functionCallType.equals("search_replace")) {
          return "Accept all edits automatically";
       }
       
@@ -187,7 +187,7 @@ public abstract class AiWidgetBase extends Composite
          if (buttonAction === 'primary') {
             // This is the Run/Accept button
             var functionCallType = self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiWidgetBase::functionCallType_;
-            if (functionCallType === 'edit_file' || functionCallType === 'search_replace') {
+            if (functionCallType === 'search_replace') {
                self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiWidgetBase::onAcceptClicked()();
             } else {
                self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiWidgetBase::onRunClicked()();
@@ -253,7 +253,7 @@ public abstract class AiWidgetBase extends Composite
    }
    
    /**
-    * Handle accept button clicks - implemented by edit_file/search_replace widgets  
+    * Handle accept button clicks - implemented by search_replace widgets  
     * Default implementation logs an error
     */
    protected void onAcceptClicked() {

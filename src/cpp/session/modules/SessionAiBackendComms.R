@@ -412,7 +412,7 @@
     }
   }
   
-  is_after_edit_file <- .rs.is_last_function_edit_file()
+  is_after_edit_file <- FALSE  # edit_file has been removed
   
   if (is.null(provider)) {
     provider <- .rs.get_active_provider()

@@ -263,7 +263,7 @@ tryCatch({
    })
 })
 
-.rs.addFunction("compute_line_diff", function(old_lines, new_lines, is_from_edit_file = FALSE) {
+.rs.addFunction("compute_line_diff", function(old_lines, new_lines, use_unified_diff_format = FALSE) {
    if (is.null(old_lines) || length(old_lines) == 0 || 
        (is.list(old_lines) && length(old_lines) == 0) || 
        identical(old_lines, list()) || identical(old_lines, structure(list(), names = character(0)))) {
@@ -323,8 +323,8 @@ tryCatch({
       }
    }
    
-   # For edit_file widgets, convert to unified diff format for proper display
-   if (is_from_edit_file) {
+   # For file editing widgets, convert to unified diff format for proper display
+   if (use_unified_diff_format) {
       unified_diff <- .rs.convert_to_unified_diff_format(diff, old_lines, new_lines)
       return(list(
          diff = unified_diff,
@@ -626,7 +626,7 @@ tryCatch({
    }
    
    # Use the existing diff computation function
-   diff_result <- .rs.compute_line_diff(original_lines, current_lines, is_from_edit_file = FALSE)
+   diff_result <- .rs.compute_line_diff(original_lines, current_lines, use_unified_diff_format = FALSE)
    
    # Step 5: Convert diff results to the format expected by the Java gutter manager
    # Create a single diff entry with the fresh diff data
@@ -711,7 +711,7 @@ tryCatch({
 
 .rs.addFunction("mark_diff_as_accepted", function(message_id, file_path) {
    # Mark a specific diff as accepted for persistent display
-   # This is called when a user accepts an edit_file change
+   # This is called when a user accepts a file editing change
    
    if (is.null(message_id) || is.null(file_path)) {
       return(FALSE)
@@ -852,36 +852,29 @@ tryCatch({
       return("Unknown")
    }
    
-   # Check if it's a message with related_to pointing to an edit_file function call
-   if (!is.null(target_message$related_to)) {
-      for (i in seq_along(conversation_log)) {
-         if (!is.null(conversation_log[[i]]$function_call) && 
-             !is.null(conversation_log[[i]]$id) &&
-             conversation_log[[i]]$id == target_message$related_to &&
-             !is.null(conversation_log[[i]]$function_call$name) &&
-             conversation_log[[i]]$function_call$name == "edit_file") {
-            
-              args <- if (is.character(conversation_log[[i]]$function_call$arguments)) {
-                jsonlite::fromJSON(conversation_log[[i]]$function_call$arguments, simplifyVector = FALSE)
-              } else {
-                conversation_log[[i]]$function_call$arguments
-              }
-              
-              if (!is.null(args$filename)) {
-                filename <- if (for_display) basename(args$filename) else args$filename
-                return(filename)
-              }
-         }
-      }
-   }
-   
-   # Check if it's a function_call for run_console_cmd, run_terminal_cmd, delete_file, or run_file
+   # Check if it's a function_call for search_replace, run_console_cmd, run_terminal_cmd, delete_file, or run_file
    if (!is.null(target_message$function_call) && 
        !is.null(target_message$function_call$name)) {
       
       function_name <- target_message$function_call$name
       
-      if (function_name == "run_console_cmd") {
+      if (function_name == "search_replace") {
+         # Extract filename from search_replace arguments
+         args <- tryCatch({
+            if (is.character(target_message$function_call$arguments)) {
+               jsonlite::fromJSON(target_message$function_call$arguments, simplifyVector = FALSE)
+            } else {
+               target_message$function_call$arguments
+            }
+         }, error = function(e) {
+            return(NULL)
+         })
+         
+         if (!is.null(args) && !is.null(args$file_path)) {
+            filename <- if (for_display) basename(args$file_path) else args$file_path
+            return(filename)
+         }
+      } else if (function_name == "run_console_cmd") {
          return("Console")
       } else if (function_name == "run_terminal_cmd") {
          return("Terminal")
@@ -1322,243 +1315,6 @@ tryCatch({
 
 .rs.addJsonRpcHandler("clear_all_persistent_diffs", function() {
    result <- .rs.clear_all_persistent_diffs()
-   return(result)
-})
-
-.rs.addFunction("get_diff_data_for_file_editing", function(message_id) {
-   # Get pre-computed diff data for file editing widgets (edit_file or search_replace)
-   
-   tryCatch({
-      # First check if we have stored diff data
-      stored_diff <- .rs.get_stored_diff_data(message_id)
-      if (!is.null(stored_diff)) {
-         
-         # Find the function call entry (edit_file OR search_replace)
-         function_call_entry <- NULL
-         function_call_name <- NULL
-         conversation_log <- .rs.read_conversation_log()
-         for (entry in conversation_log) {
-            if (!is.null(entry$id) && entry$id == message_id && 
-                !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
-                (entry$function_call$name == "edit_file" || entry$function_call$name == "search_replace")) {
-               function_call_entry <- entry
-               function_call_name <- entry$function_call$name
-               break
-            }
-         }
-         
-         # Calculate missing fields
-         added_count <- 0
-         deleted_count <- 0
-         if (!is.null(stored_diff$diff)) {
-            for (diff_item in stored_diff$diff) {
-               if (!is.null(diff_item$type)) {
-                  if (diff_item$type == "added") {
-                     added_count <- added_count + 1
-                  } else if (diff_item$type == "deleted") {
-                     deleted_count <- deleted_count + 1
-                  }
-               }
-            }
-         }
-         
-         # Format filename with diff stats
-         filename_with_stats <- "unknown"
-         if (!is.null(function_call_entry)) {
-            args <- tryCatch({
-               if (is.character(function_call_entry$function_call$arguments)) {
-                  jsonlite::fromJSON(function_call_entry$function_call$arguments, simplifyVector = FALSE)
-               } else {
-                  function_call_entry$function_call$arguments
-               }
-            }, error = function(e) {
-               return(NULL)
-            })
-            
-            if (!is.null(args)) {
-               # Extract filename based on function type
-               filename <- if (function_call_name == "search_replace") {
-                  args$file_path
-               } else {
-                  args$filename
-               }
-               
-               if (!is.null(filename)) {
-                  filename_with_stats <- basename(filename)
-                  if (added_count > 0 || deleted_count > 0) {
-                     addition_text <- paste0('<span class="addition">+', added_count, '</span>')
-                     removal_text <- paste0('<span class="removal">-', deleted_count, '</span>')
-                     diff_text <- paste(addition_text, removal_text)
-                     filename_with_stats <- paste0(filename_with_stats, ' <span class="diff-stats">', diff_text, '</span>')
-                  }
-               }
-            }
-         }
-         
-         # Filter diff for display
-         filtered_diff_for_display <- .rs.filter_diff_for_display(stored_diff$diff)
-         
-         # Return simplified structure
-         result <- list(
-            diff = filtered_diff_for_display,
-            is_start_edit = FALSE,
-            is_end_edit = FALSE,
-            is_insert_mode = FALSE,
-            is_line_range_mode = FALSE,
-            start_line = NULL,
-            end_line = NULL,
-            insert_line = NULL,
-            added = as.integer(added_count),
-            deleted = as.integer(deleted_count),
-            filename_with_stats = filename_with_stats
-         )
-         
-         return(result)
-      }
-      
-      # If no stored data, compute it fresh
-      conversation_log <- .rs.read_conversation_log()
-      if (is.null(conversation_log) || length(conversation_log) == 0) {
-         return(list(diff = list()))
-      }
-      
-      # Find the assistant message that's related to this function call
-      assistant_message <- NULL
-      for (entry in conversation_log) {
-         if (!is.null(entry$related_to) && entry$related_to == message_id && 
-             !is.null(entry$role) && entry$role == "assistant") {
-            assistant_message <- entry
-            break
-         }
-      }
-      
-      if (is.null(assistant_message)) {
-         return(list(diff = list()))
-      }
-      
-      # Find the function call (edit_file OR search_replace)
-      function_call_entry <- NULL
-      function_call_name <- NULL
-      for (entry in conversation_log) {
-         if (!is.null(entry$id) && entry$id == message_id && 
-             !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
-             (entry$function_call$name == "edit_file" || entry$function_call$name == "search_replace")) {
-            function_call_entry <- entry
-            function_call_name <- entry$function_call$name
-            break
-         }
-      }
-      
-      if (is.null(function_call_entry)) {
-         return(list(diff = list()))
-      }
-      
-      # Extract arguments from function call
-      args <- tryCatch({
-         if (is.character(function_call_entry$function_call$arguments)) {
-            jsonlite::fromJSON(function_call_entry$function_call$arguments, simplifyVector = FALSE)
-         } else {
-            function_call_entry$function_call$arguments
-         }
-      }, error = function(e) {
-         cat("DEBUG get_diff_data_for_file_editing: Error parsing arguments:", e$message, "\n")
-         return(NULL)
-      })
-      
-      if (is.null(args)) {
-         return(list(diff = list()))
-      }
-      
-      # Extract filename based on function type
-      filename <- if (function_call_name == "search_replace") {
-         args$file_path
-      } else {
-         args$filename
-      }
-      
-      if (is.null(filename)) {
-         return(list(diff = list()))
-      }
-      
-      # Get the new content from the assistant message
-      new_content <- assistant_message$content
-      if (is.null(new_content)) {
-         return(list(diff = list()))
-      }
-      
-      # For both edit_file and search_replace, the new content is the assistant's response
-      cleaned_content <- new_content
-      
-      # Get the previous content from the function_call_output
-      function_output <- NULL
-      for (entry in conversation_log) {
-         if (!is.null(entry$type) && entry$type == "function_call_output" &&
-             !is.null(entry$call_id) && 
-             !is.null(function_call_entry$function_call$call_id) &&
-             entry$call_id == function_call_entry$function_call$call_id) {
-            function_output <- entry
-            break
-         }
-      }
-      
-      previous_content <- if (!is.null(function_output) && !is.null(function_output$output)) {
-         function_output$output
-      } else {
-         ""
-      }
-      
-      # Split content into lines for diff calculation
-      old_lines <- if (nchar(previous_content) > 0) {
-         strsplit(previous_content, "\n", fixed = TRUE)[[1]]
-      } else {
-         character(0)
-      }
-      
-      new_lines <- if (nchar(cleaned_content) > 0) {
-         strsplit(cleaned_content, "\n", fixed = TRUE)[[1]]
-      } else {
-         character(0)
-      }
-      
-      # Use unified diff calculation for both function types
-      diff_result <- .rs.compute_line_diff(old_lines, new_lines, is_from_edit_file = TRUE)
-      .rs.store_diff_data(message_id, diff_result$diff, previous_content, cleaned_content)
-      
-      # Format filename with diff stats
-      filename_with_stats <- basename(filename)
-      if (diff_result$added > 0 || diff_result$deleted > 0) {
-         addition_text <- paste0('<span class="addition">+', diff_result$added, '</span>')
-         removal_text <- paste0('<span class="removal">-', diff_result$deleted, '</span>')
-         diff_text <- paste(addition_text, removal_text)
-         filename_with_stats <- paste0(filename_with_stats, ' <span class="diff-stats">', diff_text, '</span>')
-      }
-      
-      # Filter diff for display
-      filtered_diff_for_display <- .rs.filter_diff_for_display(diff_result$diff)
-      
-      # Return simplified structure
-      result <- list(
-         diff = filtered_diff_for_display,
-         is_start_edit = FALSE,
-         is_end_edit = FALSE,
-         is_insert_mode = FALSE,
-         is_line_range_mode = FALSE,
-         start_line = NULL,
-         end_line = NULL,
-         insert_line = NULL,
-         added = as.integer(diff_result$added),
-         deleted = as.integer(diff_result$deleted),
-         filename_with_stats = filename_with_stats
-      )
-      return(result)
-   }, error = function(e) {
-      cat("DEBUG: Error in get_diff_data_for_file_editing:", e$message, "\n")
-      return(list(diff = list()))
-   })
-})
-
-.rs.addJsonRpcHandler("get_diff_data_for_file_editing", function(message_id) {
-   result <- .rs.get_diff_data_for_file_editing(message_id)
    return(result)
 })
 
@@ -2402,13 +2158,63 @@ tryCatch({
    }
    
    result_lines <- c(paste0("Match counts:", 
-                           if (nrow(count_entries) > effective_limit) 
-                              paste0(" (showing first ", effective_limit, " of ", nrow(count_entries), ")") 
-                           else ""))
+                          if (nrow(count_entries) > effective_limit) 
+                             paste0(" (showing first ", effective_limit, " of ", nrow(count_entries), ")") 
+                          else ""))
    
    for (i in 1:nrow(limited_entries)) {
       result_lines <- c(result_lines, paste0(limited_entries$file[i], ":", limited_entries$count[i]))
    }
    
    return(paste(result_lines, collapse = "\n"))
+})
+
+.rs.addFunction("get_plot_images", function() {
+   # Get the graphics directory path directly from C++
+   graphics_path <- tryCatch({
+      .rs.getGraphicsPath()
+   }, error = function(e) {
+      NULL
+   })
+   
+   if (is.null(graphics_path) || !dir.exists(graphics_path)) {
+      return(character(0))
+   }
+   
+   # Get all files in the graphics directory
+   all_files <- list.files(graphics_path, full.names = TRUE, all.files = FALSE)
+   
+   if (length(all_files) == 0) {
+      return(character(0))
+   }
+   
+   # Filter to only include image files (exclude .snapshot, .manip, INDEX, and empty.*)
+   # Only keep files that look like UUID.png (or other image extensions)
+   image_files <- all_files[grepl("\\.(png|jpg|jpeg|svg|tiff|bmp|gif)$", all_files, ignore.case = TRUE)]
+   image_files <- image_files[!grepl("^empty\\.", basename(image_files), ignore.case = TRUE)]
+   image_files <- image_files[basename(image_files) != "INDEX"]
+   
+   if (length(image_files) == 0) {
+      return(character(0))
+   }
+   
+   # Sort by modification time (most recent first)
+   file_info <- file.info(image_files)
+   sorted_files <- image_files[order(file_info$mtime, decreasing = TRUE)]
+   
+   return(sorted_files)
+})
+
+.rs.addFunction("get_plot_by_index", function(plot_index) {
+   plots <- .rs.get_plot_images()
+   
+   if (length(plots) == 0) {
+      return(list(success = FALSE, error = "No plots available"))
+   }
+   
+   if (plot_index < 1 || plot_index > length(plots)) {
+      return(list(success = FALSE, error = paste0("Invalid plot index. Available plots: ", length(plots))))
+   }
+   
+   return(list(success = TRUE, path = plots[plot_index]))
 })

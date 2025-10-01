@@ -41,7 +41,6 @@ tryCatch({
     ".rs.previous_plot_record",
     ".rs.plot_info",
     "function_call_depth",
-    "last_function_was_edit_file",
     "ai_in_error",
     "context_items",
     "assistant_message_count"
@@ -115,7 +114,6 @@ tryCatch({
   }
   if (var_name == "ai_cancelled") return(FALSE)
   if (var_name == "function_call_depth") return(0)
-  if (var_name == "last_function_was_edit_file") return(FALSE)
   if (var_name == "ai_in_error") return(FALSE)
   if (var_name == "assistant_message_count") return(0)
   if (var_name == "context_items") return(list())
@@ -204,7 +202,6 @@ tryCatch({
   # Set default values for conversation-specific variables
   assign("ai_cancelled", FALSE, envir = conversation_cache)
   assign("function_call_depth", 0, envir = conversation_cache)
-  assign("last_function_was_edit_file", FALSE, envir = conversation_cache)
   assign("ai_in_error", FALSE, envir = conversation_cache)
   assign("context_items", list(), envir = conversation_cache)
   assign("assistant_message_count", 0, envir = conversation_cache)

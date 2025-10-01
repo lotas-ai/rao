@@ -664,39 +664,6 @@ public class AiPaneEventHandlers
    }
    
    /**
-    * Handles the acceptance of AI-generated code
-    * 
-    * @param editedCode The code to accept
-    * @param messageId The ID of the message to accept
-    */
-   public void handleAcceptEditFileCommand(String editedCode, String messageId)
-   {
-      server_.acceptEditFileCommand(editedCode, messageId, getCurrentRequestId(), new ServerRequestCallback<JavaScriptObject>() {
-         @Override
-         public void onResponseReceived(JavaScriptObject response) {
-            // Use smooth refresh mechanism instead of direct reload to prevent flashing
-            String currentUrl = pane_.getUrl();
-            if (currentUrl != null && !currentUrl.isEmpty()) {
-               WindowEx contentWindow = pane_.getContentWindow();
-               Point currentScrollPos = Point.create(0, 0);
-               if (contentWindow != null) {
-                  currentScrollPos = contentWindow.getScrollPosition();
-               }
-               setLocation(currentUrl, currentScrollPos);
-            } else {
-               // Fallback to direct reload only if no URL available
-               pane_.getIFrameEx().getContentWindow().reload();
-            }
-         }
-         
-         @Override
-         public void onError(ServerError error) {
-            // Error handling could be added here
-         }
-      });
-   }
-   
-   /**
     * Handles revert message
     * @param messageId The ID of the message to revert
     */

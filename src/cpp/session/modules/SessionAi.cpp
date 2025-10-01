@@ -107,9 +107,6 @@ const char * const kJsCallbacks = R"EOF(
    if (window.parent.aiClick)
       window.onclick = function(e) { window.parent.aiClick(e); } 
 
-   if (window.parent.aiAcceptEditFileCommand)
-      window.aiAcceptEditFileCommand = function(edited_code) { window.parent.aiAcceptEditFileCommand(edited_code); }
-      
    if (window.parent.aiSaveApiKey)
       window.aiSaveApiKey = function(provider, key) { window.parent.aiSaveApiKey(provider, key); }
       
@@ -434,39 +431,6 @@ Error aiCancelSearchReplaceCommand(const json::JsonRpcRequest& request,
    SEXP result_sexp;
    r::sexp::Protect rp;
    Error error = r::exec::RFunction(".rs.cancel_search_replace_command")
-         .addParam(message_id)
-         .addParam(request_id)  // request_id
-         .call(&result_sexp, &rp);
-
-   if (error) {
-      LOG_ERROR(error);
-      return error;
-   }
-
-   // Check if R function returned a result object with status information
-   if (result_sexp != R_NilValue) {
-      json::Value result_json;
-      Error json_error = r::json::jsonValueFromList(result_sexp, &result_json);
-      if (!json_error) {
-         p_response->setResult(result_json);
-      }
-   }
-
-   return Success();
-}
-
-Error aiAcceptEditFileCommand(const json::JsonRpcRequest& request,
-                     json::JsonRpcResponse* p_response,
-                     const std::string& edited_code,
-                     const std::string& message_id,
-                     const std::string& request_id)
-{
-
-   // Call the R function and capture result
-   SEXP result_sexp;
-   r::sexp::Protect rp;
-   Error error = r::exec::RFunction(".rs.accept_edit_file_command")
-         .addParam(edited_code)
          .addParam(message_id)
          .addParam(request_id)  // request_id
          .call(&result_sexp, &rp);
@@ -2561,38 +2525,6 @@ Error cancelConsoleCommand(const json::JsonRpcRequest& request,
    return Success();
 }
 
-// Function to cancel a pending edit file command
-Error cancelEditFileCommand(const json::JsonRpcRequest& request,
-                           json::JsonRpcResponse* p_response,
-                           const std::string& message_id,
-                           const std::string& request_id)
-{
-
-   // Call the R function and capture result
-   SEXP result_sexp;
-   r::sexp::Protect rp;
-   Error error = r::exec::RFunction(".rs.cancel_edit_file_command")
-      .addParam(message_id)
-      .addParam(request_id)
-      .call(&result_sexp, &rp);
-   
-   if (error) {
-      LOG_ERROR(error);
-      return error;
-   }
-   
-   // Check if R function returned a result object with status information
-   if (result_sexp != R_NilValue) {
-      json::Value result_json;
-      Error json_error = r::json::jsonValueFromList(result_sexp, &result_json);
-      if (!json_error) {
-         p_response->setResult(result_json);
-      }
-   }
-   
-   return Success();
-}
-
 // New function to orchestrate AI operation flow
 // This follows the established pattern from other functions in this file
 Error processAiOperation(const json::JsonRpcRequest& request,
@@ -3842,17 +3774,6 @@ Error initialize()
                      return error;
                   return revertAiMessage(request, p_response, message_id);
                })))
-      (bind(module_context::registerRpcMethod, "accept_edit_file_command", 
-            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
-               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
-                  std::string edited_code;
-                  std::string message_id;
-                  std::string request_id;
-                  Error error = json::readParams(request.params, &edited_code, &message_id, &request_id);
-                  if (error)
-                     return error;
-                  return aiAcceptEditFileCommand(request, p_response, edited_code, message_id, request_id);
-               })))
       (bind(module_context::registerRpcMethod, "accept_search_replace_command", 
             boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
                [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
@@ -4047,16 +3968,6 @@ Error initialize()
                   if (error)
                      return error;
                   return cancelConsoleCommand(request, p_response, message_id, request_id);
-               })))
-      (bind(module_context::registerRpcMethod, "cancel_edit_file_command", 
-            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
-               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
-                  std::string message_id;
-                  std::string request_id;
-                  Error error = json::readParams(request.params, &message_id, &request_id);
-                  if (error)
-                     return error;
-                  return cancelEditFileCommand(request, p_response, message_id, request_id);
                })))
       (bind(module_context::registerRpcMethod, "match_text_in_open_documents", matchTextInOpenDocuments))
       (bind(module_context::registerRpcMethod, "process_ai_operation", processAiOperation))

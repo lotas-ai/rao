@@ -416,7 +416,7 @@ public class AiSettingsWidget extends Composite
          deleteApiKeyButton_.addStyleName(styles_.dangerButton());
          deleteApiKeyButton_.addStyleName(styles_.compactButton());
          
-         // Add native DOM click event listener (same pattern as console/terminal/edit file widgets)
+         // Add native DOM click event listener (same pattern as console/terminal widgets)
          addNativeClickHandler(deleteApiKeyButton_.getElement(), "Sign out");
          signOutContainer.add(deleteApiKeyButton_);
          profileInfo.add(signOutContainer);
@@ -622,7 +622,7 @@ public class AiSettingsWidget extends Composite
       browseDirectoryButton_.addStyleName(styles_.settingButton());
       browseDirectoryButton_.addStyleName(styles_.secondaryButton());
       
-      // Add native DOM click event listener (same pattern as console/terminal/edit file widgets)
+      // Add native DOM click event listener (same pattern as console/terminal widgets)
       addNativeClickHandler(browseDirectoryButton_.getElement(), "Browse...");
       inputPanel.add(browseDirectoryButton_);
       
@@ -635,7 +635,7 @@ public class AiSettingsWidget extends Composite
       setDirectoryButton_.addStyleName(styles_.compactButton());
       setDirectoryButton_.getElement().getStyle().setProperty("marginTop", "8px");
       
-      // Add native DOM click event listener (same pattern as console/terminal/edit file widgets)
+      // Add native DOM click event listener (same pattern as console/terminal widgets)
       addNativeClickHandler(setDirectoryButton_.getElement(), "Set Directory");
       directoryContainer.add(setDirectoryButton_);
       contentPanel.add(directoryContainer);
@@ -1062,7 +1062,7 @@ public class AiSettingsWidget extends Composite
       securityTogglePanel.setWidth("100%");
       securityTogglePanel.setVerticalAlignment(HorizontalPanel.ALIGN_TOP);
       
-      securityModeText_ = new Label("On secure mode, no analytics are collected and zero data is retained by the model providers. Secure mode only uses search-replace for editing files rather than the third-party Morph LLM fast apply used for edit-file. This must be used for any sensitive data like PHI. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: Secure");
+      securityModeText_ = new Label("On secure mode, no analytics are collected and zero data is retained by the model providers. Secure mode only uses search-replace for editing files. This must be used for any sensitive data like PHI. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: Secure");
       securityModeText_.addStyleName(styles_.settingLabel());
       securityModeText_.getElement().getStyle().setProperty("fontWeight", "normal");
       securityModeText_.getElement().getStyle().setProperty("fontSize", "13px");
@@ -2147,7 +2147,7 @@ public class AiSettingsWidget extends Composite
       });
    }
    
-   // Add native DOM event handler using JSNI (same pattern as console/terminal/edit file widgets)
+   // Add native DOM event handler using JSNI (same pattern as console/terminal widgets)
    private native void addNativeChangeHandler(com.google.gwt.dom.client.Element element) /*-{
       var self = this;
       

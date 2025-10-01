@@ -329,8 +329,7 @@ public class ClientEventDispatcher
                isComplete = getBooleanFromRData(jsData, "is_complete");
             }
             
-            // Extract edit_file and search_replace specific properties
-            boolean isEditFile = getBooleanFromRData(jsData, "isEditFile");
+            // Extract search_replace specific properties
             boolean isSearchReplace = getBooleanFromRData(jsData, "isSearchReplace");
             String filename = getStringFromRData(jsData, "filename");
             
@@ -355,14 +354,14 @@ public class ClientEventDispatcher
             boolean isConsoleCmd = getBooleanFromRData(jsData, "isConsoleCmd");
             boolean isTerminalCmd = getBooleanFromRData(jsData, "isTerminalCmd");
             
-            // Extract replaceContent flag for edit_file widgets  
+            // Extract replaceContent flag for widgets  
             boolean replaceContent = getBooleanFromRData(jsData, "replaceContent");
             
-            // Extract requestId for edit_file widgets
+            // Extract requestId for widgets
             String requestId = getStringFromRData(jsData, "requestId");
             
             // Create event with extracted data including all flags
-            AiStreamDataEvent streamEvent = new AiStreamDataEvent(messageId, delta, isComplete, isEditFile, isSearchReplace, isConsoleCmd, isTerminalCmd, filename, sequence, isCancelled, isFunctionCall, replaceContent);
+            AiStreamDataEvent streamEvent = new AiStreamDataEvent(messageId, delta, isComplete, isSearchReplace, isConsoleCmd, isTerminalCmd, filename, sequence, isCancelled, isFunctionCall, replaceContent);
             
             // Set the requestId if present
             if (requestId != null && !requestId.isEmpty()) {
@@ -433,7 +432,6 @@ public class ClientEventDispatcher
                 "create_assistant_message".equals(operationType) ||
                 "create_console_command".equals(operationType) ||
                 "create_terminal_command".equals(operationType) ||
-                "edit_file_command".equals(operationType) ||
                 "search_replace_command".equals(operationType) ||
                 "revert_button".equals(operationType) ||
                 "hide_widget_buttons".equals(operationType) ||

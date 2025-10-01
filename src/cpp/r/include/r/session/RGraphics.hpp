@@ -174,6 +174,9 @@ public:
    // retrieve image path based on filename
    virtual core::FilePath imagePath(const std::string& imageFilename) const = 0;
    
+   // retrieve the graphics directory path
+   virtual core::FilePath graphicsPath() const = 0;
+   
    // clear the display (closes the device)
    virtual void clear() = 0;
 

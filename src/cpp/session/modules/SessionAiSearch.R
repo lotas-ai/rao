@@ -175,42 +175,6 @@
    
    .rs.write_conversation_log(conversation_log)
 
-   # Check if this assistant message relates to an edit_file function call
-   # If so, create the "Response pending..." message now (after the assistant message)
-   # Look up the related function call to see if it's edit_file
-   related_function_call <- NULL
-   for (entry in conversation_log) {
-      if (!is.null(entry$id) && entry$id == related_to_id && 
-          !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
-          entry$function_call$name == "edit_file") {
-         related_function_call <- entry
-         break
-      }
-   }
-   
-   if (!is.null(related_function_call)) {
-      # Check if auto-accept is enabled for edit_file operations
-      auto_accept_enabled <- tryCatch({
-         .rs.get_auto_accept_edits()
-      }, error = function(e) {
-         FALSE
-      })
-      
-      # Create procedural user message for edit_file pending using pre-allocated ID (index 4 for edit_file)
-      call_id <- related_function_call$function_call$call_id
-      pending_message_id <- .rs.get_preallocated_message_id(call_id, 4)
-      pending_message <- list(
-         id = pending_message_id,
-         role = "user",
-         content = "Response pending...",
-         related_to = related_to_id,  # Point to the edit_file function call ID
-         procedural = TRUE,  # Mark as procedural so it doesn't show in UI
-         auto_accept = auto_accept_enabled  # Flag for auto-accept
-      )
-      conversation_log <- c(conversation_log, list(pending_message))
-      .rs.write_conversation_log(conversation_log)
-   }
-
    text_content <- if (is.list(assistant_response)) {
       jsonlite::toJSON(assistant_response, auto_unbox = TRUE)
    } else {
@@ -387,110 +351,66 @@
    ))
 })
 
-.rs.addFunction("handle_view_image", function(function_call, current_log, related_to_id, request_id) {
-   # Ensure required packages (including magick) are installed
-   .rs.check_required_packages()
+.rs.addFunction("process_image_file", function(function_call, image_path, display_name) {
+   function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
    
-   arguments <- .rs.safe_parse_function_arguments(function_call)
-   
-   image_path <- arguments$image_path
-   
-   # COMPREHENSIVE PATH HANDLING FIX - prevents duplication issues
-   if (!is.null(image_path)) {
-      original_path <- image_path
-      current_wd <- getwd()
+   if (!file.exists(image_path)) {
+      function_call_output <- list(
+         id = function_output_id,
+         type = "function_call_output",
+         call_id = function_call$call_id,
+         output = paste0("Error: Image file does not exist: ", image_path),
+         related_to = function_call$msg_id,
+         success = FALSE,
+         procedural = FALSE
+      )
       
-      # CRITICAL FIX: Check if this is an absolute path that lost its leading slash
-      # This happens when the AI backend processes the path and strips the leading /
-      if (!startsWith(image_path, "/") && !grepl("^[A-Za-z]:", image_path)) {
-         # Path appears relative, but check if it's actually an absolute path missing the leading /
-         # If the "relative" path starts with common absolute path prefixes, it's likely missing the /
-         if (startsWith(image_path, "Users/") || startsWith(image_path, "home/") || 
-             startsWith(image_path, "opt/") || startsWith(image_path, "var/") ||
-             startsWith(image_path, "tmp/") || startsWith(image_path, "usr/")) {
-            # This looks like an absolute path missing the leading slash
-            image_path <- paste0("/", image_path)
-         } else {
-            # Treat as genuinely relative path
-            image_path <- file.path(current_wd, image_path)
-         }
-      }
-      
-      # General duplication fix: detect if any directory appears twice in succession
-      # Split path into components and look for duplicated sequences
-      path_components <- strsplit(image_path, "/")[[1]]
-      path_components <- path_components[path_components != ""]  # Remove empty components
-      
-      # Look for duplicated directory sequences
-      if (length(path_components) > 2) {
-         # Check for any directory that appears twice in a row with intervening path
-         for (i in 1:(length(path_components) - 1)) {
-            dir_name <- path_components[i]
-            if (nchar(dir_name) > 0) {
-               # Look for this directory name appearing again later in the path
-               later_matches <- which(path_components[(i+1):length(path_components)] == dir_name)
-               if (length(later_matches) > 0) {
-                  # Found duplication - take everything from the second occurrence
-                  duplicate_index <- i + later_matches[1]
-                  corrected_components <- path_components[duplicate_index:length(path_components)]
-                  image_path <- paste0("/", paste(corrected_components, collapse = "/"))
-                  break
-               }
-            }
-         }
-      }
-      
-      # Alternative approach: if the working directory appears in the path multiple times
-      if (nchar(current_wd) > 1 && grepl(current_wd, image_path)) {
-         # Simple approach: find all occurrences of the working directory
-         wd_positions <- gregexpr(current_wd, image_path, fixed = TRUE)[[1]]
-         if (length(wd_positions) > 1 && wd_positions[1] != -1) {
-            # Multiple occurrences found - use the last one and take everything from there
-            last_wd_pos <- wd_positions[length(wd_positions)]
-            remaining_path <- substring(image_path, last_wd_pos + nchar(current_wd))
-            if (startsWith(remaining_path, "/")) {
-               remaining_path <- substring(remaining_path, 2)
-            }
-            if (nchar(remaining_path) > 0) {
-               image_path <- file.path(current_wd, remaining_path)
-            }
-         }
-      }
+      return(list(
+         function_call_output = function_call_output,
+         function_output_id = function_output_id,
+         image_message_entry = NULL,
+         image_msg_id = NULL
+      ))
    }
    
-   # Validate file exists
-   file_exists <- file.exists(image_path)
+   resize_result <- .rs.resize_image_for_ai(image_path, target_size_kb = 100)
+   image_b64 <- resize_result$base64_data
    
-   # Enhanced file validation
-   if (file_exists) {
-      # Check if it's actually a file (not a directory)
-      if (file.info(image_path)$isdir) {
-         function_response <- paste0("Error: Path is a directory, not a file: ", image_path)
-         file_exists <- FALSE
-      } else {
-         # Check file size (limit to 10MB)
-         file_size <- file.info(image_path)$size
-         max_size <- 10 * 1024 * 1024  # 10MB
-         if (file_size > max_size) {
-            function_response <- paste0("Error: Image file too large (", round(file_size / 1024 / 1024, 1), "MB). Maximum size is 10MB: ", basename(image_path))
-            file_exists <- FALSE
-         } else {
-            # Basic file type validation by extension
-            file_ext <- tolower(tools::file_ext(image_path))
-            supported_formats <- c("png", "jpg", "jpeg", "gif", "svg", "bmp", "tiff", "webp")
-            if (!file_ext %in% supported_formats) {
-               function_response <- paste0("Error: Unsupported image format '.", file_ext, "'. Supported formats: ", paste(supported_formats, collapse = ", "))
-               file_exists <- FALSE
-            } else {
-               function_response <- paste0("Success: Image found at ", basename(image_path), " (", round(file_size / 1024, 1), "KB)")
-            }
-         }
+   if (!is.null(resize_result$format)) {
+      mime_type <- switch(toupper(resize_result$format),
+         "PNG" = "image/png",
+         "JPEG" = "image/jpeg",
+         "JPG" = "image/jpeg",
+         "image/png"
+      )
+   } else {
+      file_ext <- tolower(tools::file_ext(image_path))
+      mime_type <- switch(file_ext,
+         "png" = "image/png",
+         "jpg" = "image/jpeg", 
+         "jpeg" = "image/jpeg",
+         "gif" = "image/gif",
+         "svg" = "image/svg+xml",
+         "bmp" = "image/bmp",
+         "tiff" = "image/tiff",
+         "webp" = "image/webp",
+         "image/png"
+      )
+   }
+   
+   if (resize_result$resized) {
+      function_response <- paste0("Success: Image resized from ", resize_result$original_size_kb, "KB to ", resize_result$final_size_kb, "KB (", display_name, ")")
+      if (!is.null(resize_result$new_dimensions)) {
+         function_response <- paste0(function_response, " - resized to ", resize_result$new_dimensions)
       }
    } else {
-      function_response <- paste0("Error: Image not found: ", image_path)
+      function_response <- paste0("Success: Image loaded at ", resize_result$final_size_kb, "KB (", display_name, ")")
    }
    
-   function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
+   if (!is.null(resize_result$warning)) {
+      function_response <- paste0(function_response, " - Warning: ", resize_result$warning)
+   }
+   
    function_call_output <- list(
       id = function_output_id,
       type = "function_call_output",
@@ -499,70 +419,20 @@
       related_to = function_call$msg_id
    )
    
-   image_message_entry <- NULL
-   image_msg_id <- NULL
+   image_data <- paste0("data:", mime_type, ";base64,", image_b64)
+   image_msg_id <- .rs.get_next_message_id()
    
-   if (file_exists) {
-      # Use intelligent resizing to keep images under 100KB
-      resize_result <- .rs.resize_image_for_ai(image_path, target_size_kb = 100)
-      
-      # Use resized image data
-      image_b64 <- resize_result$base64_data
-      
-      # Use format from resize result or fallback to file extension
-      if (!is.null(resize_result$format)) {
-         mime_type <- switch(toupper(resize_result$format),
-            "PNG" = "image/png",
-            "JPEG" = "image/jpeg",
-            "JPG" = "image/jpeg",
-            "image/png"  # default fallback
-         )
-      } else {
-         file_ext <- tolower(tools::file_ext(image_path))
-         mime_type <- switch(file_ext,
-            "png" = "image/png",
-            "jpg" = "image/jpeg", 
-            "jpeg" = "image/jpeg",
-            "gif" = "image/gif",
-            "svg" = "image/svg+xml",
-            "bmp" = "image/bmp",
-            "tiff" = "image/tiff",
-            "webp" = "image/webp",
-            "image/png"  # default fallback
-         )
-      }
-      
-      # Update function response with resizing info
-      if (resize_result$resized) {
-         function_response <- paste0("Success: Image resized from ", resize_result$original_size_kb, "KB to ", resize_result$final_size_kb, "KB (", basename(image_path), ")")
-         if (!is.null(resize_result$new_dimensions)) {
-            function_response <- paste0(function_response, " - resized to ", resize_result$new_dimensions)
-         }
-      } else {
-         function_response <- paste0("Success: Image loaded at ", resize_result$final_size_kb, "KB (", basename(image_path), ")")
-      }
-      
-      # Add any warnings
-      if (!is.null(resize_result$warning)) {
-         function_response <- paste0(function_response, " - Warning: ", resize_result$warning)
-      }
-      
-      image_data <- paste0("data:", mime_type, ";base64,", image_b64)
-      
-      image_msg_id <- .rs.get_next_message_id()
-      
-      image_content <- list(
-         list(type = "input_text", text = paste0("Image: ", basename(image_path))),
-         list(type = "input_image", image_url = image_data)
-      )
-      
-      image_message_entry <- list(
-         id = image_msg_id,
-         role = "user",
-         content = image_content,
-         related_to = function_output_id
-      )
-   }
+   image_content <- list(
+      list(type = "input_text", text = display_name),
+      list(type = "input_image", image_url = image_data)
+   )
+   
+   image_message_entry <- list(
+      id = image_msg_id,
+      role = "user",
+      content = image_content,
+      related_to = function_output_id
+   )
    
    return(list(
       function_call_output = function_call_output,
@@ -572,40 +442,151 @@
    ))
 })
 
-.rs.addFunction("handle_edit_file", function(function_call, current_log, related_to_id, request_id) {
+.rs.addFunction("handle_view_image", function(function_call, current_log, related_to_id, request_id) {
+   .rs.check_required_packages()
+   
    arguments <- .rs.safe_parse_function_arguments(function_call)
-
-   filename <- arguments$filename
-   code_edit <- arguments$code_edit
-   instructions <- arguments$instructions
-   
-   # For the new edit_file format, we need to return the current file content
-   # so the morph LLM can see what it's working with
-   
-   # Use effective file content (editor if open, otherwise disk)
-   effective_content <- .rs.get_effective_file_content(filename)
-   
-   if (is.null(effective_content)) {
-      # File doesn't exist and isn't open in editor - return empty content
-      file_content <- ""
-   } else {
-      # Return the full file content for the morph LLM
-      file_content <- effective_content
-   }
-
+   image_path <- arguments$image_path
+   image_index <- arguments$image_index
    function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
-   function_call_output <- list(
-     id = function_output_id,
-     type = "function_call_output",
-     call_id = function_call$call_id,
-     output = file_content,
-     related_to = function_call$msg_id
-   )
    
-   return(list(
-      function_call_output = function_call_output,
-      function_output_id = function_output_id
-   ))
+   if (is.null(image_path) && is.null(image_index)) {
+      function_call_output <- list(
+         id = function_output_id,
+         type = "function_call_output",
+         call_id = function_call$call_id,
+         output = "Error: Either image_path or image_index must be provided",
+         related_to = function_call$msg_id,
+         success = FALSE,
+         procedural = FALSE
+      )
+      
+      return(list(
+         function_call_output = function_call_output,
+         function_output_id = function_output_id,
+         image_message_entry = NULL,
+         image_msg_id = NULL
+      ))
+   }
+   
+   if (!is.null(image_index)) {
+      plot_result <- .rs.get_plot_by_index(image_index)
+      
+      if (!plot_result$success) {
+         if (!is.null(image_path)) {
+            # Fallback to image_path if both provided
+            image_index <- NULL
+         } else {
+            function_call_output <- list(
+               id = function_output_id,
+               type = "function_call_output",
+               call_id = function_call$call_id,
+               output = paste0("Error: ", plot_result$error),
+               related_to = function_call$msg_id,
+               success = FALSE,
+               procedural = FALSE
+            )
+            
+            return(list(
+               function_call_output = function_call_output,
+               function_output_id = function_output_id,
+               image_message_entry = NULL,
+               image_msg_id = NULL
+            ))
+         }
+      }
+      
+      if (!is.null(image_index)) {
+         plot_name <- paste0("Plot ", image_index)
+         return(.rs.process_image_file(function_call, plot_result$path, plot_name))
+      }
+   }
+   
+   # Normalize the image path
+   image_path <- .rs.normalizePath(image_path, winslash = "/", mustWork = FALSE)
+   
+   if (!file.exists(image_path)) {
+      function_call_output <- list(
+         id = function_output_id,
+         type = "function_call_output",
+         call_id = function_call$call_id,
+         output = paste0("Error: Image not found: ", image_path),
+         related_to = function_call$msg_id,
+         success = FALSE,
+         procedural = FALSE
+      )
+      
+      return(list(
+         function_call_output = function_call_output,
+         function_output_id = function_output_id,
+         image_message_entry = NULL,
+         image_msg_id = NULL
+      ))
+   }
+   
+   if (file.info(image_path)$isdir) {
+      function_call_output <- list(
+         id = function_output_id,
+         type = "function_call_output",
+         call_id = function_call$call_id,
+         output = paste0("Error: Path is a directory, not a file: ", image_path),
+         related_to = function_call$msg_id,
+         success = FALSE,
+         procedural = FALSE
+      )
+      
+      return(list(
+         function_call_output = function_call_output,
+         function_output_id = function_output_id,
+         image_message_entry = NULL,
+         image_msg_id = NULL
+      ))
+   }
+   
+   file_size <- file.info(image_path)$size
+   max_size <- 10 * 1024 * 1024
+   if (file_size > max_size) {
+      function_call_output <- list(
+         id = function_output_id,
+         type = "function_call_output",
+         call_id = function_call$call_id,
+         output = paste0("Error: Image file too large (", round(file_size / 1024 / 1024, 1), "MB). Maximum size is 10MB: ", basename(image_path)),
+         related_to = function_call$msg_id,
+         success = FALSE,
+         procedural = FALSE
+      )
+      
+      return(list(
+         function_call_output = function_call_output,
+         function_output_id = function_output_id,
+         image_message_entry = NULL,
+         image_msg_id = NULL
+      ))
+   }
+   
+   file_ext <- tolower(tools::file_ext(image_path))
+   supported_formats <- c("png", "jpg", "jpeg", "gif", "svg", "bmp", "tiff", "webp")
+   if (!file_ext %in% supported_formats) {
+      function_call_output <- list(
+         id = function_output_id,
+         type = "function_call_output",
+         call_id = function_call$call_id,
+         output = paste0("Error: Unsupported image format '.", file_ext, "'. Supported formats: ", paste(supported_formats, collapse = ", ")),
+         related_to = function_call$msg_id,
+         success = FALSE,
+         procedural = FALSE
+      )
+      
+      return(list(
+         function_call_output = function_call_output,
+         function_output_id = function_output_id,
+         image_message_entry = NULL,
+         image_msg_id = NULL
+      ))
+   }
+   
+   display_name <- paste0("Image: ", basename(image_path))
+   return(.rs.process_image_file(function_call, image_path, display_name))
 })
 
 .rs.addFunction("perform_fuzzy_search_in_content", function(search_string, file_lines) {
@@ -889,7 +870,7 @@
          old_lines <- character(0)
          new_lines <- strsplit(new_content, "\n", fixed = TRUE)[[1]]
          
-         diff_result <- .rs.compute_line_diff(old_lines, new_lines, is_from_edit_file = TRUE)
+         diff_result <- .rs.compute_line_diff(old_lines, new_lines, use_unified_diff_format = TRUE)
          
          # For append operations only (not new file creation), adjust line numbers to start from current file length + 1
          if (!is_new_file) {
@@ -1147,7 +1128,7 @@
       old_lines <- strsplit(effective_content, "\n", fixed = TRUE)[[1]]
       new_lines <- strsplit(new_content, "\n", fixed = TRUE)[[1]]
       
-      diff_result <- .rs.compute_line_diff(old_lines, new_lines, is_from_edit_file = TRUE)
+      diff_result <- .rs.compute_line_diff(old_lines, new_lines, use_unified_diff_format = TRUE)
       
       # Store diff data for search_replace
       .rs.store_diff_data(function_call$msg_id, diff_result$diff, effective_content, new_content)
@@ -1169,7 +1150,7 @@
    # Add filename_with_stats to diff_data for Java processing
    diff_data$filename_with_stats <- filename_with_stats
    
-   # CRITICAL FIX: Filter diff for display (like edit_file) - show only changed lines plus context
+   # Filter diff for display - show only changed lines plus context
    filtered_diff <- .rs.filter_diff_for_display(diff_data$diff)
    
    # Reconstruct content from filtered diff for widget display
@@ -1217,7 +1198,7 @@
      success = TRUE
    )
    
-   # Create assistant message "Response pending..." (like edit_file does) 
+   # Create assistant message "Response pending..."
    # Read current conversation log
    conversation_log <- .rs.read_conversation_log()
    
@@ -1832,6 +1813,76 @@
      call_id = function_call$call_id,
      output = dirListing,
      related_to = function_call$msg_id
+   )
+   
+   return(list(
+      function_call_output = function_call_output,
+      function_output_id = function_output_id
+   ))
+})
+
+.rs.addFunction("handle_retrieve_documentation", function(function_call, current_log, related_to_id, request_id) {
+   tryCatch({
+      arguments <- .rs.safe_parse_function_arguments(function_call)
+   }, error = function(e) {
+      cat("ERROR: handle_retrieve_documentation argument parsing failed:", e$message, "\n")
+      stop(e)
+   })
+   
+   query <- arguments$query
+   
+   # Validate query is not empty
+   if (is.null(query) || !is.character(query) || length(query) == 0 || !nzchar(trimws(query))) {
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
+      
+      function_call_output <- list(
+        id = function_output_id,
+        type = "function_call_output",
+        call_id = function_call$call_id,
+        output = "Error: Query parameter is required and cannot be empty.",
+        related_to = function_call$msg_id,
+        success = FALSE
+      )
+      
+      return(list(
+         function_call_output = function_call_output,
+         function_output_id = function_output_id
+      ))
+   }
+   
+   # Get R help content as markdown
+   help_content <- ""
+   is_success <- FALSE
+   
+   tryCatch({
+      # Use get_help_as_md for R documentation
+      help_content <- .rs.get_help_as_md(query, "")
+      
+      # Check if help content is empty or contains error messages
+      if (is.null(help_content) || !nzchar(trimws(help_content))) {
+         help_content <- paste0("No R documentation found for '", query, "'.")
+         is_success <- FALSE
+      } else if (grepl("No help topics found", help_content, ignore.case = TRUE) ||
+                 grepl("No.*runtime available", help_content, ignore.case = TRUE)) {
+         help_content <- paste0("No R documentation found for '", query, "'.")
+         is_success <- FALSE
+      } else {
+         is_success <- TRUE
+      }
+   }, error = function(e) {
+      help_content <<- paste0("No R documentation found for '", query, "'.")
+      is_success <<- FALSE
+   })
+   
+   function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
+   
+   function_call_output <- list(
+     id = function_output_id,
+     type = "function_call_output",
+     call_id = function_call$call_id,
+     output = help_content,
+     related_to = function_call$msg_id,
+     success = is_success
    )
    
    return(list(
