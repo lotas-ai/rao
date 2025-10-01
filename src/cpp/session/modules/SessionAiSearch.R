@@ -248,70 +248,7 @@
    
    keyword <- arguments$keyword
    
-   symbol_results <- .rs.find_symbol(keyword)
-   
-   formatted_result <- if (is.character(symbol_results)) {
-      symbol_results
-   } else if (length(symbol_results) > 0) {
-      result_lines <- c(paste0("Results for keyword '", keyword, "':"))
-      
-      symbol_names <- sapply(symbol_results, function(s) s$name)
-      has_duplicates <- any(duplicated(symbol_names))
-      
-      for (i in seq_along(symbol_results)) {
-         symbol <- symbol_results[[i]]
-         symbol_info <- if(has_duplicates) {
-            paste0("[", i, "] - Name: ", symbol$name, ", Type: ", symbol$type)
-         } else {
-            paste0("- Name: ", symbol$name, ", Type: ", symbol$type)
-         }
-         
-         if (!is.null(symbol$file)) {
-            symbol_info <- paste0(symbol_info, "\n  File: ", symbol$file)
-         }
-         if (!is.null(symbol$filename)) {
-            symbol_info <- paste0(symbol_info, "\n  Filename (also keyword): ", symbol$filename)
-         }
-         
-         if (!is.null(symbol$line_start) || !is.null(symbol$line_end)) {
-            lineInfo <- ""
-            if (!is.null(symbol$line_start)) {
-               lineInfo <- paste0("Line Start: ", symbol$line_start)
-            }
-            if (!is.null(symbol$line_end)) {
-               if (lineInfo != "") lineInfo <- paste0(lineInfo, ", ")
-               lineInfo <- paste0(lineInfo, "Line End: ", symbol$line_end)
-            }
-            symbol_info <- paste0(symbol_info, "\n  ", lineInfo)
-         }
-         
-         if (!is.null(symbol$location)) {
-            symbol_info <- paste0(symbol_info, "\n  Location: ", symbol$location)
-         }
-         
-         if (!is.null(symbol$parents) && symbol$parents != "") {
-            symbol_info <- paste0(symbol_info, "\n  Parents: ", symbol$parents)
-         }
-         
-         if (!is.null(symbol$signature) && symbol$signature != "") {
-            symbol_info <- paste0(symbol_info, "\n  Signature: ", symbol$signature)
-         }
-         
-         if (!is.null(symbol$description) && symbol$description != "") {
-            symbol_info <- paste0(symbol_info, "\n  Description: ", symbol$description)
-         }
-         
-         if (!is.null(symbol$children) && length(symbol$children) > 0) {
-            symbol_info <- paste0(symbol_info, "\n  Children (also keyword): ", paste(symbol$children, collapse = ", "))
-         }
-         
-         result_lines <- c(result_lines, symbol_info)
-      }
-      
-      paste(result_lines, collapse = "\n\n")
-   } else {
-      paste0("'", keyword, "' is not a keyword and did not return any results. Only find context for keyword.")
-   }
+   formatted_result <- paste0("Keyword search is not available. Please use other tools like read_file or codebase_search to find information about '", keyword, "'.")
    
    function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
    function_call_output <- list(
@@ -855,6 +792,7 @@
    file_path <- arguments$file_path
    old_string <- arguments$old_string
    new_string <- arguments$new_string
+   replace_all <- if (!is.null(arguments$replace_all)) arguments$replace_all else FALSE
    
    # Remove line numbers from old_string and new_string before validation
    # This prevents mismatches when AI includes line numbers for context
@@ -1142,8 +1080,8 @@
       ))
    }
    
-   if (match_count > 1) {
-      # Multiple matches found - provide unique context for each match like the old version
+   if (match_count > 1 && !replace_all) {
+      # Multiple matches found and replace_all is false - provide unique context for each match
       file_lines <- strsplit(effective_content, "\n")[[1]]
       
       # Find line numbers for each match
@@ -1166,7 +1104,7 @@
       match_details <- .rs.generate_unique_contexts(file_lines, match_line_nums)
       
       error_message <- paste0("The old_string was found ", match_count, " times in the file ", file_path, ". ",
-                             "Please provide a more specific old_string that matches exactly one location. ",
+                             "Please provide a more specific old_string that matches exactly one location, or use replace_all: true to replace all instances. ",
                              "Here are all the matches with context:\n\n", paste(match_details, collapse = "\n\n"))
       
       function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
@@ -1186,18 +1124,23 @@
          function_call_output = function_call_output,
          function_output_id = function_output_id,
          breakout_of_function_calls = TRUE,
-         status = "continue_silent"  # Let AI try again with more specific old_string
+         status = "continue_silent"  # Let AI try again with more specific old_string or replace_all
       ))
    }
 
-   # SUCCESS CASE: Exactly one match found
+   # SUCCESS CASE: Exactly one match found OR multiple matches with replace_all=true
    # Follow the same pattern as run_console_cmd:
    # 1. Create and send the widget with diff data
    # 2. Return breakout status to wait for user acceptance
    
    # Simulate the replacement to get new content for widget display
    # Use the same flexible whitespace pattern as validation
-   new_content <- gsub(flexible_pattern, new_string, effective_content, perl = TRUE)
+   # When replace_all is true, gsub replaces all matches; when false, sub replaces only first match
+   if (replace_all) {
+      new_content <- gsub(flexible_pattern, new_string, effective_content, perl = TRUE)
+   } else {
+      new_content <- sub(flexible_pattern, new_string, effective_content, perl = TRUE)
+   }
    
    # Get diff data for the proposed replacement
    diff_data <- tryCatch({
@@ -1260,11 +1203,16 @@
    
    # Create function_call_output showing validation succeeded (using pre-allocated ID)
    function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
+   output_message <- if (replace_all && match_count > 1) {
+      paste0("Found ", match_count, " matches. All instances will be replaced. The user may now accept or reject the replacement.")
+   } else {
+      paste0("The unique string to replace was successfully found. The user may now accept or reject the replacement.")
+   }
    function_call_output <- list(
      id = function_output_id,
      type = "function_call_output",
      call_id = function_call$call_id,
-     output = paste0("The unique string to replace was successfully found. The user may now accept or reject the replacement."),
+     output = output_message,
      related_to = function_call$msg_id,
      success = TRUE
    )
@@ -1300,6 +1248,7 @@
       file_path = file_path,
       old_string = old_string,
       new_string = new_string,
+      replace_all = replace_all,
       current_content = new_content,
       original_content = effective_content,
       related_to_id = related_to_id,
@@ -1310,35 +1259,19 @@
    return(result)
 })
 
-.rs.addFunction("handle_grep_search", function(function_call, current_log, related_to_id, request_id) {
+.rs.addFunction("handle_grep", function(function_call, current_log, related_to_id, request_id) {
    arguments <- .rs.safe_parse_function_arguments(function_call)
    
-   query <- arguments$query
+   pattern <- arguments$pattern
    
    # Validate required parameters
-   if (is.null(query) || query == "") {
+   if (is.null(pattern) || pattern == "") {
       function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
       function_call_output <- list(
         id = function_output_id,
         type = "function_call_output",
         call_id = function_call$call_id,
-        output = "Error: query parameter is required for grep_search",
-        related_to = function_call$msg_id
-      )
-      
-      return(list(
-         function_call_output = function_call_output,
-         function_output_id = function_output_id
-      ))
-   }
-   
-   if (is.null(arguments$case_sensitive)) {
-      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
-      function_call_output <- list(
-        id = function_output_id,
-        type = "function_call_output",
-        call_id = function_call$call_id,
-        output = "Error: case_sensitive parameter is required for grep_search",
+        output = "Error: pattern parameter is required for grep",
         related_to = function_call$msg_id
       )
       
@@ -1350,88 +1283,129 @@
    
    cwd <- getwd()
    
-   case_flag <- if (!arguments$case_sensitive) "-i" else ""
+   # Handle case sensitivity (-i flag)
+   case_insensitive <- if (!is.null(arguments$`-i`)) arguments$`-i` else FALSE
+   case_flag <- if (case_insensitive) "-i" else ""
    
-   # Get ripgrep binary path (same query as pandoc)
+   # Get ripgrep binary path
    rg_exe <- if (.rs.platform.isWindows) "rg.exe" else "rg"
    rg_binary <- file.path(Sys.getenv("RSTUDIO_RIPGREP"), rg_exe)
    
-   # Build arguments vector for cross-platform compatibility
+   # Build arguments vector for ripgrep
    args <- c("-n")
    if (case_flag != "") args <- c(args, case_flag)
    
-   # Handle include querys - split by semicolons and commas, each gets its own -g
-   if (!is.null(arguments$include_pattern) && arguments$include_pattern != "") {
-      include_patterns <- strsplit(arguments$include_pattern, "[;,| ]")[[1]]
-      include_patterns <- trimws(include_patterns)  # Remove whitespace
-      include_patterns <- include_patterns[include_patterns != ""]  # Remove empty patterns
-      for (pattern in include_patterns) {
-         # Check if this is a file extension pattern (*.ext)
-         if (grepl("^\\*\\.[a-zA-Z]+$", pattern)) {
-            ext <- sub("^\\*\\.", "", pattern)
-            # Add lowercase, uppercase, and first-letter-capitalized versions
-            args <- c(args, "-g", paste0("*.", tolower(ext)))
-            if (tolower(ext) != toupper(ext)) {  # Only add uppercase if different
-               args <- c(args, "-g", paste0("*.", toupper(ext)))
-            }
-            # Add first-letter-capitalized version if different from others
-            first_cap <- paste0(toupper(substr(ext, 1, 1)), tolower(substr(ext, 2, nchar(ext))))
-            if (first_cap != tolower(ext) && first_cap != toupper(ext)) {
-               args <- c(args, "-g", paste0("*.", first_cap))
-            }
-         } else {
-            args <- c(args, "-g", pattern)
-         }
+   # Handle context flags -A, -B, -C
+   if (!is.null(arguments$`-C`)) {
+      args <- c(args, "-C", as.character(arguments$`-C`))
+   } else {
+      if (!is.null(arguments$`-A`)) {
+         args <- c(args, "-A", as.character(arguments$`-A`))
+      }
+      if (!is.null(arguments$`-B`)) {
+         args <- c(args, "-B", as.character(arguments$`-B`))
       }
    }
    
-   # Handle exclude patterns - split by semicolons and commas, each gets its own -g !
-   if (!is.null(arguments$exclude_pattern) && arguments$exclude_pattern != "") {
-      exclude_patterns <- strsplit(arguments$exclude_pattern, "[;,]")[[1]]
-      exclude_patterns <- trimws(exclude_patterns)  # Remove whitespace
-      exclude_patterns <- exclude_patterns[exclude_patterns != ""]  # Remove empty patterns
-      for (pattern in exclude_patterns) {
-         # Check if this is a file extension pattern (*.ext)
-         if (grepl("^\\*\\.[a-zA-Z]+$", pattern)) {
-            ext <- sub("^\\*\\.", "", pattern)
-            # Add lowercase, uppercase, and first-letter-capitalized versions
-            args <- c(args, "-g", paste0("!*.", tolower(ext)))
-            if (tolower(ext) != toupper(ext)) {  # Only add uppercase if different
-               args <- c(args, "-g", paste0("!*.", toupper(ext)))
-            }
-            # Add first-letter-capitalized version if different from others
-            first_cap <- paste0(toupper(substr(ext, 1, 1)), tolower(substr(ext, 2, nchar(ext))))
-            if (first_cap != tolower(ext) && first_cap != toupper(ext)) {
-               args <- c(args, "-g", paste0("!*.", first_cap))
-            }
-         } else {
-            args <- c(args, "-g", paste0("!", pattern))
-         }
-      }
+   # Handle multiline flag
+   multiline_enabled <- !is.null(arguments$multiline) && arguments$multiline
+   if (multiline_enabled) {
+      args <- c(args, "-U", "--multiline-dotall")
    }
    
-   args <- c(args, query, cwd)
-
-   # Parse include and exclude patterns for open document filtering
+   # Handle output mode for ripgrep
+   output_mode <- if (!is.null(arguments$output_mode)) arguments$output_mode else "content"
+   if (output_mode == "files_with_matches") {
+      args <- c(args, "-l")
+   } else if (output_mode == "count") {
+      args <- c(args, "-c")
+   }
+   
+   # Get head_limit parameter
+   head_limit <- if (!is.null(arguments$head_limit)) arguments$head_limit else 50
+   
+   # Handle glob pattern
    include_patterns <- NULL
    exclude_patterns <- NULL
-   
-   if (!is.null(arguments$include_pattern) && arguments$include_pattern != "") {
-      include_patterns <- strsplit(arguments$include_pattern, "[;,| ]")[[1]]
-      include_patterns <- trimws(include_patterns)  # Remove whitespace
-      include_patterns <- include_patterns[include_patterns != ""]  # Remove empty patterns
+   if (!is.null(arguments$glob) && arguments$glob != "") {
+      glob_pattern <- arguments$glob
+      args <- c(args, "-g", glob_pattern)
+      # Parse for open document filtering
+      if (startsWith(glob_pattern, "!")) {
+         # Exclusion pattern - remove ! prefix
+         exclude_patterns <- c(substring(glob_pattern, 2))
+      } else {
+         # Inclusion pattern
+         include_patterns <- c(glob_pattern)
+      }
    }
    
-   if (!is.null(arguments$exclude_pattern) && arguments$exclude_pattern != "") {
-      exclude_patterns <- strsplit(arguments$exclude_pattern, "[;,]")[[1]]
-      exclude_patterns <- trimws(exclude_patterns)  # Remove whitespace
-      exclude_patterns <- exclude_patterns[exclude_patterns != ""]  # Remove empty patterns
+   # Handle type pattern (file type)
+   if (!is.null(arguments$type) && arguments$type != "") {
+      args <- c(args, "-t", arguments$type)
+      # Map type to glob pattern for open document filtering (matches vscode's typeGlobs)
+      type_glob_map <- list(
+         js = "*.{js,jsx}",
+         ts = "*.{ts,tsx}",
+         py = "*.py",
+         java = "*.java",
+         cpp = "*.{cpp,cxx,cc,c++}",
+         c = "*.{c,h}",
+         html = "*.{html,htm}",
+         css = "*.css",
+         json = "*.json",
+         xml = "*.xml",
+         md = "*.{md,markdown}",
+         txt = "*.txt"
+      )
+      if (!is.null(type_glob_map[[arguments$type]])) {
+         include_patterns <- c(include_patterns, type_glob_map[[arguments$type]])
+      }
    }
+   
+   # Determine search path
+   search_path <- if (!is.null(arguments$path)) arguments$path else cwd
+   
+   # Expand path for open document comparison (normalize ~, relative paths, etc.)
+   # But keep original for ripgrep which handles these itself
+   search_path_expanded <- tryCatch({
+      # Handle relative paths
+      if (!startsWith(search_path, "/") && !grepl("^[A-Za-z]:", search_path)) {
+         search_path <- file.path(cwd, search_path)
+      }
+      # Expand tilde and normalize
+      normalizePath(search_path, winslash = "/", mustWork = FALSE)
+   }, error = function(e) {
+      search_path
+   })
+   
+   args <- c(args, pattern, search_path)
 
-   # First search in open documents (editor content) with include/exclude filtering
+   # First search in open documents (editor content) with pattern filtering
+   # Calculate context settings for open documents
+   context_before <- 0
+   context_after <- 0
+   if (!is.null(arguments$`-C`)) {
+      context_before <- context_after <- arguments$`-C`
+   } else {
+      context_before <- if (!is.null(arguments$`-B`)) arguments$`-B` else 0
+      context_after <- if (!is.null(arguments$`-A`)) arguments$`-A` else 0
+   }
+   
    # Wrap in tryCatch to handle invalid regex patterns
+   multiline_param <- !is.null(arguments$multiline) && arguments$multiline
+   
    grep_operation_result <- tryCatch({
-      open_doc_results <- .rs.grep_in_open_documents(query, !is.null(arguments$case_sensitive) && arguments$case_sensitive, include_patterns, exclude_patterns)
+      open_doc_results <- .rs.grep_in_open_documents(
+         pattern, 
+         !case_insensitive, 
+         include_patterns, 
+         exclude_patterns, 
+         context_before, 
+         context_after,
+         multiline = multiline_param,
+         search_path = search_path_expanded
+      )
       list(success = TRUE, results = open_doc_results)
    }, error = function(e) {
       list(success = FALSE, error_message = e$message)
@@ -1439,7 +1413,6 @@
    
    # Check if grep operation failed due to invalid regex
    if (!grep_operation_result$success) {
-      # Create error response following the same pattern as search_replace
       error_message <- paste0("Grep search failed: ", grep_operation_result$error_message)
       
       function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
@@ -1452,31 +1425,30 @@
         success = FALSE
       )
       
-      # Update conversation display immediately when grep_search fails
       .rs.update_conversation_display()
       
       return(list(
          function_call_output = function_call_output,
          function_output_id = function_output_id,
          breakout_of_function_calls = TRUE,
-         status = "continue_silent"  # Let AI try again with correct pattern
+         status = "continue_silent"
       ))
    }
    
    # Extract successful results
    open_doc_results <- grep_operation_result$results
    
-   # Also wrap ripgrep execution to handle potential errors
+   # Execute ripgrep for disk files
    result <- tryCatch({
       processx::run(rg_binary, args, timeout = 5, error_on_status = FALSE)
    }, error = function(e) {
-      # Return a synthetic result object indicating failure
       list(timeout = FALSE, stdout = "", stderr = e$message, status = 1)
    })
+   
    if (result$timeout) {
       grep_results <- "Results:\n\n_error: ripgrep timed out. Concisely ask the user to set a more specific working directory with setwd()."
    } else if (!is.null(result$status) && result$status != 0 && !is.null(result$stderr) && nchar(result$stderr) > 0) {
-      # Handle ripgrep errors (like invalid regex patterns)
+      # Handle ripgrep errors
       error_message <- paste0("Grep search failed: ", result$stderr)
       
       function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
@@ -1489,7 +1461,6 @@
         success = FALSE
       )
       
-      # Update conversation display immediately when grep_search fails
       .rs.update_conversation_display()
       
       return(list(
@@ -1499,90 +1470,19 @@
          status = "continue_silent"
       ))
    } else {
-      file_content <- result$stdout
+      # Format output based on output_mode
+      head_limit <- if (!is.null(arguments$head_limit)) arguments$head_limit else 50
       
-      # Check if we have open document results even if no disk results
-      if (nchar(file_content) == 0 && length(open_doc_results) == 0) {
-         grep_results <- paste0("Results:\n\nNo matches")
+      # Check if we're searching a specific file (for single-file ripgrep output format)
+      search_file_param <- if (file.exists(search_path)) search_path_expanded else NULL
+      
+      if (output_mode == "files_with_matches") {
+         grep_results <- .rs.format_grep_files_with_matches(result$stdout, open_doc_results, head_limit)
+      } else if (output_mode == "count") {
+         grep_results <- .rs.format_grep_count(result$stdout, open_doc_results, head_limit)
       } else {
-         matches <- strsplit(file_content, "\n")[[1]]
-         
-         match_count_note <- ""
-         if (length(matches) > 50) {
-            match_count_note <- paste0("\n(Showing 50 of ", length(matches), " matches)")
-            matches <- matches[1:50]
-         }
-         
-         results <- list()
-         
-         # Start with open document results (these take precedence)
-         for (file_path in names(open_doc_results)) {
-            for (match_info in open_doc_results[[file_path]]) {
-               if (is.null(results[[file_path]])) {
-                  results[[file_path]] <- character(0)
-               }
-               results[[file_path]] <- c(results[[file_path]], 
-                                        paste0("Line ", match_info$line, ": ", match_info$content, " [EDITOR]"))
-            }
-         }
-         
-         # Add disk results, but only for files not already found in editor
-         for (match in matches) {
-            if (match == "") next
-            
-            parts <- strsplit(match, ":", fixed = TRUE)[[1]]
-            
-            if (length(parts) >= 3) {
-               filepath <- parts[1]
-               line_num <- parts[2]
-               content <- paste(parts[-(1:2)], collapse = ":")
-               
-               relative_path <- gsub(paste0("^", cwd, "/"), "", filepath)
-               
-               # Skip if we already have editor results for this file
-               if (!is.null(open_doc_results[[relative_path]])) {
-                  next
-               }
-               
-               if (grepl("\\.(png|jpg|jpeg|gif|bmp|ico|pdf|zip|tar|gz|rar|7z|exe|dll|so|dylib)$", relative_path, ignore.case = TRUE)) {
-                  next
-               }
-               
-               content_len <- nchar(content)
-               if (content_len > 100) {
-                  match_pos <- regexpr(query, content, ignore.case = TRUE, perl = TRUE)[1]
-                  
-                  start_pos <- max(1, match_pos - 30)
-                  end_pos <- min(content_len, match_pos + 30)
-                  
-                  first_part <- substr(content, 1, 20)
-                  middle_part <- substr(content, start_pos, end_pos)
-                  last_part <- substr(content, content_len - 19, content_len)
-                  
-                  content <- paste0(first_part, "...", middle_part, "...", last_part)
-               }
-               
-               if (is.null(results[[relative_path]])) {
-                  results[[relative_path]] <- character(0)
-               }
-               
-               results[[relative_path]] <- c(results[[relative_path]], 
-                                            paste0("Line ", line_num, ": ", content))
-            }
-         }
-         
-         if (length(results) > 0) {
-            result_lines <- c(paste0("Results:", match_count_note))
-            
-            for (file in names(results)) {
-               result_lines <- c(result_lines, paste0("\nFile: ", file))
-               result_lines <- c(result_lines, results[[file]])
-            }
-            
-            grep_results <- paste(result_lines, collapse = "\n")
-         } else {
-            grep_results <- paste0("Results:\n\nNo matches")
-         }
+         # Default: content mode
+         grep_results <- .rs.format_grep_content(result$stdout, open_doc_results, pattern, cwd, head_limit, search_file_param)
       }
    }
    
@@ -1705,46 +1605,11 @@
    # First try to get content from editor (handles both saved and unsaved files)
    effective_content <- .rs.get_effective_file_content(file_path)
    
-   # If not found in editor and file doesn't exist on disk, try symbol search
-   # BUT only for regular files - for __UNSAVED_ files, respect the full identifier
+   # If not found in editor and file doesn't exist on disk, return error
    if (is.null(effective_content) && !file.exists(file_path)) {
-      found_file <- NULL
-      
-      # For unsaved files with __UNSAVED_ pattern, don't fall back to basename search
-      # as this would incorrectly match other unsaved files with the same basename
-      if (!startsWith(file_path, "__UNSAVED")) {
-         # Only use basename fallback for regular files
-         base_filename <- basename(file_path)
-         
-         symbol_results <- .rs.find_symbol(base_filename)
-         
-         file_symbols <- list()
-         if (!is.null(symbol_results)) {
-            for (symbol in symbol_results) {
-               if (!is.null(symbol$file)) {
-                  # Include both disk files and unsaved files (which may have __UNSAVED__ paths)
-                  if (file.exists(symbol$file) || .rs.is_file_open_in_editor(symbol$file)) {
-                     file_symbols <- c(file_symbols, list(symbol))
-                  }
-               }
-            }
-         }
-         
-         if (length(file_symbols) == 1) {
-            found_file <- file_symbols[[1]]$file
-            # Try again with the found file path
-            effective_content <- .rs.get_effective_file_content(found_file)
-            if (!is.null(effective_content)) {
-               file_path <- found_file
-            }
-         }
-      }
-      
-      if (is.null(effective_content)) {
-         file_content <- paste0("Error: File not found, try using your tools to look elsewhere for: ", file_path)
-         # Set end_line_to_read for error case
-         end_line_to_read <- startLine
-      }
+      file_content <- paste0("Error: File not found, try using your tools to look elsewhere for: ", file_path)
+      # Set end_line_to_read for error case
+      end_line_to_read <- startLine
    }
    
    if (!exists("file_content") && !is.null(effective_content)) {

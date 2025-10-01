@@ -1923,7 +1923,6 @@ Error matchTextInOpenDocuments(const json::JsonRpcRequest& request,
             }
             
             // For unsaved documents, we need to provide a usable path identifier
-            // Use the same pattern as the symbol index system
             std::string effective_file_path = file_path;
             if (file_path.empty() && !doc_id.empty()) {
                // Get tempName from document properties
@@ -2170,7 +2169,7 @@ Error getOpenDocumentContent(const json::JsonRpcRequest& request,
          std::string tempName = p_doc->getProperty("tempName");
          if (!tempName.empty())
          {
-            // For tempName matching, use prefix patterns from symbol index:
+            // For tempName matching, use prefix patterns:
             // 1. "__UNSAVED__/" + tempName
             // 2. "__UNSAVED_" + id + "__/" + tempName
             
@@ -2183,8 +2182,8 @@ Error getOpenDocumentContent(const json::JsonRpcRequest& request,
             
             // Check various matching patterns
             if (file_path == tempName ||                          // Direct tempName match
-                file_path == unsavedPathPattern1 ||               // Symbol index pattern 1
-                (!unsavedPathPattern2.empty() && file_path == unsavedPathPattern2)) // Symbol index pattern 2
+                file_path == unsavedPathPattern1 ||               // Pattern 1
+                (!unsavedPathPattern2.empty() && file_path == unsavedPathPattern2)) // Pattern 2
             {
                matches = true;
             }
@@ -2257,7 +2256,7 @@ Error isFileOpenInEditor(const json::JsonRpcRequest& request,
          std::string tempName = p_doc->getProperty("tempName");
          if (!tempName.empty())
          {
-            // For tempName matching, use prefix patterns from symbol index:
+            // For tempName matching, use prefix patterns:
             // 1. "__UNSAVED__/" + tempName
             // 2. "__UNSAVED_" + id + "__/" + tempName
             
@@ -2270,8 +2269,8 @@ Error isFileOpenInEditor(const json::JsonRpcRequest& request,
             
             // Check various matching patterns
             if (file_path == tempName ||                          // Direct tempName match
-                file_path == unsavedPathPattern1 ||               // Symbol index pattern 1
-                (!unsavedPathPattern2.empty() && file_path == unsavedPathPattern2)) // Symbol index pattern 2
+                file_path == unsavedPathPattern1 ||               // Pattern 1
+                (!unsavedPathPattern2.empty() && file_path == unsavedPathPattern2)) // Pattern 2
             {
                matches = true;
             }
@@ -2344,7 +2343,7 @@ Error updateOpenDocumentContent(const json::JsonRpcRequest& request,
          std::string tempName = doc->getProperty("tempName");
          if (!tempName.empty())
          {
-            // For tempName matching, use prefix patterns from symbol index:
+            // For tempName matching, use prefix patterns:
             // 1. "__UNSAVED__/" + tempName
             // 2. "__UNSAVED_" + id + "__/" + tempName
             
@@ -2357,8 +2356,8 @@ Error updateOpenDocumentContent(const json::JsonRpcRequest& request,
             
             // Check various matching patterns
             if (file_path == tempName ||                          // Direct tempName match
-                file_path == unsavedPathPattern1 ||               // Symbol index pattern 1
-                (!unsavedPathPattern2.empty() && file_path == unsavedPathPattern2)) // Symbol index pattern 2
+                file_path == unsavedPathPattern1 ||               // Pattern 1
+                (!unsavedPathPattern2.empty() && file_path == unsavedPathPattern2)) // Pattern 2
             {
                matches = true;
             }

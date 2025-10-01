@@ -158,7 +158,6 @@
 #include "modules/SessionWorkbench.hpp"
 #include "modules/SessionHelp.hpp"
 #include "modules/SessionAi.hpp"
-#include "modules/SessionSymbolIndex.hpp"
 #include "modules/SessionPlots.hpp"
 #include "modules/SessionPath.hpp"
 #include "modules/SessionPackages.hpp"
@@ -222,7 +221,6 @@
 #include "modules/SessionTerminal.hpp"
 #include "modules/SessionFonts.hpp"
 #include "modules/SessionSystemResources.hpp"
-#include "modules/SessionSymbolIndex.hpp"
 #include "modules/SessionPPM.hpp"
 
 #include <session/SessionProjectTemplate.hpp>
@@ -742,7 +740,6 @@ Error rInit(const rstudio::r::session::RInitInfo& rInitInfo)
       (modules::system_resources::initialize)
       (modules::copilot::initialize)
       (modules::automation::initialize)
-      (modules::symbol_index::initialize)
 
       // workers
       (workers::web_request::initialize)

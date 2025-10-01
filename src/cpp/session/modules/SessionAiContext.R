@@ -140,18 +140,6 @@
             timestamp = Sys.time()
          )
          .rs.setVar("context_items", context_items)
-         
-         # Index for symbols if file exists on disk or is open in editor
-         if (file.exists(result) || .rs.is_file_open_in_editor(result)) {
-            tryCatch({
-               # First, quickly build the symbol index framework for the working directory
-               .rs.build_symbol_index_quick()
-               
-               # Then index the specific file/directory to ensure it's included
-               .rs.index_specific_symbol(result)
-            }, error = function(e) {
-            })
-         }
       }
       
       return(result)
@@ -204,18 +192,6 @@
    context_items[[length(context_items) + 1]] <- new_item
    
    .rs.setVar("context_items", context_items)
-   
-   # Index for symbols if file exists on disk or is open in editor
-   if (file.exists(path) || .rs.is_file_open_in_editor(path)) {
-      tryCatch({
-         # First, quickly build the symbol index framework for the working directory
-         .rs.build_symbol_index_quick()
-         
-         # Then index the specific file/directory to ensure it's included
-         .rs.index_specific_symbol(path)
-      }, error = function(e) {
-      })
-   }
    
    return(TRUE)
 })
@@ -602,7 +578,7 @@
                      path <- doc$path
                      break
                   } else {
-                     # Unsaved document - generate __UNSAVED_ path using same logic as symbol indexing
+                     # Unsaved document - generate __UNSAVED_ path
                      # Use tempName property if available, otherwise fallback to "Untitled"
                      temp_name <- NULL
                      if (!is.null(doc$properties) && !is.null(doc$properties$tempName)) {
@@ -711,18 +687,6 @@
    
    context_items[[length(context_items) + 1]] <- new_item
    .rs.setVar("context_items", context_items)
-   
-   # Index for symbols if file exists on disk or is open in editor
-   if (file.exists(path) || .rs.is_file_open_in_editor(path)) {
-      tryCatch({
-         # First, quickly build the symbol index framework for the working directory
-         .rs.build_symbol_index_quick()
-         
-         # Then index the specific file to ensure it's included
-         .rs.index_specific_symbol(path)
-      }, error = function(e) {
-      })
-   }
    
    return(TRUE)
 })

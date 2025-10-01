@@ -426,7 +426,7 @@
          function_name <- entry$function_call$name
          
          # Handle function calls that should show as permanent messages (no widgets)
-         if (function_name %in% c("find_keyword_context", "grep_search", "read_file", "view_image", "search_for_file", "list_dir")) {
+         if (function_name %in% c("find_keyword_context", "grep", "read_file", "view_image", "search_for_file", "list_dir")) {
             # Parse function call arguments using safe function
             args <- .rs.safe_parse_function_arguments(entry$function_call)
             

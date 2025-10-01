@@ -87,29 +87,61 @@
             paste0('Searched repository for "', keyword, '"')
          }
       },
-      "grep_search" = {
-         pattern <- if (!is.null(arguments$query)) arguments$query else "unknown"
+      "grep" = {
+         pattern <- if (!is.null(arguments$pattern)) arguments$pattern else "unknown"
          display_pattern <- if (nchar(pattern) > 50) paste0(substr(pattern, 1, 50), "...") else pattern
          
-         # Build patterns info
-         patterns_info <- ""
-         if (!is.null(arguments$include_pattern) && arguments$include_pattern != "" ||
-             !is.null(arguments$exclude_pattern) && arguments$exclude_pattern != "") {
-            
-            parts <- c()
-            if (!is.null(arguments$include_pattern) && arguments$include_pattern != "") {
-               parts <- c(parts, paste0("include: ", arguments$include_pattern))
+         # Build info parts matching vscode's implementation
+         info_parts <- c()
+         
+         if (!is.null(arguments$glob) && arguments$glob != "") {
+            info_parts <- c(info_parts, paste0("glob: ", arguments$glob))
+         }
+         if (!is.null(arguments$type) && arguments$type != "") {
+            info_parts <- c(info_parts, paste0("type: ", arguments$type))
+         }
+         if (!is.null(arguments$path) && arguments$path != "" && arguments$path != ".") {
+            info_parts <- c(info_parts, paste0("path: ", arguments$path))
+         }
+         if (!is.null(arguments$output_mode) && arguments$output_mode != "content") {
+            info_parts <- c(info_parts, paste0("mode: ", arguments$output_mode))
+         }
+         if (!is.null(arguments$`-i`) && arguments$`-i`) {
+            info_parts <- c(info_parts, "case-insensitive")
+         }
+         if (!is.null(arguments$multiline) && arguments$multiline) {
+            info_parts <- c(info_parts, "multiline")
+         }
+         
+         # Handle context flags (-A, -B, -C)
+         if (!is.null(arguments$`-A`) || !is.null(arguments$`-B`) || !is.null(arguments$`-C`)) {
+            context_parts <- c()
+            if (!is.null(arguments$`-A`)) {
+               context_parts <- c(context_parts, paste0("+", arguments$`-A`))
             }
-            if (!is.null(arguments$exclude_pattern) && arguments$exclude_pattern != "") {
-               parts <- c(parts, paste0("exclude: ", arguments$exclude_pattern))
+            if (!is.null(arguments$`-B`)) {
+               context_parts <- c(context_parts, paste0("-", arguments$`-B`))
             }
-            patterns_info <- paste0(" (", paste(parts, collapse = ", "), ")")
+            if (!is.null(arguments$`-C`)) {
+               context_parts <- c(context_parts, paste0("+/-", arguments$`-C`))
+            }
+            info_parts <- c(info_parts, paste0("context: ", paste(context_parts, collapse = ",")))
+         }
+         
+         if (!is.null(arguments$head_limit)) {
+            info_parts <- c(info_parts, paste0("limit: ", arguments$head_limit))
+         }
+         
+         grep_info <- if (length(info_parts) > 0) {
+            paste0(" (", paste(info_parts, collapse = ", "), ")")
+         } else {
+            ""
          }
          
          if (is_thinking) {
-            paste0('Searching pattern "', display_pattern, '"', patterns_info, suffix)
+            paste0('Searching pattern "', display_pattern, '"', grep_info, suffix)
          } else {
-            paste0('Searched pattern "', display_pattern, '"', patterns_info)
+            paste0('Searched pattern "', display_pattern, '"', grep_info)
          }
       },
       "read_file" = {
@@ -590,7 +622,6 @@
       .rs.api.documentOpen(filename)
    }
    .rs.save_script_to_history(filename)
-   .rs.build_symbol_index()
    
    # Look for existing "Response pending..." procedural user message and replace it
    conversation_log <- .rs.read_conversation_log()
@@ -741,6 +772,7 @@
    file_path <- search_replace_args$file_path
    old_string <- search_replace_args$old_string
    new_string <- search_replace_args$new_string
+   replace_all <- if (!is.null(search_replace_args$replace_all)) search_replace_args$replace_all else FALSE
    
    # Trim line numbers from old_string and new_string (like edit_file does)
    old_string <- .rs.remove_line_numbers(old_string)
@@ -802,11 +834,15 @@
          ))
       }
       
-      # Since validation happened upfront in handle_search_replace, we can assume exactly one match exists
-      # Just perform the replacement directly (user has already approved it via the widget)
+      # Perform the replacement (user has already approved it via the widget)
       # Use the same flexible whitespace matching as validation
+      # When replace_all is true, use gsub to replace all matches; when false, use sub to replace only first match
       flexible_pattern <- .rs.create_flexible_whitespace_pattern(old_string)
-      new_content <- gsub(flexible_pattern, new_string, current_content, perl = TRUE)
+      if (replace_all) {
+         new_content <- gsub(flexible_pattern, new_string, current_content, perl = TRUE)
+      } else {
+         new_content <- sub(flexible_pattern, new_string, current_content, perl = TRUE)
+      }
    }
    
    # Apply the edit using the same system as edit_file
@@ -903,11 +939,10 @@
          }
       }
 
-   # Update document and build index (same as edit_file)
+   # Update document (same as edit_file)
    if (modification_made && file_written) {
       .rs.api.documentOpen(file_path)
       .rs.save_script_to_history(file_path)
-      .rs.build_symbol_index()
    }
    
    # Look for existing "Response pending..." procedural user message and replace it
@@ -2781,8 +2816,8 @@
       function_result <- .rs.handle_search_replace(normalized_function_call, conversation_log, related_to_id, request_id)
    } else if (function_name == "find_keyword_context") {
       function_result <- .rs.handle_find_keyword_context(normalized_function_call, conversation_log, related_to_id, request_id)
-   } else if (function_name == "grep_search") {
-      function_result <- .rs.handle_grep_search(normalized_function_call, conversation_log, related_to_id, request_id)
+   } else if (function_name == "grep") {
+      function_result <- .rs.handle_grep(normalized_function_call, conversation_log, related_to_id, request_id)
    } else if (function_name == "read_file") {
       function_result <- .rs.handle_read_file(normalized_function_call, conversation_log, related_to_id, request_id)
    } else if (function_name == "view_image") {
@@ -2816,7 +2851,7 @@
    
    # Create function call message for functions that don't have dedicated widgets  
    # For search_replace, only create message when validation fails (continue_silent status)
-   should_create_message <- function_name %in% c("find_keyword_context", "grep_search", "read_file", "view_image", "search_for_file", "list_dir") ||
+   should_create_message <- function_name %in% c("find_keyword_context", "grep", "read_file", "view_image", "search_for_file", "list_dir") ||
                            (function_name == "search_replace" && !is.null(function_result$status) && function_result$status == "continue_silent")
    
    if (should_create_message) {

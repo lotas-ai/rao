@@ -213,7 +213,6 @@ set(SESSION_SOURCE_FILES
    modules/SessionHelp.cpp
    modules/SessionHelpHome.cpp
    modules/SessionAi.cpp
-   modules/SessionSymbolIndex.cpp
    modules/SessionAiHome.cpp
    modules/SessionHistory.cpp
    modules/SessionHistoryArchive.cpp

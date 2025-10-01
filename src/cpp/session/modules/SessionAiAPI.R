@@ -257,35 +257,14 @@
           if (file.exists(path) || .rs.is_file_open_in_editor(path)) {
             context_files <- c(context_files, path)
             
-            # Ensure symbol index for this directory (only for disk files)
-            if (file.exists(path)) {
-              file_dir <- dirname(path)
-              .rs.ensure_symbol_index_for_ai_search(file_dir)
-            }
-            
             is_directory <- !is.null(item$type) && item$type == "directory"
             if (!is_directory && file.exists(path)) {
               is_directory <- file.info(path)$isdir
             }
             
             if (is_directory) {
-              # For directories, list contents and find symbols
+              # For directories, list contents
               dir_files <- list.files(path, full.names = FALSE)
-              
-              # Get complete symbols for the directory using find_symbol
-              search_term <- basename(path)
-              symbol_result <- .rs.find_symbol(search_term)
-              
-              dir_symbols <- list()
-              if (!is.null(symbol_result) && length(symbol_result) > 0) {
-                # Filter results to only include symbols from the exact directory path
-                for (sym in symbol_result) {
-                  if (!is.null(sym$file) && !is.null(sym$parent) && sym$parent == path) {
-                    dir_symbols[[length(dir_symbols) + 1]] <- sym
-                  }
-                }
-              }
-
               
               display_name <- .rs.get_unique_display_name(path, all_context_paths)
               
@@ -293,8 +272,7 @@
                 type = "directory",
                 name = display_name,
                 path = path,
-                contents = dir_files,
-                symbols = dir_symbols
+                contents = dir_files
               )
               result$direct_context[[length(result$direct_context) + 1]] <- directory_item
             } else {
@@ -302,7 +280,7 @@
               has_line_numbers <- !is.null(item$start_line) && !is.null(item$end_line)
               
               if (has_line_numbers) {
-                # Extract only the specified lines - send as content, no symbols
+                # Extract only the specified lines - send as content
                 file_content <- tryCatch({
                   # Use get_effective_file_content to get content from editor if open, otherwise from disk
                   effective_content <- .rs.get_effective_file_content(path, item$start_line, item$end_line)
@@ -325,31 +303,11 @@
                 )                
                 result$direct_context[[length(result$direct_context) + 1]] <- context_item
               } else {
-                # No line numbers - use complete find_symbol results as symbols
-                file_symbols <- tryCatch({
-                  search_term <- basename(path)
-                  symbol_result <- .rs.find_symbol(search_term)
-                  if (!is.null(symbol_result) && length(symbol_result) > 0) {
-                    # Filter results to only include symbols from the exact file path
-                    filtered_symbols <- list()
-                    for (sym in symbol_result) {
-                      if (!is.null(sym$file) && sym$file == path) {
-                        filtered_symbols[[length(filtered_symbols) + 1]] <- sym
-                      }
-                    }
-                    filtered_symbols
-                  } else {
-                    list()
-                  }
-                }, error = function(e) {
-                  list()
-                })
-                
+                # No line numbers - just send file path
                 result$direct_context[[length(result$direct_context) + 1]] <- list(
                   type = "file",
                   name = .rs.get_unique_display_name(path, all_context_paths),
-                  path = path,
-                  symbols = file_symbols
+                  path = path
                 )
               }
             }
@@ -393,91 +351,7 @@
     }
 
   
-  # 2. Keywords picked up from the query (exclude context files)
-  if (length(words) > 0) {
-    tryCatch({
-      .rs.ensure_symbol_index_for_ai_search()
-    }, error = function(e) {
-      # Continue on error
-    })
-    
-    directory_symbols <- character(0)
-    file_symbols <- character(0)
-    function_symbols <- character(0)
-    other_symbols <- character(0)
-    # Tracking arrays for duplicate detection (with type info)
-    directory_symbols_seen <- character(0)
-    file_symbols_seen <- character(0)
-    function_symbols_seen <- character(0)
-    other_symbols_seen <- character(0)
-    
-    # Process symbols from query words only (not from context files)
-    for (word in words) {
-      word_symbols <- tryCatch({
-        .rs.find_symbol(word)
-      }, error = function(e) {
-        NULL
-      })
-      
-      if (!is.null(word_symbols) && length(word_symbols) > 0) {
-        for (j in seq_along(word_symbols)) {
-          symbol <- word_symbols[[j]]
-          
-          if (!is.null(symbol) && !is.null(symbol$type) && !is.null(symbol$name)) {
-            # Skip symbols that are from context files
-            is_context_symbol <- FALSE
-            if (!is.null(symbol$file) && symbol$file %in% context_files) {
-              is_context_symbol <- TRUE
-            }
-            
-            if (!is_context_symbol) {
-              # Store objects with both name and type for backend processing
-              entry_with_type <- paste0(symbol$name, " (", symbol$type, ")")
-              keyword_obj <- list(name = symbol$name, type = symbol$type)
-              
-              if (symbol$type == "directory") {
-                if (!(entry_with_type %in% directory_symbols_seen)) {
-                  directory_symbols_seen <- c(directory_symbols_seen, entry_with_type)
-                  directory_symbols <- c(directory_symbols, list(keyword_obj))
-                }
-              } else if (symbol$type == "file") {
-                if (!(entry_with_type %in% file_symbols_seen)) {
-                  file_symbols_seen <- c(file_symbols_seen, entry_with_type)
-                  file_symbols <- c(file_symbols, list(keyword_obj))
-                }
-              } else if (symbol$type == "function") {
-                if (!(entry_with_type %in% function_symbols_seen)) {
-                  function_symbols_seen <- c(function_symbols_seen, entry_with_type)
-                  function_symbols <- c(function_symbols, list(keyword_obj))
-                }
-              } else {
-                if (!(entry_with_type %in% other_symbols_seen)) {
-                  other_symbols_seen <- c(other_symbols_seen, entry_with_type)
-                  other_symbols <- c(other_symbols, list(keyword_obj))
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-    
-    all_symbols <- c(directory_symbols, file_symbols, function_symbols, other_symbols)
-    all_symbols <- unique(all_symbols)
-    
-    if (length(all_symbols) > max_symbols) {
-      all_symbols <- all_symbols[1:max_symbols]
-    }
-    
-    # Ensure we always have a proper character vector, not empty or NULL
-    if (length(all_symbols) == 0) {
-      all_symbols <- character(0)
-    }
-    
-    result$keywords <- all_symbols
-  }
-  
-  # 3. Environmental variables
+  # 2. Environmental variables
   tryCatch({
     env_vars <- .rs.get_categorized_environment_variables()
     # Convert rs.scalar description fields to plain character strings
@@ -499,7 +373,7 @@
     result$environment_variables <- list()
   })
   
-  # 4. List of open files
+  # 3. List of open files
   tryCatch({
     open_files <- .rs.get_all_open_source_documents()
     result$open_files <- open_files
@@ -507,7 +381,7 @@
     result$open_files <- list()
   })
   
-  # 5. Attached images for context
+  # 4. Attached images for context
   tryCatch({
     image_context <- .rs.prepare_image_context_data()
     
@@ -3006,7 +2880,7 @@
   # Based on analysis of actual handlers:
   
   # Simple non-interactive: function_call + function_call_output = 2 IDs
-  simple_functions <- c("list_dir", "find_keyword_context", "grep_search", "read_file", "view_image", "search_for_file")
+  simple_functions <- c("list_dir", "find_keyword_context", "grep", "read_file", "view_image", "search_for_file")
   
   # Interactive functions: function_call + function_call_output + procedural message = 3 IDs  
   interactive_functions <- c("run_console_cmd", "run_terminal_cmd", "delete_file", "run_file", "search_replace")

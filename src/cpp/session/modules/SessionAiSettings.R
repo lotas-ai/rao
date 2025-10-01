@@ -35,7 +35,7 @@
 .rs.addFunction("set_rao_key", function(key) {  
   .rs.ai_rao_key <<- key
   
-  default_model <- "claude-sonnet-4-20250514"
+  default_model <- "claude-sonnet-4-5-20250929"
   .rs.set_selected_model(default_model)
 })
 
@@ -44,7 +44,7 @@
   openai_models <- c("gpt-5-mini")
   
   # Anthropic models  
-  anthropic_models <- c("claude-sonnet-4-20250514")
+  anthropic_models <- c("claude-sonnet-4-5-20250929")
   
   if (model %in% openai_models) {
     return("openai")
@@ -72,11 +72,11 @@
 .rs.addFunction("get_available_models", function(provider = NULL) {
   if (is.null(provider)) {
     # Return all available models if no provider specified
-    return(c("claude-sonnet-4-20250514", "gpt-5-mini"))
+    return(c("claude-sonnet-4-5-20250929", "gpt-5-mini"))
   } else if (provider == "openai") {
     return(c("gpt-5-mini"))
   } else if (provider == "anthropic") {
-    return(c("claude-sonnet-4-20250514"))
+    return(c("claude-sonnet-4-5-20250929"))
   }
   return(c())
 })
@@ -84,7 +84,7 @@
 .rs.addFunction("get_model_display_names", function() {
   models <- .rs.get_available_models()
   display_names <- c(
-    "claude-sonnet-4-20250514 (Superior coding and analysis - recommended)",
+    "claude-sonnet-4-5-20250929 (Superior coding and analysis - recommended)",
     "gpt-5-mini (Reasoning tier)"
   )
   names(display_names) <- models
@@ -96,7 +96,7 @@
   
   if (is.null(model)) {
     # Try to load from persistent settings
-    model <- .rs.get_ai_setting("selected_model", "claude-sonnet-4-20250514")
+    model <- .rs.get_ai_setting("selected_model", "claude-sonnet-4-5-20250929")
   }
   return(model)
 })
@@ -296,7 +296,7 @@
   # Set to improve only here when it's loaded for the first time
   if (!file.exists(settings_path)) {
     return(list(
-      selected_model = "claude-sonnet-4-20250514",
+      selected_model = "claude-sonnet-4-5-20250929",
       working_directory = NULL,
       temperature = 0.5,
       security_mode = "improve",
@@ -325,7 +325,7 @@
     
     # Ensure we have the required fields
     if (is.null(settings$selected_model)) {
-      settings$selected_model <- "claude-sonnet-4-20250514"
+      settings$selected_model <- "claude-sonnet-4-5-20250929"
     }
     if (is.null(settings$working_directory)) {
       settings$working_directory <- NULL
@@ -386,7 +386,7 @@
   }, error = function(e) {
     warning("Failed to load AI settings: ", e$message, ". Using defaults.")
     return(list(
-      selected_model = "claude-sonnet-4-20250514",
+      selected_model = "claude-sonnet-4-5-20250929",
       working_directory = NULL,
       temperature = 0.5,
       security_mode = "secure",
