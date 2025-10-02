@@ -122,7 +122,7 @@ public class UserPrefsAccessor extends Prefs
       }-*/;
 
       public final native String getHost() /*-{
-         return this && this.host || "RStudio";
+         return this && this.host || "Rao";
       }-*/;
 
       public final native String getUrl() /*-{
@@ -321,7 +321,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Show line numbers in RStudio's code editor.
+    * Show line numbers in Rao's code editor.
     */
    public PrefValue<Boolean> showLineNumbers()
    {
@@ -333,7 +333,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Show relative, rather than absolute, line numbers in RStudio's code editor.
+    * Show relative, rather than absolute, line numbers in Rao's code editor.
     */
    public PrefValue<Boolean> relativeLineNumbers()
    {
@@ -345,7 +345,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Highlight the selected word in RStudio's code editor.
+    * Highlight the selected word in Rao's code editor.
     */
    public PrefValue<Boolean> highlightSelectedWord()
    {
@@ -357,7 +357,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Highlight the selected line in RStudio's code editor.
+    * Highlight the selected line in Rao's code editor.
     */
    public PrefValue<Boolean> highlightSelectedLine()
    {
@@ -369,7 +369,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Layout of panes in the RStudio workbench.
+    * Layout of panes in the Rao workbench.
     */
    public PrefValue<Panes> panes()
    {
@@ -395,7 +395,7 @@ public class UserPrefsAccessor extends Prefs
       }-*/;
 
       public final native JsArrayString getTabSet1() /*-{
-         return this && this.tabSet1 || ["Ai","Environment","History","Connections","Build","VCS","Tutorial","Presentation"];
+         return this && this.tabSet1 || ["AI","Environment","History","Connections","Build","VCS","Tutorial","Presentation"];
       }-*/;
 
       public final native JsArrayString getTabSet2() /*-{
@@ -469,7 +469,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Whether to show the margin guide in the RStudio code editor.
+    * Whether to show the margin guide in the Rao code editor.
     */
    public PrefValue<Boolean> showMargin()
    {
@@ -505,7 +505,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Whether to show invisible characters, such as spaces and tabs, in the RStudio code editor.
+    * Whether to show invisible characters, such as spaces and tabs, in the Rao code editor.
     */
    public PrefValue<Boolean> showInvisibles()
    {
@@ -517,7 +517,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Style for indentation guides in the RStudio code editor.
+    * Style for indentation guides in the Rao code editor.
     */
    public PrefValue<String> indentGuides()
    {
@@ -570,7 +570,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * The keybindings to use in the RStudio code editor.
+    * The keybindings to use in the Rao code editor.
     */
    public PrefValue<String> editorKeybindings()
    {
@@ -697,7 +697,7 @@ public class UserPrefsAccessor extends Prefs
    public final static String SURROUND_SELECTION_QUOTES_AND_BRACKETS = "quotes_and_brackets";
 
    /**
-    * Whether to enable code snippets in the RStudio code editor.
+    * Whether to enable code snippets in the Rao code editor.
     */
    public PrefValue<Boolean> enableSnippets()
    {
@@ -709,7 +709,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * When to use auto-completion for R code in the RStudio code editor.
+    * When to use auto-completion for R code in the Rao code editor.
     */
    public PrefValue<String> codeCompletion()
    {
@@ -738,7 +738,7 @@ public class UserPrefsAccessor extends Prefs
    public final static String CODE_COMPLETION_MANUAL = "manual";
 
    /**
-    * When to use auto-completion for other languages (such as JavaScript and SQL) in the RStudio code editor.
+    * When to use auto-completion for other languages (such as JavaScript and SQL) in the Rao code editor.
     */
    public PrefValue<String> codeCompletionOther()
    {
@@ -800,7 +800,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * When set, RStudio will include all function arguments in the completion list, even if those arguments have already appeared to be used in the current function invocation.
+    * When set, Rao will include all function arguments in the completion list, even if those arguments have already appeared to be used in the current function invocation.
     */
    public PrefValue<Boolean> codeCompletionIncludeAlreadyUsed()
    {
@@ -1040,7 +1040,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Whether to automatically re-indent code when it's pasted into RStudio.
+    * Whether to automatically re-indent code when it's pasted into Rao.
     */
    public PrefValue<Boolean> reindentOnPaste()
    {
@@ -1227,7 +1227,7 @@ public class UserPrefsAccessor extends Prefs
          "console_line_length_limit",
          _constants.consoleLineLengthLimitTitle(), 
          _constants.consoleLineLengthLimitDescription(), 
-         2000);
+         1000);
    }
 
    /**
@@ -1239,7 +1239,7 @@ public class UserPrefsAccessor extends Prefs
          "console_max_lines",
          _constants.consoleMaxLinesTitle(), 
          _constants.consoleMaxLinesDescription(), 
-         10000);
+         1000);
    }
 
    /**
@@ -1267,6 +1267,18 @@ public class UserPrefsAccessor extends Prefs
    public final static String ANSI_CONSOLE_MODE_ON = "on";
    public final static String ANSI_CONSOLE_MODE_STRIP = "strip";
    public final static String ANSI_CONSOLE_MODE_OFF = "off";
+
+   /**
+    * Whether to only show a limited window of the total console output
+    */
+   public PrefValue<Boolean> limitVisibleConsole()
+   {
+      return bool(
+         "limit_visible_console",
+         _constants.limitVisibleConsoleTitle(), 
+         _constants.limitVisibleConsoleDescription(), 
+         false);
+   }
 
    /**
     * Whether to show a toolbar on code chunks in R Markdown documents.
@@ -1305,7 +1317,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Whether RStudio should save and reload the R workspace when building the project.
+    * Whether Rao should save and reload the R workspace when building the project.
     */
    public PrefValue<Boolean> saveAndReloadWorkspaceOnBuild()
    {
@@ -1353,31 +1365,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Use Ctrl+Mouse Wheel (Cmd+Mouse Wheel on macOS) to zoom the interface in and out.
-    */
-   public PrefValue<Boolean> enableMousewheelZoom()
-   {
-      return bool(
-         "enable_mousewheel_zoom",
-         _constants.enableMousewheelZoomTitle(), 
-         _constants.enableMousewheelZoomDescription(), 
-         false);
-   }
-
-   /**
-    * A delay in milliseconds to wait before applying the zoom level after a mouse wheel event.
-    */
-   public PrefValue<Integer> mousewheelZoomDebounceMs()
-   {
-      return integer(
-         "mousewheel_zoom_debounce_ms",
-         _constants.mousewheelZoomDebounceMsTitle(), 
-         _constants.mousewheelZoomDebounceMsDescription(), 
-         100);
-   }
-
-   /**
-    * The name of the color theme to apply to the text editor in RStudio.
+    * The name of the color theme to apply to the text editor in Rao.
     */
    public PrefValue<String> editorTheme()
    {
@@ -1389,7 +1377,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Whether to use a custom editor font in RStudio Server.
+    * Whether to use a custom editor font in Rao Server.
     */
    public PrefValue<Boolean> serverEditorFontEnabled()
    {
@@ -1401,7 +1389,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * The name of the fixed-width editor font to use with RStudio Server.
+    * The name of the fixed-width editor font to use with Rao Server.
     */
    public PrefValue<String> serverEditorFont()
    {
@@ -1425,7 +1413,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Whether to show the toolbar at the top of the RStudio workbench.
+    * Whether to show the toolbar at the top of the Rao workbench.
     */
    public PrefValue<Boolean> toolbarVisible()
    {
@@ -1509,7 +1497,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Whether to use RStudio's data import feature.
+    * Whether to use Rao's data import feature.
     */
    public PrefValue<Boolean> useDataimport()
    {
@@ -1532,7 +1520,7 @@ public class UserPrefsAccessor extends Prefs
          new String[] {
             PDF_PREVIEWER_NONE,
             PDF_PREVIEWER_DEFAULT,
-            PDF_PREVIEWER_RSTUDIO,
+            PDF_PREVIEWER_RAO,
             PDF_PREVIEWER_DESKTOP_SYNCTEX,
             PDF_PREVIEWER_SYSTEM
          },
@@ -1541,7 +1529,7 @@ public class UserPrefsAccessor extends Prefs
 
    public final static String PDF_PREVIEWER_NONE = "none";
    public final static String PDF_PREVIEWER_DEFAULT = "default";
-   public final static String PDF_PREVIEWER_RSTUDIO = "rstudio";
+   public final static String PDF_PREVIEWER_RAO = "rao";
    public final static String PDF_PREVIEWER_DESKTOP_SYNCTEX = "desktop-synctex";
    public final static String PDF_PREVIEWER_SYSTEM = "system";
 
@@ -1654,7 +1642,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Whether to enable RStudio's Packages pane.
+    * Whether to enable Rao's Packages pane.
     */
    public PrefValue<Boolean> packagesPaneEnabled()
    {
@@ -1678,7 +1666,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Whether to restore the last opened source documents when RStudio starts up.
+    * Whether to restore the last opened source documents when Rao starts up.
     */
    public PrefValue<Boolean> restoreSourceDocuments()
    {
@@ -1714,7 +1702,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Whether to check for new versions of RStudio when RStudio starts.
+    * Whether to check for new versions of Rao when Rao starts.
     */
    public PrefValue<Boolean> checkForUpdates()
    {
@@ -1878,6 +1866,18 @@ public class UserPrefsAccessor extends Prefs
          _constants.showPublishDiagnosticsTitle(), 
          _constants.showPublishDiagnosticsDescription(), 
          false);
+   }
+
+   /**
+    * Whether to show UI for publishing content to cloud service.
+    */
+   public PrefValue<Boolean> enableCloudPublishUi()
+   {
+      return bool(
+         "enable_cloud_publish_ui",
+         _constants.enableCloudPublishUiTitle(), 
+         _constants.enableCloudPublishUiDescription(), 
+         true);
    }
 
    /**
@@ -2251,7 +2251,7 @@ public class UserPrefsAccessor extends Prefs
    public final static String JOBS_TAB_VISIBILITY_DEFAULT = "default";
 
    /**
-    * Whether to show the Workbench Jobs tab in RStudio Pro and RStudio Workbench.
+    * Whether to show the Remote Jobs tab.
     */
    public PrefValue<Boolean> showLauncherJobsTab()
    {
@@ -2263,7 +2263,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * How to sort jobs in the Workbench Jobs tab in RStudio Pro and RStudio Workbench.
+    * How to sort jobs in the Remote Jobs tab.
     */
    public PrefValue<String> launcherJobsSort()
    {
@@ -2390,7 +2390,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * The theme to use for the main RStudio user interface.
+    * The theme to use for the main Rao user interface.
     */
    public PrefValue<String> globalTheme()
    {
@@ -2505,7 +2505,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * When to show the server home page in RStudio Workbench.
+    * When to show the server home page.
     */
    public PrefValue<String> showUserHomePage()
    {
@@ -2526,7 +2526,7 @@ public class UserPrefsAccessor extends Prefs
    public final static String SHOW_USER_HOME_PAGE_SESSIONS = "sessions";
 
    /**
-    * Whether to reuse sessions when opening projects in RStudio Workbench.
+    * Whether to reuse sessions when opening projects.
     */
    public PrefValue<Boolean> reuseSessionsForProjectLinks()
    {
@@ -2538,7 +2538,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Whether to enable RStudio's version control system interface.
+    * Whether to enable Rao's version control system interface.
     */
    public PrefValue<Boolean> vcsEnabled()
    {
@@ -2657,7 +2657,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * When set, RStudio will build your package in a '_build' sub-directory of your current library paths.
+    * When set, Rao will build your package in a '_build' sub-directory of your current library paths.
     */
    public PrefValue<Boolean> useBuildSubdirectory()
    {
@@ -2717,7 +2717,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Whether to restore the last project when starting RStudio.
+    * Whether to restore the last project when starting Rao.
     */
    public PrefValue<Boolean> restoreLastProject()
    {
@@ -2777,7 +2777,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Whether to restore the last version of R used by the project in RStudio Pro and RStudio Workbench.
+    * Whether to restore the last version of R used by the project.
     */
    public PrefValue<Boolean> restoreProjectRVersion()
    {
@@ -2809,18 +2809,6 @@ public class UserPrefsAccessor extends Prefs
          "submit_crash_reports",
          _constants.submitCrashReportsTitle(), 
          _constants.submitCrashReportsDescription(), 
-         true);
-   }
-
-   /**
-    * Whether to show the splash screen when RStudio is starting.
-    */
-   public PrefValue<Boolean> enableSplashScreen()
-   {
-      return bool(
-         "enable_splash_screen",
-         _constants.enableSplashScreenTitle(), 
-         _constants.enableSplashScreenDescription(), 
          true);
    }
 
@@ -3461,7 +3449,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Enable Python terminal hooks. When enabled, the RStudio-configured version of Python will be placed on the PATH.
+    * Enable Python terminal hooks. When enabled, the Rao-configured version of Python will be placed on the PATH.
     */
    public PrefValue<Boolean> terminalPythonIntegration()
    {
@@ -3485,7 +3473,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * When enabled, if the active project contains a Python virtual environment, then RStudio will automatically activate this environment on startup.
+    * When enabled, if the active project contains a Python virtual environment, then Rao will automatically activate this environment on startup.
     */
    public PrefValue<Boolean> pythonProjectEnvironmentAutomaticActivate()
    {
@@ -3497,7 +3485,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * When enabled, RStudio will detect R objects containing null external pointers when building the Environment pane, and avoid introspecting their contents further.
+    * When enabled, Rao will detect R objects containing null external pointers when building the Environment pane, and avoid introspecting their contents further.
     */
    public PrefValue<Boolean> checkNullExternalPointers()
    {
@@ -3540,7 +3528,43 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Whether RStudio Desktop will use the operating system's native File and Message dialog boxes.
+    * Show splash screen when Rao starts.
+    */
+   public PrefValue<Boolean> enableSplashScreen()
+   {
+      return bool(
+         "enable_splash_screen",
+         _constants.enableSplashScreenTitle(), 
+         _constants.enableSplashScreenDescription(), 
+         true);
+   }
+
+   /**
+    * Allow using Ctrl/Cmd + mousewheel to zoom the entire IDE.
+    */
+   public PrefValue<Boolean> enableMousewheelZoom()
+   {
+      return bool(
+         "enable_mousewheel_zoom",
+         _constants.enableMousewheelZoomTitle(), 
+         _constants.enableMousewheelZoomDescription(), 
+         false);
+   }
+
+   /**
+    * Delay in milliseconds before applying mousewheel zoom.
+    */
+   public PrefValue<Integer> mousewheelZoomDebounceMs()
+   {
+      return integer(
+         "mousewheel_zoom_debounce_ms",
+         _constants.mousewheelZoomDebounceMsTitle(), 
+         _constants.mousewheelZoomDebounceMsDescription(), 
+         100);
+   }
+
+   /**
+    * Whether Rao Desktop will use the operating system's native File and Message dialog boxes.
     */
    public PrefValue<Boolean> nativeFileDialogs()
    {
@@ -3607,7 +3631,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * When enabled, RStudio will use GitHub Copilot to provide code suggestions.
+    * When enabled, Rao will use GitHub Copilot to provide code suggestions.
     */
    public PrefValue<Boolean> copilotEnabled()
    {
@@ -3654,7 +3678,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * Control the behavior of the Tab key when both Copilot code suggestions and RStudio code completions are visible.
+    * Control the behavior of the Tab key when both Copilot code suggestions and Rao code completions are visible.
     */
    public PrefValue<String> copilotTabKeyBehavior()
    {
@@ -3677,7 +3701,7 @@ public class UserPrefsAccessor extends Prefs
    public final static String COPILOT_TAB_KEY_BEHAVIOR_COMPLETIONS = "completions";
 
    /**
-    * When enabled, RStudio will index project files with GitHub Copilot.
+    * When enabled, Rao will index project files with GitHub Copilot.
     */
    public PrefValue<Boolean> copilotIndexingEnabled()
    {
@@ -3689,7 +3713,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * When enabled, RStudio will show account and billing messages from GitHub Copilot in a message box.
+    * When enabled, Rao will show account and billing messages from GitHub Copilot in a message box.
     */
    public PrefValue<Boolean> copilotShowMessages()
    {
@@ -3701,7 +3725,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * When enabled, RStudio will tell Copilot to use the current RStudio project's folder as a workspace.
+    * When enabled, Rao will tell Copilot to use the current Rao project's folder as a workspace.
     */
    public PrefValue<Boolean> copilotProjectWorkspace()
    {
@@ -3810,7 +3834,7 @@ public class UserPrefsAccessor extends Prefs
    }
 
    /**
-    * The folder in which RStudio should store project .Rproj.user data.
+    * The folder in which Rao should store project .Rproj.user data.
     */
    public PrefValue<String> projectUserDataDirectory()
    {
@@ -3849,6 +3873,296 @@ public class UserPrefsAccessor extends Prefs
    public final static String CONSOLE_HIGHLIGHT_CONDITIONS_ERRORS_WARNINGS = "errors_warnings";
    public final static String CONSOLE_HIGHLIGHT_CONDITIONS_ERRORS = "errors";
    public final static String CONSOLE_HIGHLIGHT_CONDITIONS_NONE = "none";
+
+   /**
+    * The AI model to use for conversations
+    */
+   public PrefValue<String> aiSelectedModel()
+   {
+      return string(
+         "ai_selected_model",
+         _constants.aiSelectedModelTitle(), 
+         _constants.aiSelectedModelDescription(), 
+         "claude-sonnet-4-5-20250929");
+   }
+
+   /**
+    * The security level for AI interactions
+    */
+   public PrefValue<String> aiSecurityMode()
+   {
+      return enumeration(
+         "ai_security_mode",
+         _constants.aiSecurityModeTitle(), 
+         _constants.aiSecurityModeDescription(), 
+         new String[] {
+            AI_SECURITY_MODE_SECURE,
+            AI_SECURITY_MODE_IMPROVE
+         },
+         "improve");
+   }
+
+   public final static String AI_SECURITY_MODE_SECURE = "secure";
+   public final static String AI_SECURITY_MODE_IMPROVE = "improve";
+
+   /**
+    * Temperature setting for AI model responses (0.0 = deterministic, 1.0 = highly variable)
+    */
+   public PrefValue<Double> aiTemperature()
+   {
+      return dbl(
+         "ai_temperature",
+         _constants.aiTemperatureTitle(), 
+         _constants.aiTemperatureDescription(), 
+         0.5);
+   }
+
+   /**
+    * The interaction mode for the AI assistant
+    */
+   public PrefValue<String> aiInteractionMode()
+   {
+      return enumeration(
+         "ai_interaction_mode",
+         _constants.aiInteractionModeTitle(), 
+         _constants.aiInteractionModeDescription(), 
+         new String[] {
+            AI_INTERACTION_MODE_ASK,
+            AI_INTERACTION_MODE_AGENT
+         },
+         "agent");
+   }
+
+   public final static String AI_INTERACTION_MODE_ASK = "ask";
+   public final static String AI_INTERACTION_MODE_AGENT = "agent";
+
+   /**
+    * Allow the AI to search the web
+    */
+   public PrefValue<Boolean> aiWebSearchEnabled()
+   {
+      return bool(
+         "ai_web_search_enabled",
+         _constants.aiWebSearchEnabledTitle(), 
+         _constants.aiWebSearchEnabledDescription(), 
+         false);
+   }
+
+   /**
+    * Automatically accept file edit suggestions
+    */
+   public PrefValue<Boolean> aiAutoAcceptEdits()
+   {
+      return bool(
+         "ai_auto_accept_edits",
+         _constants.aiAutoAcceptEditsTitle(), 
+         _constants.aiAutoAcceptEditsDescription(), 
+         false);
+   }
+
+   /**
+    * Automatically accept console command suggestions
+    */
+   public PrefValue<Boolean> aiAutoAcceptConsole()
+   {
+      return bool(
+         "ai_auto_accept_console",
+         _constants.aiAutoAcceptConsoleTitle(), 
+         _constants.aiAutoAcceptConsoleDescription(), 
+         false);
+   }
+
+   /**
+    * Automatically accept terminal command suggestions
+    */
+   public PrefValue<Boolean> aiAutoAcceptTerminal()
+   {
+      return bool(
+         "ai_auto_accept_terminal",
+         _constants.aiAutoAcceptTerminalTitle(), 
+         _constants.aiAutoAcceptTerminalDescription(), 
+         false);
+   }
+
+   /**
+    * Automatically run file execution suggestions
+    */
+   public PrefValue<Boolean> aiAutoRunFiles()
+   {
+      return bool(
+         "ai_auto_run_files",
+         _constants.aiAutoRunFilesTitle(), 
+         _constants.aiAutoRunFilesDescription(), 
+         false);
+   }
+
+   /**
+    * Automatically delete files when suggested
+    */
+   public PrefValue<Boolean> aiAutoDeleteFiles()
+   {
+      return bool(
+         "ai_auto_delete_files",
+         _constants.aiAutoDeleteFilesTitle(), 
+         _constants.aiAutoDeleteFilesDescription(), 
+         false);
+   }
+
+   /**
+    * Allow auto-accept for all console commands
+    */
+   public PrefValue<Boolean> aiAutoAcceptConsoleAllowAnything()
+   {
+      return bool(
+         "ai_auto_accept_console_allow_anything",
+         _constants.aiAutoAcceptConsoleAllowAnythingTitle(), 
+         _constants.aiAutoAcceptConsoleAllowAnythingDescription(), 
+         false);
+   }
+
+   /**
+    * Allow auto-accept for all terminal commands
+    */
+   public PrefValue<Boolean> aiAutoAcceptTerminalAllowAnything()
+   {
+      return bool(
+         "ai_auto_accept_terminal_allow_anything",
+         _constants.aiAutoAcceptTerminalAllowAnythingTitle(), 
+         _constants.aiAutoAcceptTerminalAllowAnythingDescription(), 
+         false);
+   }
+
+   /**
+    * Allow auto-run for all files
+    */
+   public PrefValue<Boolean> aiAutoRunFilesAllowAnything()
+   {
+      return bool(
+         "ai_auto_run_files_allow_anything",
+         _constants.aiAutoRunFilesAllowAnythingTitle(), 
+         _constants.aiAutoRunFilesAllowAnythingDescription(), 
+         false);
+   }
+
+   /**
+    * Whitelist of console commands to auto-accept
+    */
+   public PrefValue<JsArrayString> aiAutoAcceptConsoleAllowList()
+   {
+      return object(
+         "ai_auto_accept_console_allow_list",
+         _constants.aiAutoAcceptConsoleAllowListTitle(), 
+         _constants.aiAutoAcceptConsoleAllowListDescription(), 
+         JsArrayUtil.createStringArray());
+   }
+
+   /**
+    * Blocklist of console commands to never auto-accept
+    */
+   public PrefValue<JsArrayString> aiAutoAcceptConsoleDenyList()
+   {
+      return object(
+         "ai_auto_accept_console_deny_list",
+         _constants.aiAutoAcceptConsoleDenyListTitle(), 
+         _constants.aiAutoAcceptConsoleDenyListDescription(), 
+         JsArrayUtil.createStringArray());
+   }
+
+   /**
+    * Whitelist of terminal commands to auto-accept
+    */
+   public PrefValue<JsArrayString> aiAutoAcceptTerminalAllowList()
+   {
+      return object(
+         "ai_auto_accept_terminal_allow_list",
+         _constants.aiAutoAcceptTerminalAllowListTitle(), 
+         _constants.aiAutoAcceptTerminalAllowListDescription(), 
+         JsArrayUtil.createStringArray());
+   }
+
+   /**
+    * Blocklist of terminal commands to never auto-accept
+    */
+   public PrefValue<JsArrayString> aiAutoAcceptTerminalDenyList()
+   {
+      return object(
+         "ai_auto_accept_terminal_deny_list",
+         _constants.aiAutoAcceptTerminalDenyListTitle(), 
+         _constants.aiAutoAcceptTerminalDenyListDescription(), 
+         JsArrayUtil.createStringArray());
+   }
+
+   /**
+    * Whitelist of file patterns to auto-run
+    */
+   public PrefValue<JsArrayString> aiAutoRunFilesAllowList()
+   {
+      return object(
+         "ai_auto_run_files_allow_list",
+         _constants.aiAutoRunFilesAllowListTitle(), 
+         _constants.aiAutoRunFilesAllowListDescription(), 
+         JsArrayUtil.createStringArray());
+   }
+
+   /**
+    * Blocklist of file patterns to never auto-run
+    */
+   public PrefValue<JsArrayString> aiAutoRunFilesDenyList()
+   {
+      return object(
+         "ai_auto_run_files_deny_list",
+         _constants.aiAutoRunFilesDenyListTitle(), 
+         _constants.aiAutoRunFilesDenyListDescription(), 
+         JsArrayUtil.createStringArray());
+   }
+
+   /**
+    * Custom rules for the AI assistant
+    */
+   public PrefValue<JsArrayString> aiUserRules()
+   {
+      return object(
+         "ai_user_rules",
+         _constants.aiUserRulesTitle(), 
+         _constants.aiUserRulesDescription(), 
+         JsArrayUtil.createStringArray());
+   }
+
+   /**
+    * Enable Bring Your Own Key for Anthropic
+    */
+   public PrefValue<Boolean> aiByokAnthropicEnabled()
+   {
+      return bool(
+         "ai_byok_anthropic_enabled",
+         _constants.aiByokAnthropicEnabledTitle(), 
+         _constants.aiByokAnthropicEnabledDescription(), 
+         false);
+   }
+
+   /**
+    * Enable Bring Your Own Key for OpenAI
+    */
+   public PrefValue<Boolean> aiByokOpenaiEnabled()
+   {
+      return bool(
+         "ai_byok_openai_enabled",
+         _constants.aiByokOpenaiEnabledTitle(), 
+         _constants.aiByokOpenaiEnabledDescription(), 
+         false);
+   }
+
+   /**
+    * Enable Bring Your Own Key for AWS SageMaker
+    */
+   public PrefValue<Boolean> aiByokSagemakerEnabled()
+   {
+      return bool(
+         "ai_byok_sagemaker_enabled",
+         _constants.aiByokSagemakerEnabledTitle(), 
+         _constants.aiByokSagemakerEnabledDescription(), 
+         false);
+   }
 
    public void syncPrefs(String layer, JsObject source)
    {
@@ -4018,6 +4332,8 @@ public class UserPrefsAccessor extends Prefs
          consoleMaxLines().setValue(layer, source.getInteger("console_max_lines"));
       if (source.hasKey("ansi_console_mode"))
          ansiConsoleMode().setValue(layer, source.getString("ansi_console_mode"));
+      if (source.hasKey("limit_visible_console"))
+         limitVisibleConsole().setValue(layer, source.getBool("limit_visible_console"));
       if (source.hasKey("show_inline_toolbar_for_r_code_chunks"))
          showInlineToolbarForRCodeChunks().setValue(layer, source.getBool("show_inline_toolbar_for_r_code_chunks"));
       if (source.hasKey("highlight_code_chunks"))
@@ -4032,10 +4348,6 @@ public class UserPrefsAccessor extends Prefs
          editorLineHeight().setValue(layer, source.getDbl("editor_line_height"));
       if (source.hasKey("help_font_size_points"))
          helpFontSizePoints().setValue(layer, source.getDbl("help_font_size_points"));
-      if (source.hasKey("enable_mousewheel_zoom"))
-         enableMousewheelZoom().setValue(layer, source.getBool("enable_mousewheel_zoom"));
-      if (source.hasKey("mousewheel_zoom_debounce_ms"))
-         mousewheelZoomDebounceMs().setValue(layer, source.getInteger("mousewheel_zoom_debounce_ms"));
       if (source.hasKey("editor_theme"))
          editorTheme().setValue(layer, source.getString("editor_theme"));
       if (source.hasKey("server_editor_font_enabled"))
@@ -4112,6 +4424,8 @@ public class UserPrefsAccessor extends Prefs
          rmdViewerType().setValue(layer, source.getString("rmd_viewer_type"));
       if (source.hasKey("show_publish_diagnostics"))
          showPublishDiagnostics().setValue(layer, source.getBool("show_publish_diagnostics"));
+      if (source.hasKey("enable_cloud_publish_ui"))
+         enableCloudPublishUi().setValue(layer, source.getBool("enable_cloud_publish_ui"));
       if (source.hasKey("publish_check_certificates"))
          publishCheckCertificates().setValue(layer, source.getBool("publish_check_certificates"));
       if (source.hasKey("use_publish_ca_bundle"))
@@ -4248,8 +4562,6 @@ public class UserPrefsAccessor extends Prefs
          clangVerbose().setValue(layer, source.getInteger("clang_verbose"));
       if (source.hasKey("submit_crash_reports"))
          submitCrashReports().setValue(layer, source.getBool("submit_crash_reports"));
-      if (source.hasKey("enable_splash_screen"))
-         enableSplashScreen().setValue(layer, source.getBool("enable_splash_screen"));
       if (source.hasKey("default_r_version"))
          defaultRVersion().setValue(layer, source.getObject("default_r_version"));
       if (source.hasKey("data_viewer_max_columns"))
@@ -4348,6 +4660,12 @@ public class UserPrefsAccessor extends Prefs
          uiLanguage().setValue(layer, source.getString("ui_language"));
       if (source.hasKey("autohide_menubar"))
          autohideMenubar().setValue(layer, source.getBool("autohide_menubar"));
+      if (source.hasKey("enable_splash_screen"))
+         enableSplashScreen().setValue(layer, source.getBool("enable_splash_screen"));
+      if (source.hasKey("enable_mousewheel_zoom"))
+         enableMousewheelZoom().setValue(layer, source.getBool("enable_mousewheel_zoom"));
+      if (source.hasKey("mousewheel_zoom_debounce_ms"))
+         mousewheelZoomDebounceMs().setValue(layer, source.getInteger("mousewheel_zoom_debounce_ms"));
       if (source.hasKey("native_file_dialogs"))
          nativeFileDialogs().setValue(layer, source.getBool("native_file_dialogs"));
       if (source.hasKey("discard_pending_console_input_on_error"))
@@ -4388,6 +4706,52 @@ public class UserPrefsAccessor extends Prefs
          projectUserDataDirectory().setValue(layer, source.getString("project_user_data_directory"));
       if (source.hasKey("console_highlight_conditions"))
          consoleHighlightConditions().setValue(layer, source.getString("console_highlight_conditions"));
+      if (source.hasKey("ai_selected_model"))
+         aiSelectedModel().setValue(layer, source.getString("ai_selected_model"));
+      if (source.hasKey("ai_security_mode"))
+         aiSecurityMode().setValue(layer, source.getString("ai_security_mode"));
+      if (source.hasKey("ai_temperature"))
+         aiTemperature().setValue(layer, source.getDbl("ai_temperature"));
+      if (source.hasKey("ai_interaction_mode"))
+         aiInteractionMode().setValue(layer, source.getString("ai_interaction_mode"));
+      if (source.hasKey("ai_web_search_enabled"))
+         aiWebSearchEnabled().setValue(layer, source.getBool("ai_web_search_enabled"));
+      if (source.hasKey("ai_auto_accept_edits"))
+         aiAutoAcceptEdits().setValue(layer, source.getBool("ai_auto_accept_edits"));
+      if (source.hasKey("ai_auto_accept_console"))
+         aiAutoAcceptConsole().setValue(layer, source.getBool("ai_auto_accept_console"));
+      if (source.hasKey("ai_auto_accept_terminal"))
+         aiAutoAcceptTerminal().setValue(layer, source.getBool("ai_auto_accept_terminal"));
+      if (source.hasKey("ai_auto_run_files"))
+         aiAutoRunFiles().setValue(layer, source.getBool("ai_auto_run_files"));
+      if (source.hasKey("ai_auto_delete_files"))
+         aiAutoDeleteFiles().setValue(layer, source.getBool("ai_auto_delete_files"));
+      if (source.hasKey("ai_auto_accept_console_allow_anything"))
+         aiAutoAcceptConsoleAllowAnything().setValue(layer, source.getBool("ai_auto_accept_console_allow_anything"));
+      if (source.hasKey("ai_auto_accept_terminal_allow_anything"))
+         aiAutoAcceptTerminalAllowAnything().setValue(layer, source.getBool("ai_auto_accept_terminal_allow_anything"));
+      if (source.hasKey("ai_auto_run_files_allow_anything"))
+         aiAutoRunFilesAllowAnything().setValue(layer, source.getBool("ai_auto_run_files_allow_anything"));
+      if (source.hasKey("ai_auto_accept_console_allow_list"))
+         aiAutoAcceptConsoleAllowList().setValue(layer, source.getObject("ai_auto_accept_console_allow_list"));
+      if (source.hasKey("ai_auto_accept_console_deny_list"))
+         aiAutoAcceptConsoleDenyList().setValue(layer, source.getObject("ai_auto_accept_console_deny_list"));
+      if (source.hasKey("ai_auto_accept_terminal_allow_list"))
+         aiAutoAcceptTerminalAllowList().setValue(layer, source.getObject("ai_auto_accept_terminal_allow_list"));
+      if (source.hasKey("ai_auto_accept_terminal_deny_list"))
+         aiAutoAcceptTerminalDenyList().setValue(layer, source.getObject("ai_auto_accept_terminal_deny_list"));
+      if (source.hasKey("ai_auto_run_files_allow_list"))
+         aiAutoRunFilesAllowList().setValue(layer, source.getObject("ai_auto_run_files_allow_list"));
+      if (source.hasKey("ai_auto_run_files_deny_list"))
+         aiAutoRunFilesDenyList().setValue(layer, source.getObject("ai_auto_run_files_deny_list"));
+      if (source.hasKey("ai_user_rules"))
+         aiUserRules().setValue(layer, source.getObject("ai_user_rules"));
+      if (source.hasKey("ai_byok_anthropic_enabled"))
+         aiByokAnthropicEnabled().setValue(layer, source.getBool("ai_byok_anthropic_enabled"));
+      if (source.hasKey("ai_byok_openai_enabled"))
+         aiByokOpenaiEnabled().setValue(layer, source.getBool("ai_byok_openai_enabled"));
+      if (source.hasKey("ai_byok_sagemaker_enabled"))
+         aiByokSagemakerEnabled().setValue(layer, source.getBool("ai_byok_sagemaker_enabled"));
    }
    public List<PrefValue<?>> allPrefs()
    {
@@ -4475,6 +4839,7 @@ public class UserPrefsAccessor extends Prefs
       prefs.add(consoleLineLengthLimit());
       prefs.add(consoleMaxLines());
       prefs.add(ansiConsoleMode());
+      prefs.add(limitVisibleConsole());
       prefs.add(showInlineToolbarForRCodeChunks());
       prefs.add(highlightCodeChunks());
       prefs.add(saveFilesBeforeBuild());
@@ -4482,8 +4847,6 @@ public class UserPrefsAccessor extends Prefs
       prefs.add(fontSizePoints());
       prefs.add(editorLineHeight());
       prefs.add(helpFontSizePoints());
-      prefs.add(enableMousewheelZoom());
-      prefs.add(mousewheelZoomDebounceMs());
       prefs.add(editorTheme());
       prefs.add(serverEditorFontEnabled());
       prefs.add(serverEditorFont());
@@ -4522,6 +4885,7 @@ public class UserPrefsAccessor extends Prefs
       prefs.add(rmdPreferredTemplatePath());
       prefs.add(rmdViewerType());
       prefs.add(showPublishDiagnostics());
+      prefs.add(enableCloudPublishUi());
       prefs.add(publishCheckCertificates());
       prefs.add(usePublishCaBundle());
       prefs.add(publishCaBundle());
@@ -4590,7 +4954,6 @@ public class UserPrefsAccessor extends Prefs
       prefs.add(restoreProjectRVersion());
       prefs.add(clangVerbose());
       prefs.add(submitCrashReports());
-      prefs.add(enableSplashScreen());
       prefs.add(defaultRVersion());
       prefs.add(dataViewerMaxColumns());
       prefs.add(dataViewerMaxCellSize());
@@ -4640,6 +5003,9 @@ public class UserPrefsAccessor extends Prefs
       prefs.add(checkNullExternalPointers());
       prefs.add(uiLanguage());
       prefs.add(autohideMenubar());
+      prefs.add(enableSplashScreen());
+      prefs.add(enableMousewheelZoom());
+      prefs.add(mousewheelZoomDebounceMs());
       prefs.add(nativeFileDialogs());
       prefs.add(discardPendingConsoleInputOnError());
       prefs.add(editorScrollMultiplier());
@@ -4660,6 +5026,29 @@ public class UserPrefsAccessor extends Prefs
       prefs.add(reformatOnSave());
       prefs.add(projectUserDataDirectory());
       prefs.add(consoleHighlightConditions());
+      prefs.add(aiSelectedModel());
+      prefs.add(aiSecurityMode());
+      prefs.add(aiTemperature());
+      prefs.add(aiInteractionMode());
+      prefs.add(aiWebSearchEnabled());
+      prefs.add(aiAutoAcceptEdits());
+      prefs.add(aiAutoAcceptConsole());
+      prefs.add(aiAutoAcceptTerminal());
+      prefs.add(aiAutoRunFiles());
+      prefs.add(aiAutoDeleteFiles());
+      prefs.add(aiAutoAcceptConsoleAllowAnything());
+      prefs.add(aiAutoAcceptTerminalAllowAnything());
+      prefs.add(aiAutoRunFilesAllowAnything());
+      prefs.add(aiAutoAcceptConsoleAllowList());
+      prefs.add(aiAutoAcceptConsoleDenyList());
+      prefs.add(aiAutoAcceptTerminalAllowList());
+      prefs.add(aiAutoAcceptTerminalDenyList());
+      prefs.add(aiAutoRunFilesAllowList());
+      prefs.add(aiAutoRunFilesDenyList());
+      prefs.add(aiUserRules());
+      prefs.add(aiByokAnthropicEnabled());
+      prefs.add(aiByokOpenaiEnabled());
+      prefs.add(aiByokSagemakerEnabled());
       return prefs;
    }
    

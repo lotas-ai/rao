@@ -1,19 +1,90 @@
 /* External declarations for unobfuscated classes */
-@external markdown-content, text, ai-streaming-panel, user, assistant, message, error, aiConsoleWrapper, aiConsoleHeader, aiTerminalWrapper, diff-stats, diff-stats-container, addition, removal, ace_editor, ace_gutter, ace_gutter-layer, ace_diff_added, ace_diff_deleted, ace_theme-monokai, ace_theme-twilight, ace_theme-vibrant_ink, ace_test_line_0, ace_test_line_1, ace_test_line_2, thinking-message, thinking-content, thinking-text, thinking-message-container, error-message-container, error-content, error-icon-text, error-icon, error-text, error-close-button;
+@external markdown-content, text, ai-streaming-panel, user, assistant, message, error, aiConsoleWrapper, aiConsoleHeader, aiTerminalWrapper, aiTerminalHeader, aiSearchReplaceHeader, diff-stats, diff-stats-container, addition, removal, ace_editor, ace_gutter, ace_gutter-layer, ace_scroller, ace_content, ace_text-layer, ace_line_group, ace_line, ace_scrollbar-h, ace_scrollbar-inner, ace_diff_added, ace_diff_deleted, ace_keyword, ace_theme-monokai, ace_theme-twilight, ace_theme-vibrant_ink, ace_test_line_0, ace_test_line_1, ace_test_line_2, thinking-message, thinking-content, thinking-text, thinking-message-container, error-message-container, error-content, error-icon-text, error-icon, error-text, error-close-button, function-call-message, rstudio-themes-default, rstudio-themes-dark-grey, rstudio-themes-alternate;
+
+/* ---------- IMPORT EXISTING THEME COLORS ---------- */
+@eval THEME_DEFAULT_BACKGROUND org.rstudio.core.client.theme.ThemeColors.defaultBackground;
+@eval THEME_DARKGREY_BACKGROUND org.rstudio.core.client.theme.ThemeColors.darkGreyBackground;
+@eval THEME_ALTERNATE_BACKGROUND org.rstudio.core.client.theme.ThemeColors.alternateBackground;
+
+@eval THEME_DEFAULT_BORDER org.rstudio.core.client.theme.ThemeColors.defaultBorder;
+@eval THEME_DARKGREY_BORDER org.rstudio.core.client.theme.ThemeColors.darkGreyBorder;
+@eval THEME_ALTERNATE_BORDER org.rstudio.core.client.theme.ThemeColors.alternateBorder;
+
+@eval THEME_DEFAULT_INACTIVE org.rstudio.core.client.theme.ThemeColors.defaultInactiveBackground;
+@eval THEME_DARKGREY_INACTIVE org.rstudio.core.client.theme.ThemeColors.darkGreyInactiveBackground;
+@eval THEME_ALTERNATE_INACTIVE org.rstudio.core.client.theme.ThemeColors.alternateInactiveBackground;
+
+@eval THEME_DEFAULT_MOST_INACTIVE org.rstudio.core.client.theme.ThemeColors.defaultMostInactiveBackground;
+@eval THEME_DARKGREY_MOST_INACTIVE org.rstudio.core.client.theme.ThemeColors.darkGreyMostInactiveBackground;
+@eval THEME_ALTERNATE_MOST_INACTIVE org.rstudio.core.client.theme.ThemeColors.alternateMostInactiveBackground;
+
+@eval THEME_DEFAULT_FOREGROUND org.rstudio.core.client.theme.ThemeColors.defaultForeground;
+@eval THEME_DARKGREY_FOREGROUND org.rstudio.core.client.theme.ThemeColors.darkGreyForeground;
+@eval THEME_ALTERNATE_FOREGROUND org.rstudio.core.client.theme.ThemeColors.alternateForeground;
+
+@eval THEME_DEFAULT_SUBTLE_TEXT org.rstudio.core.client.theme.ThemeColors.defaultSubtleText;
+@eval THEME_DARKGREY_SUBTLE_TEXT org.rstudio.core.client.theme.ThemeColors.darkGreySubtleText;
+@eval THEME_ALTERNATE_SUBTLE_TEXT org.rstudio.core.client.theme.ThemeColors.alternateSubtleText;
+
+@eval THEME_DEFAULT_SUCCESS_COLOR org.rstudio.core.client.theme.ThemeColors.defaultSuccessColor;
+@eval THEME_DARKGREY_SUCCESS_COLOR org.rstudio.core.client.theme.ThemeColors.darkGreySuccessColor;
+@eval THEME_ALTERNATE_SUCCESS_COLOR org.rstudio.core.client.theme.ThemeColors.alternateSuccessColor;
+
+@eval THEME_DEFAULT_WARNING_COLOR org.rstudio.core.client.theme.ThemeColors.defaultWarningColor;
+@eval THEME_DARKGREY_WARNING_COLOR org.rstudio.core.client.theme.ThemeColors.darkGreyWarningColor;
+@eval THEME_ALTERNATE_WARNING_COLOR org.rstudio.core.client.theme.ThemeColors.alternateWarningColor;
+
+@eval THEME_DEFAULT_ERROR_COLOR org.rstudio.core.client.theme.ThemeColors.defaultErrorColor;
+@eval THEME_DARKGREY_ERROR_COLOR org.rstudio.core.client.theme.ThemeColors.darkGreyErrorColor;
+@eval THEME_ALTERNATE_ERROR_COLOR org.rstudio.core.client.theme.ThemeColors.alternateErrorColor;
+@eval THEME_DEFAULT_SUCCESS_BACKGROUND org.rstudio.core.client.theme.ThemeColors.defaultSuccessBackground;
+@eval THEME_DARKGREY_SUCCESS_BACKGROUND org.rstudio.core.client.theme.ThemeColors.darkGreySuccessBackground;
+@eval THEME_ALTERNATE_SUCCESS_BACKGROUND org.rstudio.core.client.theme.ThemeColors.alternateSuccessBackground;
+@eval THEME_DEFAULT_SUCCESS_BORDER org.rstudio.core.client.theme.ThemeColors.defaultSuccessBorder;
+@eval THEME_DARKGREY_SUCCESS_BORDER org.rstudio.core.client.theme.ThemeColors.darkGreySuccessBorder;
+@eval THEME_ALTERNATE_SUCCESS_BORDER org.rstudio.core.client.theme.ThemeColors.alternateSuccessBorder;
+@eval THEME_DEFAULT_WARNING_BACKGROUND org.rstudio.core.client.theme.ThemeColors.defaultWarningBackground;
+@eval THEME_DARKGREY_WARNING_BACKGROUND org.rstudio.core.client.theme.ThemeColors.darkGreyWarningBackground;
+@eval THEME_ALTERNATE_WARNING_BACKGROUND org.rstudio.core.client.theme.ThemeColors.alternateWarningBackground;
+@eval THEME_DEFAULT_WARNING_BORDER org.rstudio.core.client.theme.ThemeColors.defaultWarningBorder;
+@eval THEME_DARKGREY_WARNING_BORDER org.rstudio.core.client.theme.ThemeColors.darkGreyWarningBorder;
+@eval THEME_ALTERNATE_WARNING_BORDER org.rstudio.core.client.theme.ThemeColors.alternateWarningBorder;
+@eval THEME_DEFAULT_TEST_BACKGROUND1 org.rstudio.core.client.theme.ThemeColors.defaultTestBackground1;
+@eval THEME_DARKGREY_TEST_BACKGROUND1 org.rstudio.core.client.theme.ThemeColors.darkGreyTestBackground1;
+@eval THEME_ALTERNATE_TEST_BACKGROUND1 org.rstudio.core.client.theme.ThemeColors.alternateTestBackground1;
+@eval THEME_DEFAULT_TEST_BACKGROUND2 org.rstudio.core.client.theme.ThemeColors.defaultTestBackground2;
+@eval THEME_DARKGREY_TEST_BACKGROUND2 org.rstudio.core.client.theme.ThemeColors.darkGreyTestBackground2;
+@eval THEME_ALTERNATE_TEST_BACKGROUND2 org.rstudio.core.client.theme.ThemeColors.alternateTestBackground2;
+@eval THEME_DEFAULT_TEST_BACKGROUND3 org.rstudio.core.client.theme.ThemeColors.defaultTestBackground3;
+@eval THEME_DARKGREY_TEST_BACKGROUND3 org.rstudio.core.client.theme.ThemeColors.darkGreyTestBackground3;
+@eval THEME_ALTERNATE_TEST_BACKGROUND3 org.rstudio.core.client.theme.ThemeColors.alternateTestBackground3;
+
+@eval THEME_DEFAULT_SHADOW_COLOR org.rstudio.core.client.theme.ThemeColors.defaultShadowColor;
+@eval THEME_DARKGREY_SHADOW_COLOR org.rstudio.core.client.theme.ThemeColors.darkGreyShadowColor;
+@eval THEME_ALTERNATE_SHADOW_COLOR org.rstudio.core.client.theme.ThemeColors.alternateShadowColor;
+
+/* ---------- END IMPORTS ---------- */
 
 /* AI Console Widget Styles */
 .aiConsoleWidget {
    margin: 10px 0;
-   border: 1px solid #ddd;
    border-radius: 4px;
-   background-color: #f8f8f8;
    padding: 8px;
    font-family: monospace;
 }
 
+.rstudio-themes-default .aiConsoleWidget,
+.rstudio-themes-alternate .aiConsoleWidget {
+   border: none;
+   background-color: THEME_DEFAULT_MOST_INACTIVE;
+}
+
+.rstudio-themes-dark-grey .aiConsoleWidget {
+   border: none;
+   background-color: THEME_DARKGREY_MOST_INACTIVE;
+}
+
 .aiConsoleEditorContainer {
-   display: flex;
-   align-items: flex-start;
    width: 100%;
    max-width: 100%;
    box-sizing: border-box;
@@ -34,11 +105,23 @@
    font-family: sans-serif;
 }
 
+/* Theme-specific header colors */
+.rstudio-themes-default .aiConsoleHeader,
+.rstudio-themes-alternate .aiConsoleHeader {
+   background-color: THEME_DEFAULT_INACTIVE;
+   color: THEME_DEFAULT_FOREGROUND;
+}
+
+.rstudio-themes-dark-grey .aiConsoleHeader {
+   background-color: THEME_DARKGREY_INACTIVE;
+   color: THEME_DARKGREY_FOREGROUND;
+}
+
 .aiConsolePrompt {
-   color: #000;
    font-family: monospace;
    margin-right: 8px;
    flex-shrink: 0;
+   /* Color is provided by ace_keyword class to match main console */
 }
 
 .aiConsoleEditor {
@@ -47,7 +130,7 @@
    border: none;
    padding: 4px;
    font-family: monospace;
-   background-color: transparent;
+   /* Background color is handled by ACE theme system, not CSS */
 }
 
 /* Hide the gutter for console and terminal editors */
@@ -61,10 +144,24 @@
    display: none !important;
 }
 
-.aiConsoleEditor:focus {
+/* ACE editor width constraints - proper approach using editor configuration */
+.aiConsoleEditor .ace_scrollbar-h {
+   display: none !important;
+}
+
+/* Default and alternate themes */
+.rstudio-themes-default .aiConsoleEditor:focus,
+.rstudio-themes-alternate .aiConsoleEditor:focus {
    outline: none;
-   border-color: #4CAF50;
-   box-shadow: 0 0 3px rgba(76, 175, 80, 0.3);
+   border-color: THEME_DEFAULT_SUCCESS_COLOR;
+   box-shadow: 0 0 3px THEME_DEFAULT_SHADOW_COLOR;
+}
+
+/* Dark grey theme */
+.rstudio-themes-dark-grey .aiConsoleEditor:focus {
+   outline: none;
+   border-color: THEME_DARKGREY_SUCCESS_COLOR;
+   box-shadow: 0 0 3px THEME_DARKGREY_SHADOW_COLOR;
 }
 
 .aiConsoleButtons {
@@ -76,11 +173,27 @@
 
 
 
-/* Console command message styling */
+/* Console command message styling - use transparent to inherit ace_editor_theme background */
 .consoleCommand {
-   background-color: #f9f9f9;
    padding: 10px;
    margin: 10px 0;
+}
+
+.rstudio-themes-default .consoleCommand,
+.rstudio-themes-alternate .consoleCommand {
+   background-color: transparent;
+}
+
+.rstudio-themes-dark-grey .consoleCommand {
+   background-color: transparent;
+}
+
+/* Ensure all parent containers (including table cells) inherit ace editor background */
+.consoleCommand table,
+.consoleCommand tbody,
+.consoleCommand tr,
+.consoleCommand td {
+   background-color: transparent !important;
 }
 
 .consoleWidgetContainer {
@@ -93,6 +206,18 @@
    margin: 0;
    box-sizing: border-box;
    font-family: sans-serif;
+}
+
+/* Theme-specific terminal header colors */
+.rstudio-themes-default .aiTerminalHeader,
+.rstudio-themes-alternate .aiTerminalHeader {
+   background-color: THEME_DEFAULT_INACTIVE;
+   color: THEME_DEFAULT_FOREGROUND;
+}
+
+.rstudio-themes-dark-grey .aiTerminalHeader {
+   background-color: THEME_DARKGREY_INACTIVE;
+   color: THEME_DARKGREY_FOREGROUND;
 }
 
 .aiTerminalEditorContainer {
@@ -110,10 +235,18 @@
 }
 
 .aiTerminalPrompt {
-   color: #666;
    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
    margin-right: 8px;
    flex-shrink: 0;
+}
+
+.rstudio-themes-default .aiTerminalPrompt,
+.rstudio-themes-alternate .aiTerminalPrompt {
+   color: THEME_DEFAULT_SUBTLE_TEXT;
+}
+
+.rstudio-themes-dark-grey .aiTerminalPrompt {
+   color: THEME_DARKGREY_SUBTLE_TEXT;
 }
 
 .aiTerminalEditor {
@@ -139,9 +272,25 @@
 
 
 .terminalCommand {
-   background-color: #f8f9fa;
    margin: 10px 0;
    padding: 0;
+}
+
+.rstudio-themes-default .terminalCommand,
+.rstudio-themes-alternate .terminalCommand {
+   background-color: transparent;
+}
+
+.rstudio-themes-dark-grey .terminalCommand {
+   background-color: transparent;
+}
+
+/* Ensure all parent containers (including table cells) inherit ace editor background */
+.terminalCommand table,
+.terminalCommand tbody,
+.terminalCommand tr,
+.terminalCommand td {
+   background-color: transparent !important;
 }
 
 .terminalWidgetContainer {
@@ -166,13 +315,13 @@
 }
 
 .diff-stats .addition {
-   color: #4CAF50 !important;
+   color: THEME_DEFAULT_SUCCESS_COLOR !important;
    font-weight: bold;
    display: inline;
 }
 
 .diff-stats .removal {
-   color: #f44336 !important;
+   color: THEME_DEFAULT_WARNING_COLOR !important;
    font-weight: bold;
    display: inline;
    margin-left: 4px;
@@ -180,19 +329,72 @@
 
 /* New Vertical Button Stack Styles */
 .aiVerticalButtonStack {
-   background-color: #f5f5f5;
-   border: 1px solid #ddd;
    border-top: none;
    border-radius: 0 0 4px 4px;
    margin: 0 8px 4px 8px;
-   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-/* Search replace widget styles */
+.rstudio-themes-default .aiVerticalButtonStack,
+.rstudio-themes-alternate .aiVerticalButtonStack {
+   box-shadow: 0 1px 3px THEME_DEFAULT_SHADOW_COLOR;
+}
+
+.rstudio-themes-dark-grey .aiVerticalButtonStack {
+   box-shadow: 0 1px 3px THEME_DARKGREY_SHADOW_COLOR;
+}
+
+.rstudio-themes-default .aiVerticalButtonStack,
+.rstudio-themes-alternate .aiVerticalButtonStack {
+   background-color: THEME_DEFAULT_MOST_INACTIVE;
+   border: 1px solid THEME_DEFAULT_BORDER;
+}
+
+.rstudio-themes-dark-grey .aiVerticalButtonStack {
+   background-color: THEME_DARKGREY_MOST_INACTIVE;
+   border: 1px solid THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+/* AI Search Replace Header Styles */
+.aiSearchReplaceHeader {
+   width: 100%;
+   margin: 0;
+   box-sizing: border-box;
+   font-family: sans-serif;
+}
+
+/* Theme-specific search replace header colors */
+.rstudio-themes-default .aiSearchReplaceHeader,
+.rstudio-themes-alternate .aiSearchReplaceHeader {
+   background-color: THEME_DEFAULT_INACTIVE;
+   color: THEME_DEFAULT_FOREGROUND;
+}
+
+.rstudio-themes-dark-grey .aiSearchReplaceHeader {
+   background-color: THEME_DARKGREY_INACTIVE;
+   color: THEME_DARKGREY_FOREGROUND;
+}
+
+/* Search replace widget styles - use transparent to inherit ace_editor_theme background */
 .searchReplaceCommand {
-   background-color: #f9f9f9;
    padding: 10px;
    margin: 10px 0;
+}
+
+.rstudio-themes-default .searchReplaceCommand,
+.rstudio-themes-alternate .searchReplaceCommand {
+   background-color: transparent;
+}
+
+.rstudio-themes-dark-grey .searchReplaceCommand {
+   background-color: transparent;
+}
+
+/* Ensure all parent containers (including table cells) inherit ace editor background */
+.searchReplaceCommand table,
+.searchReplaceCommand tbody,
+.searchReplaceCommand tr,
+.searchReplaceCommand td {
+   background-color: transparent !important;
 }
 
 .searchReplaceWidgetContainer {
@@ -201,14 +403,14 @@
 
 /* ACE Editor Diff Highlighting Styles */
 .ace_diff_added {
-   background-color: #d4edda !important;
-   border-left: 3px solid #28a745 !important;
+   background-color: THEME_DEFAULT_SUCCESS_BACKGROUND !important;
+   border-left: 3px solid THEME_DEFAULT_SUCCESS_BORDER !important;
    position: relative;
 }
 
 .ace_diff_deleted {
-   background-color: #f8d7da !important;
-   border-left: 3px solid #dc3545 !important;
+   background-color: THEME_DEFAULT_WARNING_BACKGROUND !important;
+   border-left: 3px solid THEME_DEFAULT_WARNING_BORDER !important;
    position: relative;
 }
 
@@ -217,29 +419,29 @@ div.ace_diff_added,
 .ace_theme-monokai .ace_diff_added,
 .ace_theme-twilight .ace_diff_added,
 .ace_theme-vibrant_ink .ace_diff_added {
-   background-color: #d4edda !important;
-   border-left: 3px solid #28a745 !important;
+   background-color: THEME_DEFAULT_SUCCESS_BACKGROUND !important;
+   border-left: 3px solid THEME_DEFAULT_SUCCESS_BORDER !important;
 }
 
 div.ace_diff_deleted,
 .ace_theme-monokai .ace_diff_deleted,
 .ace_theme-twilight .ace_diff_deleted,
 .ace_theme-vibrant_ink .ace_diff_deleted {
-   background-color: #f8d7da !important;
-   border-left: 3px solid #dc3545 !important;
+   background-color: THEME_DEFAULT_WARNING_BACKGROUND !important;
+   border-left: 3px solid THEME_DEFAULT_WARNING_BORDER !important;
 }
 
 /* Test classes for diff highlighting */
 .ace_test_line_0 {
-   background-color: rgba(76, 175, 80, 0.2) !important;
+   background-color: THEME_DEFAULT_TEST_BACKGROUND1 !important;
 }
 
 .ace_test_line_1 {
-   background-color: rgba(244, 67, 54, 0.2) !important;
+   background-color: THEME_DEFAULT_TEST_BACKGROUND2 !important;
 }
 
 .ace_test_line_2 {
-   background-color: white !important;
+   background-color: THEME_DEFAULT_TEST_BACKGROUND3 !important;
 }
 
 /* Thinking message styles */
@@ -269,7 +471,15 @@ div.ace_diff_deleted,
    animation: thinking-pulse 1.5s infinite ease-in-out;
    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
    font-size: 14px;
-   color: #666;
+}
+
+.rstudio-themes-default .thinking-text,
+.rstudio-themes-alternate .thinking-text {
+   color: THEME_DEFAULT_SUBTLE_TEXT;
+}
+
+.rstudio-themes-dark-grey .thinking-text {
+   color: THEME_DARKGREY_SUBTLE_TEXT;
 }
 
 @keyframes thinking-pulse {
@@ -291,12 +501,21 @@ div.ace_diff_deleted,
 }
 
 .message.error {
-   background-color: #f5f5f5;
-   border: 1px solid #ddd;
    border-radius: 4px;
    padding: 10px 12px;
    margin: 6px 0;
    position: relative;
+}
+
+.rstudio-themes-default .message.error,
+.rstudio-themes-alternate .message.error {
+   background-color: THEME_DEFAULT_MOST_INACTIVE;
+   border: 1px solid THEME_DEFAULT_BORDER;
+}
+
+.rstudio-themes-dark-grey .message.error {
+   background-color: THEME_DARKGREY_MOST_INACTIVE;
+   border: 1px solid THEME_DARKGREY_SUBTLE_TEXT;
 }
 
 .error-content {
@@ -318,7 +537,7 @@ div.ace_diff_deleted,
 }
 
 .error-text {
-   color: #991717;
+   color: THEME_DEFAULT_ERROR_COLOR;
    font-family: inherit;
    font-size: 14px;
    line-height: 1.4;
@@ -330,7 +549,6 @@ div.ace_diff_deleted,
 .error-close-button {
    background: none;
    border: none;
-   color: #999;
    cursor: pointer;
    font-size: 14px;
    line-height: 1;
@@ -346,11 +564,73 @@ div.ace_diff_deleted,
    font-weight: bold;
 }
 
-.error-close-button:hover {
-   background-color: #e5e5e5;
-   color: #666;
+.rstudio-themes-default .error-close-button,
+.rstudio-themes-alternate .error-close-button {
+   color: THEME_DEFAULT_SUBTLE_TEXT;
 }
 
-.error-close-button:active {
-   background-color: #d5d5d5;
+.rstudio-themes-dark-grey .error-close-button {
+   color: THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+.rstudio-themes-default .error-close-button:hover,
+.rstudio-themes-alternate .error-close-button:hover {
+   background-color: THEME_DEFAULT_INACTIVE;
+   color: THEME_DEFAULT_SUBTLE_TEXT;
+}
+
+.rstudio-themes-dark-grey .error-close-button:hover {
+   background-color: THEME_DARKGREY_INACTIVE;
+   color: THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+.rstudio-themes-default .error-close-button:active,
+.rstudio-themes-alternate .error-close-button:active {
+   background-color: THEME_DEFAULT_MOST_INACTIVE;
+}
+
+.rstudio-themes-dark-grey .error-close-button:active {
+   background-color: THEME_DARKGREY_MOST_INACTIVE;
+}
+
+/* Theme-specific styles for user messages */
+.rstudio-themes-default .user,
+.rstudio-themes-alternate .user {
+   background-color: THEME_DEFAULT_INACTIVE;
+}
+
+.rstudio-themes-dark-grey .user {
+   background-color: THEME_DARKGREY_INACTIVE;
+}
+
+/* Theme-specific styles for markdown code */
+.rstudio-themes-default .markdown-content code,
+.rstudio-themes-alternate .markdown-content code {
+   background-color: THEME_DEFAULT_MOST_INACTIVE;
+}
+
+.rstudio-themes-dark-grey .markdown-content code {
+   background-color: THEME_DARKGREY_MOST_INACTIVE;
+}
+
+/* Theme-specific styles for markdown pre blocks */
+.rstudio-themes-default .markdown-content pre,
+.rstudio-themes-alternate .markdown-content pre {
+   background-color: THEME_DEFAULT_MOST_INACTIVE;
+   border-color: THEME_DEFAULT_BORDER;
+}
+
+.rstudio-themes-dark-grey .markdown-content pre {
+   background-color: THEME_DARKGREY_MOST_INACTIVE;
+   border-color: THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+/* Theme-specific styles for function call messages */
+.rstudio-themes-default .function-call-message,
+.rstudio-themes-alternate .function-call-message {
+   color: THEME_DEFAULT_SUBTLE_TEXT;
+}
+
+.rstudio-themes-dark-grey .function-call-message {
+   color: THEME_DARKGREY_SUBTLE_TEXT;
 }

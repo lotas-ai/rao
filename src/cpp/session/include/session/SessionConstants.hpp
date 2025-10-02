@@ -160,6 +160,7 @@
 #define kDefaultQuartoPath         "bin/quarto"
 #define kDefaultCopilotPath        "bin/copilot-language-server"
 #define kDefaultRipgrepPath        "bin/ripgrep/14.1.1"
+#define kDefaultLocalBackendPath   "bin/rao-local-backend"
 #define kDefaultRsclangPath        "bin/rsclang"
 
 #ifdef _WIN32

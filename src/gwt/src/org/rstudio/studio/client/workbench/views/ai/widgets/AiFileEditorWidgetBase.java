@@ -19,6 +19,7 @@ import org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor;
 import org.rstudio.studio.client.common.filetypes.FileTypeRegistry;
 import org.rstudio.core.client.Debug;
 import org.rstudio.core.client.widget.FontSizer;
+import org.rstudio.core.client.theme.ThemeHelper;
 
 /**
  * Abstract base class for AI widgets that edit files using search_replace
@@ -105,9 +106,6 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
       headerPanel_.setWidth("100%");
       headerPanel_.addStyleName(getHeaderStyleClass());
       
-      // Always use dark header styling for all file editing widgets
-      headerPanel_.getElement().getStyle().setBackgroundColor("#666");
-      headerPanel_.getElement().getStyle().setColor("white");
       headerPanel_.getElement().getStyle().setFontSize(12, Unit.PX);
       headerPanel_.getElement().getStyle().setFontWeight(com.google.gwt.dom.client.Style.FontWeight.BOLD);
       headerPanel_.getElement().getStyle().setPadding(3, Unit.PX);
@@ -116,7 +114,7 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
       headerPanel_.getElement().getStyle().setProperty("boxSizing", "border-box");
       headerPanel_.getElement().getStyle().setBorderWidth(1, Unit.PX);
       headerPanel_.getElement().getStyle().setBorderStyle(com.google.gwt.dom.client.Style.BorderStyle.SOLID);
-      headerPanel_.getElement().getStyle().setBorderColor("#ccc");
+      headerPanel_.getElement().getStyle().setBorderColor(ThemeHelper.getVisibleBorder());
       headerPanel_.getElement().getStyle().setProperty("borderBottom", "none");
       headerPanel_.getElement().getStyle().setProperty("position", "relative");
       
@@ -124,7 +122,6 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
       filenameLabel_ = new Label();
       filenameLabel_.addStyleName("filename");
       filenameLabel_.getElement().getStyle().setFontWeight(com.google.gwt.dom.client.Style.FontWeight.BOLD);
-      filenameLabel_.getElement().getStyle().setColor("white");
       
       Label diffStatsLabel = null;
       
@@ -163,9 +160,10 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
    {
       SimplePanel wrapper = new SimplePanel();
       wrapper.setWidth("100%");
+      wrapper.getElement().getStyle().setProperty("boxSizing", "border-box");
       wrapper.getElement().getStyle().setBorderWidth(1, Unit.PX);
       wrapper.getElement().getStyle().setBorderStyle(com.google.gwt.dom.client.Style.BorderStyle.SOLID);
-      wrapper.getElement().getStyle().setBorderColor("#ccc");
+      wrapper.getElement().getStyle().setBorderColor(ThemeHelper.getVisibleBorder());
       wrapper.getElement().getStyle().setProperty("borderRadius", "0 0 4px 4px");
       return wrapper;
    }

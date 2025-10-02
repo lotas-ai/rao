@@ -10,8 +10,8 @@
 
 /* ---------- EXTERNAL CLASSES ---------- */
 /* External classes that shouldn't be obfuscated */
-@external gwt-SuggestBox, gwt-SuggestBoxPopup, search, searchBoxContainer, searchBoxContainer2, searchBox, rstheme_center, left, right, searchMagGlass, clearSearch, rstudio-AiSearchContainer, rstudio-AiFrame;
-@external rstudio-themes-dark, rstudio-themes-default, rstudio-themes-alternate;
+@external gwt-SuggestBox, gwt-SuggestBoxPopup, search, searchBoxContainer, searchBoxContainer2, searchBox, rstheme_center, left, right, searchMagGlass, clearSearch, rstudio-AiSearchContainer, rstudio-AiFrame, rstheme_toolbarWrapper, gwt-FlowPanel, gwt-HTML, ai-streaming-panel, ace_editor, ace_scroller;
+@external rstudio-themes-dark, rstudio-themes-default, rstudio-themes-alternate, rstudio-themes-dark-grey, rstudio-themes-flat, aiWidgetHeader, aiDeleteButton, aiCancelButton, aiRejectButton, aiConfirmButton, aiAcceptButton, aiEditButton, aiModalBackground, aiThumbnail, aiDivider, aiDropZoneOverlay, aiDropZoneBorder, aiContextItem, aiPlaceholder, aiHoverTarget, aiToggleEnabled, aiToggleDisabled, aiDragFeedback, ai-mode-toggle-button, ai-toolbar-button, ai-menu-element, ai-input-field, ai-mode-dropdown, ai-mode-option, ai-attach-file-button, ai-selected-files-panel, rstudio-AiSearchContentPanel, ai-mode-dropdown-popup, gwt-PopupPanelGlass, ai-image-button, ai-send-button, ai-stop-mode, ai-revert-icon;
 @external rstudio-themes-scrollbars;
 @external editor_dark;
 @external ace_editor_theme;
@@ -24,8 +24,76 @@
 @external std, opt, hl;
 @external findTopicTextbox, bottomSearchWidget, topicNavigationButton, topicTitle;
 @external code-block;
+@external ai-widget-header, ai-delete-button, ai-cancel-button, ai-reject-button, ai-confirm-button, ai-accept-button, ai-edit-button, ai-modal-background, ai-thumbnail, ai-divider, ai-drop-zone-overlay, ai-drop-zone-border, ai-context-item, ai-placeholder, ai-hover-target, ai-toggle-enabled, ai-toggle-disabled, ai-drag-feedback;
 
-/* ---------- COLOR CONSTANTS ---------- */
+/* ---------- IMPORT EXISTING THEME COLORS ---------- */
+@eval THEME_DEFAULT_BACKGROUND org.rstudio.core.client.theme.ThemeColors.defaultBackground;
+@eval THEME_DARKGREY_BACKGROUND org.rstudio.core.client.theme.ThemeColors.darkGreyBackground;
+@eval THEME_ALTERNATE_BACKGROUND org.rstudio.core.client.theme.ThemeColors.alternateBackground;
+
+@eval THEME_DEFAULT_INACTIVE org.rstudio.core.client.theme.ThemeColors.defaultInactiveBackground;
+@eval THEME_DARKGREY_INACTIVE org.rstudio.core.client.theme.ThemeColors.darkGreyInactiveBackground;
+@eval THEME_ALTERNATE_INACTIVE org.rstudio.core.client.theme.ThemeColors.alternateInactiveBackground;
+
+@eval THEME_DEFAULT_MOST_INACTIVE org.rstudio.core.client.theme.ThemeColors.defaultMostInactiveBackground;
+@eval THEME_DARKGREY_MOST_INACTIVE org.rstudio.core.client.theme.ThemeColors.darkGreyMostInactiveBackground;
+@eval THEME_ALTERNATE_MOST_INACTIVE org.rstudio.core.client.theme.ThemeColors.alternateMostInactiveBackground;
+
+@eval THEME_DEFAULT_BORDER org.rstudio.core.client.theme.ThemeColors.defaultBorder;
+@eval THEME_DARKGREY_BORDER org.rstudio.core.client.theme.ThemeColors.darkGreyBorder;
+@eval THEME_ALTERNATE_BORDER org.rstudio.core.client.theme.ThemeColors.alternateBorder;
+
+@eval THEME_LIGHT_CONTROL_BACKGROUND org.rstudio.core.client.theme.ThemeColors.lightControlBackground;
+@eval THEME_LIGHT_CONTROL_BORDER org.rstudio.core.client.theme.ThemeColors.lightControlBorder;
+@eval THEME_DARK_CONTROL_BACKGROUND org.rstudio.core.client.theme.ThemeColors.darkControlBackground;
+@eval THEME_DARK_CONTROL_BORDER org.rstudio.core.client.theme.ThemeColors.darkControlBorder;
+
+@eval THEME_DARKGREY_ROW_HOVERED org.rstudio.core.client.theme.ThemeColors.darkRowHovered;
+
+@eval THEME_DEFAULT_FOREGROUND org.rstudio.core.client.theme.ThemeColors.defaultForeground;
+@eval THEME_DARKGREY_FOREGROUND org.rstudio.core.client.theme.ThemeColors.darkGreyForeground;
+@eval THEME_ALTERNATE_FOREGROUND org.rstudio.core.client.theme.ThemeColors.alternateForeground;
+
+@eval THEME_DEFAULT_SUBTLE_TEXT org.rstudio.core.client.theme.ThemeColors.defaultSubtleText;
+@eval THEME_DARKGREY_SUBTLE_TEXT org.rstudio.core.client.theme.ThemeColors.darkGreySubtleText;
+@eval THEME_ALTERNATE_SUBTLE_TEXT org.rstudio.core.client.theme.ThemeColors.alternateSubtleText;
+
+@eval THEME_DEFAULT_SUCCESS_COLOR org.rstudio.core.client.theme.ThemeColors.defaultSuccessColor;
+@eval THEME_DARKGREY_SUCCESS_COLOR org.rstudio.core.client.theme.ThemeColors.darkGreySuccessColor;
+@eval THEME_ALTERNATE_SUCCESS_COLOR org.rstudio.core.client.theme.ThemeColors.alternateSuccessColor;
+
+@eval THEME_DEFAULT_ERROR_COLOR org.rstudio.core.client.theme.ThemeColors.defaultErrorColor;
+@eval THEME_DARKGREY_ERROR_COLOR org.rstudio.core.client.theme.ThemeColors.darkGreyErrorColor;
+@eval THEME_ALTERNATE_ERROR_COLOR org.rstudio.core.client.theme.ThemeColors.alternateErrorColor;
+
+@eval THEME_DEFAULT_BUTTON_BACKGROUND org.rstudio.core.client.theme.ThemeColors.defaultButtonBackground;
+@eval THEME_DARKGREY_BUTTON_BACKGROUND org.rstudio.core.client.theme.ThemeColors.darkGreyButtonBackground;
+@eval THEME_ALTERNATE_BUTTON_BACKGROUND org.rstudio.core.client.theme.ThemeColors.alternateButtonBackground;
+
+@eval THEME_DEFAULT_SHADOW_COLOR org.rstudio.core.client.theme.ThemeColors.defaultShadowColor;
+@eval THEME_DARKGREY_SHADOW_COLOR org.rstudio.core.client.theme.ThemeColors.darkGreyShadowColor;
+@eval THEME_ALTERNATE_SHADOW_COLOR org.rstudio.core.client.theme.ThemeColors.alternateShadowColor;
+
+@eval THEME_DEFAULT_TOGGLE_ACTIVE org.rstudio.core.client.theme.ThemeColors.defaultToggleActive;
+@eval THEME_DARKGREY_TOGGLE_ACTIVE org.rstudio.core.client.theme.ThemeColors.darkGreyToggleActive;
+@eval THEME_ALTERNATE_TOGGLE_ACTIVE org.rstudio.core.client.theme.ThemeColors.alternateToggleActive;
+
+/* Define drop zone and drag feedback colors using theme-appropriate values */
+@def DROP_ZONE_BG_DEFAULT rgba(76, 175, 80, 0.05);
+@def DROP_ZONE_BORDER_DEFAULT rgba(76, 175, 80, 0.3);
+@def DROP_ZONE_BG_DARK rgba(128, 255, 128, 0.1);
+@def DROP_ZONE_BORDER_DARK rgba(128, 255, 128, 0.4);
+@def DROP_ZONE_BG_ALTERNATE rgba(76, 175, 80, 0.05);
+@def DROP_ZONE_BORDER_ALTERNATE rgba(76, 175, 80, 0.3);
+
+@def DRAG_FEEDBACK_BG_DEFAULT rgba(76, 175, 80, 0.1);
+@def DRAG_FEEDBACK_BORDER_DEFAULT rgba(76, 175, 80, 0.6);
+@def DRAG_FEEDBACK_BG_DARK rgba(128, 255, 128, 0.15);
+@def DRAG_FEEDBACK_BORDER_DARK rgba(128, 255, 128, 0.6);
+@def DRAG_FEEDBACK_BG_ALTERNATE rgba(76, 175, 80, 0.1);
+@def DRAG_FEEDBACK_BORDER_ALTERNATE rgba(76, 175, 80, 0.6);
+
+/* Keep these @def for code syntax highlighting colors */
 @def CODE_BACKGROUND_COLOR_DARK #1f1f1f;
 @def CODE_BACKGROUND_COLOR_LIGHT #f7f7f7;
 @def CODE_COLOR #f0f0f0;
@@ -50,11 +118,9 @@
 }
 
 /* ---------- SEARCH CONTAINER STYLES ---------- */
-/* Style for the search container */
+/* Base structural styles */
 .rstudio-AiSearchContainer {
-   background-color: #f5f5f5;
-   padding: 0px 0px 0px 0px;
-   border-top: 1px solid #ddd;
+   padding: 0px;
    width: 100% !important;
    box-sizing: border-box;
    display: flex !important;
@@ -65,14 +131,99 @@
    font-size: 14px;
    margin-top: 0px;
    position: relative;
-   z-index: 100 !important; /* Ensure this container stays on top */
+   z-index: 100 !important;
+}
+
+/* Theme-specific colors */
+/* Background color inherited from .ace_editor_theme (same as Environment/History panes) */
+.rstudio-themes-default .rstudio-AiSearchContainer,
+.rstudio-themes-alternate .rstudio-AiSearchContainer {
+   border-top: 1px solid THEME_DEFAULT_BORDER;
+}
+
+.rstudio-themes-dark-grey .rstudio-AiSearchContainer {
+   border-top: 1px solid THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+/* Toolbar wrapper borders - right only */
+.rstudio-themes-default .rstudio-AiSearchContainer .rstheme_toolbarWrapper,
+.rstudio-themes-alternate .rstudio-AiSearchContainer .rstheme_toolbarWrapper {
+   border-right: 1px solid THEME_DEFAULT_BORDER !important;
+}
+
+.rstudio-themes-dark-grey .rstudio-AiSearchContainer .rstheme_toolbarWrapper {
+   border-right: 1px solid THEME_DARKGREY_SUBTLE_TEXT !important;
+}
+
+/* SVG colors in toolbar buttons should match text color in search container */
+.rstudio-themes-default .rstudio-AiSearchContainer .ai-image-button svg,
+.rstudio-themes-alternate .rstudio-AiSearchContainer .ai-image-button svg,
+.rstudio-themes-default .rstudio-AiSearchContainer .ai-send-button svg,
+.rstudio-themes-alternate .rstudio-AiSearchContainer .ai-send-button svg {
+   fill: THEME_DEFAULT_FOREGROUND !important;
+}
+
+.rstudio-themes-dark-grey .rstudio-AiSearchContainer .ai-image-button svg,
+.rstudio-themes-dark-grey .rstudio-AiSearchContainer .ai-send-button svg {
+   fill: THEME_DARKGREY_FOREGROUND !important;
+}
+
+/* Remove hover backgrounds from toolbar buttons */
+.rstudio-themes-default .rstudio-AiSearchContainer .ai-image-button:hover,
+.rstudio-themes-alternate .rstudio-AiSearchContainer .ai-image-button:hover,
+.rstudio-themes-default .rstudio-AiSearchContainer .ai-send-button:hover,
+.rstudio-themes-alternate .rstudio-AiSearchContainer .ai-send-button:hover {
+   background-color: transparent !important;
+}
+
+.rstudio-themes-dark-grey .rstudio-AiSearchContainer .ai-image-button:hover,
+.rstudio-themes-dark-grey .rstudio-AiSearchContainer .ai-send-button:hover {
+   background-color: transparent !important;
+}
+
+/* Stop button with circular border - matches VSCode's implementation */
+.rstudio-themes-default .rstudio-AiSearchContainer .ai-send-button.ai-stop-mode,
+.rstudio-themes-alternate .rstudio-AiSearchContainer .ai-send-button.ai-stop-mode {
+   border: 1px solid THEME_DEFAULT_FOREGROUND;
+   border-radius: 50%;
+}
+
+.rstudio-themes-dark-grey .rstudio-AiSearchContainer .ai-send-button.ai-stop-mode {
+   border: 1px solid THEME_DARKGREY_FOREGROUND;
+   border-radius: 50%;
+}
+
+.rstudio-themes-default .rstudio-AiSearchContainer .ai-send-button.ai-stop-mode:hover,
+.rstudio-themes-alternate .rstudio-AiSearchContainer .ai-send-button.ai-stop-mode:hover {
+   background-color: THEME_DEFAULT_BUTTON_BACKGROUND !important;
+   border-color: THEME_DEFAULT_FOREGROUND;
+}
+
+.rstudio-themes-dark-grey .rstudio-AiSearchContainer .ai-send-button.ai-stop-mode:hover {
+   background-color: THEME_DARKGREY_BUTTON_BACKGROUND !important;
+   border-color: THEME_DARKGREY_FOREGROUND;
 }
 
 /* ---------- TOPIC NAVIGATION STYLES ---------- */
 .topicTitle {
    padding-top: 3px;
    height: 15px;
-   font-size: inherit; /* Inherit font size from parent */
+   font-size: 12px !important; /* Standardize to match other AI pane text */
+   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
+}
+
+/* Theme-specific colors for topicTitle to match other AI pane text */
+.rstudio-themes-default .topicTitle,
+.rstudio-themes-flat .topicTitle {
+   color: THEME_DEFAULT_SUBTLE_TEXT !important; /* Match ThemeHelper.getSubtleText() for default theme */
+}
+
+.rstudio-themes-alternate .topicTitle {
+   color: THEME_ALTERNATE_SUBTLE_TEXT !important; /* Match ThemeHelper.getSubtleText() for alternate theme */
+}
+
+.rstudio-themes-dark-grey .topicTitle {
+   color: THEME_DARKGREY_SUBTLE_TEXT !important; /* Match ThemeHelper.getSubtleText() for dark-grey theme */
 }
 
 .findTopicTextbox {
@@ -93,11 +244,26 @@ button.topicNavigationButton td {
 .bottomSearchWidget {
    background-color: transparent;
    padding: 0;
-   border-top: none;
    position: relative;
    width: 100% !important;
    box-sizing: border-box;
    display: block;
+}
+
+/* Theme-specific borders for bottomSearchWidget */
+.rstudio-themes-default .bottomSearchWidget,
+.rstudio-themes-alternate .bottomSearchWidget {
+   border-top: 1px solid THEME_DEFAULT_BORDER;
+   border-left: 1px solid THEME_DEFAULT_BORDER;
+   border-right: 1px solid THEME_DEFAULT_BORDER;
+   border-bottom: none;
+}
+
+.rstudio-themes-dark-grey .bottomSearchWidget {
+   border-top: 1px solid THEME_DARKGREY_SUBTLE_TEXT;
+   border-left: 1px solid THEME_DARKGREY_SUBTLE_TEXT;
+   border-right: 1px solid THEME_DARKGREY_SUBTLE_TEXT;
+   border-bottom: none;
 }
 
 .bottomSearchWidget .search {
@@ -116,16 +282,27 @@ button.topicNavigationButton td {
    display: none;
 }
 
+/* Base structural styles */
 .bottomSearchWidget .search .rstheme_center {
    left: 0;
    right: 0;
-   background: white !important; /* Plain white background */
-   border: 1px solid #ccc !important;
    border-radius: 3px;
-   height: auto !important; /* Allow height to grow */
+   height: auto !important;
    box-sizing: border-box !important;
-   position: relative !important; /* Override absolute positioning */
-   margin: 4px 0; /* Add equal margin on top and bottom */
+   position: relative !important;
+   margin: 4px 0;
+}
+
+/* Theme-specific colors - use transparent to inherit ace_editor_theme background */
+.rstudio-themes-default .bottomSearchWidget .search .rstheme_center,
+.rstudio-themes-alternate .bottomSearchWidget .search .rstheme_center {
+   background: transparent !important;
+   border: 1px solid THEME_LIGHT_CONTROL_BORDER !important;
+}
+
+.rstudio-themes-dark-grey .bottomSearchWidget .search .rstheme_center {
+   background: transparent !important;
+   border: 1px solid THEME_DARK_CONTROL_BORDER !important;
 }
 
 /* Hide search icon and clear button */
@@ -166,6 +343,119 @@ button.topicNavigationButton td {
    outline: none !important;
    line-height: 1.4 !important;
    overflow-y: auto !important;
+}
+
+/* Theme-specific text colors for search box */
+.rstudio-themes-default .bottomSearchWidget .searchBox,
+.rstudio-themes-alternate .bottomSearchWidget .searchBox {
+   color: THEME_DEFAULT_FOREGROUND !important;
+}
+
+.rstudio-themes-dark-grey .bottomSearchWidget .searchBox {
+   color: THEME_DARKGREY_FOREGROUND !important;
+}
+
+/* Placeholder text color should match actual text color */
+.rstudio-themes-default .bottomSearchWidget .searchBox::placeholder,
+.rstudio-themes-alternate .bottomSearchWidget .searchBox::placeholder {
+   color: THEME_DEFAULT_FOREGROUND !important;
+   opacity: 0.5;
+}
+
+.rstudio-themes-dark-grey .bottomSearchWidget .searchBox::placeholder {
+   color: THEME_DARKGREY_FOREGROUND !important;
+   opacity: 0.5;
+}
+
+/* Search container should use ace_editor_theme background like streaming panel - remove any overrides to let ace_editor_theme rule apply */
+
+/* Fix font family for toolbar buttons to match search container - use maximum specificity */
+.rstudio-AiSearchContainer .ai-attach-file-button.ai-toolbar-button,
+.rstudio-AiSearchContainer .ai-mode-toggle-button.ai-toolbar-button {
+   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
+}
+
+/* Child elements within search container should be transparent to show the container background */
+.rstudio-themes-default .rstudio-AiSearchContainer textarea.ai-modal-background,
+.rstudio-themes-alternate .rstudio-AiSearchContainer textarea.ai-modal-background,
+.rstudio-themes-default .rstudio-AiSearchContainer .ai-modal-background,
+.rstudio-themes-alternate .rstudio-AiSearchContainer .ai-modal-background,
+.rstudio-themes-default .rstudio-AiSearchContainer .rstheme_toolbarWrapper,
+.rstudio-themes-alternate .rstudio-AiSearchContainer .rstheme_toolbarWrapper {
+   color: THEME_DEFAULT_FOREGROUND !important;
+   background-color: transparent !important;
+}
+
+.rstudio-themes-dark-grey .rstudio-AiSearchContainer textarea.ai-modal-background,
+.rstudio-themes-dark-grey .rstudio-AiSearchContainer .ai-modal-background,
+.rstudio-themes-dark-grey .rstudio-AiSearchContainer .rstheme_toolbarWrapper {
+   color: THEME_DARKGREY_FOREGROUND !important;
+   background-color: transparent !important;
+}
+
+/* Placeholder text for ai-modal-background textarea should match text color */
+.rstudio-themes-default .rstudio-AiSearchContainer textarea.ai-modal-background::placeholder,
+.rstudio-themes-alternate .rstudio-AiSearchContainer textarea.ai-modal-background::placeholder {
+   color: THEME_DEFAULT_FOREGROUND !important;
+   opacity: 0.5;
+}
+
+.rstudio-themes-dark-grey .rstudio-AiSearchContainer textarea.ai-modal-background::placeholder {
+   color: THEME_DARKGREY_FOREGROUND !important;
+   opacity: 0.5;
+}
+
+/* Context badges and toolbar buttons */
+/* Background color inherited from .ace_editor_theme (same as Environment/History panes) */
+/* Scoped to AI pane containers only - use descendant selector */
+.rstudio-themes-default .rstudio-AiSearchContainer .ai-toolbar-button,
+.rstudio-themes-alternate .rstudio-AiSearchContainer .ai-toolbar-button {
+   color: THEME_DEFAULT_FOREGROUND !important;
+   border-color: THEME_DEFAULT_BORDER !important;
+}
+
+.rstudio-themes-dark-grey .rstudio-AiSearchContainer .ai-toolbar-button {
+   color: THEME_DARKGREY_FOREGROUND !important;
+   border-color: THEME_DARKGREY_SUBTLE_TEXT !important;
+}
+
+/* Context bar container (top placeholder panel for file attachments) */
+/* Background color inherited from .ace_editor_theme (same as Environment/History panes) */
+/* Scoped to AI pane containers only - use descendant selector */
+.rstudio-themes-default .rstudio-AiSearchContainer .gwt-FlowPanel,
+.rstudio-themes-alternate .rstudio-AiSearchContainer .gwt-FlowPanel {
+   border-top: 1px solid THEME_DEFAULT_BORDER !important;
+   border-left: 1px solid THEME_DEFAULT_BORDER !important;
+   border-right: 1px solid THEME_DEFAULT_BORDER !important;
+}
+
+.rstudio-themes-dark-grey .rstudio-AiSearchContainer .gwt-FlowPanel {
+   border-top: 1px solid THEME_DARKGREY_SUBTLE_TEXT !important;
+   border-left: 1px solid THEME_DARKGREY_SUBTLE_TEXT !important;
+   border-right: 1px solid THEME_DARKGREY_SUBTLE_TEXT !important;
+}
+
+/* Streaming conversation panel background (no border) */
+/* The .rstheme files define .ace_editor_theme { background-color: ...; } */
+/* We need to override the body .rstudio-themes-default rule which sets body background */
+/* Must use higher specificity: body .rstudio-themes-default vs our rule */
+body .rstudio-themes-default.gwt-HTML.ace_editor_theme,
+body .ace_editor .gwt-HTML.ace_editor_theme.rstudio-themes-default,
+body .ace_editor_theme .gwt-HTML.ace_editor_theme.rstudio-themes-default {
+   background: transparent !important; /* Let parent's ace_editor_theme background show through */
+}
+
+/* For dark-grey and alternate themes too */
+body .rstudio-themes-dark-grey.gwt-HTML.ace_editor_theme,
+body .ace_editor .gwt-HTML.ace_editor_theme.rstudio-themes-dark-grey,
+body .ace_editor_theme .gwt-HTML.ace_editor_theme.rstudio-themes-dark-grey {
+   background: transparent !important;
+}
+
+body .rstudio-themes-alternate.gwt-HTML.ace_editor_theme,
+body .ace_editor .gwt-HTML.ace_editor_theme.rstudio-themes-alternate,
+body .ace_editor_theme .gwt-HTML.ace_editor_theme.rstudio-themes-alternate {
+   background: transparent !important;
 }
 
 /* ---------- SUGGEST BOX STYLES ---------- */
@@ -275,45 +565,80 @@ button.topicNavigationButton td {
 }
 
 /* Default to white text on black in editor_dark themes */
-.editor_dark {
+/* Scoped to AI frame only to avoid affecting global popups */
+.rstudio-AiFrame.editor_dark {
    color: white;
    background: none;
 }
 
-.editor_dark div#TOC,
-.editor_dark h1,
-.editor_dark h2,
-.editor_dark h3,
-.editor_dark h4,
-.editor_dark table {
+.rstudio-AiFrame.editor_dark div#TOC,
+.rstudio-AiFrame.editor_dark h1,
+.rstudio-AiFrame.editor_dark h2,
+.rstudio-AiFrame.editor_dark h3,
+.rstudio-AiFrame.editor_dark h4,
+.rstudio-AiFrame.editor_dark table {
    color: white !important;
    background: none !important;
 }
 
-.editor_dark.ace_editor_theme p,
-.editor_dark.ace_editor_theme a,
-.rstudio-themes-dark.editor_dark.ace_editor_theme div {
+.rstudio-AiFrame.editor_dark.ace_editor_theme p,
+.rstudio-AiFrame.editor_dark.ace_editor_theme a,
+.rstudio-themes-dark .rstudio-AiFrame.editor_dark.ace_editor_theme div {
    color: white !important;
 }
 
-.editor_dark h1,
-.editor_dark h2,
-.editor_dark h3,
-.editor_dark h4 {
-   border-color: #6A6A6A !important;
+/* Theme-specific border colors for headers */
+/* Scoped to AI frame only */
+.rstudio-themes-default .rstudio-AiFrame.editor_dark h1,
+.rstudio-themes-default .rstudio-AiFrame.editor_dark h2,
+.rstudio-themes-default .rstudio-AiFrame.editor_dark h3,
+.rstudio-themes-default .rstudio-AiFrame.editor_dark h4,
+.rstudio-themes-alternate .rstudio-AiFrame.editor_dark h1,
+.rstudio-themes-alternate .rstudio-AiFrame.editor_dark h2,
+.rstudio-themes-alternate .rstudio-AiFrame.editor_dark h3,
+.rstudio-themes-alternate .rstudio-AiFrame.editor_dark h4 {
+   border-color: THEME_DEFAULT_BORDER !important;
 }
 
-.editor_dark ::selection {
-   background-color: #CCC;
+.rstudio-themes-dark-grey .rstudio-AiFrame.editor_dark h1,
+.rstudio-themes-dark-grey .rstudio-AiFrame.editor_dark h2,
+.rstudio-themes-dark-grey .rstudio-AiFrame.editor_dark h3,
+.rstudio-themes-dark-grey .rstudio-AiFrame.editor_dark h4 {
+   border-color: THEME_DARKGREY_SUBTLE_TEXT !important;
 }
 
-.rstudio-themes-dark.rstudio-themes-scrollbars::-webkit-scrollbar,
-.rstudio-themes-dark.rstudio-themes-scrollbars ::-webkit-scrollbar {
-   background: #FFF;
+/* Theme-specific selection colors */
+/* Scoped to AI frame only */
+.rstudio-themes-default .rstudio-AiFrame.editor_dark ::selection,
+.rstudio-themes-alternate .rstudio-AiFrame.editor_dark ::selection {
+   background-color: THEME_DEFAULT_SUBTLE_TEXT;
 }
 
-.rstudio-themes-dark.editor_dark.ace_editor_theme a.sourceLine {
-   color: #A3A3A3 !important;
+.rstudio-themes-dark-grey .rstudio-AiFrame.editor_dark ::selection {
+   background-color: THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+/* Theme-specific scrollbar colors */
+.rstudio-themes-default.rstudio-themes-scrollbars::-webkit-scrollbar,
+.rstudio-themes-default.rstudio-themes-scrollbars ::-webkit-scrollbar,
+.rstudio-themes-alternate.rstudio-themes-scrollbars::-webkit-scrollbar,
+.rstudio-themes-alternate.rstudio-themes-scrollbars ::-webkit-scrollbar {
+   background: THEME_DEFAULT_BACKGROUND;
+}
+
+.rstudio-themes-dark-grey.rstudio-themes-scrollbars::-webkit-scrollbar,
+.rstudio-themes-dark-grey.rstudio-themes-scrollbars ::-webkit-scrollbar {
+   background: THEME_DARKGREY_BACKGROUND;
+}
+
+/* Theme-specific source line colors */
+.rstudio-themes-default.editor_dark.ace_editor_theme a.sourceLine,
+.rstudio-themes-alternate.editor_dark.ace_editor_theme a.sourceLine {
+   color: THEME_DEFAULT_SUBTLE_TEXT !important;
+}
+
+.rstudio-themes-dark-grey.editor_dark.ace_editor_theme a.sourceLine {
+   color: THEME_DARKGREY_SUBTLE_TEXT !important;
 }
 
 /**
@@ -321,7 +646,7 @@ button.topicNavigationButton td {
   * the Arguments section of the documentation.
   */
 .rstudio-themes-dark.editor_dark.ace_editor_theme h3 + pre {
-   color: #DEDEDE;
+   color: THEME_DARKGREY_FOREGROUND;
    background: none;
 }
 
@@ -340,16 +665,16 @@ button.topicNavigationButton td {
 .rstudio-themes-dark.editor_dark.ace_editor_theme table thead,
 .rstudio-themes-dark.editor_dark.ace_editor_theme table tr.even {
    background-color: CODE_BACKGROUND_COLOR_DARK !important;
-   border-color: #999 !important;
+   border-color: THEME_DARKGREY_SUBTLE_TEXT !important;
 }
 
 .rstudio-themes-dark.editor_dark.ace_editor_theme table tr.odd {
-   border-color: #999 !important;
+   border-color: THEME_DARKGREY_SUBTLE_TEXT !important;
 }
 
 .rstudio-themes-dark.editor_dark.ace_editor_theme table th,
 .rstudio-themes-dark.editor_dark.ace_editor_theme table td {
-   border-color: #666 !important;
+   border-color: THEME_DARKGREY_SUBTLE_TEXT !important;
 }
 
 .rstudio-themes-dark.editor_dark.ace_editor_theme blockquote {
@@ -408,11 +733,18 @@ button.topicNavigationButton td {
 }
 
 .rstudio-themes-dark.editor_dark.ace_editor_theme .hl.opt {
-   color: #9a6e3a;
+   color: THEME_DARKGREY_SUBTLE_TEXT;
 }
 
-.rstudio-themes-dark.editor_dark.ace_editor_theme *::selection {
-   background: rgba(255, 255, 255, 0.15) !important;
+/* Theme-specific selection colors for dark editor */
+.rstudio-themes-default.editor_dark.ace_editor_theme *::selection,
+.rstudio-themes-alternate.editor_dark.ace_editor_theme *::selection {
+   background: THEME_DEFAULT_SHADOW_COLOR !important;
+   color: inherit !important;
+}
+
+.rstudio-themes-dark-grey.editor_dark.ace_editor_theme *::selection {
+   background: THEME_DARKGREY_SHADOW_COLOR !important;
    color: inherit !important;
 }
 
@@ -440,10 +772,312 @@ button.topicNavigationButton td {
 }
 
 /* --- Custom code block outline for AI conversations --- */
+/* Base structural styles */
 .code-block {
-  border: 1px solid #ccc;
   border-top: none;
   border-radius: 0 0 4px 4px;
   margin-top: -2px;
-  /* Keep existing background and padding if present elsewhere */
+}
+
+/* Theme-specific colors */
+.rstudio-themes-default .code-block,
+.rstudio-themes-alternate .code-block {
+  border: 1px solid THEME_DEFAULT_BORDER;
+}
+
+.rstudio-themes-dark-grey .code-block {
+  border: 1px solid THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+/* --- Interaction Mode Toggle Button --- */
+/* Matches @ button styling with hover effects */
+/* Background color inherited from .ace_editor_theme (same as Environment/History panes) */
+/* Scoped to AI pane search container */
+.rstudio-themes-default .rstudio-AiSearchContainer .ai-mode-toggle-button,
+.rstudio-themes-alternate .rstudio-AiSearchContainer .ai-mode-toggle-button {
+   color: THEME_DEFAULT_FOREGROUND !important;
+}
+
+.rstudio-themes-dark-grey .rstudio-AiSearchContainer .ai-mode-toggle-button {
+   color: THEME_DARKGREY_FOREGROUND !important;
+}
+
+.rstudio-themes-default .rstudio-AiSearchContainer .ai-mode-toggle-button:hover,
+.rstudio-themes-alternate .rstudio-AiSearchContainer .ai-mode-toggle-button:hover {
+   background-color: THEME_DEFAULT_BUTTON_BACKGROUND !important;
+}
+
+.rstudio-themes-dark-grey .rstudio-AiSearchContainer .ai-mode-toggle-button:hover {
+   background-color: THEME_DARKGREY_BUTTON_BACKGROUND !important;
+}
+
+/* Mode dropdown popup - transparent glass */
+.ai-mode-dropdown-popup .gwt-PopupPanelGlass {
+   background-color: transparent !important;
+}
+
+/* Mode dropdown menu styling */
+.ai-mode-dropdown {
+   /* Styles handled in Java */
+}
+
+/* Scoped to AI pane search container */
+.rstudio-themes-default .rstudio-AiSearchContainer .ai-mode-option:hover,
+.rstudio-themes-alternate .rstudio-AiSearchContainer .ai-mode-option:hover {
+   background-color: THEME_DEFAULT_BUTTON_BACKGROUND !important;
+}
+
+.rstudio-themes-dark-grey .rstudio-AiSearchContainer .ai-mode-option:hover {
+   background-color: THEME_DARKGREY_BUTTON_BACKGROUND !important;
+}
+
+/* ---------- PHASE 4: CSS CLASSES FOR JAVA-INJECTED STYLES ---------- */
+
+/* Widget Headers - reuse control backgrounds */
+.rstudio-themes-default .aiWidgetHeader {
+   background-color: THEME_DEFAULT_INACTIVE;
+   color: THEME_DEFAULT_FOREGROUND;
+   border: 1px solid THEME_DEFAULT_BORDER;
+}
+
+.rstudio-themes-dark-grey .aiWidgetHeader {
+   background-color: THEME_DARKGREY_INACTIVE;
+   color: THEME_DARKGREY_FOREGROUND;
+   border: 1px solid THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+.rstudio-themes-alternate .aiWidgetHeader {
+   background-color: THEME_ALTERNATE_INACTIVE;
+   color: THEME_ALTERNATE_FOREGROUND;
+   border: 1px solid THEME_ALTERNATE_BORDER;
+}
+
+/* Semantic Action Buttons - use theme-appropriate colors */
+.aiDeleteButton,
+.aiCancelButton,
+.rstudio-themes-default .aiRejectButton,
+.rstudio-themes-alternate .aiRejectButton {
+   color: THEME_DEFAULT_ERROR_COLOR !important;
+}
+
+.rstudio-themes-dark-grey .aiRejectButton {
+   color: THEME_DARKGREY_ERROR_COLOR !important;
+}
+
+.aiConfirmButton,
+.rstudio-themes-default .aiAcceptButton,
+.rstudio-themes-alternate .aiAcceptButton {
+   color: THEME_DEFAULT_SUCCESS_COLOR !important;
+}
+
+.rstudio-themes-dark-grey .aiAcceptButton {
+   color: THEME_DARKGREY_SUCCESS_COLOR !important;
+}
+
+/* Edit buttons - use theme-appropriate text color */
+.rstudio-themes-default .aiEditButton,
+.rstudio-themes-alternate .aiEditButton {
+   color: THEME_ALTERNATE_SUBTLE_TEXT;
+}
+
+.rstudio-themes-dark-grey .aiEditButton {
+   color: THEME_DARKGREY_FOREGROUND;
+}
+
+/* Modal backgrounds */
+.rstudio-themes-default .aiModalBackground {
+   background-color: THEME_LIGHT_CONTROL_BACKGROUND;
+}
+
+.rstudio-themes-dark-grey .aiModalBackground {
+   background-color: THEME_DARK_CONTROL_BACKGROUND;
+}
+
+.rstudio-themes-alternate .aiModalBackground {
+   background-color: THEME_LIGHT_CONTROL_BACKGROUND;
+}
+
+/* Thumbnail images */
+.rstudio-themes-default .aiThumbnail,
+.rstudio-themes-alternate .aiThumbnail {
+   border: 1px solid THEME_DEFAULT_BORDER;
+   background-color: THEME_DEFAULT_MOST_INACTIVE;
+}
+
+.rstudio-themes-dark-grey .aiThumbnail {
+   border: 1px solid THEME_DARKGREY_SUBTLE_TEXT;
+   background-color: THEME_DARKGREY_MOST_INACTIVE;
+}
+
+/* Dividers */
+.rstudio-themes-default .aiDivider,
+.rstudio-themes-alternate .aiDivider {
+   border-top: 1px solid THEME_DEFAULT_BORDER;
+}
+
+.rstudio-themes-dark-grey .aiDivider {
+   border-top: 1px solid THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+/* Drop zone overlays - use theme-aware semi-transparent backgrounds */
+.rstudio-themes-default .aiDropZoneOverlay {
+   background-color: DROP_ZONE_BG_DEFAULT;
+   border: 2px dashed DROP_ZONE_BORDER_DEFAULT;
+}
+
+.rstudio-themes-dark-grey .aiDropZoneOverlay {
+   background-color: DROP_ZONE_BG_DARK;
+   border: 2px dashed DROP_ZONE_BORDER_DARK;
+}
+
+.rstudio-themes-alternate .aiDropZoneOverlay {
+   background-color: DROP_ZONE_BG_ALTERNATE;
+   border: 2px dashed DROP_ZONE_BORDER_ALTERNATE;
+}
+
+.rstudio-themes-default .aiDropZoneBorder,
+.rstudio-themes-alternate .aiDropZoneBorder {
+   background-color: THEME_DEFAULT_SUCCESS_COLOR;
+   color: white;
+}
+
+.rstudio-themes-dark-grey .aiDropZoneBorder {
+   background-color: THEME_DARKGREY_SUCCESS_COLOR;
+   color: white;
+}
+
+/* Context item borders */
+.rstudio-themes-default .aiContextItem,
+.rstudio-themes-alternate .aiContextItem {
+   border: 1px solid THEME_DEFAULT_BORDER;
+}
+
+.rstudio-themes-dark-grey .aiContextItem {
+   border: 1px solid THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+/* Placeholder text */
+.rstudio-themes-default .aiPlaceholder,
+.rstudio-themes-alternate .aiPlaceholder {
+   color: THEME_ALTERNATE_SUBTLE_TEXT;
+   background-color: THEME_DEFAULT_INACTIVE;
+   border: 1px solid THEME_DEFAULT_BORDER;
+}
+
+.rstudio-themes-dark-grey .aiPlaceholder {
+   color: THEME_DARKGREY_SUBTLE_TEXT;
+   background-color: THEME_DARKGREY_INACTIVE;
+   border: 1px solid THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+/* Hover states for interactive elements */
+.rstudio-themes-default .aiHoverTarget:hover,
+.rstudio-themes-alternate .aiHoverTarget:hover {
+   background-color: THEME_DEFAULT_INACTIVE;
+}
+
+.rstudio-themes-dark-grey .aiHoverTarget:hover {
+   background-color: THEME_DARKGREY_ROW_HOVERED;
+}
+
+
+/* Toggle switches */
+.rstudio-themes-default .aiToggleEnabled,
+.rstudio-themes-alternate .aiToggleEnabled {
+   background-color: THEME_DEFAULT_TOGGLE_ACTIVE !important;
+}
+
+.rstudio-themes-dark-grey .aiToggleEnabled {
+   background-color: THEME_DARKGREY_TOGGLE_ACTIVE !important;
+}
+
+.rstudio-themes-default .aiToggleDisabled,
+.rstudio-themes-alternate .aiToggleDisabled {
+   background-color: THEME_DEFAULT_BORDER;
+}
+
+.rstudio-themes-dark-grey .aiToggleDisabled {
+   background-color: THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+/* Drag feedback */
+.rstudio-themes-default .aiDragFeedback {
+   background-color: DRAG_FEEDBACK_BG_DEFAULT;
+   border-color: DRAG_FEEDBACK_BORDER_DEFAULT;
+}
+
+.rstudio-themes-dark-grey .aiDragFeedback {
+   background-color: DRAG_FEEDBACK_BG_DARK;
+   border-color: DRAG_FEEDBACK_BORDER_DARK;
+}
+
+.rstudio-themes-alternate .aiDragFeedback {
+   background-color: DRAG_FEEDBACK_BG_ALTERNATE;
+   border-color: DRAG_FEEDBACK_BORDER_ALTERNATE;
+}
+
+/* Toolbar button styles */
+.ai-toolbar-button {
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   border-radius: 3px;
+   padding: 1px 5px;
+   margin-left: 3px;
+   cursor: pointer;
+}
+
+/* Scoped to AI pane search container */
+.rstudio-themes-default .rstudio-AiSearchContainer .ai-toolbar-button,
+.rstudio-themes-alternate .rstudio-AiSearchContainer .ai-toolbar-button {
+   background-color: THEME_DEFAULT_BACKGROUND;
+   border: 1px solid THEME_DEFAULT_BORDER;
+}
+
+.rstudio-themes-dark-grey .rstudio-AiSearchContainer .ai-toolbar-button {
+   background-color: THEME_DARKGREY_BACKGROUND;
+   border: 1px solid THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+/* Menu/Picker/Dropdown styles */
+.ai-menu-element {
+   border-radius: 4px;
+}
+
+/* Scoped to AI pane search container */
+.rstudio-themes-default .rstudio-AiSearchContainer .ai-menu-element,
+.rstudio-themes-alternate .rstudio-AiSearchContainer .ai-menu-element {
+   background-color: THEME_DEFAULT_BACKGROUND;
+   border: 1px solid THEME_DEFAULT_BORDER;
+   box-shadow: 0 2px 6px THEME_DEFAULT_SHADOW_COLOR;
+}
+
+.rstudio-themes-dark-grey .rstudio-AiSearchContainer .ai-menu-element {
+   background-color: THEME_DARKGREY_BACKGROUND;
+   border: 1px solid THEME_DARKGREY_SUBTLE_TEXT;
+   box-shadow: 0 2px 6px THEME_DARKGREY_SHADOW_COLOR;
+}
+
+/* Input field styles */
+.ai-input-field {
+   box-sizing: border-box;
+}
+
+/* Scoped to AI pane search container */
+.rstudio-themes-default .rstudio-AiSearchContainer .ai-input-field,
+.rstudio-themes-alternate .rstudio-AiSearchContainer .ai-input-field {
+   border: 1px solid THEME_DEFAULT_BORDER;
+}
+
+.rstudio-themes-dark-grey .rstudio-AiSearchContainer .ai-input-field {
+   border: 1px solid THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+/* Button colors for console/terminal widgets */
+.ai-accept-button {
+   color: #28a745 !important; /* Dark green for Run button */
+}
+
+.ai-cancel-button {
+   color: #dc3545 !important; /* Dark red for Cancel button */
 }

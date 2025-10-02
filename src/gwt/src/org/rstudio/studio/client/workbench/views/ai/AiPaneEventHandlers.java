@@ -443,12 +443,12 @@ public class AiPaneEventHandlers
          if (window && window.document && window.document.body) {
             // Add a semi-transparent blue overlay container
             var overlay = window.document.createElement('div');
+            overlay.className = 'aiDropZoneOverlay';
             overlay.style.position = 'fixed';
             overlay.style.top = '0';
             overlay.style.left = '0';
             overlay.style.width = '100%';
             overlay.style.height = '100%';
-            overlay.style.backgroundColor = 'rgba(0, 100, 255, 0.05)';
             overlay.style.pointerEvents = 'none';
             overlay.style.zIndex = '999999';
             overlay.id = 'blue-background-overlay';
@@ -464,13 +464,12 @@ public class AiPaneEventHandlers
             
             // Also add a small indicator in the corner
             var indicator = window.document.createElement('div');
+            indicator.className = 'aiDropZoneBorder';
             indicator.innerText = 'Background Frame';
             indicator.style.position = 'fixed';
             indicator.style.top = '5px';
             indicator.style.right = '5px';
             indicator.style.padding = '3px 8px';
-            indicator.style.backgroundColor = 'rgba(0, 100, 255, 0.8)';
-            indicator.style.color = 'white';
             indicator.style.fontFamily = 'sans-serif';
             indicator.style.fontSize = '10px';
             indicator.style.borderRadius = '3px';
@@ -738,6 +737,71 @@ public class AiPaneEventHandlers
             }
          },
          false  // Default is No
+      );
+   }
+   
+   public void handleAiRevertAndResubmit(String messageId, String newQuery) {
+      final String messageIdFinal = messageId;
+      final String newQueryFinal = newQuery;
+      globalDisplay_.showYesNoMessage(
+         GlobalDisplay.MSG_WARNING,
+         "Revert Changes",
+         "This will revert all code changes and delete all messages after this point in the conversation. This cannot be undone.",
+         new Operation() {
+            @Override
+            public void execute() {
+               server_.revertAiMessage(Integer.parseInt(messageIdFinal), new ServerRequestCallback<java.lang.Void>() {
+                  @Override
+                  public void onResponseReceived(java.lang.Void response) {
+                     org.rstudio.studio.client.workbench.views.ai.widgets.AiStreamingPanel streamingPanel = 
+                        pane_.getStreamingPanel();
+                     
+                     if (streamingPanel != null) {
+                        server_.getCurrentConversationIndex(new ServerRequestCallback<Double>() {
+                           @Override
+                           public void onResponseReceived(Double conversationIndex) {
+                              if (conversationIndex != null && conversationIndex.intValue() > 0) {
+                                 org.rstudio.studio.client.workbench.views.ai.AiViewManager viewManager = 
+                                    pane_.getToolbars().getViewManager();
+                                 viewManager.loadConversationHistory(conversationIndex.intValue(), true);
+                                 
+                                 com.google.gwt.core.client.Scheduler.get().scheduleDeferred(new com.google.gwt.core.client.Scheduler.ScheduledCommand() {
+                                    @Override
+                                    public void execute() {
+                                       reinitializePersistentDiffIndicators();
+                                       
+                                       com.google.gwt.core.client.Scheduler.get().scheduleDeferred(new com.google.gwt.core.client.Scheduler.ScheduledCommand() {
+                                          @Override
+                                          public void execute() {
+                                             org.rstudio.studio.client.workbench.views.ai.search.AiSearch search = pane_.getSearch();
+                                             if (search != null && newQueryFinal != null && !newQueryFinal.trim().isEmpty()) {
+                                                search.submitQuery(newQueryFinal.trim());
+                                             }
+                                          }
+                                       });
+                                    }
+                                 });
+                              }
+                           }
+                           
+                           @Override
+                           public void onError(ServerError error) {
+                              streamingPanel.clearMessages();
+                           }
+                        });
+                     } else {
+                        pane_.refreshIframe();
+                     }
+                  }
+                  
+                  @Override
+                  public void onError(ServerError error) {
+                     globalDisplay_.showErrorMessage("Error", "Failed to revert message: " + error.getMessage());
+                  }
+               });
+            }
+         },
+         false
       );
    }
    

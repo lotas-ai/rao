@@ -92,14 +92,14 @@ Error UserPrefsComputedLayer::readPrefs()
 
    // Synctex viewer ----------------------------------------------------------
 #ifdef __APPLE__
-# define kDefaultDesktopPdfPreviewer kPdfPreviewerRstudio
+# define kDefaultDesktopPdfPreviewer kPdfPreviewerRao
 #else
 # define kDefaultDesktopPdfPreviewer kPdfPreviewerDesktopSynctex
 #endif
    
    layer[kPdfPreviewer] = (session::options().programMode() == kSessionProgramModeDesktop)
          ? kDefaultDesktopPdfPreviewer
-         : kPdfPreviewerRstudio;
+         : kPdfPreviewerRao;
 
    // Spelling ----------------------------------------------------------------
    layer["spelling"] =

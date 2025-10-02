@@ -72,7 +72,7 @@ protected:
       "Run automation tests and exit.")
       (kAutomationAgentSessionOption,
       value<bool>(&isAutomationAgent_)->default_value(false)->implicit_value(true),
-      "Run RStudio as an automation agent.")
+      "Run Rao as an automation agent.")
       ("automation-report-file",
       value<std::string>(&automationReportFile_)->default_value(std::string()),
       "The file where automation test results should be written.");
@@ -110,15 +110,15 @@ protected:
    pDocs->add_options()
       ("docs-url",
       value<std::string>(&docsURL_)->default_value(std::string()),
-      "If specified, overrides the URL to navigate to when a user clicks on the RStudio help link.");
+      "If specified, overrides the URL to navigate to when a user clicks on the Rao help link.");
 
    pWww->add_options()
       ("www-local-path",
       value<std::string>(&wwwLocalPath_)->default_value("www"),
-      "The relative path from the RStudio installation directory, or absolute path where web assets are stored.")
+      "The relative path from the Rao installation directory, or absolute path where web assets are stored.")
       ("www-symbol-maps-path",
       value<std::string>(&wwwSymbolMapsPath_)->default_value("www-symbolmaps"),
-      "The relative path from the RStudio installation directory, or absolute path, where symbol maps are stored.")
+      "The relative path from the Rao installation directory, or absolute path, where symbol maps are stored.")
       (kWwwPortSessionOption,
       value<std::string>(&wwwPort_)->default_value("8787"),
       "The HTTP port to listen on for incoming connections. This is generally only used with Launcher sessions.")
@@ -189,7 +189,7 @@ protected:
       "Specifies the path to a first project template which will be copied into new users' home directories and opened the first time they run a session. The template can optionally be configured with `DefaultOpenDocs` to cause documents to automatically be opened for the first project.")
       ("default-rsconnect-server",
       value<std::string>(&defaultRSConnectServer_)->default_value(std::string()),
-      "Specifies the default server URL.")
+      "Specifies the default publishing server URL.")
       (kTerminalPortOption,
       value<std::string>(&terminalPort_)->default_value(std::string()),
       "If specified, sets the port to bind the terminal server to. This should generally only be set for containerized Launcher sessions, where the port must be known.")
@@ -210,7 +210,7 @@ protected:
       "Specifies whether or not package builds output to the package project folder.")
       (kRootPathSessionOption,
       value<std::string>(&rootPath_)->default_value(kRequestDefaultRootPath),
-      "The path prefix added by a proxy to the incoming RStudio URL. This setting is used so RStudio Server knows what path it is being served from. If running RStudio Server behind a path-modifying proxy, this should be changed to match the base RStudio Server URL.")
+      "The path prefix added by a proxy to the incoming Rao URL. This setting is used so Rao Server knows what path it is being served from. If running Rao Server behind a path-modifying proxy, this should be changed to match the base Rao Server URL.")
       (kUseSecureCookiesSessionOption,
       value<bool>(&useSecureCookies_)->default_value(false),
       "Indicates whether or not to mark cookies as secure.")
@@ -249,7 +249,7 @@ protected:
       "Controls whether the session should store its metadata on the file system or send it to the server to be stored in the internal database.")
       ("session-project-user-data-dir",
       value<std::string>(&sessionProjectUserDataDir_)->default_value(""),
-      "The folder in which RStudio should store user-specific project (.Rproj.user) data.")
+      "The folder in which Rao should store user-specific project (.Rproj.user) data.")
       ("session-allow-project-user-data-dir-override",
       value<bool>(&sessionAllowProjectUserDataDirOverride_)->default_value(true),
       "Whether or not users can override the default project (.Rproj.user) data directory via their own user preferences.")
@@ -340,7 +340,7 @@ protected:
       "Indicates whether or not to automatically reload R source if it changes during the session.")
       ("r-compatible-graphics-engine-version",
       value<int>(&rCompatibleGraphicsEngineVersion_)->default_value(16),
-      "Specifies the maximum graphics engine version that this version of RStudio is compatible with.")
+      "Specifies the maximum graphics engine version that this version of Rao is compatible with.")
       ("r-resources-path",
       value<std::string>(&rResourcesPath_)->default_value("resources"),
       "Specifies the directory containing external resources.")
@@ -411,6 +411,9 @@ protected:
       ("external-ripgrep-path",
       value<std::string>(&ripgrepPath_)->default_value(kDefaultRipgrepPath),
       "Specifies the path to ripgrep binaries.")
+      ("external-local-backend-path",
+      value<std::string>(&localBackendPath_)->default_value(kDefaultLocalBackendPath),
+      "Specifies the path to BYOK local backend binaries.")
       ("external-node-path",
       value<std::string>(&deprecatedNodePath_)->default_value(kDefaultNodePath),
       "Specifies the path to node binaries.")
@@ -590,6 +593,7 @@ public:
    core::FilePath quartoPath() const { return core::FilePath(quartoPath_); }
    core::FilePath copilotPath() const { return core::FilePath(copilotPath_); }
    core::FilePath ripgrepPath() const { return core::FilePath(ripgrepPath_); }
+   core::FilePath localBackendPath() const { return core::FilePath(localBackendPath_); }
    core::FilePath deprecatedNodePath() const { return core::FilePath(deprecatedNodePath_); }
    core::FilePath deprecatedCopilotAgentPath() const { return core::FilePath(deprecatedCopilotAgentPath_); }
    core::FilePath libclangPath() const { return core::FilePath(libclangPath_); }
@@ -716,6 +720,7 @@ protected:
    std::string quartoPath_;
    std::string copilotPath_;
    std::string ripgrepPath_;
+   std::string localBackendPath_;
    std::string deprecatedNodePath_;
    std::string deprecatedCopilotAgentPath_;
    std::string libclangPath_;

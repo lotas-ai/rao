@@ -201,6 +201,9 @@ public class AiPane extends WorkbenchPane
       history_ = conversationsManager_.initConversationMenu(commands);
       attachmentsMenu_ = attachmentsManager_.initAttachmentsMenu(commands);
       imagesMenu_ = imagesManager_.initImagesMenu(commands);
+      
+      // Load the initial interaction mode setting
+      loadInitialInteractionMode();
 
       // Handles resizing of the window to hide the conversation menu and attachments menu when the window is resized
       Window.addResizeHandler(new ResizeHandler()
@@ -802,6 +805,24 @@ public class AiPane extends WorkbenchPane
       String topicNavigationButton();
       String topicTitle();
       String bottomSearchWidget();
+      String aiWidgetHeader();
+      String aiDeleteButton();
+      String aiCancelButton();
+      String aiRejectButton();
+      String aiConfirmButton();
+      String aiAcceptButton();
+      String aiEditButton();
+      String aiModalBackground();
+      String aiThumbnail();
+      String aiDivider();
+      String aiDropZoneOverlay();
+      String aiDropZoneBorder();
+      String aiContextItem();
+      String aiPlaceholder();
+      String aiHoverTarget();
+      String aiToggleEnabled();
+      String aiToggleDisabled();
+      String aiDragFeedback();
    }
 
    public interface EditorStyles extends CssResource
@@ -1084,13 +1105,12 @@ public class AiPane extends WorkbenchPane
    // Add a private member for the attachments menu button
    private Element attachmentsMenuButton_;
 
-
+   // Interaction mode variables
+   private String currentInteractionMode_ = "agent";
 
    // Add the AiToolbars member variable after the other member declarations
    private AiToolbars toolbars_;
    
-
-
    // Add a method to update the attachments list
    public void refreshAttachmentsList() 
    {
@@ -1495,6 +1515,7 @@ public class AiPane extends WorkbenchPane
          Element style = searchContainer.getElement();
          
          // Reset all styles with a fresh inline style attribute
+         // Note: background-color is handled by CSS theme classes, not inline styles
          style.setAttribute("style", 
             "visibility: visible; " +
             "opacity: 1; " +
@@ -1502,7 +1523,6 @@ public class AiPane extends WorkbenchPane
             "min-height: " + heightToUse + "px; " +
             "position: relative; " +
             "z-index: 100; " +
-            "background-color: #ffffff; " +
             "border-top: none; " +
             "border-bottom: none; " +
             "transition: opacity 0.1s ease;");
@@ -1712,6 +1732,19 @@ public class AiPane extends WorkbenchPane
       
       // Continue with existing revert confirmation logic
       eventHandlers_.handleAiRevertConfirmation(messageId);
+   }
+   
+   public void handleAiRevertAndResubmit(String messageId, String newQuery) {
+      // Retrieve the current active request ID
+      String activeRequestId = getActiveRequestId();
+      
+      // Send cancellation via WebSocket if we have an active request
+      if (activeRequestId != null && !activeRequestId.isEmpty()) {
+         sendCancellationViaWebSocket(activeRequestId);
+      }
+      
+      // Continue with revert and resubmit logic
+      eventHandlers_.handleAiRevertAndResubmit(messageId, newQuery);
    }
    
    public void handleGetFileNameForMessageId(String messageId, JavaScriptObject callback) {
@@ -2664,7 +2697,7 @@ public class AiPane extends WorkbenchPane
       }
    }
 
-       public native void handleCreateUserRevertButton(String messageId) /*-{
+   public native void handleCreateUserRevertButton(String messageId) /*-{
        
        var self = this; // Keep reference to the Java object like console buttons do
        
@@ -2675,16 +2708,16 @@ public class AiPane extends WorkbenchPane
           return;
        }
        
-       // Remove any existing revert buttons first to prevent duplicates
-       var existingButtons = conversationElement.querySelectorAll('.revert-button');
-       for (var i = 0; i < existingButtons.length; i++) {
-          existingButtons[i].remove();
+       // Remove any existing revert icons first to prevent duplicates
+       var existingIcons = conversationElement.querySelectorAll('.ai-revert-icon');
+       for (var i = 0; i < existingIcons.length; i++) {
+          existingIcons[i].remove();
        }
        
        // Find user message containers
        var userContainers = conversationElement.querySelectorAll('.user-container, .message.user');
        
-       // Add revert button to ALL user messages
+       // Add revert icon to ALL user messages
        if (userContainers.length > 0) {
           
           for (var i = 0; i < userContainers.length; i++) {
@@ -2700,50 +2733,38 @@ public class AiPane extends WorkbenchPane
              }
              
              
-             // Check if this user message already has a revert button to avoid duplicates
-             var existingButton = userMessageDiv.querySelector('.revert-button');
-             if (existingButton) {
+             // Check if this user message already has a revert icon to avoid duplicates
+             var existingIcon = userMessageDiv.querySelector('.ai-revert-icon');
+             if (existingIcon) {
                 continue;
              }
              
-             // Create button container with positioning like console buttons - append to user message itself
-             var buttonContainer = $doc.createElement('div');
-             buttonContainer.style.position = 'relative';
-             buttonContainer.style.height = '0px';
-             buttonContainer.style.width = '100%';
-             buttonContainer.style.zIndex = '10';
+             // Reserve 20px space on the right side for the revert icon
+             userMessageDiv.style.paddingRight = '28px'; // 8px base + 20px for icon
              
-             // Create the revert button with console-style positioning and styling
-             var revertButton = $doc.createElement('button');
-             revertButton.className = 'revert-button';
-             revertButton.textContent = 'Revert';
-             revertButton.title = 'Revert to this point in the conversation and delete all messages after';
+             // Create the revert icon using discard codicon SVG
+             var revertIcon = $doc.createElement('div');
+             revertIcon.className = 'ai-revert-icon';
+             revertIcon.title = 'Delete this message and all messages after it';
              
-             // Position to appear at bottom right of the user message
-             revertButton.style.position = 'absolute';
-             revertButton.style.bottom = '-18px'; // Position below the message (like console buttons at bottom)
-             revertButton.style.right = '4px';
-             revertButton.style.backgroundColor = '#cccccc'; // Light gray like disabled console buttons
-             revertButton.style.color = 'black';
-             revertButton.style.border = '1px solid black';
-             revertButton.style.padding = '2px 6px'; // Shorter height like console buttons
-             revertButton.style.borderRadius = '3px';
-             revertButton.style.fontSize = '11px';
-             revertButton.style.cursor = 'pointer';
-             revertButton.style.pointerEvents = 'auto';
-             revertButton.style.zIndex = '999';
+             // Apply styles directly since CSS file may not be loaded in iframe
+             revertIcon.style.position = 'absolute';
+             revertIcon.style.bottom = '12px';
+             revertIcon.style.right = '6px';
+             revertIcon.style.width = '14px';
+             revertIcon.style.height = '14px';
+             revertIcon.style.cursor = 'pointer';
+             revertIcon.style.pointerEvents = 'auto';
+             revertIcon.style.zIndex = '999';
              
-             // Add hover effects
-             revertButton.addEventListener('mouseenter', function() {
-                this.style.backgroundColor = '#b8b8b8'; // Slightly darker on hover
-             });
-             revertButton.addEventListener('mouseleave', function() {
-                this.style.backgroundColor = '#cccccc';
-             });
+             // Use the same color as Add context and Agent buttons (subtle text)
+             var fillColor = @org.rstudio.core.client.theme.ThemeHelper::getSubtleText()();
              
-             // Create a closure to capture the correct messageId for each button
+             revertIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 16 16" style="display: block; width: 100%; height: 100%;"><path fill-rule="evenodd" clip-rule="evenodd" fill="' + fillColor + '" d="M3.5 2v3.5L4 6h3.5V5H4.979l.941-.941a3.552 3.552 0 1 1 5.023 5.023L5.746 14.28l.72.72 5.198-5.198A4.57 4.57 0 0 0 5.2 3.339l-.7.7V2h-1z"/></svg>';
+             
+             // Create a closure to capture the correct messageId for each icon
              (function(capturedMessageId) {
-                revertButton.addEventListener('click', function(event) {
+                revertIcon.addEventListener('click', function(event) {
                    event.preventDefault();
                    event.stopPropagation();
                    
@@ -2752,9 +2773,8 @@ public class AiPane extends WorkbenchPane
                 });
              })(userMessageId);
              
-             // Add button to container and append to the user message div itself
-             buttonContainer.appendChild(revertButton);
-             userMessageDiv.appendChild(buttonContainer);
+             // Append the revert icon to the user message div itself
+             userMessageDiv.appendChild(revertIcon);
           }
        } else {
           console.log("DEBUG: No user containers found");
@@ -2842,6 +2862,57 @@ public class AiPane extends WorkbenchPane
    public void onAuthenticationComplete() {
       if (toolbars_ != null && toolbars_.getViewManager() != null) {
          toolbars_.getViewManager().onAuthenticationComplete();
+      }
+   }
+   
+   /**
+    * Get the current interaction mode
+    */
+   public String getCurrentInteractionMode() {
+      return currentInteractionMode_;
+   }
+   
+   /**
+    * Set the interaction mode and notify the backend
+    */
+   private void loadInitialInteractionMode() {
+      server_.getInteractionMode(new ServerRequestCallback<String>() {
+         @Override
+         public void onResponseReceived(String mode) {
+            if (mode != null && (mode.equals("ask") || mode.equals("agent"))) {
+               currentInteractionMode_ = mode;
+               if (toolbars_ != null) {
+                  toolbars_.updateModeToggleButton(mode);
+               }
+            }
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Error loading initial interaction mode: " + error.getMessage());
+         }
+      });
+   }
+   
+   public void setInteractionMode(String mode) {
+      currentInteractionMode_ = mode;
+      
+      // Notify the backend
+      server_.setInteractionMode(mode, new ServerRequestCallback<java.lang.Void>() {
+         @Override
+         public void onResponseReceived(java.lang.Void response) {
+            // Mode successfully set
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.log("Error setting interaction mode: " + error.getMessage());
+         }
+      });
+      
+      // Update the UI button if toolbars exist
+      if (toolbars_ != null) {
+         toolbars_.updateModeToggleButton(mode);
       }
    }
 }

@@ -9,6 +9,36 @@
 # AGPL (http://www.gnu.org/licenses/agpl-3.0.txt) for more details.
 #
 
+.rs.addFunction("get_ai_pref", function(key, default_value = NULL) {
+  full_key <- paste0("ai_", key)
+  pref_value <- .rs.readUserPref(full_key)
+  return(if (is.null(pref_value)) default_value else pref_value)
+})
+
+.rs.addFunction("set_ai_pref", function(key, value) {
+  full_key <- paste0("ai_", key)
+  .rs.writeUserPref(full_key, value)
+  return(TRUE)
+})
+
+.rs.addFunction("get_ai_state", function(key, default_value = NULL) {
+  full_key <- paste0("ai_", key)
+  state_value <- .rs.readUserState(full_key)
+  return(if (is.null(state_value)) default_value else state_value)
+})
+
+.rs.addFunction("set_ai_state", function(key, value) {
+  full_key <- paste0("ai_", key)
+  
+  # Ensure numeric values are properly typed
+  if (is.numeric(value)) {
+    value <- as.numeric(value)
+  }
+  
+  .rs.writeUserState(full_key, value)
+  return(TRUE)
+})
+
 .rs.addJsonRpcHandler("get_settings", function() {
   # Since we now use DOM/GWT widgets instead of HTML files,
   # we just return success to maintain compatibility
@@ -56,16 +86,35 @@
 })
 
 .rs.addFunction("get_active_provider", function() {
-  # Determine provider based on selected model
-  if (!is.null(.rs.get_api_key("rao"))) {
-    model <- .rs.get_selected_model()
-    if (!is.null(model)) {
-      return(.rs.get_provider_from_model(model))
+  # Determine provider based on selected model (works for both Rao and BYOK)
+  model <- .rs.get_selected_model()
+  
+  if (!is.null(model)) {
+    provider <- .rs.get_provider_from_model(model)
+    
+    # Verify we have a key for this provider (either Rao or BYOK)
+    has_rao_key <- !is.null(.rs.get_api_key(provider))
+    has_byok_key <- !is.null(.rs.ai.getBYOKApiKey(provider)) && nchar(.rs.ai.getBYOKApiKey(provider)) > 0
+    
+    if (has_rao_key || has_byok_key) {
+      return(provider)
     }
-    return("openai")  # Default to openai
-  } else {
-    return(NULL)
   }
+  
+  # Fallback: check if we have any Rao key
+  if (!is.null(.rs.get_api_key("rao"))) {
+    return("openai")  # Default to openai
+  }
+  
+  # Fallback: check for BYOK keys
+  if (!is.null(.rs.ai.getBYOKApiKey("openai")) && nchar(.rs.ai.getBYOKApiKey("openai")) > 0) {
+    return("openai")
+  }
+  if (!is.null(.rs.ai.getBYOKApiKey("anthropic")) && nchar(.rs.ai.getBYOKApiKey("anthropic")) > 0) {
+    return("anthropic")
+  }
+  
+  return(NULL)
 })
 
 # Helper function to get available models for a provider
@@ -92,20 +141,13 @@
 })
 
 .rs.addFunction("get_selected_model", function() {
-  model <- if (exists(".rs.ai_selected_model", envir = .GlobalEnv)) get(".rs.ai_selected_model", envir = .GlobalEnv) else NULL
-  
-  if (is.null(model)) {
-    # Try to load from persistent settings
-    model <- .rs.get_ai_setting("selected_model", "claude-sonnet-4-5-20250929")
-  }
-  return(model)
+  return(.rs.get_ai_pref("selected_model", "claude-sonnet-4-5-20250929"))
 })
 
-.rs.addFunction("set_selected_model", function(model) {  
-  assign(".rs.ai_selected_model", model, envir = .GlobalEnv)
-  
-  # Save selected model to persistent settings
-  .rs.update_ai_setting("selected_model", model)
+.rs.addFunction("set_selected_model", function(model) {
+  .rs.set_ai_pref("selected_model", model)
+  .rs.ai_selected_model <<- model
+  return(TRUE)
 })
 
 .rs.addFunction("delete_api_key", function(provider) {
@@ -281,200 +323,19 @@
 })
 
 # Simple settings persistence for the Settings pane
-.rs.addFunction("get_ai_settings_path", function() {
-  # Get the path to the AI settings file
-  base_ai_dir <- .rs.get_ai_base_dir()
-  settings_path <- file.path(base_ai_dir, "ai_settings.json")
-  return(settings_path)
-})
-
-.rs.addFunction("load_ai_settings", function() {
-  # Load AI settings from persistent storage
-  settings_path <- .rs.get_ai_settings_path()
-  
-  # Create default settings if file doesn't exist
-  # Set to improve only here when it's loaded for the first time
-  if (!file.exists(settings_path)) {
-    return(list(
-      selected_model = "claude-sonnet-4-5-20250929",
-      working_directory = NULL,
-      temperature = 0.5,
-      security_mode = "improve",
-      web_search_enabled = FALSE,
-      auto_accept_edits = FALSE,
-      auto_accept_console = FALSE,
-      auto_accept_terminal = FALSE,
-      auto_run_files = FALSE,
-      auto_delete_files = FALSE,
-      auto_accept_console_allow_anything = FALSE,
-      auto_accept_terminal_allow_anything = FALSE,
-      auto_run_files_allow_anything = FALSE,
-      auto_accept_console_allow_list = character(0),
-      auto_accept_console_deny_list = character(0),
-      auto_accept_terminal_allow_list = character(0),
-      auto_accept_terminal_deny_list = character(0),
-      auto_run_files_allow_list = character(0),
-      auto_run_files_deny_list = character(0)
-    ))
-  }
-  
-  tryCatch({
-    # Read settings from file
-    settings_json <- readLines(settings_path, warn = FALSE)
-    settings <- jsonlite::fromJSON(paste(settings_json, collapse = ""), simplifyVector = FALSE)
-    
-    # Ensure we have the required fields
-    if (is.null(settings$selected_model)) {
-      settings$selected_model <- "claude-sonnet-4-5-20250929"
-    }
-    if (is.null(settings$working_directory)) {
-      settings$working_directory <- NULL
-    }
-    if (is.null(settings$temperature)) {
-      settings$temperature <- 0.5
-    }
-    if (is.null(settings$security_mode)) {
-      settings$security_mode <- "secure"
-    }
-    if (is.null(settings$web_search_enabled)) {
-      settings$web_search_enabled <- FALSE
-    }
-    if (is.null(settings$auto_accept_edits)) {
-      settings$auto_accept_edits <- FALSE
-    }
-    if (is.null(settings$auto_accept_console)) {
-      settings$auto_accept_console <- FALSE
-    }
-    if (is.null(settings$auto_accept_terminal)) {
-      settings$auto_accept_terminal <- FALSE
-    }
-    if (is.null(settings$auto_run_files)) {
-      settings$auto_run_files <- FALSE
-    }
-    if (is.null(settings$auto_delete_files)) {
-      settings$auto_delete_files <- FALSE
-    }
-    if (is.null(settings$auto_accept_console_allow_anything)) {
-      settings$auto_accept_console_allow_anything <- FALSE
-    }
-    if (is.null(settings$auto_accept_terminal_allow_anything)) {
-      settings$auto_accept_terminal_allow_anything <- FALSE
-    }
-    if (is.null(settings$auto_run_files_allow_anything)) {
-      settings$auto_run_files_allow_anything <- FALSE
-    }
-    if (is.null(settings$auto_accept_console_allow_list)) {
-      settings$auto_accept_console_allow_list <- list()
-    }
-    if (is.null(settings$auto_accept_console_deny_list)) {
-      settings$auto_accept_console_deny_list <- list()
-    }
-    if (is.null(settings$auto_accept_terminal_allow_list)) {
-      settings$auto_accept_terminal_allow_list <- list()
-    }
-    if (is.null(settings$auto_accept_terminal_deny_list)) {
-      settings$auto_accept_terminal_deny_list <- list()
-    }
-    if (is.null(settings$auto_run_files_allow_list)) {
-      settings$auto_run_files_allow_list <- list()
-    }
-    if (is.null(settings$auto_run_files_deny_list)) {
-      settings$auto_run_files_deny_list <- list()
-    }
-    
-    return(settings)
-  }, error = function(e) {
-    warning("Failed to load AI settings: ", e$message, ". Using defaults.")
-    return(list(
-      selected_model = "claude-sonnet-4-5-20250929",
-      working_directory = NULL,
-      temperature = 0.5,
-      security_mode = "secure",
-      web_search_enabled = FALSE,
-      auto_accept_edits = FALSE,
-      auto_accept_console = FALSE,
-      auto_accept_terminal = FALSE,
-      auto_run_files = FALSE,
-      auto_delete_files = FALSE,
-      auto_accept_console_allow_anything = FALSE,
-      auto_accept_terminal_allow_anything = FALSE,
-      auto_run_files_allow_anything = FALSE,
-      auto_accept_console_allow_list = character(0),
-      auto_accept_console_deny_list = character(0),
-      auto_accept_terminal_allow_list = character(0),
-      auto_accept_terminal_deny_list = character(0),
-      auto_run_files_allow_list = character(0),
-      auto_run_files_deny_list = character(0)
-    ))
-  })
-})
-
-.rs.addFunction("save_ai_settings", function(settings) {
-  # Save AI settings to persistent storage
-  settings_path <- .rs.get_ai_settings_path()
-  
-  # Ensure directory exists
-  dir.create(dirname(settings_path), recursive = TRUE, showWarnings = FALSE)
-  
-  tryCatch({
-    # Write settings to file
-    settings_json <- jsonlite::toJSON(settings, pretty = TRUE, auto_unbox = TRUE)
-    writeLines(settings_json, settings_path)
-    return(TRUE)
-  }, error = function(e) {
-    warning("Failed to save AI settings: ", e$message)
-    return(FALSE)
-  })
-})
-
-.rs.addFunction("initialize_ai_settings", function() {
-  # Initialize AI settings system and load persisted settings
-  settings <- .rs.load_ai_settings()
-  
-  # Apply settings to current session
-  if (!is.null(settings$selected_model)) {
-    .rs.set_selected_model(settings$selected_model)
-  }
-  
-  if (!is.null(settings$working_directory) && dir.exists(settings$working_directory)) {
-    tryCatch({
-      setwd(settings$working_directory)
-    }, error = function(e) {
-      # Silently ignore directory change errors
-    })
-  }
-  
-  return(settings)
-})
-
-.rs.addFunction("update_ai_setting", function(key, value) {
-  # Update a specific setting and save to disk
-  settings <- .rs.load_ai_settings()
-  settings[[key]] <- value
-  .rs.save_ai_settings(settings)
-  return(TRUE)
-})
-
-.rs.addFunction("get_ai_setting", function(key, default_value = NULL) {
-  # Get a specific setting value
-  settings <- .rs.load_ai_settings()
-  return(if (is.null(settings[[key]])) default_value else settings[[key]])
-})
-
 # Temperature management functions
 .rs.addFunction("get_temperature", function() {
-  temperature <- .rs.get_ai_setting("temperature", 0.5)
+  temperature <- .rs.get_ai_pref("temperature", 0.5)
   return(as.numeric(temperature))
 })
 
-.rs.addFunction("set_temperature_action", function(temperature) {  
-  if (is.null(temperature) || !is.numeric(temperature) || temperature < 0.0 || temperature > 1.0) {
-    return(FALSE)
-  }
-  
-  # Save temperature to persistent settings
-  result <- .rs.update_ai_setting("temperature", temperature)  
-  return(result)
+.rs.addFunction("set_temperature_action", function(temperature) {
+  # Ensure temperature is always a double/numeric, not an integer
+  # This is critical because when temperature=0, R treats it as integer
+  # but the preference schema expects a number (double)
+  temperature <- as.double(temperature)
+  .rs.set_ai_pref("temperature", temperature)
+  return(TRUE)
 })
 
 .rs.addJsonRpcHandler("get_temperature", function() {
@@ -542,34 +403,21 @@
 
 # Security settings management functions
 .rs.addFunction("get_security_mode", function() {
-  security_mode <- .rs.get_ai_setting("security_mode", "secure")
-  return(security_mode)
+  return(.rs.get_ai_pref("security_mode", "improve"))
 })
 
-.rs.addFunction("set_security_mode_action", function(mode) {  
-  if (is.null(mode) || !is.character(mode) || !mode %in% c("secure", "improve")) {
-    return(FALSE)
-  }
-  
-  # Save security mode to persistent settings
-  result <- .rs.update_ai_setting("security_mode", mode)  
-  return(result)
+.rs.addFunction("set_security_mode_action", function(mode) {
+  .rs.set_ai_pref("security_mode", mode)
+  return(TRUE)
 })
 
 .rs.addFunction("get_web_search_enabled", function() {
-  web_search_enabled <- .rs.get_ai_setting("web_search_enabled", FALSE)
-  return(as.logical(web_search_enabled))
+  return(.rs.get_ai_pref("web_search_enabled", FALSE))
 })
 
-.rs.addFunction("set_web_search_enabled_action", function(enabled) {  
-  if (is.null(enabled)) {
-    return(FALSE)
-  }
-  
-  # Convert to logical and save to persistent settings
-  enabled <- as.logical(enabled)
-  result <- .rs.update_ai_setting("web_search_enabled", enabled)  
-  return(result)
+.rs.addFunction("set_web_search_enabled_action", function(enabled) {
+  .rs.set_ai_pref("web_search_enabled", enabled)
+  return(TRUE)
 })
 
 # JSON RPC handlers for security settings
@@ -589,85 +437,68 @@
   return(.rs.set_web_search_enabled_action(enabled))
 })
 
-# Automation settings management functions
-.rs.addFunction("get_auto_accept_edits", function() {
-  auto_accept_edits <- .rs.get_ai_setting("auto_accept_edits", FALSE)
-  return(as.logical(auto_accept_edits))
+# Interaction mode management functions
+.rs.addFunction("get_interaction_mode", function() {
+  return(.rs.get_ai_pref("interaction_mode", "agent"))
 })
 
-.rs.addFunction("set_auto_accept_edits_action", function(enabled) {  
-  if (is.null(enabled)) {
-    return(FALSE)
-  }
-  
-  # Convert to logical and save to persistent settings
-  enabled <- as.logical(enabled)
-  result <- .rs.update_ai_setting("auto_accept_edits", enabled)  
-  return(result)
+.rs.addFunction("set_interaction_mode_action", function(mode) {
+  .rs.set_ai_pref("interaction_mode", mode)
+  return(TRUE)
+})
+
+.rs.addJsonRpcHandler("get_interaction_mode", function() {
+  return(.rs.get_interaction_mode())
+})
+
+.rs.addJsonRpcHandler("set_interaction_mode", function(mode) {
+  return(.rs.set_interaction_mode_action(mode))
+})
+
+# Automation settings management functions
+.rs.addFunction("get_auto_accept_edits", function() {
+  return(.rs.get_ai_pref("auto_accept_edits", FALSE))
+})
+
+.rs.addFunction("set_auto_accept_edits_action", function(enabled) {
+  .rs.set_ai_pref("auto_accept_edits", enabled)
+  return(TRUE)
 })
 
 .rs.addFunction("get_auto_accept_console", function() {
-  auto_accept_console <- .rs.get_ai_setting("auto_accept_console", FALSE)
-  return(as.logical(auto_accept_console))
+  return(.rs.get_ai_pref("auto_accept_console", FALSE))
 })
 
-.rs.addFunction("set_auto_accept_console_action", function(enabled) {  
-  if (is.null(enabled)) {
-    return(FALSE)
-  }
-  
-  # Convert to logical and save to persistent settings
-  enabled <- as.logical(enabled)
-  result <- .rs.update_ai_setting("auto_accept_console", enabled)  
-  return(result)
+.rs.addFunction("set_auto_accept_console_action", function(enabled) {
+  .rs.set_ai_pref("auto_accept_console", enabled)
+  return(TRUE)
 })
 
 .rs.addFunction("get_auto_accept_terminal", function() {
-  auto_accept_terminal <- .rs.get_ai_setting("auto_accept_terminal", FALSE)
-  return(as.logical(auto_accept_terminal))
+  return(.rs.get_ai_pref("auto_accept_terminal", FALSE))
 })
 
-.rs.addFunction("set_auto_accept_terminal_action", function(enabled) {  
-  if (is.null(enabled)) {
-    return(FALSE)
-  }
-  
-  # Convert to logical and save to persistent settings
-  enabled <- as.logical(enabled)
-  result <- .rs.update_ai_setting("auto_accept_terminal", enabled)  
-  return(result)
+.rs.addFunction("set_auto_accept_terminal_action", function(enabled) {
+  .rs.set_ai_pref("auto_accept_terminal", enabled)
+  return(TRUE)
 })
 
 .rs.addFunction("get_auto_run_files", function() {
-  auto_run_files <- .rs.get_ai_setting("auto_run_files", FALSE)
-  return(as.logical(auto_run_files))
+  return(.rs.get_ai_pref("auto_run_files", FALSE))
 })
 
-.rs.addFunction("set_auto_run_files_action", function(enabled) {  
-  if (is.null(enabled)) {
-    return(FALSE)
-  }
-  
-  # Convert to logical and save to persistent settings
-  enabled <- as.logical(enabled)
-  result <- .rs.update_ai_setting("auto_run_files", enabled)  
-  return(result)
+.rs.addFunction("set_auto_run_files_action", function(enabled) {
+  .rs.set_ai_pref("auto_run_files", enabled)
+  return(TRUE)
 })
 
 .rs.addFunction("get_auto_delete_files", function() {
-  auto_delete_files <- .rs.get_ai_setting("auto_delete_files", FALSE)
-  return(as.logical(auto_delete_files))
+  return(.rs.get_ai_pref("auto_delete_files", FALSE))
 })
 
-.rs.addFunction("set_auto_delete_files_action", function(enabled) {  
-  if (is.null(enabled)) {
-    return(FALSE)
-  }
-  
-  # Convert to logical and save to persistent settings
-  enabled <- as.logical(enabled)
-  result <- .rs.update_ai_setting("auto_delete_files", enabled)  
-  return(result)
+.rs.addFunction("set_auto_delete_files_action", function(enabled) {
+  .rs.set_ai_pref("auto_delete_files", enabled)
+  return(TRUE)
 })
 
 # JSON RPC handlers for automation settings
@@ -713,120 +544,60 @@
 
 # Allow/deny list settings management functions
 .rs.addFunction("get_auto_accept_console_allow_anything", function() {
-  allow_anything <- .rs.get_ai_setting("auto_accept_console_allow_anything", FALSE)
-  return(as.logical(allow_anything))
+  return(.rs.get_ai_pref("auto_accept_console_allow_anything", FALSE))
 })
 
-.rs.addFunction("set_auto_accept_console_allow_anything_action", function(enabled) {  
-  if (is.null(enabled)) {
-    return(FALSE)
-  }
-  
-  # Convert to logical and save to persistent settings
-  enabled <- as.logical(enabled)
-  result <- .rs.update_ai_setting("auto_accept_console_allow_anything", enabled)  
-  return(result)
+.rs.addFunction("set_auto_accept_console_allow_anything_action", function(enabled) {
+  .rs.set_ai_pref("auto_accept_console_allow_anything", enabled)
+  return(TRUE)
 })
 
 .rs.addFunction("get_auto_accept_terminal_allow_anything", function() {
-  allow_anything <- .rs.get_ai_setting("auto_accept_terminal_allow_anything", FALSE)
-  return(as.logical(allow_anything))
+  return(.rs.get_ai_pref("auto_accept_terminal_allow_anything", FALSE))
 })
 
-.rs.addFunction("set_auto_accept_terminal_allow_anything_action", function(enabled) {  
-  if (is.null(enabled)) {
-    return(FALSE)
-  }
-  
-  # Convert to logical and save to persistent settings
-  enabled <- as.logical(enabled)
-  result <- .rs.update_ai_setting("auto_accept_terminal_allow_anything", enabled)  
-  return(result)
+.rs.addFunction("set_auto_accept_terminal_allow_anything_action", function(enabled) {
+  .rs.set_ai_pref("auto_accept_terminal_allow_anything", enabled)
+  return(TRUE)
 })
 
 .rs.addFunction("get_auto_run_files_allow_anything", function() {
-  allow_anything <- .rs.get_ai_setting("auto_run_files_allow_anything", FALSE)
-  return(as.logical(allow_anything))
+  return(.rs.get_ai_pref("auto_run_files_allow_anything", FALSE))
 })
 
-.rs.addFunction("set_auto_run_files_allow_anything_action", function(enabled) {  
-  if (is.null(enabled)) {
-    return(FALSE)
-  }
-  
-  # Convert to logical and save to persistent settings
-  enabled <- as.logical(enabled)
-  result <- .rs.update_ai_setting("auto_run_files_allow_anything", enabled)  
-  return(result)
+.rs.addFunction("set_auto_run_files_allow_anything_action", function(enabled) {
+  .rs.set_ai_pref("auto_run_files_allow_anything", enabled)
+  return(TRUE)
 })
 
 .rs.addFunction("get_automation_list", function(list_type) {
-  if (is.null(list_type) || !is.character(list_type)) {
-    return(list())
+  items <- .rs.get_ai_pref(list_type, character(0))
+  
+  if (is.null(items) || length(items) == 0) {
+    return(character(0))
   }
   
-  # list_type should now be correct (e.g., "auto_accept_console_allow_list")
-  list_items <- .rs.get_ai_setting(list_type, character(0))  # Default to empty character vector
-  
-  # Ensure we always return character vectors consistently, regardless of JSON storage format
-  if (is.list(list_items)) {
-    # Convert list back to character vector (handles multi-item case from JSON)
-    list_items <- as.character(unlist(list_items))
-  } else if (is.character(list_items)) {
-    # Already a character vector (single-item case), keep as-is
-    list_items <- list_items
-  } else {
-    # Fallback to empty character vector
-    list_items <- character(0)
+  if (is.list(items)) {
+    items <- unlist(items)
   }
   
-  # Convert to list for JSON response
-  list_items <- as.list(list_items)
-  
-  return(list_items)
+  return(as.character(items))
 })
 
 .rs.addFunction("set_automation_list_action", function(list_type, items) {
-  
-  if (is.null(list_type) || !is.character(list_type)) {
-    return(FALSE)
-  }
-  
   if (is.null(items)) {
-    items <- list()
+    items <- character(0)
+  } else if (is.list(items)) {
+    items <- unlist(items)
   }
   
-  # list_type should now be correct (e.g., "auto_accept_console_allow_list")
-  # C++ json::Array is passed as a list directly to R - no JSON string conversion needed
-  if (is.list(items)) {
-    # Convert list elements to character vector
-    items <- as.character(unlist(items))
-  } else if (!is.character(items)) {
-    # Fallback: convert to character
-    items <- as.character(items)
-  }
+  items <- as.character(items)
   
-  # Remove any empty strings
-  items <- items[nzchar(items)]
+  # Always convert to list for proper serialization
+  items <- as.list(items)
   
-  # Remove duplicates while preserving order
-  if (length(items) > 0) {
-    items <- items[!duplicated(items)]
-  }
-  
-  # Save as character vector (not list) to avoid nested structure
-  # Empty vector for no items, character vector for items
-  if (length(items) == 0) {
-    items <- character(0)  # Empty character vector instead of list()
-  }
-  # items is already a character vector from the conversion above
-  
-  # Save as a list to ensure consistent JSON array format (prevents auto_unbox issues)
-  # This ensures both single and multi-item lists are stored as JSON arrays
-  items_list <- as.list(items)
-  
-  result <- .rs.update_ai_setting(list_type, items_list)
-  return(result)
+  .rs.set_ai_pref(list_type, items)
+  return(TRUE)
 })
 
 # JSON RPC handlers for allow/deny list settings
@@ -863,66 +634,34 @@
 })
 
 # User rules management functions
-.rs.addFunction("get_ai_rules_path", function() {
-  # Get the path to the AI rules file
-  base_ai_dir <- .rs.get_ai_base_dir()
-  rules_path <- file.path(base_ai_dir, "ai_rules.json")
-  return(rules_path)
-})
-
 .rs.addFunction("load_ai_rules", function() {
-  # Load AI rules from persistent storage
-  rules_path <- .rs.get_ai_rules_path()
+  rules <- .rs.get_ai_pref("user_rules", character(0))
   
-  # Create default rules if file doesn't exist
-  if (!file.exists(rules_path)) {
-    return(character(0))  # Return empty character vector
+  if (is.null(rules) || length(rules) == 0) {
+    return(character(0))
   }
   
-  tryCatch({
-    # Read rules from file
-    rules_json <- readLines(rules_path, warn = FALSE)
-    rules <- jsonlite::fromJSON(paste(rules_json, collapse = ""), simplifyVector = TRUE)
-    
-    # Ensure we have a character vector
-    if (is.null(rules) || !is.character(rules)) {
-      rules <- character(0)
-    }
-    
-    return(rules)
-  }, error = function(e) {
-    warning("Failed to load AI rules: ", e$message, ". Using empty rules.")
-    return(character(0))
-  })
+  if (is.list(rules)) {
+    rules <- unlist(rules)
+  }
+  
+  return(as.character(rules))
 })
 
 .rs.addFunction("save_ai_rules", function(rules) {
-  # Save AI rules to persistent storage
-  rules_path <- .rs.get_ai_rules_path()
+  if (is.null(rules)) {
+    rules <- character(0)
+  } else if (is.list(rules)) {
+    rules <- unlist(rules)
+  }
   
-  # Ensure directory exists
-  dir.create(dirname(rules_path), recursive = TRUE, showWarnings = FALSE)
+  rules <- as.character(rules)
   
-  tryCatch({
-    # Ensure rules is a character vector
-    if (is.null(rules) || (!is.character(rules) && !is.list(rules))) {
-      rules <- character(0)
-    }
-    
-    # Convert to character vector if it's a list
-    if (is.list(rules)) {
-      rules <- unlist(rules, use.names = FALSE)
-      rules <- as.character(rules)
-    }
-    
-    # Write rules to file as JSON array
-    rules_json <- jsonlite::toJSON(rules, auto_unbox = FALSE)
-    writeLines(rules_json, rules_path)
-    return(TRUE)
-  }, error = function(e) {
-    warning("Failed to save AI rules: ", e$message)
-    return(FALSE)
-  })
+  # Always convert to list for proper serialization
+  rules <- as.list(rules)
+  
+  .rs.set_ai_pref("user_rules", rules)
+  return(TRUE)
 })
 
 .rs.addFunction("get_user_rules", function() {
@@ -1474,4 +1213,12 @@
     
     return(TRUE)  # All commands are in allow list, auto-accept
   }
+})
+
+# BYOK API Key Management
+.rs.addJsonRpcHandler("has_byok_api_key", function(provider) {
+  key_name <- paste0("byok_", provider, "_api_key")
+  api_key <- .rs.readUserState(key_name)
+  has_key <- !is.null(api_key) && nchar(api_key) > 0
+  return(has_key)
 })

@@ -33,6 +33,7 @@ import org.rstudio.studio.client.server.ServerError;
 import org.rstudio.studio.client.workbench.views.ai.model.AiServerOperations;
 import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.JsArrayString;
+import org.rstudio.core.client.theme.ThemeHelper;
 
 public class AiConsoleWidget extends AiWidgetBase
 {
@@ -56,7 +57,7 @@ public class AiConsoleWidget extends AiWidgetBase
       isEditable_ = isEditable;
       
       initWidget(createWidget(initialCommand));
-      addStyleName("aiConsoleWidget");
+      addStyleName(AiStreamingPanel.RES.styles().aiConsoleWidget());
    }
    
    private VerticalPanel container_;
@@ -75,8 +76,7 @@ public class AiConsoleWidget extends AiWidgetBase
       String headerText = determineHeaderText();
       headerLabel_ = new Label(headerText);
       headerLabel_.addStyleName("aiConsoleHeader");
-      headerLabel_.getElement().getStyle().setBackgroundColor("#666");
-      headerLabel_.getElement().getStyle().setColor("white");
+      // Background and text colors are handled by CSS theme classes
       headerLabel_.getElement().getStyle().setFontSize(12, Unit.PX);
       headerLabel_.getElement().getStyle().setFontWeight(com.google.gwt.dom.client.Style.FontWeight.BOLD);
       headerLabel_.getElement().getStyle().setPadding(3, Unit.PX);
@@ -84,18 +84,21 @@ public class AiConsoleWidget extends AiWidgetBase
       headerLabel_.getElement().getStyle().setMargin(0, Unit.PX);
       headerLabel_.getElement().getStyle().setProperty("width", "100%");
       headerLabel_.getElement().getStyle().setProperty("boxSizing", "border-box");
+      headerLabel_.getElement().getStyle().setBorderWidth(1, Unit.PX);
+      headerLabel_.getElement().getStyle().setBorderStyle(com.google.gwt.dom.client.Style.BorderStyle.SOLID);
+      headerLabel_.getElement().getStyle().setBorderColor(ThemeHelper.getVisibleBorder());
+      headerLabel_.getElement().getStyle().setProperty("borderBottom", "none");
       container_.add(headerLabel_);
       
       // Create console editor container
       HorizontalPanel editorContainer = new HorizontalPanel();
       editorContainer.setWidth("100%");
-      editorContainer.addStyleName("aiConsoleEditorContainer");
+      editorContainer.addStyleName(AiStreamingPanel.RES.styles().aiConsoleEditorContainer());
+      editorContainer.addStyleName("ace_editor"); // Get background from ACE theme like main console
       editorContainer.getElement().getStyle().setProperty("maxWidth", "100%");
       editorContainer.getElement().getStyle().setProperty("boxSizing", "border-box");
-      // Eliminate any spacing that could create a gap at the bottom
       editorContainer.getElement().getStyle().setMargin(0, Unit.PX);
       editorContainer.getElement().getStyle().setPadding(0, Unit.PX);
-      editorContainer.getElement().getStyle().setProperty("borderCollapse", "collapse");
       
       // Create a wrapper around the entire editor container (prompt + editor) with the border
       consoleWrapper_ = new SimplePanel();
@@ -103,9 +106,9 @@ public class AiConsoleWidget extends AiWidgetBase
       consoleWrapper_.addStyleName("aiConsoleWrapper");
       consoleWrapper_.getElement().getStyle().setBorderWidth(1, Unit.PX);
       consoleWrapper_.getElement().getStyle().setBorderStyle(com.google.gwt.dom.client.Style.BorderStyle.SOLID);
-      consoleWrapper_.getElement().getStyle().setBorderColor("#666");
+      consoleWrapper_.getElement().getStyle().setBorderColor(ThemeHelper.getVisibleBorder());
       consoleWrapper_.getElement().getStyle().setProperty("borderRadius", "0 0 4px 4px");
-      consoleWrapper_.getElement().getStyle().setBackgroundColor("white");
+      // Background color is handled by ACE theme, not manually set
       consoleWrapper_.getElement().getStyle().setPadding(0, Unit.PX);
       consoleWrapper_.getElement().getStyle().setMargin(0, Unit.PX);
       consoleWrapper_.getElement().getStyle().setProperty("lineHeight", "0");
@@ -114,12 +117,12 @@ public class AiConsoleWidget extends AiWidgetBase
       consoleWrapper_.getElement().getStyle().setProperty("maxWidth", "100%");
       consoleWrapper_.getElement().getStyle().setProperty("overflow", "hidden");
       
-      // Create console prompt
+      // Create console prompt (matching main RStudio console)
       Label promptLabel = new Label(">");
-      promptLabel.addStyleName("aiConsolePrompt");
+      promptLabel.addStyleName(AiStreamingPanel.RES.styles().aiConsolePrompt());
+      promptLabel.addStyleName("ace_keyword"); // Use same color as main console prompt
       promptLabel.getElement().getStyle().setProperty("fontFamily", "monospace");
       promptLabel.getElement().getStyle().setPaddingLeft(3, Unit.PX);
-      promptLabel.getElement().getStyle().setColor("#000");
       promptLabel.getElement().getStyle().setMarginRight(8, Unit.PX);
       // Apply same font sizing as the ACE editor
       FontSizer.applyNormalFontSize(promptLabel);
@@ -145,11 +148,11 @@ public class AiConsoleWidget extends AiWidgetBase
       if (!isEditable_)
       {
          editor_.setReadOnly(true);
-         editor_.getWidget().getElement().getStyle().setBackgroundColor("#f5f5f5");
-         consoleWrapper_.getElement().getStyle().setBackgroundColor("#f5f5f5");
+         // Disabled background colors are handled by CSS theme classes
       }
       
       // Add editor directly to container, then container to wrapper
+      editor_.getWidget().setWidth("100%");
       editorContainer.add(editor_.getWidget());
       editorContainer.setCellWidth(editor_.getWidget(), "100%");
       consoleWrapper_.setWidget(editorContainer);
@@ -185,14 +188,14 @@ public class AiConsoleWidget extends AiWidgetBase
       if ("folder".equals(type))
       {
          // New folder icon
-         svg = "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
+         svg = "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='" + ThemeHelper.getIconColor() + "' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
              + "<path d='M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'/>"
              + "</svg>";
       }
       else if ("file".equals(type))
       {
          // Page with folded corner (matches Files & Folders menu file icon)
-         svg = "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
+         svg = "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='" + ThemeHelper.getIconColor() + "' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
              + "<path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/>"
              + "<polyline points='14 2 14 8 20 8'/>"
              + "</svg>";
@@ -200,14 +203,14 @@ public class AiConsoleWidget extends AiWidgetBase
       else if ("chat".equals(type))
       {
          // Chat bubble
-         svg = "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
+         svg = "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='" + ThemeHelper.getIconColor() + "' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
              + "<path d='M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z'/>"
              + "</svg>";
       }
       else // docs
       {
          // Open book (current Docs icon)
-         svg = "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
+         svg = "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='" + ThemeHelper.getIconColor() + "' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
              + "<path d='M12 7 A9 9 0 0 0 3 7'/>"
              + "<path d='M12 7 A9 9 0 0 1 21 7'/>"
              + "<path d='M3 7 L3 19'/>"
@@ -369,6 +372,9 @@ public class AiConsoleWidget extends AiWidgetBase
       
       // Set console-like styling
       editor.getWidget().addStyleName("aiConsoleEditor");
+      
+      // Apply the current ACE theme (same as main console) for proper background color
+      editor.getWidget().getEditor().setTheme(RStudioGinjector.INSTANCE.getAceThemes().getCurrentTheme());
       
       // Apply proper font sizing using FontSizer system
       FontSizer.applyNormalFontSize(editor.getWidget());

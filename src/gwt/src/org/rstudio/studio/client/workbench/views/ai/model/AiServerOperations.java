@@ -168,6 +168,21 @@ public interface AiServerOperations
    
    void deleteImage(String imagePath, ServerRequestCallback<Void> requestCallback);
    
+   // BYOK (Bring Your Own Key) operations
+   void startLocalBackendProxy(ServerRequestCallback<String> requestCallback);
+   
+   void stopLocalBackendProxy(ServerRequestCallback<Boolean> requestCallback);
+   
+   void isBYOKEnabled(String provider, ServerRequestCallback<Boolean> requestCallback);
+   
+   void setBYOKApiKey(String provider, String apiKey, ServerRequestCallback<Boolean> requestCallback);
+   
+   void setBYOKEnabled(String provider, boolean enabled, ServerRequestCallback<Boolean> requestCallback);
+   
+   void clearBYOKApiKey(String provider, ServerRequestCallback<java.lang.Void> requestCallback);
+   
+   void hasBYOKApiKey(String provider, ServerRequestCallback<Boolean> requestCallback);
+   
    void deleteAllImages(ServerRequestCallback<java.lang.Void> requestCallback);
    
    void checkImageContentDuplicate(String imagePath, ServerRequestCallback<Boolean> requestCallback);
@@ -246,4 +261,8 @@ public interface AiServerOperations
    void getAutomationList(String listType, ServerRequestCallback<JavaScriptObject> requestCallback);
    
    void setAutomationList(String listType, JavaScriptObject items, ServerRequestCallback<java.lang.Void> requestCallback);
+   
+   void setInteractionMode(String mode, ServerRequestCallback<java.lang.Void> requestCallback);
+   
+   void getInteractionMode(ServerRequestCallback<String> requestCallback);
 }

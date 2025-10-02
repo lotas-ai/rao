@@ -290,6 +290,7 @@ private:
    void resolveQuartoPath(const core::FilePath& resourcePath, std::string* pPath);
    void resolveCopilotPath(const core::FilePath& resourcePath, std::string* pPath);
    void resolveRipgrepPath(const core::FilePath& resourcePath, std::string* pPath);
+   void resolveLocalBackendPath(const core::FilePath& resourcePath, std::string* pPath);
    void resolveRsclangPath(const core::FilePath& resourcePath, std::string* pPath);
 
    void resolveOverlayOptions();

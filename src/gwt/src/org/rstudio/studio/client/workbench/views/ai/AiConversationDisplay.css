@@ -1,0 +1,149 @@
+/* AiConversationDisplay.css
+ * 
+ * Theme-aware styles for conversation display in iframe
+ */
+
+@external rstudio-themes-default, rstudio-themes-dark-grey, rstudio-themes-alternate;
+
+@eval THEME_DEFAULT_INACTIVE org.rstudio.core.client.theme.ThemeColors.defaultInactiveBackground;
+@eval THEME_DARKGREY_INACTIVE org.rstudio.core.client.theme.ThemeColors.darkGreyInactiveBackground;
+@eval THEME_ALTERNATE_INACTIVE org.rstudio.core.client.theme.ThemeColors.alternateInactiveBackground;
+
+@eval THEME_DEFAULT_MOST_INACTIVE org.rstudio.core.client.theme.ThemeColors.defaultMostInactiveBackground;
+@eval THEME_DARKGREY_MOST_INACTIVE org.rstudio.core.client.theme.ThemeColors.darkGreyMostInactiveBackground;
+@eval THEME_ALTERNATE_MOST_INACTIVE org.rstudio.core.client.theme.ThemeColors.alternateMostInactiveBackground;
+
+@eval THEME_DEFAULT_BORDER org.rstudio.core.client.theme.ThemeColors.defaultBorder;
+@eval THEME_DARKGREY_BORDER org.rstudio.core.client.theme.ThemeColors.darkGreyBorder;
+@eval THEME_ALTERNATE_BORDER org.rstudio.core.client.theme.ThemeColors.alternateBorder;
+
+body {
+   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+   margin: 12px;
+}
+
+.message {
+   margin-bottom: 12px;
+   padding: 8px;
+   font-size: 14px;
+}
+
+.message.user {
+   padding-right: 28px; /* 8px base + 20px reserved space for revert icon */
+   position: relative;
+}
+
+.rstudio-themes-default .user,
+.rstudio-themes-alternate .user {
+   background-color: THEME_DEFAULT_INACTIVE;
+   border-radius: 5px;
+   display: block;
+   width: 100%;
+   box-sizing: border-box;
+   text-align: left;
+   word-wrap: break-word;
+}
+
+.rstudio-themes-dark-grey .user {
+   background-color: THEME_DARKGREY_INACTIVE;
+   border-radius: 5px;
+   display: block;
+   width: 100%;
+   box-sizing: border-box;
+   text-align: left;
+   word-wrap: break-word;
+}
+
+.ai-revert-icon {
+   position: absolute;
+   bottom: 8px;
+   right: 10px;
+   width: 14px;
+   height: 14px;
+   cursor: pointer;
+   pointer-events: auto;
+   z-index: 999;
+}
+
+.ai-revert-icon svg {
+   display: block;
+   width: 100%;
+   height: 100%;
+}
+
+.rstudio-themes-default .ai-revert-icon svg,
+.rstudio-themes-alternate .ai-revert-icon svg {
+   fill: THEME_DEFAULT_SUBTLE_TEXT;
+}
+
+.rstudio-themes-dark-grey .ai-revert-icon svg {
+   fill: THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+.assistant {
+   background-color: transparent;
+   text-align: left;
+   word-wrap: break-word;
+   max-width: 100%;
+}
+
+.user-container {
+   width: 100%;
+   overflow: hidden;
+   text-align: right;
+}
+
+.text {
+   font-size: 14px;
+   line-height: 1.4;
+   white-space: pre-wrap;
+}
+
+.rstudio-themes-default .code-block,
+.rstudio-themes-alternate .code-block {
+   background-color: THEME_DEFAULT_MOST_INACTIVE;
+   border-radius: 5px;
+   padding: 4px;
+   margin: 2px 0;
+   font-family: monospace;
+   white-space: pre;
+   overflow-x: auto;
+}
+
+.rstudio-themes-dark-grey .code-block {
+   background-color: THEME_DARKGREY_MOST_INACTIVE;
+   border-radius: 5px;
+   padding: 4px;
+   margin: 2px 0;
+   font-family: monospace;
+   white-space: pre;
+   overflow-x: auto;
+}
+
+.code-block pre {
+   margin: 0;
+   padding: 0;
+}
+
+.editable-pre {
+   min-height: 1em;
+   outline: none;
+}
+
+.rstudio-themes-default .editable-pre:focus,
+.rstudio-themes-alternate .editable-pre:focus {
+   background-color: THEME_DEFAULT_MOST_INACTIVE;
+   border: 1px solid THEME_DEFAULT_BORDER;
+}
+
+.rstudio-themes-dark-grey .editable-pre:focus {
+   background-color: THEME_DARKGREY_MOST_INACTIVE;
+   border: 1px solid THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+br {
+   display: block;
+   content: "";
+   margin-top: 0.5em;
+}
+

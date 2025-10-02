@@ -206,7 +206,7 @@ public class UserStateAccessor extends Prefs
       protected Platform() {} 
 
       public final native JavaScriptObject getWindows() /*-{
-         return this && this.windows || {"useDefault32BitR":false,"useDefault64BitR":true,"rBinDir":"","preferR64":true,"rExecutablePath":""};
+         return this && this.windows || {"rBinDir":"","preferR64":true,"rExecutablePath":""};
       }-*/;
 
       public final native JavaScriptObject getMacos() /*-{
@@ -480,7 +480,7 @@ public class UserStateAccessor extends Prefs
    }
 
    /**
-    * Whether to show UI for publishing content to Posit Connect.
+    * Whether to show UI for publishing content.
     */
    public PrefValue<Boolean> enableRsconnectPublishUi()
    {
@@ -488,7 +488,7 @@ public class UserStateAccessor extends Prefs
          "enable_rsconnect_publish_ui",
          _constants.enableRsconnectPublishUiTitle(), 
          _constants.enableRsconnectPublishUiDescription(), 
-         true);
+         false);
    }
 
    /**
@@ -705,6 +705,90 @@ public class UserStateAccessor extends Prefs
          false);
    }
 
+   /**
+    * Key for making Rao API calls
+    */
+   public PrefValue<String> raoApiKey()
+   {
+      return string(
+         "rao_api_key",
+         _constants.raoApiKeyTitle(), 
+         _constants.raoApiKeyDescription(), 
+         "");
+   }
+
+   /**
+    * Temperature setting for AI model responses
+    */
+   public PrefValue<Double> aiTemperature()
+   {
+      return dbl(
+         "ai_temperature",
+         _constants.aiTemperatureTitle(), 
+         _constants.aiTemperatureDescription(), 
+         0.5);
+   }
+
+   /**
+    * Last used working directory for AI conversations
+    */
+   public PrefValue<String> aiWorkingDirectory()
+   {
+      return string(
+         "ai_working_directory",
+         _constants.aiWorkingDirectoryTitle(), 
+         _constants.aiWorkingDirectoryDescription(), 
+         "");
+   }
+
+   /**
+    * AWS SageMaker endpoint name
+    */
+   public PrefValue<String> aiSagemakerEndpoint()
+   {
+      return string(
+         "ai_sagemaker_endpoint",
+         _constants.aiSagemakerEndpointTitle(), 
+         _constants.aiSagemakerEndpointDescription(), 
+         "");
+   }
+
+   /**
+    * AWS SageMaker region
+    */
+   public PrefValue<String> aiSagemakerRegion()
+   {
+      return string(
+         "ai_sagemaker_region",
+         _constants.aiSagemakerRegionTitle(), 
+         _constants.aiSagemakerRegionDescription(), 
+         "us-east-1");
+   }
+
+   /**
+    * Bring Your Own Key for Anthropic API
+    */
+   public PrefValue<String> byokAnthropicApiKey()
+   {
+      return string(
+         "byok_anthropic_api_key",
+         _constants.byokAnthropicApiKeyTitle(), 
+         _constants.byokAnthropicApiKeyDescription(), 
+         "");
+   }
+
+   /**
+    * Bring Your Own Key for OpenAI API
+    */
+   public PrefValue<String> byokOpenaiApiKey()
+   {
+      return string(
+         "byok_openai_api_key",
+         _constants.byokOpenaiApiKeyTitle(), 
+         _constants.byokOpenaiApiKeyDescription(), 
+         "");
+   }
+
    public void syncPrefs(String layer, JsObject source)
    {
       if (source.hasKey("general"))
@@ -769,6 +853,20 @@ public class UserStateAccessor extends Prefs
          zoteroDataDir().setValue(layer, source.getString("zotero_data_dir"));
       if (source.hasKey("quarto_website_sync_editor"))
          quartoWebsiteSyncEditor().setValue(layer, source.getBool("quarto_website_sync_editor"));
+      if (source.hasKey("rao_api_key"))
+         raoApiKey().setValue(layer, source.getString("rao_api_key"));
+      if (source.hasKey("ai_temperature"))
+         aiTemperature().setValue(layer, source.getDbl("ai_temperature"));
+      if (source.hasKey("ai_working_directory"))
+         aiWorkingDirectory().setValue(layer, source.getString("ai_working_directory"));
+      if (source.hasKey("ai_sagemaker_endpoint"))
+         aiSagemakerEndpoint().setValue(layer, source.getString("ai_sagemaker_endpoint"));
+      if (source.hasKey("ai_sagemaker_region"))
+         aiSagemakerRegion().setValue(layer, source.getString("ai_sagemaker_region"));
+      if (source.hasKey("byok_anthropic_api_key"))
+         byokAnthropicApiKey().setValue(layer, source.getString("byok_anthropic_api_key"));
+      if (source.hasKey("byok_openai_api_key"))
+         byokOpenaiApiKey().setValue(layer, source.getString("byok_openai_api_key"));
    }
    public List<PrefValue<?>> allPrefs()
    {
@@ -804,6 +902,13 @@ public class UserStateAccessor extends Prefs
       prefs.add(zoteroApiKey());
       prefs.add(zoteroDataDir());
       prefs.add(quartoWebsiteSyncEditor());
+      prefs.add(raoApiKey());
+      prefs.add(aiTemperature());
+      prefs.add(aiWorkingDirectory());
+      prefs.add(aiSagemakerEndpoint());
+      prefs.add(aiSagemakerRegion());
+      prefs.add(byokAnthropicApiKey());
+      prefs.add(byokOpenaiApiKey());
       return prefs;
    }
    

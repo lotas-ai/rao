@@ -1,0 +1,32 @@
+{
+  "name": "rao-local-backend",
+  "version": "0.0.1",
+  "description": "BYOK backend service for Rao AI",
+  "main": "out/server.js",
+  "bin": "out/server.js",
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "start": "node out/server.js",
+    "bundle": "esbuild out/server.js --bundle --platform=node --target=node18 --format=cjs --outfile=out/bundle.js --external:express --external:@aws-sdk/client-sagemaker-runtime",
+    "copy-config": "cp -r src/config out/",
+    "package": "npm run bundle && npm run copy-config && pkg out/bundle.js --targets node18-macos-arm64,node18-macos-x64,node18-linux-x64,node18-win-x64 --output dist/rao-local-backend"
+  },
+  "pkg": {
+    "assets": [
+      "out/config/**/*"
+    ],
+    "outputPath": "dist"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20",
+    "esbuild": "^0.25.10",
+    "pkg": "^5.8.1",
+    "typescript": "^5.6.2"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sagemaker-runtime": "^3.0.0",
+    "express": "^4.18.2"
+  }
+}

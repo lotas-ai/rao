@@ -26,6 +26,7 @@ import org.rstudio.studio.client.workbench.views.ai.events.AiStartConversationEv
 import org.rstudio.studio.client.application.events.EventBus;
 import org.rstudio.core.client.Markdown;
 import org.rstudio.core.client.CommandWithArg;
+import org.rstudio.core.client.theme.ThemeHelper;
 import com.google.gwt.resources.client.ClientBundle;
 import com.google.gwt.resources.client.CssResource;
 import com.google.gwt.core.client.GWT;
@@ -142,7 +143,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       Styles styles();
    }
 
-   private static final Resources RES = GWT.create(Resources.class);
+   public static final Resources RES = GWT.create(Resources.class);
    private static final Styles styles_ = RES.styles();
    static { RES.styles().ensureInjected(); }
 
@@ -172,11 +173,60 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       eventBus_.addHandler(AiStreamDataEvent.TYPE, this);
       eventBus_.addHandler(AiStartConversationEvent.TYPE, this);
       
+      // Register for theme change events to update theme classes
+      eventBus_.addHandler(org.rstudio.studio.client.application.events.ThemeChangedEvent.TYPE, 
+         new org.rstudio.studio.client.application.events.ThemeChangedEvent.Handler() {
+            @Override
+            public void onThemeChanged(org.rstudio.studio.client.application.events.ThemeChangedEvent event) {
+               updateThemeClasses();
+            }
+         });
+      
+      // Add theme classes to enable CSS theme selectors
+      addThemeClasses();
+      
       // Initialize with conversation display HTML structure and CSS
       initializeConversationDisplay();
       
       // Initialize scroll manager
       scrollManager_ = new AiScrollManager(this);
+   }
+   
+   /**
+    * Add theme classes to enable CSS theme selectors to work properly
+    */
+   private void addThemeClasses()
+   {
+      // Get current theme from body class
+      String themeName = ThemeHelper.getCurrentTheme();
+      
+      // Add ace_editor to get ACE theme background (.rstheme files define .ace_editor { background-color: ... })
+      addStyleName("ace_editor");
+      // Add ace_editor_theme as theme context marker
+      addStyleName("ace_editor_theme");
+      
+      // Add appropriate theme class
+      if (themeName.equals("dark-grey")) {
+         addStyleName("rstudio-themes-dark-grey");
+      } else if (themeName.equals("alternate")) {
+         addStyleName("rstudio-themes-alternate");
+      } else {
+         addStyleName("rstudio-themes-default");
+      }
+   }
+   
+   /**
+    * Update theme classes when theme changes at runtime
+    */
+   private void updateThemeClasses()
+   {
+      // Remove all existing theme classes
+      removeStyleName("rstudio-themes-default");
+      removeStyleName("rstudio-themes-dark-grey");
+      removeStyleName("rstudio-themes-alternate");
+      
+      // Add the current theme class
+      addThemeClasses();
    }
    
    /**
@@ -189,12 +239,12 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       htmlBuilder.appendHtmlConstant("<style>");
       htmlBuilder.appendHtmlConstant(".ai-streaming-panel { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; margin: 12px; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
       htmlBuilder.appendHtmlConstant(".message { padding: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; font-size: 14px; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
-      htmlBuilder.appendHtmlConstant(".user { background-color: #e6e6e6; border-radius: 5px; display: inline-block; float: right; max-width: 100%; word-wrap: break-word; margin-bottom: 16px; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
+      htmlBuilder.appendHtmlConstant(".user { border-radius: 5px; display: block; width: 100%; box-sizing: border-box; text-align: left; word-wrap: break-word; margin-bottom: 16px; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
       htmlBuilder.appendHtmlConstant(".assistant { background-color: transparent; text-align: left; word-wrap: break-word; max-width: 100%; position: relative; clear: both; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }"); // Ensure assistant starts below user
-      htmlBuilder.appendHtmlConstant(".user-container { width: 100%; overflow: hidden; text-align: right; position: relative; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
+      htmlBuilder.appendHtmlConstant(".user-container { width: 100%; box-sizing: border-box; overflow: hidden; text-align: left; position: relative; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
       htmlBuilder.appendHtmlConstant(".text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; font-size: 14px; line-height: 1.4; white-space: pre-wrap; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
       htmlBuilder.appendHtmlConstant(".text.markdown-content { white-space: normal; }"); // Override pre-wrap for markdown content
-      htmlBuilder.appendHtmlConstant(".user { text-align: right; position: relative; }");
+      htmlBuilder.appendHtmlConstant(".user { text-align: left; position: relative; }");
       htmlBuilder.appendHtmlConstant(".assistant { text-align: left; }");
       htmlBuilder.appendHtmlConstant(".user .text { text-align: left; max-width: 100%; }");
 
@@ -204,10 +254,10 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       htmlBuilder.appendHtmlConstant(".markdown-content p { margin-top: 0.5em; margin-bottom: 0.5em; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
       htmlBuilder.appendHtmlConstant(".markdown-content ul, .markdown-content ol { margin-top: 0.5em; margin-bottom: 0.5em; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
       htmlBuilder.appendHtmlConstant(".markdown-content li { margin-bottom: 0.25em; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
-      htmlBuilder.appendHtmlConstant(".markdown-content code { background-color: #f0f0f0; padding: 2px 4px; border-radius: 3px; font-family: monospace; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
-      htmlBuilder.appendHtmlConstant(".markdown-content pre { background-color: #f8f8f8; border: 1px solid #ddd; border-radius: 4px; padding: 10px; overflow-x: auto; margin: 0.5em 0; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
+      htmlBuilder.appendHtmlConstant(".markdown-content code { padding: 2px 4px; border-radius: 3px; font-family: monospace; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
+      htmlBuilder.appendHtmlConstant(".markdown-content pre { border-radius: 4px; padding: 10px; overflow-x: auto; margin: 0.5em 0; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
       htmlBuilder.appendHtmlConstant(".markdown-content pre code { background-color: transparent; padding: 0; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
-      htmlBuilder.appendHtmlConstant(".function-call-message { margin-left: 15px; opacity: 0.8; font-size: 14px; color: #666; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
+      htmlBuilder.appendHtmlConstant(".function-call-message { margin-left: 15px; opacity: 0.8; font-size: 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
       htmlBuilder.appendHtmlConstant(".ai-streaming-panel *, .message *, .text *, .markdown-content *, .user *, .assistant * { -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
       htmlBuilder.appendHtmlConstant("</style>");
       
@@ -557,6 +607,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       
       messageDiv.appendChild(textDiv);
       userContainer.appendChild(messageDiv);
+      
+      // Make user message editable on click
+      makeUserMessageEditable(messageDiv, messageId);
       
       // Insert in correct position
       insertElementInOrder(conversationElement, userContainer, messageId, currentProcessingSequence_);
@@ -2428,6 +2481,92 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       } catch (e) {
          $wnd.console.log("DEBUG: Error clearing persistent diff indicators: " + e.message);
       }
+   }-*/;
+   
+   /**
+    * Make user message editable on click
+    */
+   private native void makeUserMessageEditable(Element messageDiv, String messageId) /*-{
+      var textDiv = messageDiv.querySelector('.text');
+      if (!textDiv) return;
+      
+      var self = this;
+      messageDiv.style.cursor = 'pointer';
+      
+      messageDiv.addEventListener('click', function() {
+         if (textDiv.hasAttribute('data-editing')) return;
+         
+         textDiv.setAttribute('data-editing', 'true');
+         
+         var originalText = textDiv.innerText || textDiv.textContent;
+         
+         var textarea = $doc.createElement('textarea');
+         textarea.value = originalText;
+         textarea.style.width = '100%';
+         textarea.style.height = 'auto';
+         textarea.style.minHeight = '22px';
+         textarea.style.maxHeight = '150px';
+         textarea.style.boxSizing = 'border-box';
+         textarea.style.resize = 'none';
+         textarea.style.overflow = 'auto';
+         textarea.style.outline = 'none';
+         textarea.style.border = 'none';
+         textarea.style.boxShadow = 'none';
+         textarea.style.padding = '8px';
+         textarea.style.display = 'block';
+         textarea.style.margin = '0';
+         textarea.style.backgroundColor = 'transparent';
+         
+         var computedStyle = window.getComputedStyle(textDiv);
+         textarea.style.fontFamily = computedStyle.fontFamily;
+         textarea.style.fontSize = computedStyle.fontSize;
+         textarea.style.fontWeight = computedStyle.fontWeight;
+         textarea.style.fontStyle = computedStyle.fontStyle;
+         textarea.style.lineHeight = computedStyle.lineHeight || '1.4';
+         textarea.style.color = computedStyle.color;
+         
+         textDiv.innerHTML = '';
+         textDiv.appendChild(textarea);
+         
+         var resizeTextarea = function() {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+         };
+         
+         textarea.addEventListener('input', resizeTextarea);
+         
+         var finishEditing = function(shouldRevert) {
+            var newText = textarea.value;
+            textDiv.removeAttribute('data-editing');
+            
+            if (shouldRevert && newText !== originalText && newText.trim().length > 0) {
+               var aiPane = @org.rstudio.studio.client.workbench.views.ai.AiPane::getCurrentInstance()();
+               if (aiPane) {
+                  aiPane.@org.rstudio.studio.client.workbench.views.ai.AiPane::handleAiRevertAndResubmit(Ljava/lang/String;Ljava/lang/String;)(messageId, newText);
+               }
+            } else {
+               textDiv.innerText = newText;
+            }
+         };
+         
+         textarea.addEventListener('blur', function() {
+            finishEditing(false);
+         });
+         
+         textarea.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+               e.preventDefault();
+               finishEditing(true);
+            } else if (e.key === 'Escape') {
+               e.preventDefault();
+               textDiv.innerText = originalText;
+               textDiv.removeAttribute('data-editing');
+            }
+         });
+         
+         textarea.focus();
+         resizeTextarea();
+      });
    }-*/;
 
 } 

@@ -62,45 +62,11 @@ public class AceThemes
       prefs_ = prefs;
       themes_ = new HashMap<>();
 
-      // Bind theme changes, but validate themes before applying them
+      // Bind theme changes and apply them
       state.get().theme().bind(theme -> {
          AceTheme aceTheme = (AceTheme)theme.cast();
-         
-         // Check if the theme is allowed (not dark and not in excluded list)
-         if (isThemeAllowed(aceTheme)) {
-            applyTheme(aceTheme);
-         } else {
-            // Theme is not allowed, force switch to Textmate and update user state
-            Debug.logWarning("Blocked disallowed theme '" + aceTheme.getName() + "'. Switching to Textmate for AI pane compatibility.");
-            AceTheme textmateTheme = AceTheme.create("Textmate (default)", "theme/default/textmate.rstheme", false);
-            state.get().theme().setGlobalValue(textmateTheme);
-            applyTheme(textmateTheme);
-         }
+         applyTheme(aceTheme);
       });
-   }
-   
-   /**
-    * Checks if a theme is allowed based on our filtering criteria
-    */
-   private boolean isThemeAllowed(AceTheme theme)
-   {
-      // Don't allow dark themes
-      if (theme.isDark()) {
-         return false;
-      }
-      
-      // Don't allow specific excluded light themes
-      String[] excludedThemes = {
-         "Dawn", "iPlastic", "Katzenmilch", "Solarized Light"
-      };
-      
-      for (String excludedTheme : excludedThemes) {
-         if (theme.getName().equals(excludedTheme)) {
-            return false;
-         }
-      }
-      
-      return true;
    }
    
    public AceTheme getCurrentTheme()
@@ -238,16 +204,9 @@ public class AceThemes
             for (int i = 0; i < len; ++i)
             {
                AceTheme theme = jsonThemeArray.get(i);
-               
-               // Use the same validation logic as the constructor
-               if (isThemeAllowed(theme))
-               {
-                  themes_.put(theme.getName(), theme);
-               }
+               themes_.put(theme.getName(), theme);
             }
             
-            if (themes_.size() == 0)
-               Debug.logWarning("No allowed themes found - all themes were filtered out.");
             themeConsumer.accept(themes_);
          }
       });

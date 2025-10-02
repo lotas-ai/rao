@@ -146,14 +146,23 @@ bool writePref(Preferences& prefs, SEXP prefName, SEXP value)
 
    // if this corresponds to an existing preference, ensure that we're not 
    // changing its data type
+   // EXCEPTION: Allow Integer <-> Real conversions for numeric preferences
    boost::optional<json::Value> previous = prefs.readValue(pref);
    if (previous)
    {
-      if ((*previous).getType() != prefValue.getType())
+      json::Type prevType = (*previous).getType();
+      json::Type newType = prefValue.getType();
+      
+      // Allow numeric type conversions (Integer <-> Real)
+      bool isNumericConversion = 
+         (prevType == json::Type::INTEGER && newType == json::Type::REAL) ||
+         (prevType == json::Type::REAL && newType == json::Type::INTEGER);
+      
+      if (prevType != newType && !isNumericConversion)
       {
          r::exec::error("Type mismatch: expected " + 
-                  json::typeAsString((*previous).getType()) + "; got " +
-                  json::typeAsString(prefValue.getType()));
+                  json::typeAsString(prevType) + "; got " +
+                  json::typeAsString(newType));
          return false;
       }
    }

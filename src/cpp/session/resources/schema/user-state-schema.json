@@ -407,6 +407,44 @@
             "default": "",
             "title": "Rao API Key",
             "description": "Key for making Rao API calls"
+        },
+        "ai_temperature": {
+            "type": "number",
+            "default": 0.5,
+            "minimum": 0.0,
+            "maximum": 2.0,
+            "title": "AI Temperature",
+            "description": "Temperature setting for AI model responses"
+        },
+        "ai_working_directory": {
+            "type": "string",
+            "default": "",
+            "title": "AI Working Directory",
+            "description": "Last used working directory for AI conversations"
+        },
+        "ai_sagemaker_endpoint": {
+            "type": "string",
+            "default": "",
+            "title": "SageMaker Endpoint",
+            "description": "AWS SageMaker endpoint name"
+        },
+        "ai_sagemaker_region": {
+            "type": "string",
+            "default": "us-east-1",
+            "title": "SageMaker Region",
+            "description": "AWS SageMaker region"
+        },
+        "byok_anthropic_api_key": {
+            "type": "string",
+            "default": "",
+            "title": "BYOK Anthropic API Key",
+            "description": "Bring Your Own Key for Anthropic API"
+        },
+        "byok_openai_api_key": {
+            "type": "string",
+            "default": "",
+            "title": "BYOK OpenAI API Key",
+            "description": "Bring Your Own Key for OpenAI API"
         }
     }
 }

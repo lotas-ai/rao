@@ -329,27 +329,29 @@ public class AiPaneLifecycle {
          '<a href="$1" target="_blank">$1</a>'
       );
       
-      // Add CSS styles to head if they don't exist yet
+      // Add CSS link to head if it doesn't exist yet
       if (!window.document.getElementById('ai-conversation-styles')) {
-         var styleEl = window.document.createElement('style');
-         styleEl.id = 'ai-conversation-styles';
-         styleEl.textContent = 
-            'body { font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', \'Roboto\', \'Oxygen\', \'Ubuntu\', \'Cantarell\', \'Fira Sans\', \'Droid Sans\', \'Helvetica Neue\', sans-serif; margin: 12px; }' +
-            '.message { margin-bottom: 12px; padding: 8px; font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', \'Roboto\', \'Oxygen\', \'Ubuntu\', \'Cantarell\', \'Fira Sans\', \'Droid Sans\', \'Helvetica Neue\', sans-serif; font-size: 14px; }' +
-            '.user { background-color: #e6e6e6; border-radius: 5px; display: inline-block; float: right; max-width: 100%; word-wrap: break-word; }' +
-            '.assistant { background-color: transparent; text-align: left; word-wrap: break-word; max-width: 100%; }' +
-            '.user-container { width: 100%; overflow: hidden; text-align: right; }' +
-            '.text { font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', \'Roboto\', \'Oxygen\', \'Ubuntu\', \'Cantarell\', \'Fira Sans\', \'Droid Sans\', \'Helvetica Neue\', sans-serif; font-size: 14px; line-height: 1.4; white-space: pre-wrap; }' +
-            '.user { text-align: right; }' +
-            '.assistant { text-align: left; }' +
-            '.user .text { text-align: left; max-width: 100%; }' +
-            '.code-block { background-color: #f5f5f5; border-radius: 5px; padding: 4px; margin: 2px 0; font-family: monospace; white-space: pre; overflow-x: auto; }' +
-            '.code-block pre { margin: 0; padding: 0; }' +
-            '.editable-pre { min-height: 1em; outline: none; }' +
-            '.editable-pre:focus { background-color: #f5f5f5; border: 1px solid #ccc; }' +
-            'br { display: block; content: ""; margin-top: 0.5em; }';
+         var linkEl = window.document.createElement('link');
+         linkEl.id = 'ai-conversation-styles';
+         linkEl.rel = 'stylesheet';
+         linkEl.type = 'text/css';
          
-         window.document.head.appendChild(styleEl);
+         // Get the current theme class from the parent document
+         var themeClass = 'rstudio-themes-default';
+         if (window.parent && window.parent.document && window.parent.document.body) {
+            if (window.parent.document.body.classList.contains('rstudio-themes-dark-grey')) {
+               themeClass = 'rstudio-themes-dark-grey';
+            } else if (window.parent.document.body.classList.contains('rstudio-themes-alternate')) {
+               themeClass = 'rstudio-themes-alternate';
+            }
+         }
+         
+         // Add theme class to conversation display body
+         window.document.body.classList.add(themeClass);
+         
+         // Load the CSS file
+         linkEl.href = 'ai/AiConversationDisplay.css';
+         window.document.head.appendChild(linkEl);
       }
       
       // Create the new message element with proper classes only (no inline styles)

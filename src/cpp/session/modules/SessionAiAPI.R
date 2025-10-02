@@ -447,7 +447,30 @@
       }
     }
     # Use SSE approach with httr streaming to /ai/query endpoint
-    config <- .rs.get_backend_config()
+    # Check if BYOK is enabled and route accordingly
+    provider <- final_request_data$provider
+    model <- final_request_data$model
+        
+    use_byok <- FALSE
+    if (!is.null(provider) && !is.null(model)) {
+      use_byok <- tryCatch({
+        result <- .rs.ai.shouldUseBYOK(provider, model)
+        result
+      }, error = function(e) {
+        FALSE
+      })
+    }
+        
+    if (use_byok) {
+      # Route to local backend proxy
+      backend_url <- .rs.ai.getLocalBackendUrl()
+      config <- list(url = backend_url)
+      # Add BYOK keys to request
+      final_request_data <- .rs.ai.addBYOKKeysToRequest(final_request_data, provider)
+    } else {
+      # Route to managed backend (api.lotas.ai)
+      config <- .rs.get_backend_config()
+    }
     
     # Get security mode and web search settings in the main process before background execution
     security_mode <- tryCatch({

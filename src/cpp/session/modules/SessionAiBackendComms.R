@@ -91,8 +91,15 @@
   api_key <- .rs.get_api_key(provider)
   
   if (is.null(api_key)) {
-    .rs.enqueue_error_message("No API key found. Please set up a valid Rao API key at www.lotas.ai/account.")
-    return(NULL)
+    # Try BYOK key as fallback
+    byok_key <- .rs.ai.getBYOKApiKey(provider)
+    
+    if (!is.null(byok_key) && nchar(byok_key) > 0) {
+      api_key <- byok_key
+    } else {
+      .rs.enqueue_error_message("No API key found. Please sign in or provide a BYOK key in the Settings (gear icon).")
+      return(NULL)
+    }
   }
   
   list(
@@ -421,22 +428,39 @@
       if (!is.null(.rs.get_api_key("openai"))) {
         provider <- "openai"
       } else {
-        if (!is_conversation_name_request) {
-          .rs.enqueClientEvent("update_thinking_message", list(message = "", hide_cancel = TRUE))
+        # Check for BYOK keys (OpenAI first, then Anthropic)
+        has_openai_byok <- !is.null(.rs.ai.getBYOKApiKey("openai")) && nchar(.rs.ai.getBYOKApiKey("openai")) > 0
+        has_anthropic_byok <- !is.null(.rs.ai.getBYOKApiKey("anthropic")) && nchar(.rs.ai.getBYOKApiKey("anthropic")) > 0
+                
+        if (has_openai_byok) {
+          provider <- "openai"
+        } else if (has_anthropic_byok) {
+          provider <- "anthropic"
+        } else {
+          if (!is_conversation_name_request) {
+            .rs.enqueClientEvent("update_thinking_message", list(message = "", hide_cancel = TRUE))
+          }
+          .rs.enqueue_error_message("Please sign in or provide an API key in the Settings (gear icon) before attempting to use the chat.")
+          return(NULL)
         }
-        .rs.enqueue_error_message("Please sign in or provide an API key in the Settings (gear icon) before attempting to use the chat.")
-        return(NULL)
       }
     }
   }
-
+  
+  # Check for Rao API key first, then BYOK key
   api_key <- .rs.get_api_key(provider)
   if (is.null(api_key)) {
-    if (!is_conversation_name_request) {
-      .rs.enqueClientEvent("update_thinking_message", list(message = "", hide_cancel = TRUE))
+    # Check for BYOK key
+    byok_key <- .rs.ai.getBYOKApiKey(provider)    
+    if (!is.null(byok_key) && nchar(byok_key) > 0) {
+      api_key <- byok_key
+    } else {
+      if (!is_conversation_name_request) {
+        .rs.enqueClientEvent("update_thinking_message", list(message = "", hide_cancel = TRUE))
+      }
+      .rs.enqueue_error_message(paste0("No API key found for this user. Please use a valid log-in or set up a valid API key in the Settings (gear icon)."))
+      return(NULL)
     }
-    .rs.enqueue_error_message(paste0("No API key found for this user. Please use a valid log-in or set up a valid API key in the Settings (gear icon)."))
-    return(NULL)
   }
   
   symbols_note <- NULL
@@ -495,7 +519,8 @@
     user_workspace_path = user_env_info$user_workspace_path,
     user_shell = user_env_info$user_shell,
     project_layout = user_env_info$project_layout,
-    user_rules = user_rules
+    user_rules = user_rules,
+    interaction_mode = .rs.get_interaction_mode()
   )
   
   if (!is.null(attachment_data) && !is.null(attachment_data$has_attachments) && attachment_data$has_attachments) {

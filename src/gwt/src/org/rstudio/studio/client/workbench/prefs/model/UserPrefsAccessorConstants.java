@@ -152,43 +152,43 @@ public interface UserPrefsAccessorConstants extends Constants {
    String customShellOptionsDescription();
 
    /**
-    * Show line numbers in RStudio's code editor.
+    * Show line numbers in Rao's code editor.
     */
    @DefaultStringValue("Show line numbers in editor")
    String showLineNumbersTitle();
-   @DefaultStringValue("Show line numbers in RStudio's code editor.")
+   @DefaultStringValue("Show line numbers in Rao's code editor.")
    String showLineNumbersDescription();
 
    /**
-    * Show relative, rather than absolute, line numbers in RStudio's code editor.
+    * Show relative, rather than absolute, line numbers in Rao's code editor.
     */
    @DefaultStringValue("Use relative line numbers in editor")
    String relativeLineNumbersTitle();
-   @DefaultStringValue("Show relative, rather than absolute, line numbers in RStudio's code editor.")
+   @DefaultStringValue("Show relative, rather than absolute, line numbers in Rao's code editor.")
    String relativeLineNumbersDescription();
 
    /**
-    * Highlight the selected word in RStudio's code editor.
+    * Highlight the selected word in Rao's code editor.
     */
    @DefaultStringValue("Highlight selected word in editor")
    String highlightSelectedWordTitle();
-   @DefaultStringValue("Highlight the selected word in RStudio's code editor.")
+   @DefaultStringValue("Highlight the selected word in Rao's code editor.")
    String highlightSelectedWordDescription();
 
    /**
-    * Highlight the selected line in RStudio's code editor.
+    * Highlight the selected line in Rao's code editor.
     */
    @DefaultStringValue("Highlight selected line in editor")
    String highlightSelectedLineTitle();
-   @DefaultStringValue("Highlight the selected line in RStudio's code editor.")
+   @DefaultStringValue("Highlight the selected line in Rao's code editor.")
    String highlightSelectedLineDescription();
 
    /**
-    * Layout of panes in the Rao Server.
+    * Layout of panes in the Rao workbench.
     */
    @DefaultStringValue("")
    String panesTitle();
-   @DefaultStringValue("Layout of panes in the Rao Server.")
+   @DefaultStringValue("Layout of panes in the Rao workbench.")
    String panesDescription();
 
    /**
@@ -224,11 +224,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String autoDetectIndentationDescription();
 
    /**
-    * Whether to show the margin guide in the RStudio code editor.
+    * Whether to show the margin guide in the Rao code editor.
     */
    @DefaultStringValue("Show margin in editor")
    String showMarginTitle();
-   @DefaultStringValue("Whether to show the margin guide in the RStudio code editor.")
+   @DefaultStringValue("Whether to show the margin guide in the Rao code editor.")
    String showMarginDescription();
 
    /**
@@ -248,19 +248,19 @@ public interface UserPrefsAccessorConstants extends Constants {
    String marginColumnDescription();
 
    /**
-    * Whether to show invisible characters, such as spaces and tabs, in the RStudio code editor.
+    * Whether to show invisible characters, such as spaces and tabs, in the Rao code editor.
     */
    @DefaultStringValue("Show invisible characters in editor")
    String showInvisiblesTitle();
-   @DefaultStringValue("Whether to show invisible characters, such as spaces and tabs, in the RStudio code editor.")
+   @DefaultStringValue("Whether to show invisible characters, such as spaces and tabs, in the Rao code editor.")
    String showInvisiblesDescription();
 
    /**
-    * Style for indentation guides in the RStudio code editor.
+    * Style for indentation guides in the Rao code editor.
     */
    @DefaultStringValue("Indentation guides")
    String indentGuidesTitle();
-   @DefaultStringValue("Style for indentation guides in the RStudio code editor.")
+   @DefaultStringValue("Style for indentation guides in the Rao code editor.")
    String indentGuidesDescription();
    @DefaultStringValue("None")
    String indentGuidesEnum_none();
@@ -288,11 +288,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String highlightWebLinkDescription();
 
    /**
-    * The keybindings to use in the RStudio code editor.
+    * The keybindings to use in the Rao code editor.
     */
    @DefaultStringValue("Keybinding set for editor")
    String editorKeybindingsTitle();
-   @DefaultStringValue("The keybindings to use in the RStudio code editor.")
+   @DefaultStringValue("The keybindings to use in the Rao code editor.")
    String editorKeybindingsDescription();
    @DefaultStringValue("Default")
    String editorKeybindingsEnum_default();
@@ -366,19 +366,19 @@ public interface UserPrefsAccessorConstants extends Constants {
    String surroundSelectionEnum_quotes_and_brackets();
 
    /**
-    * Whether to enable code snippets in the RStudio code editor.
+    * Whether to enable code snippets in the Rao code editor.
     */
    @DefaultStringValue("Enable code snippets")
    String enableSnippetsTitle();
-   @DefaultStringValue("Whether to enable code snippets in the RStudio code editor.")
+   @DefaultStringValue("Whether to enable code snippets in the Rao code editor.")
    String enableSnippetsDescription();
 
    /**
-    * When to use auto-completion for R code in the RStudio code editor.
+    * When to use auto-completion for R code in the Rao code editor.
     */
    @DefaultStringValue("Use code completion for R")
    String codeCompletionTitle();
-   @DefaultStringValue("When to use auto-completion for R code in the RStudio code editor.")
+   @DefaultStringValue("When to use auto-completion for R code in the Rao code editor.")
    String codeCompletionDescription();
    @DefaultStringValue("Automatically")
    String codeCompletionEnum_always();
@@ -390,11 +390,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String codeCompletionEnum_manual();
 
    /**
-    * When to use auto-completion for other languages (such as JavaScript and SQL) in the RStudio code editor.
+    * When to use auto-completion for other languages (such as JavaScript and SQL) in the Rao code editor.
     */
    @DefaultStringValue("Use code completion for other languages")
    String codeCompletionOtherTitle();
-   @DefaultStringValue("When to use auto-completion for other languages (such as JavaScript and SQL) in the RStudio code editor.")
+   @DefaultStringValue("When to use auto-completion for other languages (such as JavaScript and SQL) in the Rao code editor.")
    String codeCompletionOtherDescription();
    @DefaultStringValue("Automatically")
    String codeCompletionOtherEnum_always();
@@ -428,11 +428,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String codeCompletionCharactersDescription();
 
    /**
-    * When set, RStudio will include all function arguments in the completion list, even if those arguments have already appeared to be used in the current function invocation.
+    * When set, Rao will include all function arguments in the completion list, even if those arguments have already appeared to be used in the current function invocation.
     */
    @DefaultStringValue("Include all function arguments in completion list")
    String codeCompletionIncludeAlreadyUsedTitle();
-   @DefaultStringValue("When set, RStudio will include all function arguments in the completion list, even if those arguments have already appeared to be used in the current function invocation.")
+   @DefaultStringValue("When set, Rao will include all function arguments in the completion list, even if those arguments have already appeared to be used in the current function invocation.")
    String codeCompletionIncludeAlreadyUsedDescription();
 
    /**
@@ -588,11 +588,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String restoreSourceDocumentCursorPositionDescription();
 
    /**
-    * Whether to automatically re-indent code when it's pasted into RStudio.
+    * Whether to automatically re-indent code when it's pasted into Rao.
     */
    @DefaultStringValue("Re-indent code when pasting")
    String reindentOnPasteTitle();
-   @DefaultStringValue("Whether to automatically re-indent code when it's pasted into RStudio.")
+   @DefaultStringValue("Whether to automatically re-indent code when it's pasted into Rao.")
    String reindentOnPasteDescription();
 
    /**
@@ -734,6 +734,14 @@ public interface UserPrefsAccessorConstants extends Constants {
    String ansiConsoleModeEnum_off();
 
    /**
+    * Whether to only show a limited window of the total console output
+    */
+   @DefaultStringValue("Limit visible console output")
+   String limitVisibleConsoleTitle();
+   @DefaultStringValue("Whether to only show a limited window of the total console output")
+   String limitVisibleConsoleDescription();
+
+   /**
     * Whether to show a toolbar on code chunks in R Markdown documents.
     */
    @DefaultStringValue("Show toolbar on R Markdown chunks")
@@ -758,11 +766,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String saveFilesBeforeBuildDescription();
 
    /**
-    * Whether RStudio should save and reload the R workspace when building the project.
+    * Whether Rao should save and reload the R workspace when building the project.
     */
    @DefaultStringValue("Save and reload R workspace on build")
    String saveAndReloadWorkspaceOnBuildTitle();
-   @DefaultStringValue("Whether RStudio should save and reload the R workspace when building the project.")
+   @DefaultStringValue("Whether Rao should save and reload the R workspace when building the project.")
    String saveAndReloadWorkspaceOnBuildDescription();
 
    /**
@@ -790,43 +798,27 @@ public interface UserPrefsAccessorConstants extends Constants {
    String helpFontSizePointsDescription();
 
    /**
-    * Use Ctrl+Mouse Wheel (Cmd+Mouse Wheel on macOS) to zoom the interface in and out.
-    */
-   @DefaultStringValue("Zoom with mouse wheel when holding Ctrl (Cmd on macOS)")
-   String enableMousewheelZoomTitle();
-   @DefaultStringValue("Use Ctrl+Mouse Wheel (Cmd+Mouse Wheel on macOS) to zoom the interface in and out.")
-   String enableMousewheelZoomDescription();
-
-   /**
-    * A delay in milliseconds to wait before applying the zoom level after a mouse wheel event.
-    */
-   @DefaultStringValue("Mouse wheel zoom debounce delay (ms)")
-   String mousewheelZoomDebounceMsTitle();
-   @DefaultStringValue("A delay in milliseconds to wait before applying the zoom level after a mouse wheel event.")
-   String mousewheelZoomDebounceMsDescription();
-
-   /**
-    * The name of the color theme to apply to the text editor in RStudio.
+    * The name of the color theme to apply to the text editor in Rao.
     */
    @DefaultStringValue("Theme")
    String editorThemeTitle();
-   @DefaultStringValue("The name of the color theme to apply to the text editor in RStudio.")
+   @DefaultStringValue("The name of the color theme to apply to the text editor in Rao.")
    String editorThemeDescription();
 
    /**
-    * Whether to use a custom editor font in RStudio Server.
+    * Whether to use a custom editor font in Rao Server.
     */
-   @DefaultStringValue("Enable editor fonts on RStudio Server")
+   @DefaultStringValue("Enable editor fonts on Rao Server")
    String serverEditorFontEnabledTitle();
-   @DefaultStringValue("Whether to use a custom editor font in RStudio Server.")
+   @DefaultStringValue("Whether to use a custom editor font in Rao Server.")
    String serverEditorFontEnabledDescription();
 
    /**
-    * The name of the fixed-width editor font to use with RStudio Server.
+    * The name of the fixed-width editor font to use with Rao Server.
     */
    @DefaultStringValue("Editor font")
    String serverEditorFontTitle();
-   @DefaultStringValue("The name of the fixed-width editor font to use with RStudio Server.")
+   @DefaultStringValue("The name of the fixed-width editor font to use with Rao Server.")
    String serverEditorFontDescription();
 
    /**
@@ -838,11 +830,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String defaultEncodingDescription();
 
    /**
-    * Whether to show the toolbar at the top of the Rao Server.
+    * Whether to show the toolbar at the top of the Rao workbench.
     */
    @DefaultStringValue("Show top toolbar")
    String toolbarVisibleTitle();
-   @DefaultStringValue("Whether to show the toolbar at the top of the Rao Server.")
+   @DefaultStringValue("Whether to show the toolbar at the top of the Rao workbench.")
    String toolbarVisibleDescription();
 
    /**
@@ -894,11 +886,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String useRoxygenDescription();
 
    /**
-    * Whether to use RStudio's data import feature.
+    * Whether to use Rao's data import feature.
     */
    @DefaultStringValue("Enable data import")
    String useDataimportTitle();
-   @DefaultStringValue("Whether to use RStudio's data import feature.")
+   @DefaultStringValue("Whether to use Rao's data import feature.")
    String useDataimportDescription();
 
    /**
@@ -982,11 +974,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String navigateToBuildErrorDescription();
 
    /**
-    * Whether to enable RStudio's Packages pane.
+    * Whether to enable Rao's Packages pane.
     */
    @DefaultStringValue("Enable the Packages pane")
    String packagesPaneEnabledTitle();
-   @DefaultStringValue("Whether to enable RStudio's Packages pane.")
+   @DefaultStringValue("Whether to enable Rao's Packages pane.")
    String packagesPaneEnabledDescription();
 
    /**
@@ -998,11 +990,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String cppTemplateDescription();
 
    /**
-    * Whether to restore the last opened source documents when RStudio starts up.
+    * Whether to restore the last opened source documents when Rao starts up.
     */
    @DefaultStringValue("Restore last opened documents on startup")
    String restoreSourceDocumentsTitle();
-   @DefaultStringValue("Whether to restore the last opened source documents when RStudio starts up.")
+   @DefaultStringValue("Whether to restore the last opened source documents when Rao starts up.")
    String restoreSourceDocumentsDescription();
 
    /**
@@ -1022,11 +1014,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String autoExpandErrorTracebacksDescription();
 
    /**
-    * Whether to check for new versions of RStudio when RStudio starts.
+    * Whether to check for new versions of Rao when Rao starts.
     */
    @DefaultStringValue("Check for new version at startup")
    String checkForUpdatesTitle();
-   @DefaultStringValue("Whether to check for new versions of RStudio when RStudio starts.")
+   @DefaultStringValue("Whether to check for new versions of Rao when Rao starts.")
    String checkForUpdatesDescription();
 
    /**
@@ -1108,6 +1100,14 @@ public interface UserPrefsAccessorConstants extends Constants {
    String showPublishDiagnosticsTitle();
    @DefaultStringValue("Whether to show verbose diagnostic information when publishing content.")
    String showPublishDiagnosticsDescription();
+
+   /**
+    * Whether to show UI for publishing content to cloud service.
+    */
+   @DefaultStringValue("")
+   String enableCloudPublishUiTitle();
+   @DefaultStringValue("Whether to show UI for publishing content to cloud service.")
+   String enableCloudPublishUiDescription();
 
    /**
     * Whether to check remote server SSL certificates when publishing content.
@@ -1332,19 +1332,19 @@ public interface UserPrefsAccessorConstants extends Constants {
    String jobsTabVisibilityDescription();
 
    /**
-    * Whether to show the Workbench Jobs tab in Rao and Rao Server.
+    * Whether to show the Remote Jobs tab.
     */
    @DefaultStringValue("")
    String showLauncherJobsTabTitle();
-   @DefaultStringValue("Whether to show the Workbench Jobs tab in Rao and Rao Server.")
+   @DefaultStringValue("Whether to show the Remote Jobs tab.")
    String showLauncherJobsTabDescription();
 
    /**
-    * How to sort jobs in the Workbench Jobs tab in Rao and Rao Server.
+    * How to sort jobs in the Remote Jobs tab.
     */
    @DefaultStringValue("")
    String launcherJobsSortTitle();
-   @DefaultStringValue("How to sort jobs in the Workbench Jobs tab in Rao and Rao Server.")
+   @DefaultStringValue("How to sort jobs in the Remote Jobs tab.")
    String launcherJobsSortDescription();
 
    /**
@@ -1396,11 +1396,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String wrapTabNavigationDescription();
 
    /**
-    * The theme to use for the main RStudio user interface.
+    * The theme to use for the main Rao user interface.
     */
    @DefaultStringValue("Global theme")
    String globalThemeTitle();
-   @DefaultStringValue("The theme to use for the main RStudio user interface.")
+   @DefaultStringValue("The theme to use for the main Rao user interface.")
    String globalThemeDescription();
 
    /**
@@ -1468,27 +1468,27 @@ public interface UserPrefsAccessorConstants extends Constants {
    String rootDocumentDescription();
 
    /**
-    * When to show the server home page in Rao Server.
+    * When to show the server home page.
     */
-   @DefaultStringValue("Show user home page in Rao Server")
+   @DefaultStringValue("Show user home page")
    String showUserHomePageTitle();
-   @DefaultStringValue("When to show the server home page in Rao Server.")
+   @DefaultStringValue("When to show the server home page.")
    String showUserHomePageDescription();
 
    /**
-    * Whether to reuse sessions when opening projects in Rao Server.
+    * Whether to reuse sessions when opening projects.
     */
    @DefaultStringValue("")
    String reuseSessionsForProjectLinksTitle();
-   @DefaultStringValue("Whether to reuse sessions when opening projects in Rao Server.")
+   @DefaultStringValue("Whether to reuse sessions when opening projects.")
    String reuseSessionsForProjectLinksDescription();
 
    /**
-    * Whether to enable RStudio's version control system interface.
+    * Whether to enable Rao's version control system interface.
     */
    @DefaultStringValue("Enable version control if available")
    String vcsEnabledTitle();
-   @DefaultStringValue("Whether to enable RStudio's version control system interface.")
+   @DefaultStringValue("Whether to enable Rao's version control system interface.")
    String vcsEnabledDescription();
 
    /**
@@ -1560,11 +1560,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String cleanBeforeInstallDescription();
 
    /**
-    * When set, RStudio will build your package in a '_build' sub-directory of your current library paths.
+    * When set, Rao will build your package in a '_build' sub-directory of your current library paths.
     */
    @DefaultStringValue("Use alternate library path when building package")
    String useBuildSubdirectoryTitle();
-   @DefaultStringValue("When set, RStudio will build your package in a '_build' sub-directory of your current library paths.")
+   @DefaultStringValue("When set, Rao will build your package in a '_build' sub-directory of your current library paths.")
    String useBuildSubdirectoryDescription();
 
    /**
@@ -1600,11 +1600,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String hideObjectFilesDescription();
 
    /**
-    * Whether to restore the last project when starting RStudio.
+    * Whether to restore the last project when starting Rao.
     */
-   @DefaultStringValue("Restore last project when starting RStudio")
+   @DefaultStringValue("Restore last project when starting Rao")
    String restoreLastProjectTitle();
-   @DefaultStringValue("Whether to restore the last project when starting RStudio.")
+   @DefaultStringValue("Whether to restore the last project when starting Rao.")
    String restoreLastProjectDescription();
 
    /**
@@ -1640,11 +1640,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String latexShellEscapeDescription();
 
    /**
-    * Whether to restore the last version of R used by the project in Rao and Rao Server.
+    * Whether to restore the last version of R used by the project.
     */
-   @DefaultStringValue("Restore project R version in Rao and Rao Server")
+   @DefaultStringValue("Restore project R version")
    String restoreProjectRVersionTitle();
-   @DefaultStringValue("Whether to restore the last version of R used by the project in Rao and Rao Server.")
+   @DefaultStringValue("Whether to restore the last version of R used by the project.")
    String restoreProjectRVersionDescription();
 
    /**
@@ -1658,18 +1658,10 @@ public interface UserPrefsAccessorConstants extends Constants {
    /**
     * Whether to automatically submit crash reports to Lotas Inc.
     */
-   @DefaultStringValue("Submit crash reports to Lotas Inc.")
+   @DefaultStringValue("Submit crash reports to Lotas Inc")
    String submitCrashReportsTitle();
    @DefaultStringValue("Whether to automatically submit crash reports to Lotas Inc.")
    String submitCrashReportsDescription();
-
-   /**
-    * Whether to show the splash screen when RStudio is starting.
-    */
-   @DefaultStringValue("Show splash screen when RStudio is starting")
-   String enableSplashScreenTitle();
-   @DefaultStringValue("Whether to show the splash screen when RStudio is starting.")
-   String enableSplashScreenDescription();
 
    /**
     * The R version to use by default.
@@ -1784,7 +1776,7 @@ public interface UserPrefsAccessorConstants extends Constants {
    /**
     * Whether to show the full path to project in desktop window title.
     */
-   @DefaultStringValue("Show full path to project in RStudio Desktop windows")
+   @DefaultStringValue("Show full path to project in Rao Desktop windows")
    String fullProjectPathInWindowTitleTitle();
    @DefaultStringValue("Whether to show the full path to project in desktop window title.")
    String fullProjectPathInWindowTitleDescription();
@@ -1952,7 +1944,7 @@ public interface UserPrefsAccessorConstants extends Constants {
    /**
     * List of fixed-width fonts to check for browser support.
     */
-   @DefaultStringValue("Fixed-width font list for RStudio Server")
+   @DefaultStringValue("Fixed-width font list for Rao Server")
    String browserFixedWidthFontsTitle();
    @DefaultStringValue("List of fixed-width fonts to check for browser support.")
    String browserFixedWidthFontsDescription();
@@ -2022,11 +2014,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String memoryQueryIntervalSecondsDescription();
 
    /**
-    * Enable Python terminal hooks. When enabled, the RStudio-configured version of Python will be placed on the PATH.
+    * Enable Python terminal hooks. When enabled, the Rao-configured version of Python will be placed on the PATH.
     */
    @DefaultStringValue("Enable terminal Python integration")
    String terminalPythonIntegrationTitle();
-   @DefaultStringValue("Enable Python terminal hooks. When enabled, the RStudio-configured version of Python will be placed on the PATH.")
+   @DefaultStringValue("Enable Python terminal hooks. When enabled, the Rao-configured version of Python will be placed on the PATH.")
    String terminalPythonIntegrationDescription();
 
    /**
@@ -2038,19 +2030,19 @@ public interface UserPrefsAccessorConstants extends Constants {
    String sessionProtocolDebugDescription();
 
    /**
-    * When enabled, if the active project contains a Python virtual environment, then RStudio will automatically activate this environment on startup.
+    * When enabled, if the active project contains a Python virtual environment, then Rao will automatically activate this environment on startup.
     */
    @DefaultStringValue("Automatically activate project Python environments")
    String pythonProjectEnvironmentAutomaticActivateTitle();
-   @DefaultStringValue("When enabled, if the active project contains a Python virtual environment, then RStudio will automatically activate this environment on startup.")
+   @DefaultStringValue("When enabled, if the active project contains a Python virtual environment, then Rao will automatically activate this environment on startup.")
    String pythonProjectEnvironmentAutomaticActivateDescription();
 
    /**
-    * When enabled, RStudio will detect R objects containing null external pointers when building the Environment pane, and avoid introspecting their contents further.
+    * When enabled, Rao will detect R objects containing null external pointers when building the Environment pane, and avoid introspecting their contents further.
     */
    @DefaultStringValue("Check values in the Environment pane for null external pointers")
    String checkNullExternalPointersTitle();
-   @DefaultStringValue("When enabled, RStudio will detect R objects containing null external pointers when building the Environment pane, and avoid introspecting their contents further.")
+   @DefaultStringValue("When enabled, Rao will detect R objects containing null external pointers when building the Environment pane, and avoid introspecting their contents further.")
    String checkNullExternalPointersDescription();
 
    /**
@@ -2070,11 +2062,35 @@ public interface UserPrefsAccessorConstants extends Constants {
    String autohideMenubarDescription();
 
    /**
-    * Whether RStudio Desktop will use the operating system's native File and Message dialog boxes.
+    * Show splash screen when Rao starts.
+    */
+   @DefaultStringValue("Enable splash screen")
+   String enableSplashScreenTitle();
+   @DefaultStringValue("Show splash screen when Rao starts.")
+   String enableSplashScreenDescription();
+
+   /**
+    * Allow using Ctrl/Cmd + mousewheel to zoom the entire IDE.
+    */
+   @DefaultStringValue("Enable mousewheel zoom")
+   String enableMousewheelZoomTitle();
+   @DefaultStringValue("Allow using Ctrl/Cmd + mousewheel to zoom the entire IDE.")
+   String enableMousewheelZoomDescription();
+
+   /**
+    * Delay in milliseconds before applying mousewheel zoom.
+    */
+   @DefaultStringValue("Mousewheel zoom debounce (ms)")
+   String mousewheelZoomDebounceMsTitle();
+   @DefaultStringValue("Delay in milliseconds before applying mousewheel zoom.")
+   String mousewheelZoomDebounceMsDescription();
+
+   /**
+    * Whether Rao Desktop will use the operating system's native File and Message dialog boxes.
     */
    @DefaultStringValue("Use native file and message dialog boxes")
    String nativeFileDialogsTitle();
-   @DefaultStringValue("Whether RStudio Desktop will use the operating system's native File and Message dialog boxes.")
+   @DefaultStringValue("Whether Rao Desktop will use the operating system's native File and Message dialog boxes.")
    String nativeFileDialogsDescription();
 
    /**
@@ -2110,11 +2126,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String disableRendererAccessibilityDescription();
 
    /**
-    * When enabled, RStudio will use GitHub Copilot to provide code suggestions.
+    * When enabled, Rao will use GitHub Copilot to provide code suggestions.
     */
    @DefaultStringValue("Enable GitHub Copilot")
    String copilotEnabledTitle();
-   @DefaultStringValue("When enabled, RStudio will use GitHub Copilot to provide code suggestions.")
+   @DefaultStringValue("When enabled, Rao will use GitHub Copilot to provide code suggestions.")
    String copilotEnabledDescription();
 
    /**
@@ -2138,11 +2154,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String copilotCompletionsDelayDescription();
 
    /**
-    * Control the behavior of the Tab key when both Copilot code suggestions and RStudio code completions are visible.
+    * Control the behavior of the Tab key when both Copilot code suggestions and Rao code completions are visible.
     */
    @DefaultStringValue("Pressing Tab key will prefer inserting:")
    String copilotTabKeyBehaviorTitle();
-   @DefaultStringValue("Control the behavior of the Tab key when both Copilot code suggestions and RStudio code completions are visible.")
+   @DefaultStringValue("Control the behavior of the Tab key when both Copilot code suggestions and Rao code completions are visible.")
    String copilotTabKeyBehaviorDescription();
    @DefaultStringValue("Copilot Suggestion")
    String copilotTabKeyBehaviorEnum_suggestion();
@@ -2150,27 +2166,27 @@ public interface UserPrefsAccessorConstants extends Constants {
    String copilotTabKeyBehaviorEnum_completions();
 
    /**
-    * When enabled, RStudio will index project files with GitHub Copilot.
+    * When enabled, Rao will index project files with GitHub Copilot.
     */
    @DefaultStringValue("Index project files with GitHub Copilot")
    String copilotIndexingEnabledTitle();
-   @DefaultStringValue("When enabled, RStudio will index project files with GitHub Copilot.")
+   @DefaultStringValue("When enabled, Rao will index project files with GitHub Copilot.")
    String copilotIndexingEnabledDescription();
 
    /**
-    * When enabled, RStudio will show account and billing messages from GitHub Copilot in a message box.
+    * When enabled, Rao will show account and billing messages from GitHub Copilot in a message box.
     */
    @DefaultStringValue("Display account and billing messages from GitHub Copilot")
    String copilotShowMessagesTitle();
-   @DefaultStringValue("When enabled, RStudio will show account and billing messages from GitHub Copilot in a message box.")
+   @DefaultStringValue("When enabled, Rao will show account and billing messages from GitHub Copilot in a message box.")
    String copilotShowMessagesDescription();
 
    /**
-    * When enabled, RStudio will tell Copilot to use the current RStudio project's folder as a workspace.
+    * When enabled, Rao will tell Copilot to use the current Rao project's folder as a workspace.
     */
-   @DefaultStringValue("Use RStudio project folder as a Copilot workspace")
+   @DefaultStringValue("Use Rao project folder as a Copilot workspace")
    String copilotProjectWorkspaceTitle();
-   @DefaultStringValue("When enabled, RStudio will tell Copilot to use the current RStudio project's folder as a workspace.")
+   @DefaultStringValue("When enabled, Rao will tell Copilot to use the current Rao project's folder as a workspace.")
    String copilotProjectWorkspaceDescription();
 
    /**
@@ -2232,11 +2248,11 @@ public interface UserPrefsAccessorConstants extends Constants {
    String reformatOnSaveDescription();
 
    /**
-    * The folder in which RStudio should store project .Rproj.user data.
+    * The folder in which Rao should store project .Rproj.user data.
     */
    @DefaultStringValue("Default project user data directory")
    String projectUserDataDirectoryTitle();
-   @DefaultStringValue("The folder in which RStudio should store project .Rproj.user data.")
+   @DefaultStringValue("The folder in which Rao should store project .Rproj.user data.")
    String projectUserDataDirectoryDescription();
 
    /**
@@ -2254,6 +2270,190 @@ public interface UserPrefsAccessorConstants extends Constants {
    String consoleHighlightConditionsEnum_errors();
    @DefaultStringValue("(None)")
    String consoleHighlightConditionsEnum_none();
+
+   /**
+    * The AI model to use for conversations
+    */
+   @DefaultStringValue("Default AI Model")
+   String aiSelectedModelTitle();
+   @DefaultStringValue("The AI model to use for conversations")
+   String aiSelectedModelDescription();
+
+   /**
+    * The security level for AI interactions
+    */
+   @DefaultStringValue("Security Mode")
+   String aiSecurityModeTitle();
+   @DefaultStringValue("The security level for AI interactions")
+   String aiSecurityModeDescription();
+
+   /**
+    * Temperature setting for AI model responses (0.0 = deterministic, 1.0 = highly variable)
+    */
+   @DefaultStringValue("AI Temperature")
+   String aiTemperatureTitle();
+   @DefaultStringValue("Temperature setting for AI model responses (0.0 = deterministic, 1.0 = highly variable)")
+   String aiTemperatureDescription();
+
+   /**
+    * The interaction mode for the AI assistant
+    */
+   @DefaultStringValue("Interaction Mode")
+   String aiInteractionModeTitle();
+   @DefaultStringValue("The interaction mode for the AI assistant")
+   String aiInteractionModeDescription();
+
+   /**
+    * Allow the AI to search the web
+    */
+   @DefaultStringValue("Enable Web Search")
+   String aiWebSearchEnabledTitle();
+   @DefaultStringValue("Allow the AI to search the web")
+   String aiWebSearchEnabledDescription();
+
+   /**
+    * Automatically accept file edit suggestions
+    */
+   @DefaultStringValue("Auto-accept File Edits")
+   String aiAutoAcceptEditsTitle();
+   @DefaultStringValue("Automatically accept file edit suggestions")
+   String aiAutoAcceptEditsDescription();
+
+   /**
+    * Automatically accept console command suggestions
+    */
+   @DefaultStringValue("Auto-accept Console Commands")
+   String aiAutoAcceptConsoleTitle();
+   @DefaultStringValue("Automatically accept console command suggestions")
+   String aiAutoAcceptConsoleDescription();
+
+   /**
+    * Automatically accept terminal command suggestions
+    */
+   @DefaultStringValue("Auto-accept Terminal Commands")
+   String aiAutoAcceptTerminalTitle();
+   @DefaultStringValue("Automatically accept terminal command suggestions")
+   String aiAutoAcceptTerminalDescription();
+
+   /**
+    * Automatically run file execution suggestions
+    */
+   @DefaultStringValue("Auto-run Files")
+   String aiAutoRunFilesTitle();
+   @DefaultStringValue("Automatically run file execution suggestions")
+   String aiAutoRunFilesDescription();
+
+   /**
+    * Automatically delete files when suggested
+    */
+   @DefaultStringValue("Auto-delete Files")
+   String aiAutoDeleteFilesTitle();
+   @DefaultStringValue("Automatically delete files when suggested")
+   String aiAutoDeleteFilesDescription();
+
+   /**
+    * Allow auto-accept for all console commands
+    */
+   @DefaultStringValue("Allow All Console Commands")
+   String aiAutoAcceptConsoleAllowAnythingTitle();
+   @DefaultStringValue("Allow auto-accept for all console commands")
+   String aiAutoAcceptConsoleAllowAnythingDescription();
+
+   /**
+    * Allow auto-accept for all terminal commands
+    */
+   @DefaultStringValue("Allow All Terminal Commands")
+   String aiAutoAcceptTerminalAllowAnythingTitle();
+   @DefaultStringValue("Allow auto-accept for all terminal commands")
+   String aiAutoAcceptTerminalAllowAnythingDescription();
+
+   /**
+    * Allow auto-run for all files
+    */
+   @DefaultStringValue("Allow Running All Files")
+   String aiAutoRunFilesAllowAnythingTitle();
+   @DefaultStringValue("Allow auto-run for all files")
+   String aiAutoRunFilesAllowAnythingDescription();
+
+   /**
+    * Whitelist of console commands to auto-accept
+    */
+   @DefaultStringValue("Console Command Whitelist")
+   String aiAutoAcceptConsoleAllowListTitle();
+   @DefaultStringValue("Whitelist of console commands to auto-accept")
+   String aiAutoAcceptConsoleAllowListDescription();
+
+   /**
+    * Blocklist of console commands to never auto-accept
+    */
+   @DefaultStringValue("Console Command Blocklist")
+   String aiAutoAcceptConsoleDenyListTitle();
+   @DefaultStringValue("Blocklist of console commands to never auto-accept")
+   String aiAutoAcceptConsoleDenyListDescription();
+
+   /**
+    * Whitelist of terminal commands to auto-accept
+    */
+   @DefaultStringValue("Terminal Command Whitelist")
+   String aiAutoAcceptTerminalAllowListTitle();
+   @DefaultStringValue("Whitelist of terminal commands to auto-accept")
+   String aiAutoAcceptTerminalAllowListDescription();
+
+   /**
+    * Blocklist of terminal commands to never auto-accept
+    */
+   @DefaultStringValue("Terminal Command Blocklist")
+   String aiAutoAcceptTerminalDenyListTitle();
+   @DefaultStringValue("Blocklist of terminal commands to never auto-accept")
+   String aiAutoAcceptTerminalDenyListDescription();
+
+   /**
+    * Whitelist of file patterns to auto-run
+    */
+   @DefaultStringValue("File Whitelist")
+   String aiAutoRunFilesAllowListTitle();
+   @DefaultStringValue("Whitelist of file patterns to auto-run")
+   String aiAutoRunFilesAllowListDescription();
+
+   /**
+    * Blocklist of file patterns to never auto-run
+    */
+   @DefaultStringValue("File Blocklist")
+   String aiAutoRunFilesDenyListTitle();
+   @DefaultStringValue("Blocklist of file patterns to never auto-run")
+   String aiAutoRunFilesDenyListDescription();
+
+   /**
+    * Custom rules for the AI assistant
+    */
+   @DefaultStringValue("Custom AI Rules")
+   String aiUserRulesTitle();
+   @DefaultStringValue("Custom rules for the AI assistant")
+   String aiUserRulesDescription();
+
+   /**
+    * Enable Bring Your Own Key for Anthropic
+    */
+   @DefaultStringValue("BYOK Anthropic Enabled")
+   String aiByokAnthropicEnabledTitle();
+   @DefaultStringValue("Enable Bring Your Own Key for Anthropic")
+   String aiByokAnthropicEnabledDescription();
+
+   /**
+    * Enable Bring Your Own Key for OpenAI
+    */
+   @DefaultStringValue("BYOK OpenAI Enabled")
+   String aiByokOpenaiEnabledTitle();
+   @DefaultStringValue("Enable Bring Your Own Key for OpenAI")
+   String aiByokOpenaiEnabledDescription();
+
+   /**
+    * Enable Bring Your Own Key for AWS SageMaker
+    */
+   @DefaultStringValue("BYOK SageMaker Enabled")
+   String aiByokSagemakerEnabledTitle();
+   @DefaultStringValue("Enable Bring Your Own Key for AWS SageMaker")
+   String aiByokSagemakerEnabledDescription();
 
 
 

@@ -32,14 +32,14 @@ public class UserPrefUtils
          // otherwise default to the internal viewer
          else
          {
-            return UserPrefs.PDF_PREVIEWER_RSTUDIO;
+            return UserPrefs.PDF_PREVIEWER_RAO;
          }
       }
       
       // web mode -- always default to internal viewer
       else
       {
-         return UserPrefs.PDF_PREVIEWER_RSTUDIO;
+         return UserPrefs.PDF_PREVIEWER_RAO;
       }
    }
 }

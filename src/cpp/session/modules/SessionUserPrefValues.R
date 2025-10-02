@@ -165,7 +165,7 @@
 
 # Show line numbers in editor
 #
-# Show line numbers in RStudio's code editor.
+# Show line numbers in Rao's code editor.
 .rs.uiPrefs$showLineNumbers <- list(
    get = function() { .rs.getUserPref("show_line_numbers") },
    set = function(value) { .rs.setUserPref("show_line_numbers", value) },
@@ -174,7 +174,7 @@
 
 # Use relative line numbers in editor
 #
-# Show relative, rather than absolute, line numbers in RStudio's code editor.
+# Show relative, rather than absolute, line numbers in Rao's code editor.
 .rs.uiPrefs$relativeLineNumbers <- list(
    get = function() { .rs.getUserPref("relative_line_numbers") },
    set = function(value) { .rs.setUserPref("relative_line_numbers", value) },
@@ -183,7 +183,7 @@
 
 # Highlight selected word in editor
 #
-# Highlight the selected word in RStudio's code editor.
+# Highlight the selected word in Rao's code editor.
 .rs.uiPrefs$highlightSelectedWord <- list(
    get = function() { .rs.getUserPref("highlight_selected_word") },
    set = function(value) { .rs.setUserPref("highlight_selected_word", value) },
@@ -192,7 +192,7 @@
 
 # Highlight selected line in editor
 #
-# Highlight the selected line in RStudio's code editor.
+# Highlight the selected line in Rao's code editor.
 .rs.uiPrefs$highlightSelectedLine <- list(
    get = function() { .rs.getUserPref("highlight_selected_line") },
    set = function(value) { .rs.setUserPref("highlight_selected_line", value) },
@@ -201,7 +201,7 @@
 
 # 
 #
-# Layout of panes in the RStudio workbench.
+# Layout of panes in the Rao workbench.
 .rs.uiPrefs$panes <- list(
    get = function() { .rs.getUserPref("panes") },
    set = function(value) { .rs.setUserPref("panes", value) },
@@ -246,7 +246,7 @@
 
 # Show margin in editor
 #
-# Whether to show the margin guide in the RStudio code editor.
+# Whether to show the margin guide in the Rao code editor.
 .rs.uiPrefs$showMargin <- list(
    get = function() { .rs.getUserPref("show_margin") },
    set = function(value) { .rs.setUserPref("show_margin", value) },
@@ -273,8 +273,8 @@
 
 # Show invisible characters in editor
 #
-# Whether to show invisible characters, such as spaces and tabs, in the RStudio
-# code editor.
+# Whether to show invisible characters, such as spaces and tabs, in the Rao code
+# editor.
 .rs.uiPrefs$showInvisibles <- list(
    get = function() { .rs.getUserPref("show_invisibles") },
    set = function(value) { .rs.setUserPref("show_invisibles", value) },
@@ -283,7 +283,7 @@
 
 # Indentation guides
 #
-# Style for indentation guides in the RStudio code editor.
+# Style for indentation guides in the Rao code editor.
 .rs.uiPrefs$indentGuides <- list(
    get = function() { .rs.getUserPref("indent_guides") },
    set = function(value) { .rs.setUserPref("indent_guides", value) },
@@ -311,7 +311,7 @@
 
 # Keybinding set for editor
 #
-# The keybindings to use in the RStudio code editor.
+# The keybindings to use in the Rao code editor.
 .rs.uiPrefs$editorKeybindings <- list(
    get = function() { .rs.getUserPref("editor_keybindings") },
    set = function(value) { .rs.setUserPref("editor_keybindings", value) },
@@ -384,7 +384,7 @@
 
 # Enable code snippets
 #
-# Whether to enable code snippets in the RStudio code editor.
+# Whether to enable code snippets in the Rao code editor.
 .rs.uiPrefs$enableSnippets <- list(
    get = function() { .rs.getUserPref("enable_snippets") },
    set = function(value) { .rs.setUserPref("enable_snippets", value) },
@@ -393,7 +393,7 @@
 
 # Use code completion for R
 #
-# When to use auto-completion for R code in the RStudio code editor.
+# When to use auto-completion for R code in the Rao code editor.
 .rs.uiPrefs$codeCompletion <- list(
    get = function() { .rs.getUserPref("code_completion") },
    set = function(value) { .rs.setUserPref("code_completion", value) },
@@ -403,7 +403,7 @@
 # Use code completion for other languages
 #
 # When to use auto-completion for other languages (such as JavaScript and SQL) in
-# the RStudio code editor.
+# the Rao code editor.
 .rs.uiPrefs$codeCompletionOther <- list(
    get = function() { .rs.getUserPref("code_completion_other") },
    set = function(value) { .rs.setUserPref("code_completion_other", value) },
@@ -440,9 +440,9 @@
 
 # Include all function arguments in completion list
 #
-# When set, RStudio will include all function arguments in the completion list,
-# even if those arguments have already appeared to be used in the current
-# function invocation.
+# When set, Rao will include all function arguments in the completion list, even
+# if those arguments have already appeared to be used in the current function
+# invocation.
 .rs.uiPrefs$codeCompletionIncludeAlreadyUsed <- list(
    get = function() { .rs.getUserPref("code_completion_include_already_used") },
    set = function(value) { .rs.setUserPref("code_completion_include_already_used", value) },
@@ -630,7 +630,7 @@
 
 # Re-indent code when pasting
 #
-# Whether to automatically re-indent code when it's pasted into RStudio.
+# Whether to automatically re-indent code when it's pasted into Rao.
 .rs.uiPrefs$reindentOnPaste <- list(
    get = function() { .rs.getUserPref("reindent_on_paste") },
    set = function(value) { .rs.setUserPref("reindent_on_paste", value) },
@@ -785,6 +785,15 @@
    clear = function() { .rs.clearUserPref("ansi_console_mode") }
 )
 
+# Limit visible console output
+#
+# Whether to only show a limited window of the total console output
+.rs.uiPrefs$limitVisibleConsole <- list(
+   get = function() { .rs.getUserPref("limit_visible_console") },
+   set = function(value) { .rs.setUserPref("limit_visible_console", value) },
+   clear = function() { .rs.clearUserPref("limit_visible_console") }
+)
+
 # Show toolbar on R Markdown chunks
 #
 # Whether to show a toolbar on code chunks in R Markdown documents.
@@ -815,8 +824,7 @@
 
 # Save and reload R workspace on build
 #
-# Whether RStudio should save and reload the R workspace when building the
-# project.
+# Whether Rao should save and reload the R workspace when building the project.
 .rs.uiPrefs$saveAndReloadWorkspaceOnBuild <- list(
    get = function() { .rs.getUserPref("save_and_reload_workspace_on_build") },
    set = function(value) { .rs.setUserPref("save_and_reload_workspace_on_build", value) },
@@ -850,38 +858,18 @@
    clear = function() { .rs.clearUserPref("help_font_size_points") }
 )
 
-# Zoom with mouse wheel when holding Ctrl (Cmd on macOS)
-#
-# Use Ctrl+Mouse Wheel (Cmd+Mouse Wheel on macOS) to zoom the interface in and
-# out.
-.rs.uiPrefs$enableMousewheelZoom <- list(
-   get = function() { .rs.getUserPref("enable_mousewheel_zoom") },
-   set = function(value) { .rs.setUserPref("enable_mousewheel_zoom", value) },
-   clear = function() { .rs.clearUserPref("enable_mousewheel_zoom") }
-)
-
-# Mouse wheel zoom debounce delay (ms)
-#
-# A delay in milliseconds to wait before applying the zoom level after a mouse
-# wheel event.
-.rs.uiPrefs$mousewheelZoomDebounceMs <- list(
-   get = function() { .rs.getUserPref("mousewheel_zoom_debounce_ms") },
-   set = function(value) { .rs.setUserPref("mousewheel_zoom_debounce_ms", value) },
-   clear = function() { .rs.clearUserPref("mousewheel_zoom_debounce_ms") }
-)
-
 # Theme
 #
-# The name of the color theme to apply to the text editor in RStudio.
+# The name of the color theme to apply to the text editor in Rao.
 .rs.uiPrefs$editorTheme <- list(
    get = function() { .rs.getUserPref("editor_theme") },
    set = function(value) { .rs.setUserPref("editor_theme", value) },
    clear = function() { .rs.clearUserPref("editor_theme") }
 )
 
-# Enable editor fonts on RStudio Server
+# Enable editor fonts on Rao Server
 #
-# Whether to use a custom editor font in RStudio Server.
+# Whether to use a custom editor font in Rao Server.
 .rs.uiPrefs$serverEditorFontEnabled <- list(
    get = function() { .rs.getUserPref("server_editor_font_enabled") },
    set = function(value) { .rs.setUserPref("server_editor_font_enabled", value) },
@@ -890,7 +878,7 @@
 
 # Editor font
 #
-# The name of the fixed-width editor font to use with RStudio Server.
+# The name of the fixed-width editor font to use with Rao Server.
 .rs.uiPrefs$serverEditorFont <- list(
    get = function() { .rs.getUserPref("server_editor_font") },
    set = function(value) { .rs.setUserPref("server_editor_font", value) },
@@ -908,7 +896,7 @@
 
 # Show top toolbar
 #
-# Whether to show the toolbar at the top of the RStudio workbench.
+# Whether to show the toolbar at the top of the Rao workbench.
 .rs.uiPrefs$toolbarVisible <- list(
    get = function() { .rs.getUserPref("toolbar_visible") },
    set = function(value) { .rs.setUserPref("toolbar_visible", value) },
@@ -971,7 +959,7 @@
 
 # Enable data import
 #
-# Whether to use RStudio's data import feature.
+# Whether to use Rao's data import feature.
 .rs.uiPrefs$useDataimport <- list(
    get = function() { .rs.getUserPref("use_dataimport") },
    set = function(value) { .rs.setUserPref("use_dataimport", value) },
@@ -1071,7 +1059,7 @@
 
 # Enable the Packages pane
 #
-# Whether to enable RStudio's Packages pane.
+# Whether to enable Rao's Packages pane.
 .rs.uiPrefs$packagesPaneEnabled <- list(
    get = function() { .rs.getUserPref("packages_pane_enabled") },
    set = function(value) { .rs.setUserPref("packages_pane_enabled", value) },
@@ -1089,7 +1077,7 @@
 
 # Restore last opened documents on startup
 #
-# Whether to restore the last opened source documents when RStudio starts up.
+# Whether to restore the last opened source documents when Rao starts up.
 .rs.uiPrefs$restoreSourceDocuments <- list(
    get = function() { .rs.getUserPref("restore_source_documents") },
    set = function(value) { .rs.setUserPref("restore_source_documents", value) },
@@ -1116,7 +1104,7 @@
 
 # Check for new version at startup
 #
-# Whether to check for new versions of RStudio when RStudio starts.
+# Whether to check for new versions of Rao when Rao starts.
 .rs.uiPrefs$checkForUpdates <- list(
    get = function() { .rs.getUserPref("check_for_updates") },
    set = function(value) { .rs.setUserPref("check_for_updates", value) },
@@ -1125,7 +1113,8 @@
 
 # Enable automatic updates
 #
-# Whether to automatically download and install updates in the background (Mac/Windows only).
+# Whether to automatically download and install updates in the background
+# (Mac/Windows only).
 .rs.uiPrefs$autoUpdatesEnabled <- list(
    get = function() { .rs.getUserPref("auto_updates_enabled") },
    set = function(value) { .rs.setUserPref("auto_updates_enabled", value) },
@@ -1212,6 +1201,15 @@
    get = function() { .rs.getUserPref("show_publish_diagnostics") },
    set = function(value) { .rs.setUserPref("show_publish_diagnostics", value) },
    clear = function() { .rs.clearUserPref("show_publish_diagnostics") }
+)
+
+# 
+#
+# Whether to show UI for publishing content to cloud service.
+.rs.uiPrefs$enableCloudPublishUi <- list(
+   get = function() { .rs.getUserPref("enable_cloud_publish_ui") },
+   set = function(value) { .rs.setUserPref("enable_cloud_publish_ui", value) },
+   clear = function() { .rs.clearUserPref("enable_cloud_publish_ui") }
 )
 
 # Check SSL certificates when publishing
@@ -1474,7 +1472,7 @@
 
 # 
 #
-# Whether to show the Workbench Jobs tab in RStudio Pro and RStudio Workbench.
+# Whether to show the Remote Jobs tab.
 .rs.uiPrefs$showLauncherJobsTab <- list(
    get = function() { .rs.getUserPref("show_launcher_jobs_tab") },
    set = function(value) { .rs.setUserPref("show_launcher_jobs_tab", value) },
@@ -1483,8 +1481,7 @@
 
 # 
 #
-# How to sort jobs in the Workbench Jobs tab in RStudio Pro and RStudio
-# Workbench.
+# How to sort jobs in the Remote Jobs tab.
 .rs.uiPrefs$launcherJobsSort <- list(
    get = function() { .rs.getUserPref("launcher_jobs_sort") },
    set = function(value) { .rs.setUserPref("launcher_jobs_sort", value) },
@@ -1548,7 +1545,7 @@
 
 # Global theme
 #
-# The theme to use for the main RStudio user interface.
+# The theme to use for the main Rao user interface.
 .rs.uiPrefs$globalTheme <- list(
    get = function() { .rs.getUserPref("global_theme") },
    set = function(value) { .rs.setUserPref("global_theme", value) },
@@ -1629,9 +1626,9 @@
    clear = function() { .rs.clearUserPref("root_document") }
 )
 
-# Show user home page in RStudio Workbench
+# Show user home page
 #
-# When to show the server home page in RStudio Workbench.
+# When to show the server home page.
 .rs.uiPrefs$showUserHomePage <- list(
    get = function() { .rs.getUserPref("show_user_home_page") },
    set = function(value) { .rs.setUserPref("show_user_home_page", value) },
@@ -1640,7 +1637,7 @@
 
 # 
 #
-# Whether to reuse sessions when opening projects in RStudio Workbench.
+# Whether to reuse sessions when opening projects.
 .rs.uiPrefs$reuseSessionsForProjectLinks <- list(
    get = function() { .rs.getUserPref("reuse_sessions_for_project_links") },
    set = function(value) { .rs.setUserPref("reuse_sessions_for_project_links", value) },
@@ -1649,7 +1646,7 @@
 
 # Enable version control if available
 #
-# Whether to enable RStudio's version control system interface.
+# Whether to enable Rao's version control system interface.
 .rs.uiPrefs$vcsEnabled <- list(
    get = function() { .rs.getUserPref("vcs_enabled") },
    set = function(value) { .rs.setUserPref("vcs_enabled", value) },
@@ -1730,7 +1727,7 @@
 
 # Use alternate library path when building package
 #
-# When set, RStudio will build your package in a '_build' sub-directory of your
+# When set, Rao will build your package in a '_build' sub-directory of your
 # current library paths.
 .rs.uiPrefs$useBuildSubdirectory <- list(
    get = function() { .rs.getUserPref("use_build_subdirectory") },
@@ -1774,9 +1771,9 @@
    clear = function() { .rs.clearUserPref("hide_object_files") }
 )
 
-# Restore last project when starting RStudio
+# Restore last project when starting Rao
 #
-# Whether to restore the last project when starting RStudio.
+# Whether to restore the last project when starting Rao.
 .rs.uiPrefs$restoreLastProject <- list(
    get = function() { .rs.getUserPref("restore_last_project") },
    set = function(value) { .rs.setUserPref("restore_last_project", value) },
@@ -1820,10 +1817,9 @@
    clear = function() { .rs.clearUserPref("latex_shell_escape") }
 )
 
-# Restore project R version in RStudio Pro and RStudio Workbench
+# Restore project R version
 #
-# Whether to restore the last version of R used by the project in RStudio Pro and
-# RStudio Workbench.
+# Whether to restore the last version of R used by the project.
 .rs.uiPrefs$restoreProjectRVersion <- list(
    get = function() { .rs.getUserPref("restore_project_r_version") },
    set = function(value) { .rs.setUserPref("restore_project_r_version", value) },
@@ -1839,22 +1835,13 @@
    clear = function() { .rs.clearUserPref("clang_verbose") }
 )
 
-# Submit crash reports to Posit
+# Submit crash reports to Lotas Inc
 #
-# Whether to automatically submit crash reports to Posit.
+# Whether to automatically submit crash reports to Lotas Inc.
 .rs.uiPrefs$submitCrashReports <- list(
    get = function() { .rs.getUserPref("submit_crash_reports") },
    set = function(value) { .rs.setUserPref("submit_crash_reports", value) },
    clear = function() { .rs.clearUserPref("submit_crash_reports") }
-)
-
-# Show splash screen when RStudio is starting
-#
-# Whether to show the splash screen when RStudio is starting.
-.rs.uiPrefs$enableSplashScreen <- list(
-   get = function() { .rs.getUserPref("enable_splash_screen") },
-   set = function(value) { .rs.setUserPref("enable_splash_screen", value) },
-   clear = function() { .rs.clearUserPref("enable_splash_screen") }
 )
 
 # 
@@ -1976,7 +1963,7 @@
    clear = function() { .rs.clearUserPref("terminal_initial_directory") }
 )
 
-# Show full path to project in RStudio Desktop windows
+# Show full path to project in Rao Desktop windows
 #
 # Whether to show the full path to project in desktop window title.
 .rs.uiPrefs$fullProjectPathInWindowTitle <- list(
@@ -2167,7 +2154,7 @@
    clear = function() { .rs.clearUserPref("graphics_antialiasing") }
 )
 
-# Fixed-width font list for RStudio Server
+# Fixed-width font list for Rao Server
 #
 # List of fixed-width fonts to check for browser support.
 .rs.uiPrefs$browserFixedWidthFonts <- list(
@@ -2252,7 +2239,7 @@
 
 # Enable terminal Python integration
 #
-# Enable Python terminal hooks. When enabled, the RStudio-configured version of
+# Enable Python terminal hooks. When enabled, the Rao-configured version of
 # Python will be placed on the PATH.
 .rs.uiPrefs$terminalPythonIntegration <- list(
    get = function() { .rs.getUserPref("terminal_python_integration") },
@@ -2272,7 +2259,7 @@
 # Automatically activate project Python environments
 #
 # When enabled, if the active project contains a Python virtual environment, then
-# RStudio will automatically activate this environment on startup.
+# Rao will automatically activate this environment on startup.
 .rs.uiPrefs$pythonProjectEnvironmentAutomaticActivate <- list(
    get = function() { .rs.getUserPref("python_project_environment_automatic_activate") },
    set = function(value) { .rs.setUserPref("python_project_environment_automatic_activate", value) },
@@ -2281,9 +2268,8 @@
 
 # Check values in the Environment pane for null external pointers
 #
-# When enabled, RStudio will detect R objects containing null external pointers
-# when building the Environment pane, and avoid introspecting their contents
-# further.
+# When enabled, Rao will detect R objects containing null external pointers when
+# building the Environment pane, and avoid introspecting their contents further.
 .rs.uiPrefs$checkNullExternalPointers <- list(
    get = function() { .rs.getUserPref("check_null_external_pointers") },
    set = function(value) { .rs.setUserPref("check_null_external_pointers", value) },
@@ -2308,9 +2294,36 @@
    clear = function() { .rs.clearUserPref("autohide_menubar") }
 )
 
+# Enable splash screen
+#
+# Show splash screen when Rao starts.
+.rs.uiPrefs$enableSplashScreen <- list(
+   get = function() { .rs.getUserPref("enable_splash_screen") },
+   set = function(value) { .rs.setUserPref("enable_splash_screen", value) },
+   clear = function() { .rs.clearUserPref("enable_splash_screen") }
+)
+
+# Enable mousewheel zoom
+#
+# Allow using Ctrl/Cmd + mousewheel to zoom the entire IDE.
+.rs.uiPrefs$enableMousewheelZoom <- list(
+   get = function() { .rs.getUserPref("enable_mousewheel_zoom") },
+   set = function(value) { .rs.setUserPref("enable_mousewheel_zoom", value) },
+   clear = function() { .rs.clearUserPref("enable_mousewheel_zoom") }
+)
+
+# Mousewheel zoom debounce (ms)
+#
+# Delay in milliseconds before applying mousewheel zoom.
+.rs.uiPrefs$mousewheelZoomDebounceMs <- list(
+   get = function() { .rs.getUserPref("mousewheel_zoom_debounce_ms") },
+   set = function(value) { .rs.setUserPref("mousewheel_zoom_debounce_ms", value) },
+   clear = function() { .rs.clearUserPref("mousewheel_zoom_debounce_ms") }
+)
+
 # Use native file and message dialog boxes
 #
-# Whether RStudio Desktop will use the operating system's native File and Message
+# Whether Rao Desktop will use the operating system's native File and Message
 # dialog boxes.
 .rs.uiPrefs$nativeFileDialogs <- list(
    get = function() { .rs.getUserPref("native_file_dialogs") },
@@ -2358,7 +2371,7 @@
 
 # Enable GitHub Copilot
 #
-# When enabled, RStudio will use GitHub Copilot to provide code suggestions.
+# When enabled, Rao will use GitHub Copilot to provide code suggestions.
 .rs.uiPrefs$copilotEnabled <- list(
    get = function() { .rs.getUserPref("copilot_enabled") },
    set = function(value) { .rs.setUserPref("copilot_enabled", value) },
@@ -2386,8 +2399,8 @@
 
 # Pressing Tab key will prefer inserting:
 #
-# Control the behavior of the Tab key when both Copilot code suggestions and
-# RStudio code completions are visible.
+# Control the behavior of the Tab key when both Copilot code suggestions and Rao
+# code completions are visible.
 .rs.uiPrefs$copilotTabKeyBehavior <- list(
    get = function() { .rs.getUserPref("copilot_tab_key_behavior") },
    set = function(value) { .rs.setUserPref("copilot_tab_key_behavior", value) },
@@ -2396,7 +2409,7 @@
 
 # Index project files with GitHub Copilot
 #
-# When enabled, RStudio will index project files with GitHub Copilot.
+# When enabled, Rao will index project files with GitHub Copilot.
 .rs.uiPrefs$copilotIndexingEnabled <- list(
    get = function() { .rs.getUserPref("copilot_indexing_enabled") },
    set = function(value) { .rs.setUserPref("copilot_indexing_enabled", value) },
@@ -2405,18 +2418,18 @@
 
 # Display account and billing messages from GitHub Copilot
 #
-# When enabled, RStudio will show account and billing messages from GitHub
-# Copilot in a message box.
+# When enabled, Rao will show account and billing messages from GitHub Copilot in
+# a message box.
 .rs.uiPrefs$copilotShowMessages <- list(
    get = function() { .rs.getUserPref("copilot_show_messages") },
    set = function(value) { .rs.setUserPref("copilot_show_messages", value) },
    clear = function() { .rs.clearUserPref("copilot_show_messages") }
 )
 
-# Use RStudio project folder as a Copilot workspace
+# Use Rao project folder as a Copilot workspace
 #
-# When enabled, RStudio will tell Copilot to use the current RStudio project's
-# folder as a workspace.
+# When enabled, Rao will tell Copilot to use the current Rao project's folder as
+# a workspace.
 .rs.uiPrefs$copilotProjectWorkspace <- list(
    get = function() { .rs.getUserPref("copilot_project_workspace") },
    set = function(value) { .rs.setUserPref("copilot_project_workspace", value) },
@@ -2480,7 +2493,7 @@
 
 # Default project user data directory
 #
-# The folder in which RStudio should store project .Rproj.user data.
+# The folder in which Rao should store project .Rproj.user data.
 .rs.uiPrefs$projectUserDataDirectory <- list(
    get = function() { .rs.getUserPref("project_user_data_directory") },
    set = function(value) { .rs.setUserPref("project_user_data_directory", value) },
@@ -2495,4 +2508,212 @@
    get = function() { .rs.getUserPref("console_highlight_conditions") },
    set = function(value) { .rs.setUserPref("console_highlight_conditions", value) },
    clear = function() { .rs.clearUserPref("console_highlight_conditions") }
+)
+
+# Default AI Model
+#
+# The AI model to use for conversations
+.rs.uiPrefs$aiSelectedModel <- list(
+   get = function() { .rs.getUserPref("ai_selected_model") },
+   set = function(value) { .rs.setUserPref("ai_selected_model", value) },
+   clear = function() { .rs.clearUserPref("ai_selected_model") }
+)
+
+# Security Mode
+#
+# The security level for AI interactions
+.rs.uiPrefs$aiSecurityMode <- list(
+   get = function() { .rs.getUserPref("ai_security_mode") },
+   set = function(value) { .rs.setUserPref("ai_security_mode", value) },
+   clear = function() { .rs.clearUserPref("ai_security_mode") }
+)
+
+# AI Temperature
+#
+# Temperature setting for AI model responses (0.0 = deterministic, 1.0 = highly
+# variable)
+.rs.uiPrefs$aiTemperature <- list(
+   get = function() { .rs.getUserPref("ai_temperature") },
+   set = function(value) { .rs.setUserPref("ai_temperature", value) },
+   clear = function() { .rs.clearUserPref("ai_temperature") }
+)
+
+# Interaction Mode
+#
+# The interaction mode for the AI assistant
+.rs.uiPrefs$aiInteractionMode <- list(
+   get = function() { .rs.getUserPref("ai_interaction_mode") },
+   set = function(value) { .rs.setUserPref("ai_interaction_mode", value) },
+   clear = function() { .rs.clearUserPref("ai_interaction_mode") }
+)
+
+# Enable Web Search
+#
+# Allow the AI to search the web
+.rs.uiPrefs$aiWebSearchEnabled <- list(
+   get = function() { .rs.getUserPref("ai_web_search_enabled") },
+   set = function(value) { .rs.setUserPref("ai_web_search_enabled", value) },
+   clear = function() { .rs.clearUserPref("ai_web_search_enabled") }
+)
+
+# Auto-accept File Edits
+#
+# Automatically accept file edit suggestions
+.rs.uiPrefs$aiAutoAcceptEdits <- list(
+   get = function() { .rs.getUserPref("ai_auto_accept_edits") },
+   set = function(value) { .rs.setUserPref("ai_auto_accept_edits", value) },
+   clear = function() { .rs.clearUserPref("ai_auto_accept_edits") }
+)
+
+# Auto-accept Console Commands
+#
+# Automatically accept console command suggestions
+.rs.uiPrefs$aiAutoAcceptConsole <- list(
+   get = function() { .rs.getUserPref("ai_auto_accept_console") },
+   set = function(value) { .rs.setUserPref("ai_auto_accept_console", value) },
+   clear = function() { .rs.clearUserPref("ai_auto_accept_console") }
+)
+
+# Auto-accept Terminal Commands
+#
+# Automatically accept terminal command suggestions
+.rs.uiPrefs$aiAutoAcceptTerminal <- list(
+   get = function() { .rs.getUserPref("ai_auto_accept_terminal") },
+   set = function(value) { .rs.setUserPref("ai_auto_accept_terminal", value) },
+   clear = function() { .rs.clearUserPref("ai_auto_accept_terminal") }
+)
+
+# Auto-run Files
+#
+# Automatically run file execution suggestions
+.rs.uiPrefs$aiAutoRunFiles <- list(
+   get = function() { .rs.getUserPref("ai_auto_run_files") },
+   set = function(value) { .rs.setUserPref("ai_auto_run_files", value) },
+   clear = function() { .rs.clearUserPref("ai_auto_run_files") }
+)
+
+# Auto-delete Files
+#
+# Automatically delete files when suggested
+.rs.uiPrefs$aiAutoDeleteFiles <- list(
+   get = function() { .rs.getUserPref("ai_auto_delete_files") },
+   set = function(value) { .rs.setUserPref("ai_auto_delete_files", value) },
+   clear = function() { .rs.clearUserPref("ai_auto_delete_files") }
+)
+
+# Allow All Console Commands
+#
+# Allow auto-accept for all console commands
+.rs.uiPrefs$aiAutoAcceptConsoleAllowAnything <- list(
+   get = function() { .rs.getUserPref("ai_auto_accept_console_allow_anything") },
+   set = function(value) { .rs.setUserPref("ai_auto_accept_console_allow_anything", value) },
+   clear = function() { .rs.clearUserPref("ai_auto_accept_console_allow_anything") }
+)
+
+# Allow All Terminal Commands
+#
+# Allow auto-accept for all terminal commands
+.rs.uiPrefs$aiAutoAcceptTerminalAllowAnything <- list(
+   get = function() { .rs.getUserPref("ai_auto_accept_terminal_allow_anything") },
+   set = function(value) { .rs.setUserPref("ai_auto_accept_terminal_allow_anything", value) },
+   clear = function() { .rs.clearUserPref("ai_auto_accept_terminal_allow_anything") }
+)
+
+# Allow Running All Files
+#
+# Allow auto-run for all files
+.rs.uiPrefs$aiAutoRunFilesAllowAnything <- list(
+   get = function() { .rs.getUserPref("ai_auto_run_files_allow_anything") },
+   set = function(value) { .rs.setUserPref("ai_auto_run_files_allow_anything", value) },
+   clear = function() { .rs.clearUserPref("ai_auto_run_files_allow_anything") }
+)
+
+# Console Command Whitelist
+#
+# Whitelist of console commands to auto-accept
+.rs.uiPrefs$aiAutoAcceptConsoleAllowList <- list(
+   get = function() { .rs.getUserPref("ai_auto_accept_console_allow_list") },
+   set = function(value) { .rs.setUserPref("ai_auto_accept_console_allow_list", value) },
+   clear = function() { .rs.clearUserPref("ai_auto_accept_console_allow_list") }
+)
+
+# Console Command Blocklist
+#
+# Blocklist of console commands to never auto-accept
+.rs.uiPrefs$aiAutoAcceptConsoleDenyList <- list(
+   get = function() { .rs.getUserPref("ai_auto_accept_console_deny_list") },
+   set = function(value) { .rs.setUserPref("ai_auto_accept_console_deny_list", value) },
+   clear = function() { .rs.clearUserPref("ai_auto_accept_console_deny_list") }
+)
+
+# Terminal Command Whitelist
+#
+# Whitelist of terminal commands to auto-accept
+.rs.uiPrefs$aiAutoAcceptTerminalAllowList <- list(
+   get = function() { .rs.getUserPref("ai_auto_accept_terminal_allow_list") },
+   set = function(value) { .rs.setUserPref("ai_auto_accept_terminal_allow_list", value) },
+   clear = function() { .rs.clearUserPref("ai_auto_accept_terminal_allow_list") }
+)
+
+# Terminal Command Blocklist
+#
+# Blocklist of terminal commands to never auto-accept
+.rs.uiPrefs$aiAutoAcceptTerminalDenyList <- list(
+   get = function() { .rs.getUserPref("ai_auto_accept_terminal_deny_list") },
+   set = function(value) { .rs.setUserPref("ai_auto_accept_terminal_deny_list", value) },
+   clear = function() { .rs.clearUserPref("ai_auto_accept_terminal_deny_list") }
+)
+
+# File Whitelist
+#
+# Whitelist of file patterns to auto-run
+.rs.uiPrefs$aiAutoRunFilesAllowList <- list(
+   get = function() { .rs.getUserPref("ai_auto_run_files_allow_list") },
+   set = function(value) { .rs.setUserPref("ai_auto_run_files_allow_list", value) },
+   clear = function() { .rs.clearUserPref("ai_auto_run_files_allow_list") }
+)
+
+# File Blocklist
+#
+# Blocklist of file patterns to never auto-run
+.rs.uiPrefs$aiAutoRunFilesDenyList <- list(
+   get = function() { .rs.getUserPref("ai_auto_run_files_deny_list") },
+   set = function(value) { .rs.setUserPref("ai_auto_run_files_deny_list", value) },
+   clear = function() { .rs.clearUserPref("ai_auto_run_files_deny_list") }
+)
+
+# Custom AI Rules
+#
+# Custom rules for the AI assistant
+.rs.uiPrefs$aiUserRules <- list(
+   get = function() { .rs.getUserPref("ai_user_rules") },
+   set = function(value) { .rs.setUserPref("ai_user_rules", value) },
+   clear = function() { .rs.clearUserPref("ai_user_rules") }
+)
+
+# BYOK Anthropic Enabled
+#
+# Enable Bring Your Own Key for Anthropic
+.rs.uiPrefs$aiByokAnthropicEnabled <- list(
+   get = function() { .rs.getUserPref("ai_byok_anthropic_enabled") },
+   set = function(value) { .rs.setUserPref("ai_byok_anthropic_enabled", value) },
+   clear = function() { .rs.clearUserPref("ai_byok_anthropic_enabled") }
+)
+
+# BYOK OpenAI Enabled
+#
+# Enable Bring Your Own Key for OpenAI
+.rs.uiPrefs$aiByokOpenaiEnabled <- list(
+   get = function() { .rs.getUserPref("ai_byok_openai_enabled") },
+   set = function(value) { .rs.setUserPref("ai_byok_openai_enabled", value) },
+   clear = function() { .rs.clearUserPref("ai_byok_openai_enabled") }
+)
+
+# BYOK SageMaker Enabled
+#
+# Enable Bring Your Own Key for AWS SageMaker
+.rs.uiPrefs$aiByokSagemakerEnabled <- list(
+   get = function() { .rs.getUserPref("ai_byok_sagemaker_enabled") },
+   set = function(value) { .rs.setUserPref("ai_byok_sagemaker_enabled", value) },
+   clear = function() { .rs.clearUserPref("ai_byok_sagemaker_enabled") }
 )

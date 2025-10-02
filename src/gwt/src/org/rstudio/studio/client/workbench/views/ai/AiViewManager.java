@@ -48,6 +48,7 @@ public class AiViewManager
    private final AiServerOperations server_;
    private final AiPane aiPane_;
    private final SimplePanel searchContainer_;
+   private final org.rstudio.studio.client.application.events.EventBus eventBus_;
    private final DockLayoutPanel mainPanel_;  // AiViewManager creates and owns this
    private final SimplePanel centerContainer_;  // Center content switching
    private final AutoGlassPanel glassPanel_;  // Wrapper for proper styling
@@ -73,6 +74,7 @@ public class AiViewManager
       frame_ = frame;
       server_ = server;
       aiPane_ = aiPane;
+      eventBus_ = eventBus;
       
       // Register for authentication completion events
       eventBus.addHandler(AiAuthenticationCompletedEvent.TYPE, this);
@@ -83,6 +85,8 @@ public class AiViewManager
       // Create settings container and widget
       settingsContainer_ = new SimplePanel();
       settingsContainer_.setSize("100%", "100%");
+      settingsContainer_.addStyleName("ace_editor"); // Get ACE theme background from .rstheme files
+      settingsContainer_.addStyleName("ace_editor_theme"); // Theme context marker
       
       // Create settings widget with handler
       AiSettingsWidget.SettingsHandler settingsHandler = new AiSettingsWidget.SettingsHandler() {
@@ -153,54 +157,6 @@ public class AiViewManager
                public void onError(ServerError error) {
                   RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
                      "Error", "Failed to change model: " + error.getMessage());
-               }
-            });
-         }
-         
-         @Override
-         public void onWorkingDirectoryChange(String directory) {
-            server_.setAiWorkingDirectory(directory, new ServerRequestCallback<java.lang.Void>() {
-               @Override
-               public void onResponseReceived(java.lang.Void response) {
-                  settingsWidget_.updateDirectoryPath(directory);
-               }
-               
-               @Override
-               public void onError(ServerError error) {
-                  Debug.log("setAiWorkingDirectory failed: " + error.getMessage());
-                  settingsWidget_.showDirectoryError("Failed to set working directory: " + error.getMessage());
-               }
-            });
-         }
-         
-         @Override
-         public void onBrowseDirectory() {
-            server_.browseDirectory(new ServerRequestCallback<com.google.gwt.core.client.JavaScriptObject>() {
-               @Override
-               public void onResponseReceived(com.google.gwt.core.client.JavaScriptObject response) {
-                  // Extract directory path from response
-                  String selectedDir = extractDirectoryPath(response);
-                  if (selectedDir != null && !selectedDir.isEmpty()) {
-                     // Set the directory on the server (same logic as onWorkingDirectoryChange)
-                     server_.setAiWorkingDirectory(selectedDir, new ServerRequestCallback<java.lang.Void>() {
-                        @Override
-                        public void onResponseReceived(java.lang.Void response) {
-                           settingsWidget_.updateDirectoryPath(selectedDir);
-                        }
-                        
-                        @Override
-                        public void onError(ServerError error) {
-                           Debug.log("setAiWorkingDirectory failed: " + error.getMessage());
-                           settingsWidget_.showDirectoryError("Failed to set working directory: " + error.getMessage());
-                        }
-                     });
-                  }
-               }
-               
-               @Override
-               public void onError(ServerError error) {
-                  Debug.log("Browse directory failed: " + error.getMessage());
-                  settingsWidget_.showDirectoryError("Failed to browse directory: " + error.getMessage());
                }
             });
          }
@@ -434,6 +390,41 @@ public class AiViewManager
                }
             });
          }
+         
+         @Override
+         public void onBYOKEnabledChange(String provider, boolean enabled) {
+            // Update AI settings to enable/disable BYOK for this provider
+            Debug.log("BYOK " + provider + " " + (enabled ? "enabled" : "disabled"));
+            // The setting is already saved via the R function when toggle is clicked
+            // Just start/stop the proxy if needed
+            if (enabled) {
+               server_.startLocalBackendProxy(new ServerRequestCallback<String>() {
+                  @Override
+                  public void onResponseReceived(String proxyUrl) {
+                     Debug.log("Local backend proxy started at: " + proxyUrl);
+                  }
+                  
+                  @Override
+                  public void onError(ServerError error) {
+                     Debug.log("Failed to start local backend proxy: " + error.getMessage());
+                     RStudioGinjector.INSTANCE.getGlobalDisplay().showErrorMessage(
+                        "Error", "Failed to start local backend: " + error.getMessage());
+                  }
+               });
+            }
+         }
+         
+         @Override
+         public void onBYOKApiKeySet(String provider, String apiKey) {
+            Debug.log("BYOK API key set for " + provider);
+            // Key is already saved via the server call in the widget
+         }
+         
+         @Override
+         public void onBYOKApiKeyDeleted(String provider) {
+            Debug.log("BYOK API key deleted for " + provider);
+            // Key is already deleted via the server call in the widget
+         }
       };
       
       settingsWidget_ = new AiSettingsWidget(
@@ -452,6 +443,8 @@ public class AiViewManager
       // Create center container for switching between settings and streaming container
       centerContainer_ = new SimplePanel();
       centerContainer_.setSize("100%", "100%");
+      centerContainer_.addStyleName("ace_editor"); // Get ACE theme background from .rstheme files
+      centerContainer_.addStyleName("ace_editor_theme"); // Theme context marker
       
       // Set up iframe container with the frame (remove from current parent first)
       if (frame_.getParent() != null) {
@@ -459,6 +452,8 @@ public class AiViewManager
       }
       iframeContainer_.setWidget(frame_);
       iframeContainer_.setSize("100%", "100%");
+      iframeContainer_.addStyleName("ace_editor"); // Get ACE theme background from .rstheme files
+      iframeContainer_.addStyleName("ace_editor_theme"); // Theme context marker
       
       // Add widgets to main panel (these are the ONLY widgets we'll ever add)
       mainPanel_.addSouth(searchContainer_, 0);   // Search initially hidden (size 0) for Settings mode
@@ -474,16 +469,53 @@ public class AiViewManager
       glassPanel_ = new AutoGlassPanel(mainPanel_);
       glassPanel_.setSize("100%", "100%");
       
+      // Add theme classes to the main panel for CSS theme selectors
+      addThemeClasses();
+      
+      // Register for theme change events
+      eventBus_.addHandler(org.rstudio.studio.client.application.events.ThemeChangedEvent.TYPE, 
+         new org.rstudio.studio.client.application.events.ThemeChangedEvent.Handler() {
+            @Override
+            public void onThemeChanged(org.rstudio.studio.client.application.events.ThemeChangedEvent event) {
+               updateThemeClasses();
+            }
+         });
+      
       // Mark as initialized
       isInitialized_ = true;
    }
    
-   private native String extractDirectoryPath(com.google.gwt.core.client.JavaScriptObject response) /*-{
-      if (response && response.directory) {
-         return response.directory;
+   /**
+    * Add theme classes to enable CSS theme selectors to work properly
+    */
+   private void addThemeClasses()
+   {
+      // Get current theme from body class
+      String themeName = org.rstudio.core.client.theme.ThemeHelper.getCurrentTheme();
+      
+      // Add appropriate theme class to the glass panel
+      if (themeName.equals("dark-grey")) {
+         glassPanel_.addStyleName("rstudio-themes-dark-grey");
+      } else if (themeName.equals("alternate")) {
+         glassPanel_.addStyleName("rstudio-themes-alternate");
+      } else {
+         glassPanel_.addStyleName("rstudio-themes-default");
       }
-      return null;
-   }-*/;
+   }
+   
+   /**
+    * Update theme classes when theme changes at runtime
+    */
+   private void updateThemeClasses()
+   {
+      // Remove all existing theme classes
+      glassPanel_.removeStyleName("rstudio-themes-default");
+      glassPanel_.removeStyleName("rstudio-themes-dark-grey");
+      glassPanel_.removeStyleName("rstudio-themes-alternate");
+      
+      // Add the current theme class
+      addThemeClasses();
+   }
    
    /**
     * Get the main widget that should be returned by createMainWidget()

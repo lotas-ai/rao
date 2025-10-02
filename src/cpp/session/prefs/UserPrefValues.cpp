@@ -232,7 +232,7 @@ core::Error UserPrefValues::setCustomShellOptions(std::string val)
 }
 
 /**
- * Show line numbers in RStudio's code editor.
+ * Show line numbers in Rao's code editor.
  */
 bool UserPrefValues::showLineNumbers()
 {
@@ -245,7 +245,7 @@ core::Error UserPrefValues::setShowLineNumbers(bool val)
 }
 
 /**
- * Show relative, rather than absolute, line numbers in RStudio's code editor.
+ * Show relative, rather than absolute, line numbers in Rao's code editor.
  */
 bool UserPrefValues::relativeLineNumbers()
 {
@@ -258,7 +258,7 @@ core::Error UserPrefValues::setRelativeLineNumbers(bool val)
 }
 
 /**
- * Highlight the selected word in RStudio's code editor.
+ * Highlight the selected word in Rao's code editor.
  */
 bool UserPrefValues::highlightSelectedWord()
 {
@@ -271,7 +271,7 @@ core::Error UserPrefValues::setHighlightSelectedWord(bool val)
 }
 
 /**
- * Highlight the selected line in RStudio's code editor.
+ * Highlight the selected line in Rao's code editor.
  */
 bool UserPrefValues::highlightSelectedLine()
 {
@@ -284,7 +284,7 @@ core::Error UserPrefValues::setHighlightSelectedLine(bool val)
 }
 
 /**
- * Layout of panes in the RStudio workbench.
+ * Layout of panes in the Rao workbench.
  */
 core::json::Object UserPrefValues::panes()
 {
@@ -349,7 +349,7 @@ core::Error UserPrefValues::setAutoDetectIndentation(bool val)
 }
 
 /**
- * Whether to show the margin guide in the RStudio code editor.
+ * Whether to show the margin guide in the Rao code editor.
  */
 bool UserPrefValues::showMargin()
 {
@@ -388,7 +388,7 @@ core::Error UserPrefValues::setMarginColumn(int val)
 }
 
 /**
- * Whether to show invisible characters, such as spaces and tabs, in the RStudio code editor.
+ * Whether to show invisible characters, such as spaces and tabs, in the Rao code editor.
  */
 bool UserPrefValues::showInvisibles()
 {
@@ -401,7 +401,7 @@ core::Error UserPrefValues::setShowInvisibles(bool val)
 }
 
 /**
- * Style for indentation guides in the RStudio code editor.
+ * Style for indentation guides in the Rao code editor.
  */
 std::string UserPrefValues::indentGuides()
 {
@@ -440,7 +440,7 @@ core::Error UserPrefValues::setHighlightWebLink(bool val)
 }
 
 /**
- * The keybindings to use in the RStudio code editor.
+ * The keybindings to use in the Rao code editor.
  */
 std::string UserPrefValues::editorKeybindings()
 {
@@ -544,7 +544,7 @@ core::Error UserPrefValues::setSurroundSelection(std::string val)
 }
 
 /**
- * Whether to enable code snippets in the RStudio code editor.
+ * Whether to enable code snippets in the Rao code editor.
  */
 bool UserPrefValues::enableSnippets()
 {
@@ -557,7 +557,7 @@ core::Error UserPrefValues::setEnableSnippets(bool val)
 }
 
 /**
- * When to use auto-completion for R code in the RStudio code editor.
+ * When to use auto-completion for R code in the Rao code editor.
  */
 std::string UserPrefValues::codeCompletion()
 {
@@ -570,7 +570,7 @@ core::Error UserPrefValues::setCodeCompletion(std::string val)
 }
 
 /**
- * When to use auto-completion for other languages (such as JavaScript and SQL) in the RStudio code editor.
+ * When to use auto-completion for other languages (such as JavaScript and SQL) in the Rao code editor.
  */
 std::string UserPrefValues::codeCompletionOther()
 {
@@ -622,7 +622,7 @@ core::Error UserPrefValues::setCodeCompletionCharacters(int val)
 }
 
 /**
- * When set, RStudio will include all function arguments in the completion list, even if those arguments have already appeared to be used in the current function invocation.
+ * When set, Rao will include all function arguments in the completion list, even if those arguments have already appeared to be used in the current function invocation.
  */
 bool UserPrefValues::codeCompletionIncludeAlreadyUsed()
 {
@@ -882,7 +882,7 @@ core::Error UserPrefValues::setRestoreSourceDocumentCursorPosition(bool val)
 }
 
 /**
- * Whether to automatically re-indent code when it's pasted into RStudio.
+ * Whether to automatically re-indent code when it's pasted into Rao.
  */
 bool UserPrefValues::reindentOnPaste()
 {
@@ -1103,6 +1103,19 @@ core::Error UserPrefValues::setAnsiConsoleMode(std::string val)
 }
 
 /**
+ * Whether to only show a limited window of the total console output
+ */
+bool UserPrefValues::limitVisibleConsole()
+{
+   return readPref<bool>("limit_visible_console");
+}
+
+core::Error UserPrefValues::setLimitVisibleConsole(bool val)
+{
+   return writePref("limit_visible_console", val);
+}
+
+/**
  * Whether to show a toolbar on code chunks in R Markdown documents.
  */
 bool UserPrefValues::showInlineToolbarForRCodeChunks()
@@ -1142,7 +1155,7 @@ core::Error UserPrefValues::setSaveFilesBeforeBuild(bool val)
 }
 
 /**
- * Whether RStudio should save and reload the R workspace when building the project.
+ * Whether Rao should save and reload the R workspace when building the project.
  */
 bool UserPrefValues::saveAndReloadWorkspaceOnBuild()
 {
@@ -1194,33 +1207,7 @@ core::Error UserPrefValues::setHelpFontSizePoints(double val)
 }
 
 /**
- * Use Ctrl+Mouse Wheel (Cmd+Mouse Wheel on macOS) to zoom the interface in and out.
- */
-bool UserPrefValues::enableMousewheelZoom()
-{
-   return readPref<bool>("enable_mousewheel_zoom");
-}
-
-core::Error UserPrefValues::setEnableMousewheelZoom(bool val)
-{
-   return writePref("enable_mousewheel_zoom", val);
-}
-
-/**
- * A delay in milliseconds to wait before applying the zoom level after a mouse wheel event.
- */
-int UserPrefValues::mousewheelZoomDebounceMs()
-{
-   return readPref<int>("mousewheel_zoom_debounce_ms");
-}
-
-core::Error UserPrefValues::setMousewheelZoomDebounceMs(int val)
-{
-   return writePref("mousewheel_zoom_debounce_ms", val);
-}
-
-/**
- * The name of the color theme to apply to the text editor in RStudio.
+ * The name of the color theme to apply to the text editor in Rao.
  */
 std::string UserPrefValues::editorTheme()
 {
@@ -1233,7 +1220,7 @@ core::Error UserPrefValues::setEditorTheme(std::string val)
 }
 
 /**
- * Whether to use a custom editor font in RStudio Server.
+ * Whether to use a custom editor font in Rao Server.
  */
 bool UserPrefValues::serverEditorFontEnabled()
 {
@@ -1246,7 +1233,7 @@ core::Error UserPrefValues::setServerEditorFontEnabled(bool val)
 }
 
 /**
- * The name of the fixed-width editor font to use with RStudio Server.
+ * The name of the fixed-width editor font to use with Rao Server.
  */
 std::string UserPrefValues::serverEditorFont()
 {
@@ -1272,7 +1259,7 @@ core::Error UserPrefValues::setDefaultEncoding(std::string val)
 }
 
 /**
- * Whether to show the toolbar at the top of the RStudio workbench.
+ * Whether to show the toolbar at the top of the Rao workbench.
  */
 bool UserPrefValues::toolbarVisible()
 {
@@ -1363,7 +1350,7 @@ core::Error UserPrefValues::setUseRoxygen(bool val)
 }
 
 /**
- * Whether to use RStudio's data import feature.
+ * Whether to use Rao's data import feature.
  */
 bool UserPrefValues::useDataimport()
 {
@@ -1506,7 +1493,7 @@ core::Error UserPrefValues::setNavigateToBuildError(bool val)
 }
 
 /**
- * Whether to enable RStudio's Packages pane.
+ * Whether to enable Rao's Packages pane.
  */
 bool UserPrefValues::packagesPaneEnabled()
 {
@@ -1532,7 +1519,7 @@ core::Error UserPrefValues::setCppTemplate(std::string val)
 }
 
 /**
- * Whether to restore the last opened source documents when RStudio starts up.
+ * Whether to restore the last opened source documents when Rao starts up.
  */
 bool UserPrefValues::restoreSourceDocuments()
 {
@@ -1571,7 +1558,7 @@ core::Error UserPrefValues::setAutoExpandErrorTracebacks(bool val)
 }
 
 /**
- * Whether to check for new versions of RStudio when RStudio starts.
+ * Whether to check for new versions of Rao when Rao starts.
  */
 bool UserPrefValues::checkForUpdates()
 {
@@ -1711,6 +1698,19 @@ bool UserPrefValues::showPublishDiagnostics()
 core::Error UserPrefValues::setShowPublishDiagnostics(bool val)
 {
    return writePref("show_publish_diagnostics", val);
+}
+
+/**
+ * Whether to show UI for publishing content to cloud service.
+ */
+bool UserPrefValues::enableCloudPublishUi()
+{
+   return readPref<bool>("enable_cloud_publish_ui");
+}
+
+core::Error UserPrefValues::setEnableCloudPublishUi(bool val)
+{
+   return writePref("enable_cloud_publish_ui", val);
 }
 
 /**
@@ -2065,7 +2065,7 @@ core::Error UserPrefValues::setJobsTabVisibility(std::string val)
 }
 
 /**
- * Whether to show the Workbench Jobs tab in RStudio Pro and RStudio Workbench.
+ * Whether to show the Remote Jobs tab.
  */
 bool UserPrefValues::showLauncherJobsTab()
 {
@@ -2078,7 +2078,7 @@ core::Error UserPrefValues::setShowLauncherJobsTab(bool val)
 }
 
 /**
- * How to sort jobs in the Workbench Jobs tab in RStudio Pro and RStudio Workbench.
+ * How to sort jobs in the Remote Jobs tab.
  */
 std::string UserPrefValues::launcherJobsSort()
 {
@@ -2169,7 +2169,7 @@ core::Error UserPrefValues::setWrapTabNavigation(bool val)
 }
 
 /**
- * The theme to use for the main RStudio user interface.
+ * The theme to use for the main Rao user interface.
  */
 std::string UserPrefValues::globalTheme()
 {
@@ -2286,7 +2286,7 @@ core::Error UserPrefValues::setRootDocument(std::string val)
 }
 
 /**
- * When to show the server home page in RStudio Workbench.
+ * When to show the server home page.
  */
 std::string UserPrefValues::showUserHomePage()
 {
@@ -2299,7 +2299,7 @@ core::Error UserPrefValues::setShowUserHomePage(std::string val)
 }
 
 /**
- * Whether to reuse sessions when opening projects in RStudio Workbench.
+ * Whether to reuse sessions when opening projects.
  */
 bool UserPrefValues::reuseSessionsForProjectLinks()
 {
@@ -2312,7 +2312,7 @@ core::Error UserPrefValues::setReuseSessionsForProjectLinks(bool val)
 }
 
 /**
- * Whether to enable RStudio's version control system interface.
+ * Whether to enable Rao's version control system interface.
  */
 bool UserPrefValues::vcsEnabled()
 {
@@ -2429,7 +2429,7 @@ core::Error UserPrefValues::setCleanBeforeInstall(bool val)
 }
 
 /**
- * When set, RStudio will build your package in a '_build' sub-directory of your current library paths.
+ * When set, Rao will build your package in a '_build' sub-directory of your current library paths.
  */
 bool UserPrefValues::useBuildSubdirectory()
 {
@@ -2494,7 +2494,7 @@ core::Error UserPrefValues::setHideObjectFiles(bool val)
 }
 
 /**
- * Whether to restore the last project when starting RStudio.
+ * Whether to restore the last project when starting Rao.
  */
 bool UserPrefValues::restoreLastProject()
 {
@@ -2559,7 +2559,7 @@ core::Error UserPrefValues::setLatexShellEscape(bool val)
 }
 
 /**
- * Whether to restore the last version of R used by the project in RStudio Pro and RStudio Workbench.
+ * Whether to restore the last version of R used by the project.
  */
 bool UserPrefValues::restoreProjectRVersion()
 {
@@ -2585,7 +2585,7 @@ core::Error UserPrefValues::setClangVerbose(int val)
 }
 
 /**
- * Whether to automatically submit crash reports to Posit.
+ * Whether to automatically submit crash reports to Lotas Inc.
  */
 bool UserPrefValues::submitCrashReports()
 {
@@ -2595,19 +2595,6 @@ bool UserPrefValues::submitCrashReports()
 core::Error UserPrefValues::setSubmitCrashReports(bool val)
 {
    return writePref("submit_crash_reports", val);
-}
-
-/**
- * Whether to show the splash screen when RStudio is starting.
- */
-bool UserPrefValues::enableSplashScreen()
-{
-   return readPref<bool>("enable_splash_screen");
-}
-
-core::Error UserPrefValues::setEnableSplashScreen(bool val)
-{
-   return writePref("enable_splash_screen", val);
 }
 
 /**
@@ -3170,7 +3157,7 @@ core::Error UserPrefValues::setMemoryQueryIntervalSeconds(int val)
 }
 
 /**
- * Enable Python terminal hooks. When enabled, the RStudio-configured version of Python will be placed on the PATH.
+ * Enable Python terminal hooks. When enabled, the Rao-configured version of Python will be placed on the PATH.
  */
 bool UserPrefValues::terminalPythonIntegration()
 {
@@ -3196,7 +3183,7 @@ core::Error UserPrefValues::setSessionProtocolDebug(bool val)
 }
 
 /**
- * When enabled, if the active project contains a Python virtual environment, then RStudio will automatically activate this environment on startup.
+ * When enabled, if the active project contains a Python virtual environment, then Rao will automatically activate this environment on startup.
  */
 bool UserPrefValues::pythonProjectEnvironmentAutomaticActivate()
 {
@@ -3209,7 +3196,7 @@ core::Error UserPrefValues::setPythonProjectEnvironmentAutomaticActivate(bool va
 }
 
 /**
- * When enabled, RStudio will detect R objects containing null external pointers when building the Environment pane, and avoid introspecting their contents further.
+ * When enabled, Rao will detect R objects containing null external pointers when building the Environment pane, and avoid introspecting their contents further.
  */
 bool UserPrefValues::checkNullExternalPointers()
 {
@@ -3248,7 +3235,46 @@ core::Error UserPrefValues::setAutohideMenubar(bool val)
 }
 
 /**
- * Whether RStudio Desktop will use the operating system's native File and Message dialog boxes.
+ * Show splash screen when Rao starts.
+ */
+bool UserPrefValues::enableSplashScreen()
+{
+   return readPref<bool>("enable_splash_screen");
+}
+
+core::Error UserPrefValues::setEnableSplashScreen(bool val)
+{
+   return writePref("enable_splash_screen", val);
+}
+
+/**
+ * Allow using Ctrl/Cmd + mousewheel to zoom the entire IDE.
+ */
+bool UserPrefValues::enableMousewheelZoom()
+{
+   return readPref<bool>("enable_mousewheel_zoom");
+}
+
+core::Error UserPrefValues::setEnableMousewheelZoom(bool val)
+{
+   return writePref("enable_mousewheel_zoom", val);
+}
+
+/**
+ * Delay in milliseconds before applying mousewheel zoom.
+ */
+int UserPrefValues::mousewheelZoomDebounceMs()
+{
+   return readPref<int>("mousewheel_zoom_debounce_ms");
+}
+
+core::Error UserPrefValues::setMousewheelZoomDebounceMs(int val)
+{
+   return writePref("mousewheel_zoom_debounce_ms", val);
+}
+
+/**
+ * Whether Rao Desktop will use the operating system's native File and Message dialog boxes.
  */
 bool UserPrefValues::nativeFileDialogs()
 {
@@ -3313,7 +3339,7 @@ core::Error UserPrefValues::setDisableRendererAccessibility(bool val)
 }
 
 /**
- * When enabled, RStudio will use GitHub Copilot to provide code suggestions.
+ * When enabled, Rao will use GitHub Copilot to provide code suggestions.
  */
 bool UserPrefValues::copilotEnabled()
 {
@@ -3352,7 +3378,7 @@ core::Error UserPrefValues::setCopilotCompletionsDelay(int val)
 }
 
 /**
- * Control the behavior of the Tab key when both Copilot code suggestions and RStudio code completions are visible.
+ * Control the behavior of the Tab key when both Copilot code suggestions and Rao code completions are visible.
  */
 std::string UserPrefValues::copilotTabKeyBehavior()
 {
@@ -3365,7 +3391,7 @@ core::Error UserPrefValues::setCopilotTabKeyBehavior(std::string val)
 }
 
 /**
- * When enabled, RStudio will index project files with GitHub Copilot.
+ * When enabled, Rao will index project files with GitHub Copilot.
  */
 bool UserPrefValues::copilotIndexingEnabled()
 {
@@ -3378,7 +3404,7 @@ core::Error UserPrefValues::setCopilotIndexingEnabled(bool val)
 }
 
 /**
- * When enabled, RStudio will show account and billing messages from GitHub Copilot in a message box.
+ * When enabled, Rao will show account and billing messages from GitHub Copilot in a message box.
  */
 bool UserPrefValues::copilotShowMessages()
 {
@@ -3391,7 +3417,7 @@ core::Error UserPrefValues::setCopilotShowMessages(bool val)
 }
 
 /**
- * When enabled, RStudio will tell Copilot to use the current RStudio project's folder as a workspace.
+ * When enabled, Rao will tell Copilot to use the current Rao project's folder as a workspace.
  */
 bool UserPrefValues::copilotProjectWorkspace()
 {
@@ -3482,7 +3508,7 @@ core::Error UserPrefValues::setReformatOnSave(bool val)
 }
 
 /**
- * The folder in which RStudio should store project .Rproj.user data.
+ * The folder in which Rao should store project .Rproj.user data.
  */
 std::string UserPrefValues::projectUserDataDirectory()
 {
@@ -3505,6 +3531,305 @@ std::string UserPrefValues::consoleHighlightConditions()
 core::Error UserPrefValues::setConsoleHighlightConditions(std::string val)
 {
    return writePref("console_highlight_conditions", val);
+}
+
+/**
+ * The AI model to use for conversations
+ */
+std::string UserPrefValues::aiSelectedModel()
+{
+   return readPref<std::string>("ai_selected_model");
+}
+
+core::Error UserPrefValues::setAiSelectedModel(std::string val)
+{
+   return writePref("ai_selected_model", val);
+}
+
+/**
+ * The security level for AI interactions
+ */
+std::string UserPrefValues::aiSecurityMode()
+{
+   return readPref<std::string>("ai_security_mode");
+}
+
+core::Error UserPrefValues::setAiSecurityMode(std::string val)
+{
+   return writePref("ai_security_mode", val);
+}
+
+/**
+ * Temperature setting for AI model responses (0.0 = deterministic, 1.0 = highly variable)
+ */
+double UserPrefValues::aiTemperature()
+{
+   return readPref<double>("ai_temperature");
+}
+
+core::Error UserPrefValues::setAiTemperature(double val)
+{
+   return writePref("ai_temperature", val);
+}
+
+/**
+ * The interaction mode for the AI assistant
+ */
+std::string UserPrefValues::aiInteractionMode()
+{
+   return readPref<std::string>("ai_interaction_mode");
+}
+
+core::Error UserPrefValues::setAiInteractionMode(std::string val)
+{
+   return writePref("ai_interaction_mode", val);
+}
+
+/**
+ * Allow the AI to search the web
+ */
+bool UserPrefValues::aiWebSearchEnabled()
+{
+   return readPref<bool>("ai_web_search_enabled");
+}
+
+core::Error UserPrefValues::setAiWebSearchEnabled(bool val)
+{
+   return writePref("ai_web_search_enabled", val);
+}
+
+/**
+ * Automatically accept file edit suggestions
+ */
+bool UserPrefValues::aiAutoAcceptEdits()
+{
+   return readPref<bool>("ai_auto_accept_edits");
+}
+
+core::Error UserPrefValues::setAiAutoAcceptEdits(bool val)
+{
+   return writePref("ai_auto_accept_edits", val);
+}
+
+/**
+ * Automatically accept console command suggestions
+ */
+bool UserPrefValues::aiAutoAcceptConsole()
+{
+   return readPref<bool>("ai_auto_accept_console");
+}
+
+core::Error UserPrefValues::setAiAutoAcceptConsole(bool val)
+{
+   return writePref("ai_auto_accept_console", val);
+}
+
+/**
+ * Automatically accept terminal command suggestions
+ */
+bool UserPrefValues::aiAutoAcceptTerminal()
+{
+   return readPref<bool>("ai_auto_accept_terminal");
+}
+
+core::Error UserPrefValues::setAiAutoAcceptTerminal(bool val)
+{
+   return writePref("ai_auto_accept_terminal", val);
+}
+
+/**
+ * Automatically run file execution suggestions
+ */
+bool UserPrefValues::aiAutoRunFiles()
+{
+   return readPref<bool>("ai_auto_run_files");
+}
+
+core::Error UserPrefValues::setAiAutoRunFiles(bool val)
+{
+   return writePref("ai_auto_run_files", val);
+}
+
+/**
+ * Automatically delete files when suggested
+ */
+bool UserPrefValues::aiAutoDeleteFiles()
+{
+   return readPref<bool>("ai_auto_delete_files");
+}
+
+core::Error UserPrefValues::setAiAutoDeleteFiles(bool val)
+{
+   return writePref("ai_auto_delete_files", val);
+}
+
+/**
+ * Allow auto-accept for all console commands
+ */
+bool UserPrefValues::aiAutoAcceptConsoleAllowAnything()
+{
+   return readPref<bool>("ai_auto_accept_console_allow_anything");
+}
+
+core::Error UserPrefValues::setAiAutoAcceptConsoleAllowAnything(bool val)
+{
+   return writePref("ai_auto_accept_console_allow_anything", val);
+}
+
+/**
+ * Allow auto-accept for all terminal commands
+ */
+bool UserPrefValues::aiAutoAcceptTerminalAllowAnything()
+{
+   return readPref<bool>("ai_auto_accept_terminal_allow_anything");
+}
+
+core::Error UserPrefValues::setAiAutoAcceptTerminalAllowAnything(bool val)
+{
+   return writePref("ai_auto_accept_terminal_allow_anything", val);
+}
+
+/**
+ * Allow auto-run for all files
+ */
+bool UserPrefValues::aiAutoRunFilesAllowAnything()
+{
+   return readPref<bool>("ai_auto_run_files_allow_anything");
+}
+
+core::Error UserPrefValues::setAiAutoRunFilesAllowAnything(bool val)
+{
+   return writePref("ai_auto_run_files_allow_anything", val);
+}
+
+/**
+ * Whitelist of console commands to auto-accept
+ */
+core::json::Array UserPrefValues::aiAutoAcceptConsoleAllowList()
+{
+   return readPref<core::json::Array>("ai_auto_accept_console_allow_list");
+}
+
+core::Error UserPrefValues::setAiAutoAcceptConsoleAllowList(core::json::Array val)
+{
+   return writePref("ai_auto_accept_console_allow_list", val);
+}
+
+/**
+ * Blocklist of console commands to never auto-accept
+ */
+core::json::Array UserPrefValues::aiAutoAcceptConsoleDenyList()
+{
+   return readPref<core::json::Array>("ai_auto_accept_console_deny_list");
+}
+
+core::Error UserPrefValues::setAiAutoAcceptConsoleDenyList(core::json::Array val)
+{
+   return writePref("ai_auto_accept_console_deny_list", val);
+}
+
+/**
+ * Whitelist of terminal commands to auto-accept
+ */
+core::json::Array UserPrefValues::aiAutoAcceptTerminalAllowList()
+{
+   return readPref<core::json::Array>("ai_auto_accept_terminal_allow_list");
+}
+
+core::Error UserPrefValues::setAiAutoAcceptTerminalAllowList(core::json::Array val)
+{
+   return writePref("ai_auto_accept_terminal_allow_list", val);
+}
+
+/**
+ * Blocklist of terminal commands to never auto-accept
+ */
+core::json::Array UserPrefValues::aiAutoAcceptTerminalDenyList()
+{
+   return readPref<core::json::Array>("ai_auto_accept_terminal_deny_list");
+}
+
+core::Error UserPrefValues::setAiAutoAcceptTerminalDenyList(core::json::Array val)
+{
+   return writePref("ai_auto_accept_terminal_deny_list", val);
+}
+
+/**
+ * Whitelist of file patterns to auto-run
+ */
+core::json::Array UserPrefValues::aiAutoRunFilesAllowList()
+{
+   return readPref<core::json::Array>("ai_auto_run_files_allow_list");
+}
+
+core::Error UserPrefValues::setAiAutoRunFilesAllowList(core::json::Array val)
+{
+   return writePref("ai_auto_run_files_allow_list", val);
+}
+
+/**
+ * Blocklist of file patterns to never auto-run
+ */
+core::json::Array UserPrefValues::aiAutoRunFilesDenyList()
+{
+   return readPref<core::json::Array>("ai_auto_run_files_deny_list");
+}
+
+core::Error UserPrefValues::setAiAutoRunFilesDenyList(core::json::Array val)
+{
+   return writePref("ai_auto_run_files_deny_list", val);
+}
+
+/**
+ * Custom rules for the AI assistant
+ */
+core::json::Array UserPrefValues::aiUserRules()
+{
+   return readPref<core::json::Array>("ai_user_rules");
+}
+
+core::Error UserPrefValues::setAiUserRules(core::json::Array val)
+{
+   return writePref("ai_user_rules", val);
+}
+
+/**
+ * Enable Bring Your Own Key for Anthropic
+ */
+bool UserPrefValues::aiByokAnthropicEnabled()
+{
+   return readPref<bool>("ai_byok_anthropic_enabled");
+}
+
+core::Error UserPrefValues::setAiByokAnthropicEnabled(bool val)
+{
+   return writePref("ai_byok_anthropic_enabled", val);
+}
+
+/**
+ * Enable Bring Your Own Key for OpenAI
+ */
+bool UserPrefValues::aiByokOpenaiEnabled()
+{
+   return readPref<bool>("ai_byok_openai_enabled");
+}
+
+core::Error UserPrefValues::setAiByokOpenaiEnabled(bool val)
+{
+   return writePref("ai_byok_openai_enabled", val);
+}
+
+/**
+ * Enable Bring Your Own Key for AWS SageMaker
+ */
+bool UserPrefValues::aiByokSagemakerEnabled()
+{
+   return readPref<bool>("ai_byok_sagemaker_enabled");
+}
+
+core::Error UserPrefValues::setAiByokSagemakerEnabled(bool val)
+{
+   return writePref("ai_byok_sagemaker_enabled", val);
 }
 
 std::vector<std::string> UserPrefValues::allKeys()
@@ -3593,6 +3918,7 @@ std::vector<std::string> UserPrefValues::allKeys()
       kConsoleLineLengthLimit,
       kConsoleMaxLines,
       kAnsiConsoleMode,
+      kLimitVisibleConsole,
       kShowInlineToolbarForRCodeChunks,
       kHighlightCodeChunks,
       kSaveFilesBeforeBuild,
@@ -3600,8 +3926,6 @@ std::vector<std::string> UserPrefValues::allKeys()
       kFontSizePoints,
       kEditorLineHeight,
       kHelpFontSizePoints,
-      kEnableMousewheelZoom,
-      kMousewheelZoomDebounceMs,
       kEditorTheme,
       kServerEditorFontEnabled,
       kServerEditorFont,
@@ -3630,6 +3954,7 @@ std::vector<std::string> UserPrefValues::allKeys()
       kHandleErrorsInUserCodeOnly,
       kAutoExpandErrorTracebacks,
       kCheckForUpdates,
+      kAutoUpdatesEnabled,
       kShowInternalFunctions,
       kShinyViewerType,
       kShinyBackgroundJobs,
@@ -3639,6 +3964,7 @@ std::vector<std::string> UserPrefValues::allKeys()
       kRmdPreferredTemplatePath,
       kRmdViewerType,
       kShowPublishDiagnostics,
+      kEnableCloudPublishUi,
       kPublishCheckCertificates,
       kUsePublishCaBundle,
       kPublishCaBundle,
@@ -3707,7 +4033,6 @@ std::vector<std::string> UserPrefValues::allKeys()
       kRestoreProjectRVersion,
       kClangVerbose,
       kSubmitCrashReports,
-      kEnableSplashScreen,
       kDefaultRVersion,
       kDataViewerMaxColumns,
       kDataViewerMaxCellSize,
@@ -3757,6 +4082,9 @@ std::vector<std::string> UserPrefValues::allKeys()
       kCheckNullExternalPointers,
       kUiLanguage,
       kAutohideMenubar,
+      kEnableSplashScreen,
+      kEnableMousewheelZoom,
+      kMousewheelZoomDebounceMs,
       kNativeFileDialogs,
       kDiscardPendingConsoleInputOnError,
       kEditorScrollMultiplier,
@@ -3777,6 +4105,29 @@ std::vector<std::string> UserPrefValues::allKeys()
       kReformatOnSave,
       kProjectUserDataDirectory,
       kConsoleHighlightConditions,
+      kAiSelectedModel,
+      kAiSecurityMode,
+      kAiTemperature,
+      kAiInteractionMode,
+      kAiWebSearchEnabled,
+      kAiAutoAcceptEdits,
+      kAiAutoAcceptConsole,
+      kAiAutoAcceptTerminal,
+      kAiAutoRunFiles,
+      kAiAutoDeleteFiles,
+      kAiAutoAcceptConsoleAllowAnything,
+      kAiAutoAcceptTerminalAllowAnything,
+      kAiAutoRunFilesAllowAnything,
+      kAiAutoAcceptConsoleAllowList,
+      kAiAutoAcceptConsoleDenyList,
+      kAiAutoAcceptTerminalAllowList,
+      kAiAutoAcceptTerminalDenyList,
+      kAiAutoRunFilesAllowList,
+      kAiAutoRunFilesDenyList,
+      kAiUserRules,
+      kAiByokAnthropicEnabled,
+      kAiByokOpenaiEnabled,
+      kAiByokSagemakerEnabled,
    });
 }
    

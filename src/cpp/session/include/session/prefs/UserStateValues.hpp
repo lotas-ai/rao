@@ -36,6 +36,7 @@ namespace prefs {
 #define kViewWindowBounds "windowBounds"
 #define kViewAccessibility "accessibility"
 #define kViewDisableRendererAccessibility "disableRendererAccessibility"
+#define kViewEnableSplashScreen "enableSplashScreen"
 #define kRemoteSession "remote_session"
 #define kRemoteSessionLastRemoteSessionUrl "lastRemoteSessionUrl"
 #define kRemoteSessionAuthCookies "authCookies"
@@ -115,6 +116,12 @@ namespace prefs {
 #define kZoteroDataDir "zotero_data_dir"
 #define kQuartoWebsiteSyncEditor "quarto_website_sync_editor"
 #define kRaoApiKey "rao_api_key"
+#define kAiTemperature "ai_temperature"
+#define kAiWorkingDirectory "ai_working_directory"
+#define kAiSagemakerEndpoint "ai_sagemaker_endpoint"
+#define kAiSagemakerRegion "ai_sagemaker_region"
+#define kByokAnthropicApiKey "byok_anthropic_api_key"
+#define kByokOpenaiApiKey "byok_openai_api_key"
 
 class UserStateValues: public Preferences
 {
@@ -301,16 +308,52 @@ public:
    core::Error setZoteroDataDir(std::string val);
 
    /**
+    * Sync source editor to Quarto website preview navigation.
+    */
+   bool quartoWebsiteSyncEditor();
+   core::Error setQuartoWebsiteSyncEditor(bool val);
+
+   /**
     * Key for making Rao API calls
     */
    std::string raoApiKey();
    core::Error setRaoApiKey(std::string val);
 
    /**
-    * Sync source editor to Quarto website preview navigation.
+    * Temperature setting for AI model responses
     */
-   bool quartoWebsiteSyncEditor();
-   core::Error setQuartoWebsiteSyncEditor(bool val);
+   double aiTemperature();
+   core::Error setAiTemperature(double val);
+
+   /**
+    * Last used working directory for AI conversations
+    */
+   std::string aiWorkingDirectory();
+   core::Error setAiWorkingDirectory(std::string val);
+
+   /**
+    * AWS SageMaker endpoint name
+    */
+   std::string aiSagemakerEndpoint();
+   core::Error setAiSagemakerEndpoint(std::string val);
+
+   /**
+    * AWS SageMaker region
+    */
+   std::string aiSagemakerRegion();
+   core::Error setAiSagemakerRegion(std::string val);
+
+   /**
+    * Bring Your Own Key for Anthropic API
+    */
+   std::string byokAnthropicApiKey();
+   core::Error setByokAnthropicApiKey(std::string val);
+
+   /**
+    * Bring Your Own Key for OpenAI API
+    */
+   std::string byokOpenaiApiKey();
+   core::Error setByokOpenaiApiKey(std::string val);
 
 };
 

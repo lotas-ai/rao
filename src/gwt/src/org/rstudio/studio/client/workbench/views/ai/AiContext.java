@@ -15,6 +15,7 @@ package org.rstudio.studio.client.workbench.views.ai;
 
 import org.rstudio.core.client.Debug;
 import org.rstudio.core.client.files.FileSystemItem;
+import org.rstudio.core.client.theme.ThemeHelper;
 import org.rstudio.studio.client.common.GlobalDisplay;
 import org.rstudio.studio.client.server.ServerError;
 import org.rstudio.studio.client.server.ServerRequestCallback;
@@ -500,13 +501,11 @@ public class AiContext
       Element containerElement = fileItemContainer.getElement();
       containerElement.getStyle().setProperty("display", "inline-flex");
       containerElement.getStyle().setProperty("alignItems", "center");
-      containerElement.getStyle().setProperty("backgroundColor", "white");
-      containerElement.getStyle().setProperty("border", "1px solid #cccccc");
-      containerElement.getStyle().setProperty("borderRadius", "3px");
       containerElement.getStyle().setProperty("padding", "1px 4px");
       containerElement.getStyle().setProperty("margin", "0 4px 3px 0");
       containerElement.getStyle().setProperty("maxWidth", "175px");
       containerElement.getStyle().setProperty("height", "18px");
+      containerElement.addClassName("ai-toolbar-button");
       containerElement.getStyle().setProperty("overflow", "hidden");
       containerElement.getStyle().setProperty("whiteSpace", "nowrap");
       containerElement.getStyle().setProperty("fontSize", "11px");
@@ -550,7 +549,7 @@ public class AiContext
       Element removeElement = removeButton.getElement();
       removeElement.getStyle().setProperty("marginLeft", "3px");
       removeElement.getStyle().setProperty("cursor", "pointer");
-      removeElement.getStyle().setProperty("color", "#999999");
+      removeElement.getStyle().setProperty("color", ThemeHelper.getSubtleText());
       removeElement.getStyle().setProperty("fontWeight", "bold");
       removeElement.getStyle().setProperty("fontSize", "12px");
       removeElement.getStyle().setProperty("lineHeight", "16px");
@@ -624,9 +623,7 @@ public class AiContext
       containerElement.getStyle().setProperty("display", "inline-flex");
       containerElement.getStyle().setProperty("alignItems", "center");
       // Always white background per spec
-      containerElement.getStyle().setProperty("backgroundColor", "white");
-      containerElement.getStyle().setProperty("border", "1px solid #cccccc");
-      containerElement.getStyle().setProperty("borderRadius", "3px");
+      containerElement.addClassName("ai-toolbar-button");
       containerElement.getStyle().setProperty("padding", "1px 4px");
       containerElement.getStyle().setProperty("margin", "0 4px 3px 0");
       containerElement.getStyle().setProperty("maxWidth", "175px");
@@ -647,23 +644,23 @@ public class AiContext
       String svg;
       if (isDirectory) {
          // Folder icon
-         svg = "<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
+         svg = "<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='" + org.rstudio.core.client.theme.ThemeHelper.getIconColor() + "' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
              + "<path d='M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'/>"
              + "</svg>";
       } else if ("file".equals(type)) {
          // File icon (page with folded corner)
-         svg = "<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
+         svg = "<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='" + org.rstudio.core.client.theme.ThemeHelper.getIconColor() + "' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
              + "<path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/>"
              + "<polyline points='14 2 14 8 20 8'/>"
              + "</svg>";
       } else if ("chat".equals(type)) {
          // Chat bubble
-         svg = "<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
+         svg = "<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='" + org.rstudio.core.client.theme.ThemeHelper.getIconColor() + "' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
              + "<path d='M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z'/>"
              + "</svg>";
       } else { // docs
          // Open book (Docs)
-         svg = "<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
+         svg = "<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='" + org.rstudio.core.client.theme.ThemeHelper.getIconColor() + "' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
              + "<path d='M12 7 A9 9 0 0 0 3 7'/>"
              + "<path d='M12 7 A9 9 0 0 1 21 7'/>"
              + "<path d='M3 7 L3 19'/>"
@@ -711,7 +708,7 @@ public class AiContext
       Element removeElement = removeButton.getElement();
       removeElement.getStyle().setProperty("marginLeft", "3px");
       removeElement.getStyle().setProperty("cursor", "pointer");
-      removeElement.getStyle().setProperty("color", "#999999");
+      removeElement.getStyle().setProperty("color", ThemeHelper.getSubtleText());
       removeElement.getStyle().setProperty("fontWeight", "bold");
       removeElement.getStyle().setProperty("fontSize", "12px");
       removeElement.getStyle().setProperty("lineHeight", "16px");
