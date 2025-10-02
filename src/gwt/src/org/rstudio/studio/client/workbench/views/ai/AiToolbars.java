@@ -15,6 +15,7 @@ package org.rstudio.studio.client.workbench.views.ai;
 
 import org.rstudio.core.client.ElementIds;
 import org.rstudio.core.client.command.KeyboardShortcut;
+import org.rstudio.core.client.theme.ThemeHelper;
 import org.rstudio.core.client.dom.WindowEx;
 import org.rstudio.core.client.theme.res.ThemeStyles;
 import org.rstudio.studio.client.common.AutoGlassPanel;
@@ -28,6 +29,7 @@ import org.rstudio.core.client.widget.ToolbarButton;
 import org.rstudio.core.client.events.SelectionCommitEvent;
 import org.rstudio.core.client.Debug;
 import org.rstudio.studio.client.workbench.commands.Commands;
+import com.google.gwt.event.shared.HandlerRegistration;
 
 import org.rstudio.studio.client.workbench.views.ai.search.AiSearch;
 import org.rstudio.studio.client.workbench.views.ai.widgets.AiStreamingPanel;
@@ -155,14 +157,12 @@ public class AiToolbars
       
       // Add a placeholder label at the top with light gray rounded rectangle (top corners only)
       FlowPanel topPlaceholderPanel = new FlowPanel();
-      topPlaceholderPanel.getElement().getStyle().setBackgroundColor("#f0f0f0");
+      // Background color and border colors handled by CSS theme classes
       topPlaceholderPanel.getElement().getStyle().setProperty("borderTopLeftRadius", "4px");
       topPlaceholderPanel.getElement().getStyle().setProperty("borderTopRightRadius", "4px");
       topPlaceholderPanel.getElement().getStyle().setProperty("borderBottomLeftRadius", "0px");
       topPlaceholderPanel.getElement().getStyle().setProperty("borderBottomRightRadius", "0px");
-      topPlaceholderPanel.getElement().getStyle().setProperty("borderTop", "1px solid #aaaaaa");
-      topPlaceholderPanel.getElement().getStyle().setProperty("borderLeft", "1px solid #aaaaaa");
-      topPlaceholderPanel.getElement().getStyle().setProperty("borderRight", "1px solid #aaaaaa");
+      topPlaceholderPanel.getElement().getStyle().setProperty("border", "1px solid " + ThemeHelper.getVisibleBorder());
       topPlaceholderPanel.getElement().getStyle().setProperty("borderBottom", "none");
       topPlaceholderPanel.getElement().getStyle().setPadding(0, Unit.PX);
       topPlaceholderPanel.getElement().getStyle().setPaddingTop(2, Unit.PX);
@@ -189,23 +189,20 @@ public class AiToolbars
       attachFileButton_.setStyleName("ai-attach-file-button");
       attachFileButton_.getElement().setAttribute("title", "Attach File or Directory for Context");
       Element attachButtonElement = attachFileButton_.getElement();
-      attachButtonElement.getStyle().setProperty("display", "inline-flex");
-      attachButtonElement.getStyle().setProperty("alignItems", "center");
-      attachButtonElement.getStyle().setProperty("justifyContent", "center");
-      attachButtonElement.getStyle().setProperty("backgroundColor", "white");
-      attachButtonElement.getStyle().setProperty("border", "1px solid #cccccc");
-      attachButtonElement.getStyle().setProperty("borderRadius", "3px");
-      attachButtonElement.getStyle().setProperty("padding", "1px 5px");
-      attachButtonElement.getStyle().setProperty("marginLeft", "3px");
+      attachButtonElement.addClassName("ai-toolbar-button");
       attachButtonElement.getStyle().setProperty("marginRight", "5px");
       attachButtonElement.getStyle().setProperty("cursor", "pointer");
-      attachButtonElement.getStyle().setProperty("color", "#555555");
-      attachButtonElement.getStyle().setProperty("fontSize", "11px");
+      attachButtonElement.getStyle().setProperty("color", ThemeHelper.getSubtleText());
+      attachButtonElement.getStyle().setProperty("fontSize", "12px");
+      attachButtonElement.getStyle().setProperty("fontFamily", "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif");
       attachButtonElement.getStyle().setProperty("height", "18px");
       attachButtonElement.getStyle().setProperty("lineHeight", "14px");
       attachButtonElement.getStyle().setProperty("verticalAlign", "middle");
       attachButtonElement.getStyle().setProperty("position", "relative");
       attachButtonElement.getStyle().setProperty("top", "0px");
+      attachButtonElement.getStyle().setProperty("display", "inline-flex");
+      attachButtonElement.getStyle().setProperty("alignItems", "center");
+      attachButtonElement.getStyle().setProperty("whiteSpace", "nowrap");
       
       // Create panel for selected files
       selectedFilesPanel_ = new FlowPanel();
@@ -226,8 +223,8 @@ public class AiToolbars
       
       // Add scrollbar styling for WebKit browsers
       selectedFilesElement.getStyle().setProperty("webkitScrollbarHeight", "4px");
-      selectedFilesElement.getStyle().setProperty("webkitScrollbarThumbColor", "#888888");
-      selectedFilesElement.getStyle().setProperty("webkitScrollbarTrackColor", "#f0f0f0");
+      selectedFilesElement.getStyle().setProperty("webkitScrollbarThumbColor", ThemeHelper.getScrollbarThumbColor());
+      selectedFilesElement.getStyle().setProperty("webkitScrollbarTrackColor", ThemeHelper.getScrollbarTrackColor());
       
       // Add specific webkit scrollbar styles using direct JS
       pane_.addWebkitScrollbarStyles(selectedFilesElement);
@@ -262,10 +259,11 @@ public class AiToolbars
             final PopupPanel menu = new PopupPanel(true, true);
             menu.setStyleName("");
             Element menuEl = menu.getElement();
-            menuEl.getStyle().setBackgroundColor("#ffffff");
-            menuEl.getStyle().setProperty("border", "1px solid #cccccc");
+            menuEl.addClassName("ai-menu-element");
+            menuEl.getStyle().setBackgroundColor(ThemeHelper.getBackground());
+            menuEl.getStyle().setProperty("border", "1px solid " + ThemeHelper.getVisibleBorder());
             menuEl.getStyle().setProperty("borderRadius", "4px");
-            menuEl.getStyle().setProperty("boxShadow", "0 2px 6px rgba(0,0,0,0.15)");
+            menuEl.getStyle().setProperty("boxShadow", "0 2px 6px " + ThemeHelper.getShadowColor());
 
             FlowPanel container = new FlowPanel();
             // Size to content (no fixed min width) and keep text on one line
@@ -286,7 +284,7 @@ public class AiToolbars
                      rowEl.getStyle().setPaddingLeft(6, Unit.PX);
                      rowEl.getStyle().setPaddingRight(6, Unit.PX);
                      rowEl.getStyle().setCursor(Style.Cursor.POINTER);
-                     rowEl.getStyle().setColor("#333333");
+                     rowEl.getStyle().setColor(ThemeHelper.getForeground());
                      rowEl.getStyle().setFontSize(11, Unit.PX); // match "@ Add context"
 
                      // Icon container
@@ -301,21 +299,21 @@ public class AiToolbars
                      Element textEl = textLabel.getElement();
                      textEl.getStyle().setMarginLeft(6, Unit.PX);
                      textEl.getStyle().setFontSize(11, Unit.PX);
-                     textEl.getStyle().setColor("#333333");
+                     textEl.getStyle().setColor(ThemeHelper.getForeground());
 
                      // Attach hover behavior on the whole row
                      row.addDomHandler(new com.google.gwt.event.dom.client.MouseOverHandler() {
                         @Override
                         public void onMouseOver(MouseOverEvent e) {
-                           rowEl.getStyle().setBackgroundColor("#f0f0f0");
-                           textEl.getStyle().setColor("#555555");
+                           rowEl.getStyle().setBackgroundColor(ThemeHelper.getButtonBackground());
+                           textEl.getStyle().setColor(ThemeHelper.getSubtleText());
                         }
                      }, MouseOverEvent.getType());
                      row.addDomHandler(new com.google.gwt.event.dom.client.MouseOutHandler() {
                         @Override
                         public void onMouseOut(MouseOutEvent e) {
                            rowEl.getStyle().setBackgroundColor("transparent");
-                           textEl.getStyle().setColor("#333333");
+                           textEl.getStyle().setColor(ThemeHelper.getForeground());
                         }
                      }, MouseOutEvent.getType());
 
@@ -347,7 +345,7 @@ public class AiToolbars
                Element iconSpan = filesItem.getElement().getFirstChildElement();
                if (iconSpan != null) {
                   iconSpan.setInnerHTML(
-                     "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
+                     "<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='" + org.rstudio.core.client.theme.ThemeHelper.getIconColor() + "' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'>"
                      + "<path d='M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z'/>"
                      + "<polyline points='14 2 14 8 20 8'/></svg>");
                }
@@ -359,10 +357,11 @@ public class AiToolbars
                @Override public void onClick(ClickEvent e){
                   final PopupPanel picker = new PopupPanel(true, true);
                   Element pickerEl = picker.getElement();
-                  pickerEl.getStyle().setBackgroundColor("#ffffff");
-                  pickerEl.getStyle().setProperty("border", "1px solid #cccccc");
+                  pickerEl.addClassName("ai-menu-element");
+                  pickerEl.getStyle().setBackgroundColor(ThemeHelper.getBackground());
+                  pickerEl.getStyle().setProperty("border", "1px solid " + ThemeHelper.getVisibleBorder());
                   pickerEl.getStyle().setProperty("borderRadius", "4px");
-                  pickerEl.getStyle().setProperty("boxShadow", "0 2px 6px rgba(0,0,0,0.15)");
+                  pickerEl.getStyle().setProperty("boxShadow", "0 2px 6px " + ThemeHelper.getShadowColor());
 
                   final FlowPanel panel = new FlowPanel();
                   panel.getElement().getStyle().setProperty("display", "block");
@@ -378,8 +377,7 @@ public class AiToolbars
                   input.getElement().getStyle().setPaddingLeft(6, Unit.PX);
                   input.getElement().getStyle().setPaddingRight(6, Unit.PX);
                   input.getElement().getStyle().setMargin(0, Unit.PX);
-                  input.getElement().getStyle().setProperty("boxSizing", "border-box");
-                  input.getElement().getStyle().setProperty("border", "1px solid #cccccc");
+                  input.getElement().addClassName("ai-input-field");
                   panel.add(input);
 
                   final FlowPanel results = new FlowPanel();
@@ -418,10 +416,10 @@ public class AiToolbars
                                     label.getElement().getStyle().setFontSize(11, Unit.PX);
                                     row.add(label);
                                     row.addDomHandler(new MouseOverHandler(){
-                                       @Override public void onMouseOver(MouseOverEvent evt){ row.getElement().getStyle().setBackgroundColor("#e6e6e6"); }
+                                       @Override public void onMouseOver(MouseOverEvent evt){ row.getElement().getStyle().setBackgroundColor(ThemeHelper.getInactiveBackground()); }
                                     }, MouseOverEvent.getType());
                                     row.addDomHandler(new MouseOutHandler(){
-                                       @Override public void onMouseOut(MouseOutEvent evt){ row.getElement().getStyle().setBackgroundColor("#ffffff"); }
+                                       @Override public void onMouseOut(MouseOutEvent evt){ row.getElement().getStyle().setBackgroundColor(ThemeHelper.getBackground()); }
                                     }, MouseOutEvent.getType());
                                     row.addDomHandler(new ClickHandler(){
                                        @Override public void onClick(ClickEvent e2){
@@ -488,13 +486,13 @@ public class AiToolbars
                Element rowEl = chatItem.getElement();
                Element first = rowEl.getFirstChildElement();
                if (first != null) {
-                  first.setInnerHTML("<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z'/></svg>");
+                  first.setInnerHTML("<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='" + org.rstudio.core.client.theme.ThemeHelper.getIconColor() + "' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z'/></svg>");
                }
                com.google.gwt.dom.client.Element spacer = com.google.gwt.dom.client.Document.get().createSpanElement();
                spacer.getStyle().setProperty("flex", "1 1 auto");
                rowEl.appendChild(spacer);
                com.google.gwt.dom.client.Element chev = com.google.gwt.dom.client.Document.get().createSpanElement();
-               chev.setInnerHTML("<svg xmlns='http://www.w3.org/2000/svg' width='12' height='14' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='9 6 15 12 9 18'/></svg>");
+               chev.setInnerHTML("<svg xmlns='http://www.w3.org/2000/svg' width='12' height='14' viewBox='0 0 24 24' fill='none' stroke='" + org.rstudio.core.client.theme.ThemeHelper.getIconColor() + "' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='9 6 15 12 9 18'/></svg>");
                chev.getStyle().setMarginLeft(6, Unit.PX);
                chev.getStyle().setMarginTop(2, Unit.PX);
                rowEl.appendChild(chev);
@@ -506,10 +504,11 @@ public class AiToolbars
                @Override public void onClick(ClickEvent e){
                   final PopupPanel picker = new PopupPanel(true, true);
                   Element pickerEl = picker.getElement();
-                  pickerEl.getStyle().setBackgroundColor("#ffffff");
-                  pickerEl.getStyle().setProperty("border", "1px solid #cccccc");
+                  pickerEl.addClassName("ai-menu-element");
+                  pickerEl.getStyle().setBackgroundColor(ThemeHelper.getBackground());
+                  pickerEl.getStyle().setProperty("border", "1px solid " + ThemeHelper.getVisibleBorder());
                   pickerEl.getStyle().setProperty("borderRadius", "4px");
-                  pickerEl.getStyle().setProperty("boxShadow", "0 2px 6px rgba(0,0,0,0.15)");
+                  pickerEl.getStyle().setProperty("boxShadow", "0 2px 6px " + ThemeHelper.getShadowColor());
 
                   final FlowPanel panel = new FlowPanel();
                   panel.getElement().getStyle().setProperty("display", "block");
@@ -525,8 +524,7 @@ public class AiToolbars
                   input.getElement().getStyle().setPaddingLeft(6, Unit.PX);
                   input.getElement().getStyle().setPaddingRight(6, Unit.PX);
                   input.getElement().getStyle().setMargin(0, Unit.PX);
-                  input.getElement().getStyle().setProperty("boxSizing", "border-box");
-                  input.getElement().getStyle().setProperty("border", "1px solid #cccccc");
+                  input.getElement().addClassName("ai-input-field");
                   panel.add(input);
 
                   final FlowPanel results = new FlowPanel();
@@ -562,10 +560,10 @@ public class AiToolbars
                                  label.getElement().getStyle().setFontSize(11, Unit.PX);
                                  row.add(label);
                                  row.addDomHandler(new MouseOverHandler(){
-                                    @Override public void onMouseOver(MouseOverEvent evt){ row.getElement().getStyle().setBackgroundColor("#e6e6e6"); }
+                                    @Override public void onMouseOver(MouseOverEvent evt){ row.getElement().getStyle().setBackgroundColor(ThemeHelper.getInactiveBackground()); }
                                  }, MouseOverEvent.getType());
                                  row.addDomHandler(new MouseOutHandler(){
-                                    @Override public void onMouseOut(MouseOutEvent evt){ row.getElement().getStyle().setBackgroundColor("#ffffff"); }
+                                    @Override public void onMouseOut(MouseOutEvent evt){ row.getElement().getStyle().setBackgroundColor(ThemeHelper.getBackground()); }
                                  }, MouseOutEvent.getType());
                                  row.addDomHandler(new ClickHandler(){
                                     @Override public void onClick(ClickEvent e2){
@@ -627,13 +625,13 @@ public class AiToolbars
                Element rowEl = docsItem.getElement();
                Element first = rowEl.getFirstChildElement();
                if (first != null) {
-                  first.setInnerHTML("<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M12 7 A9 9 0 0 0 3 7'/><path d='M12 7 A9 9 0 0 1 21 7'/><path d='M3 7 L3 19'/><path d='M21 7 L21 19'/><path d='M3 19 Q7 16 12 19'/><path d='M21 19 Q17 16 12 19'/><path d='M12 8 L12 19'/></svg>");
+                  first.setInnerHTML("<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='" + ThemeHelper.getIconColor() + "' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'><path d='M12 7 A9 9 0 0 0 3 7'/><path d='M12 7 A9 9 0 0 1 21 7'/><path d='M3 7 L3 19'/><path d='M21 7 L21 19'/><path d='M3 19 Q7 16 12 19'/><path d='M21 19 Q17 16 12 19'/><path d='M12 8 L12 19'/></svg>");
                }
                com.google.gwt.dom.client.Element spacer = com.google.gwt.dom.client.Document.get().createSpanElement();
                spacer.getStyle().setProperty("flex", "1 1 auto");
                rowEl.appendChild(spacer);
                com.google.gwt.dom.client.Element chev = com.google.gwt.dom.client.Document.get().createSpanElement();
-               chev.setInnerHTML("<svg xmlns='http://www.w3.org/2000/svg' width='12' height='14' viewBox='0 0 24 24' fill='none' stroke='#555' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='9 6 15 12 9 18'/></svg>");
+               chev.setInnerHTML("<svg xmlns='http://www.w3.org/2000/svg' width='12' height='14' viewBox='0 0 24 24' fill='none' stroke='" + org.rstudio.core.client.theme.ThemeHelper.getIconColor() + "' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='9 6 15 12 9 18'/></svg>");
                chev.getStyle().setMarginLeft(6, Unit.PX);
                chev.getStyle().setMarginTop(2, Unit.PX);
                rowEl.appendChild(chev);
@@ -659,16 +657,16 @@ public class AiToolbars
       
       // Create a container for both search input and toolbar with a shared border
       FlowPanel searchAndToolbarWrapper = new FlowPanel();
-      searchAndToolbarWrapper.getElement().getStyle().setProperty("border", "1px solid #aaaaaa");
+      searchAndToolbarWrapper.getElement().getStyle().setProperty("border", "1px solid " + ThemeHelper.getVisibleBorder());
       searchAndToolbarWrapper.getElement().getStyle().setProperty("borderRadius", "8px");
       searchAndToolbarWrapper.getElement().getStyle().setProperty("margin", "0 10px");
       searchAndToolbarWrapper.getElement().getStyle().setProperty("overflow", "hidden");
-      searchAndToolbarWrapper.getElement().getStyle().setProperty("backgroundColor", "#ffffff");
+      // Background color handled by CSS theme classes
       searchAndToolbarWrapper.getElement().getStyle().setProperty("paddingBottom", "0px");
       
       // Style the search widget for a clean appearance
       searchWidgetWidget.getElement().getStyle().setWidth(100, Unit.PCT);
-      searchWidgetWidget.getElement().getStyle().setBackgroundColor("#ffffff");
+      // Background color handled by CSS theme classes via ai-modal-background
       searchWidgetWidget.getElement().getStyle().setPaddingLeft(5, Unit.PX);
       searchWidgetWidget.getElement().getStyle().setPaddingRight(5, Unit.PX);
       searchWidgetWidget.getElement().getStyle().setProperty("border", "none"); // Ensure no border on widget
@@ -688,7 +686,7 @@ public class AiToolbars
          input.getStyle().setProperty("boxShadow", "none !important");
          input.getStyle().setProperty("outlineStyle", "none !important");
          input.getStyle().setProperty("outline", "none !important");
-         input.getStyle().setBackgroundColor("#ffffff");
+         // Background color handled by CSS theme classes
          input.getStyle().setPadding(8, Unit.PX);
          input.getStyle().setWidth(100, Unit.PCT);
          input.getStyle().setProperty("boxSizing", "border-box");
@@ -717,7 +715,7 @@ public class AiToolbars
          searchElement.getStyle().setWidth(100, Unit.PCT);
          searchElement.getStyle().setProperty("border", "none !important");
          searchElement.getStyle().setProperty("boxShadow", "none !important");
-         searchElement.getStyle().setBackgroundColor("#ffffff");
+         // Background color handled by CSS theme classes
          
          // Find all direct children of the search element and set them to 100% width
          NodeList<Element> children = searchElement.getChildNodes().cast();
@@ -727,7 +725,7 @@ public class AiToolbars
                child.getStyle().setWidth(100, Unit.PCT);
                child.getStyle().setProperty("border", "none !important");
                child.getStyle().setProperty("boxShadow", "none !important");
-               child.getStyle().setBackgroundColor("#ffffff");
+               // Background color handled by CSS theme classes
             }
          }
       }
@@ -743,7 +741,7 @@ public class AiToolbars
       searchToolbar_.getElement().getStyle().setProperty("borderTop", "none");
       searchToolbar_.getElement().getStyle().setPaddingTop(2, Unit.PX); // Even less padding on top
       searchToolbar_.getElement().getStyle().setPaddingBottom(0, Unit.PX); // Remove bottom padding entirely
-      searchToolbar_.getElement().getStyle().setBackgroundColor("#ffffff");
+      // Background color handled by CSS theme classes
       searchToolbar_.getElement().getStyle().setWidth(100, Unit.PCT);
       searchToolbar_.getElement().getStyle().setBorderWidth(0, Unit.PX);
       searchToolbar_.getElement().getStyle().setProperty("zIndex", "102"); // Bring toolbar to front
@@ -771,18 +769,41 @@ public class AiToolbars
       attachmentMenuContainer_ = new SimplePanel();
       // searchToolbar_.addLeftWidget(attachmentMenuContainer_); // DISABLED: Comment out to hide attachment menu container
       
-      // Add the image attachment button in place of the old attachment button
-      ToolbarButton imageButton = commands_.aiAttachImage().createToolbarButton();
-      imageButton.getElement().getStyle().setMarginLeft(0, Unit.PX);
-      imageButton.getElement().getStyle().setMarginRight(0, Unit.PX);
-      imageButton.getElement().getStyle().setPaddingRight(0, Unit.PX);
-      imageButton.getElement().getStyle().setPaddingLeft(0, Unit.PX);
-      imageButton.getElement().getStyle().setPaddingTop(0, Unit.PX);
-      imageButton.getElement().getStyle().setPaddingBottom(0, Unit.PX);
-      imageButton.getElement().getStyle().setProperty("transform", "scale(1.1)");
-      imageButton.getElement().getStyle().setBackgroundColor("transparent");
-      imageButton.getElement().getStyle().setProperty("overflow", "visible"); // Allow content to show outside button bounds
-      imageButton.getElement().getStyle().setMarginTop(-7, Unit.PX); // Move up slightly to match send button height
+      // Add the image attachment button using graph icon SVG
+      FlowPanel imageButton = new FlowPanel();
+      imageButton.addStyleName("ai-image-button");
+      Element imageButtonElement = imageButton.getElement();
+      imageButtonElement.getStyle().setProperty("display", "inline-flex");
+      imageButtonElement.getStyle().setProperty("alignItems", "center");
+      imageButtonElement.getStyle().setProperty("justifyContent", "center");
+      imageButtonElement.getStyle().setProperty("width", "20px");
+      imageButtonElement.getStyle().setProperty("height", "20px");
+      imageButtonElement.getStyle().setProperty("borderRadius", "2px");
+      imageButtonElement.getStyle().setProperty("backgroundColor", "transparent");
+      imageButtonElement.getStyle().setProperty("border", "none");
+      imageButtonElement.getStyle().setProperty("cursor", "pointer");
+      imageButtonElement.getStyle().setProperty("padding", "2px");
+      imageButtonElement.getStyle().setProperty("marginLeft", "0px");
+      imageButtonElement.getStyle().setProperty("marginRight", "0px");
+      
+      // Create graph icon SVG (codicon-graph) - flipped right-side up
+      imageButtonElement.setInnerHTML(
+         "<svg width='16' height='16' viewBox='0 0 300 300' fill='" + ThemeHelper.getForeground() + "'>" +
+         "<g transform='translate(0, 300) scale(1, -1)'>" +
+         "<path d='M28 38H281V56H38V300H19V47ZM56 84V234L66 244H103L113 234V84L103 75H66ZM94 94V225H75V94ZM206 272V84L216 75H253L263 84V272L253 281H216ZM244 263V94H225V263ZM131 84V197L141 206H178L188 197V84L178 75H141ZM169 94V188H150V94Z'/>" +
+         "</g></svg>"
+      );
+      
+      // Hover effects removed - handled by CSS with transparent background
+      
+      // Add click handler to trigger the command
+      imageButton.addDomHandler(new ClickHandler() {
+         @Override
+         public void onClick(ClickEvent event) {
+            commands_.aiAttachImage().execute();
+         }
+      }, ClickEvent.getType());
+      
       searchToolbar_.addLeftWidget(imageButton);
       
       // Container for image menu that will appear to the right of the button
@@ -792,40 +813,35 @@ public class AiToolbars
       imageMenuContainer_.getElement().getStyle().setProperty("alignItems", "center");
       searchToolbar_.addLeftWidget(imageMenuContainer_);
       
-      // Create a circular button with a right-pointing triangle
+      // Create send/stop button using codicons
       FlowPanel sendButton = new FlowPanel();
       sendButton.addStyleName("ai-send-button");
       Element sendButtonElement = sendButton.getElement();
       sendButtonElement.getStyle().setProperty("display", "inline-flex");
       sendButtonElement.getStyle().setProperty("alignItems", "center");
       sendButtonElement.getStyle().setProperty("justifyContent", "center");
-      sendButtonElement.getStyle().setProperty("width", "19px");
-      sendButtonElement.getStyle().setProperty("height", "19px");
-      sendButtonElement.getStyle().setProperty("borderRadius", "50%");
-      sendButtonElement.getStyle().setProperty("backgroundColor", "#000000");
-      sendButtonElement.getStyle().setProperty("border", "1px solid #000000");
+      sendButtonElement.getStyle().setProperty("width", "17px");
+      sendButtonElement.getStyle().setProperty("height", "17px");
+      sendButtonElement.getStyle().setProperty("borderRadius", "2px");
+      sendButtonElement.getStyle().setProperty("backgroundColor", "transparent");
+      sendButtonElement.getStyle().setProperty("border", "none");
       sendButtonElement.getStyle().setProperty("cursor", "pointer");
-      sendButtonElement.getStyle().setProperty("marginRight", "9px");
+      sendButtonElement.getStyle().setProperty("marginRight", "2px");
+      sendButtonElement.getStyle().setProperty("padding", "2px");
       
       // Store the button element for later transformation
       sendButtonElement_ = sendButtonElement;
       
-      // Initialize in send mode (triangle)
+      // Initialize in send mode
       isInCancelMode_ = false;
       
-      // Create a div for the triangle
-      Element triangle = Document.get().createDivElement();
-      
-      // Style it as a right-pointing triangle with slightly rounded appearance
-      triangle.getStyle().setProperty("width", "0");
-      triangle.getStyle().setProperty("height", "0");
-      triangle.getStyle().setProperty("borderTop", "6px solid transparent");
-      triangle.getStyle().setProperty("borderBottom", "6px solid transparent");
-      triangle.getStyle().setProperty("borderLeft", "9px solid white");
-      triangle.getStyle().setProperty("marginLeft", "3px");
-      
-      // Add the triangle to the button
-      sendButtonElement.appendChild(triangle);
+      // Create send icon SVG (codicon-send) - flipped right-side up
+      sendButtonElement.setInnerHTML(
+         "<svg width='16' height='16' viewBox='0 0 300 300' fill='" + ThemeHelper.getForeground() + "'>" +
+         "<g transform='translate(0, 300) scale(1, -1)'>" +
+         "<path d='M19 264 33 272 281 160V143L33 31L19 39L48 150ZM68 141 44 54 253 152 44 247 68 161 169 159V141Z'/>" +
+         "</g></svg>"
+      );
       
       // Add direct GWT click handler to handle cancel functionality when in cancel mode
       sendButton.addDomHandler(new ClickHandler() {
@@ -888,20 +904,112 @@ public class AiToolbars
          }
       }, ClickEvent.getType());
       
-      // Add hover effects
-      sendButton.addDomHandler(new MouseOverHandler() {
-         @Override
-         public void onMouseOver(MouseOverEvent event) {
-            sendButtonElement.getStyle().setBackgroundColor("#333333"); // Darker hover state
-         }
-      }, MouseOverEvent.getType());
+      // Hover effects removed - handled by CSS with transparent background
       
-      sendButton.addDomHandler(new MouseOutHandler() {
+      // Create mode toggle button with dropdown (bottom right, before send button)
+      // Use a Label to match the @ button styling exactly
+      modeToggleButton_ = new Label();
+      updateModeToggleButtonContent("agent"); // Initialize with agent mode
+      modeToggleButton_.setTitle("Agent mode - proposes actions. Click to open mode menu.");
+      modeToggleButton_.setStyleName("ai-mode-toggle-button");
+      
+      Element modeButtonElement = modeToggleButton_.getElement();
+      modeButtonElement.addClassName("ai-toolbar-button");
+      modeButtonElement.getStyle().setProperty("marginRight", "8px");
+      modeButtonElement.getStyle().setProperty("cursor", "pointer");
+      modeButtonElement.getStyle().setProperty("color", ThemeHelper.getSubtleText());
+      modeButtonElement.getStyle().setProperty("fontSize", "12px");
+      modeButtonElement.getStyle().setProperty("fontFamily", "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif");
+      modeButtonElement.getStyle().setProperty("height", "18px");
+      modeButtonElement.getStyle().setProperty("lineHeight", "14px");
+      modeButtonElement.getStyle().setProperty("verticalAlign", "middle");
+      modeButtonElement.getStyle().setProperty("position", "relative");
+      modeButtonElement.getStyle().setProperty("top", "0px");
+      
+      // Create dropdown menu as a PopupPanel to avoid overflow clipping
+      modeDropdownPopup_ = new PopupPanel(true, false); // autoHide=true, modal=false
+      modeDropdownPopup_.setStyleName("ai-mode-dropdown-popup");
+      
+      FlowPanel modeDropdownMenu_ = new FlowPanel();
+      modeDropdownMenu_.setStyleName("ai-mode-dropdown");
+      Element dropdownElement = modeDropdownMenu_.getElement();
+      dropdownElement.getStyle().setProperty("padding", "2px");
+      dropdownElement.getStyle().setProperty("backgroundColor", ThemeHelper.getBackground());
+      dropdownElement.getStyle().setProperty("border", "1px solid " + ThemeHelper.getVisibleBorder());
+      dropdownElement.getStyle().setProperty("borderRadius", "3px");
+      dropdownElement.getStyle().setProperty("minWidth", "100px");
+      
+      // Create Ask option
+      Label askOption = new Label();
+      askOption.getElement().setInnerHTML(
+         "<svg width='14' height='14' viewBox='0 0 300 300' style='position: relative; top: 1px; margin-right: 4px;' fill='currentColor'>" +
+         "<g transform='translate(0, 300) scale(1, -1)'>" +
+         "<path d='M272 263H28L19 253V84L28 75H75V28L91 21L145 75H272L281 84V253ZM263 94H141L134 91L94 51V84L84 94H38V244H263Z'/>" +
+         "</g></svg>Ask"
+      );
+      askOption.setStyleName("ai-mode-option");
+      Element askElement = askOption.getElement();
+      askElement.getStyle().setProperty("padding", "3px 6px");
+      askElement.getStyle().setProperty("cursor", "pointer");
+      askElement.getStyle().setProperty("fontSize", "12px");
+      askElement.getStyle().setProperty("fontFamily", "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif");
+      askElement.getStyle().setProperty("color", ThemeHelper.getSubtleText());
+      askElement.getStyle().setProperty("display", "flex");
+      askElement.getStyle().setProperty("alignItems", "center");
+      askElement.getStyle().setProperty("borderRadius", "2px");
+      askElement.getStyle().setProperty("borderBottom", "1px solid " + ThemeHelper.getVisibleBorder());
+      
+      askOption.addClickHandler(new ClickHandler() {
          @Override
-         public void onMouseOut(MouseOutEvent event) {
-            sendButtonElement.getStyle().setBackgroundColor("#000000"); // Back to black
+         public void onClick(ClickEvent event) {
+            selectInteractionMode("ask");
+            event.stopPropagation();
          }
-      }, MouseOutEvent.getType());
+      });
+      
+      // Create Agent option
+      Label agentOption = new Label();
+      agentOption.getElement().setInnerHTML(
+         "<svg width='14' height='14' viewBox='0 0 300 300' style='position: relative; top: 1px; margin-right: 4px;' fill='currentColor'>" +
+         "<g transform='translate(0, 300) scale(1, -1)'>" +
+         "<path d='M248 281H221L66 127L63 122L19 45L45 19L122 63L127 66L281 221V248ZM45 45 74 101 101 74ZM117 84 84 117 234 267 267 234Z'/>" +
+         "</g></svg>Agent"
+      );
+      agentOption.setStyleName("ai-mode-option");
+      Element agentElement = agentOption.getElement();
+      agentElement.getStyle().setProperty("padding", "3px 6px");
+      agentElement.getStyle().setProperty("cursor", "pointer");
+      agentElement.getStyle().setProperty("fontSize", "12px");
+      agentElement.getStyle().setProperty("fontFamily", "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif");
+      agentElement.getStyle().setProperty("color", ThemeHelper.getSubtleText());
+      agentElement.getStyle().setProperty("display", "flex");
+      agentElement.getStyle().setProperty("alignItems", "center");
+      agentElement.getStyle().setProperty("borderRadius", "2px");
+      
+      agentOption.addClickHandler(new ClickHandler() {
+         @Override
+         public void onClick(ClickEvent event) {
+            selectInteractionMode("agent");
+            event.stopPropagation();
+         }
+      });
+      
+      modeDropdownMenu_.add(askOption);
+      modeDropdownMenu_.add(agentOption);
+      
+      // Add the dropdown content to the popup
+      modeDropdownPopup_.setWidget(modeDropdownMenu_);
+      
+      // Button click handler to toggle dropdown
+      modeToggleButton_.addClickHandler(new ClickHandler() {
+         @Override
+         public void onClick(ClickEvent event) {
+            toggleModeDropdown();
+            event.stopPropagation();
+         }
+      });
+      
+      searchToolbar_.addRightWidget(modeToggleButton_);
       
       // Add the send button to the right side of the toolbar
       searchToolbar_.addRightWidget(sendButton);
@@ -912,19 +1020,24 @@ public class AiToolbars
       // Add the wrapper to the content panel
       contentPanel.add(searchAndToolbarWrapper);
       
-      // Wrap the content panel in the search container with clean styling
+      // Create ace_editor_theme wrapper (like streaming panel has)
+      SimplePanel aceWrapper = new SimplePanel();
+      aceWrapper.addStyleName("ace_editor");
+      aceWrapper.addStyleName("ace_editor_theme");
+      aceWrapper.setWidget(contentPanel);
+      
+      // Wrap the ace wrapper in the search container
       searchContainer = new SimplePanel();
-      searchContainer.setWidget(contentPanel);
+      searchContainer.setWidget(aceWrapper);
       searchContainer.setStyleName("rstudio-AiSearchContainer");
       
-      // Create a clean white container with NO border
+      // Create a clean theme-aware container with NO border
       Element containerElement = searchContainer.getElement();
       containerElement.getStyle().setProperty("minHeight", "100px");
       containerElement.getStyle().setProperty("height", "auto");
       containerElement.getStyle().setProperty("display", "block");
       containerElement.getStyle().setProperty("position", "relative");
       containerElement.getStyle().setProperty("zIndex", "100");
-      containerElement.getStyle().setProperty("backgroundColor", "#ffffff");
       containerElement.getStyle().setProperty("border", "none"); // No border on container
       containerElement.getStyle().setProperty("margin", "10px 15px");
       containerElement.getStyle().setProperty("padding", "0");
@@ -948,7 +1061,6 @@ public class AiToolbars
                containerElement.getStyle().setProperty("height", "auto");
                containerElement.getStyle().setProperty("position", "relative");
                containerElement.getStyle().setProperty("zIndex", "100");
-               containerElement.getStyle().setProperty("backgroundColor", "#ffffff"); // Keep white
                containerElement.getStyle().setProperty("border", "none"); // No border on container
                containerElement.getStyle().setProperty("margin", "10px 15px"); // Maintain margin
 
@@ -969,12 +1081,12 @@ public class AiToolbars
       searchWidgetWidget.getElement().getStyle().setMarginBottom(0, Unit.PX);
       
       // Style the streaming panel but DON'T add it yet - view manager will control this
-      
+      // Background comes from ace_editor_theme class (from .rstheme files)
       streamingPanel_.setSize("100%", "100%");
-      streamingPanel_.getElement().getStyle().setProperty("border", "1px solid #ddd");
       streamingPanel_.getElement().getStyle().setProperty("borderRadius", "4px");
-      streamingPanel_.getElement().getStyle().setProperty("backgroundColor", "#ffffff");
       streamingPanel_.getElement().getStyle().setProperty("overflow", "auto");
+      // Clear any background that might override ace_editor_theme
+      streamingPanel_.getElement().getStyle().clearBackgroundColor();
 
       
       // Schedule a deferred task to ensure proper rendering of the search widget
@@ -1491,6 +1603,10 @@ public class AiToolbars
    // Add a flag to track button mode - true for cancel mode, false for send mode
    private boolean isInCancelMode_ = false;
    
+   // Interaction mode toggle button
+   private Label modeToggleButton_;
+   private PopupPanel modeDropdownPopup_;
+   
    /**
     * Recursively searches for an input or textarea element within the given element's children
     */
@@ -1573,23 +1689,20 @@ public class AiToolbars
     */
    public void setButtonToCancelMode() {
       if (sendButtonElement_ != null) {
-         // Remove all child elements (the triangle)
-         while (sendButtonElement_.getFirstChild() != null) {
-            sendButtonElement_.removeChild(sendButtonElement_.getFirstChild());
-         }
+         // Replace with stop icon SVG (codicon-primitive-square) - flipped right-side up
+         sendButtonElement_.setInnerHTML(
+            "<svg width='16' height='16' viewBox='0 0 300 300' fill='" + ThemeHelper.getForeground() + "'>" +
+            "<g transform='translate(0, 300) scale(1, -1)'>" +
+            "<path d='M66 225 75 234H225L234 225V75L225 66H75L66 75ZM84 216V84H216V216Z'/>" +
+            "</g></svg>"
+         );
          
-         // Create a square element with rounded corners
-         Element square = Document.get().createDivElement();
-         square.getStyle().setProperty("width", "9px");
-         square.getStyle().setProperty("height", "9px");
-         square.getStyle().setProperty("backgroundColor", "white");
-         square.getStyle().setProperty("borderRadius", "2px");
-         square.getStyle().setProperty("display", "block");
-         square.getStyle().setProperty("flexShrink", "0");
-         square.getStyle().setProperty("position", "relative");
+         // Add circular border inline (inline styles override CSS classes)
+         sendButtonElement_.getStyle().setProperty("border", "1px solid " + ThemeHelper.getForeground());
+         sendButtonElement_.getStyle().setProperty("borderRadius", "50%");
          
-         // Add the square to the button
-         sendButtonElement_.appendChild(square);
+         // Add the ai-stop-mode class for additional styling hooks
+         sendButtonElement_.addClassName("ai-stop-mode");
          
          // Update mode flag
          isInCancelMode_ = true;
@@ -1597,28 +1710,24 @@ public class AiToolbars
    }
    
    /**
-    * Transforms the cancel button (square) back to a send button (triangle)
+    * Transforms the cancel button (stop icon) back to a send button (send icon)
     */
    public void setButtonToSendMode() {
       if (sendButtonElement_ != null) {
-         // Remove all child elements (the square)
-         while (sendButtonElement_.getFirstChild() != null) {
-            sendButtonElement_.removeChild(sendButtonElement_.getFirstChild());
-         }
+         // Replace with send icon SVG (codicon-send) - flipped right-side up
+         sendButtonElement_.setInnerHTML(
+            "<svg width='16' height='16' viewBox='0 0 300 300' fill='" + ThemeHelper.getForeground() + "'>" +
+            "<g transform='translate(0, 300) scale(1, -1)'>" +
+            "<path d='M19 264 33 272 281 160V143L33 31L19 39L48 150ZM68 141 44 54 253 152 44 247 68 161 169 159V141Z'/>" +
+            "</g></svg>"
+         );
          
-         // Create a div for the triangle
-         Element triangle = Document.get().createDivElement();
+         // Remove circular border - restore original inline styles
+         sendButtonElement_.getStyle().setProperty("border", "none");
+         sendButtonElement_.getStyle().setProperty("borderRadius", "2px");
          
-         // Style it as a right-pointing triangle with slightly rounded appearance
-         triangle.getStyle().setProperty("width", "0");
-         triangle.getStyle().setProperty("height", "0");
-         triangle.getStyle().setProperty("borderTop", "6px solid transparent");
-         triangle.getStyle().setProperty("borderBottom", "6px solid transparent");
-         triangle.getStyle().setProperty("borderLeft", "9px solid white");
-         triangle.getStyle().setProperty("marginLeft", "3px");
-         
-         // Add the triangle to the button
-         sendButtonElement_.appendChild(triangle);
+         // Remove the ai-stop-mode class
+         sendButtonElement_.removeClassName("ai-stop-mode");
          
          // Update mode flag
          isInCancelMode_ = false;
@@ -1692,16 +1801,16 @@ public class AiToolbars
          @Override
          public void onDragOver(NativeEvent event) {
             // Add visual feedback during drag over
-            contextPanel.getElement().getStyle().setProperty("backgroundColor", "#e8f4fd");
-            contextPanel.getElement().getStyle().setProperty("borderColor", "#0078d4");
+            contextPanel.getElement().getStyle().setProperty("backgroundColor", ThemeHelper.getInactiveBackground());
+            contextPanel.getElement().getStyle().setProperty("borderColor", ThemeHelper.getSuccessColor());
             contextPanel.getElement().getStyle().setProperty("borderWidth", "2px");
          }
          
          @Override
          public void onDragLeave(NativeEvent event) {
             // Remove visual feedback when drag leaves
-            contextPanel.getElement().getStyle().setProperty("backgroundColor", "#f0f0f0");
-            contextPanel.getElement().getStyle().setProperty("borderColor", "#aaaaaa");
+            contextPanel.getElement().getStyle().setProperty("backgroundColor", ThemeHelper.getButtonBackground());
+            contextPanel.getElement().getStyle().setProperty("borderColor", ThemeHelper.getVisibleBorder());
             contextPanel.getElement().getStyle().setProperty("borderWidth", "1px");
          }
          
@@ -1710,8 +1819,8 @@ public class AiToolbars
           */
          public boolean handleDroppedFiles(NativeEvent event) {
             // Reset visual feedback
-            contextPanel.getElement().getStyle().setProperty("backgroundColor", "#f0f0f0");
-            contextPanel.getElement().getStyle().setProperty("borderColor", "#aaaaaa");
+            contextPanel.getElement().getStyle().setProperty("backgroundColor", ThemeHelper.getButtonBackground());
+            contextPanel.getElement().getStyle().setProperty("borderColor", ThemeHelper.getVisibleBorder());
             contextPanel.getElement().getStyle().setProperty("borderWidth", "1px");
             
             // Extract dropped files - handle both internal RStudio files and external files
@@ -1780,8 +1889,8 @@ public class AiToolbars
           */
          private void showDropSuccess(FlowPanel contextPanel) {
             // Reset to normal immediately instead of showing green feedback
-            contextPanel.getElement().getStyle().setProperty("backgroundColor", "#f0f0f0");
-            contextPanel.getElement().getStyle().setProperty("borderColor", "#aaaaaa");
+            contextPanel.getElement().getStyle().setProperty("backgroundColor", ThemeHelper.getButtonBackground());
+            contextPanel.getElement().getStyle().setProperty("borderColor", ThemeHelper.getVisibleBorder());
             contextPanel.getElement().getStyle().setProperty("borderWidth", "1px");
          }
       };
@@ -1871,22 +1980,19 @@ public class AiToolbars
                event.preventDefault();
                event.stopPropagation();
                
-               // Add visual feedback
-               element.style.backgroundColor = '#e8f4fd';
-               element.style.borderColor = '#0078d4';
+               // Add visual feedback via CSS class
+               element.classList.add('ai-drag-feedback');
             }
          });
          
          element.addEventListener("dragleave", function(event) {
             // Remove visual feedback
-            element.style.backgroundColor = '';
-            element.style.borderColor = '';
+            element.classList.remove('ai-drag-feedback');
          });
          
          element.addEventListener("drop", function(event) {
             // Remove visual feedback
-            element.style.backgroundColor = '';
-            element.style.borderColor = '';
+            element.classList.remove('ai-drag-feedback');
             
             var foundImage = false;
             
@@ -2251,4 +2357,102 @@ public class AiToolbars
       
       reader.readAsDataURL(file);
    }-*/;
+   
+   /**
+    * Toggle between Ask and Agent interaction modes
+    */
+   private void toggleInteractionMode() {
+      String currentMode = pane_.getCurrentInteractionMode();
+      String newMode = "ask".equals(currentMode) ? "agent" : "ask";
+      pane_.setInteractionMode(newMode);
+   }
+   
+   /**
+    * Toggle the mode dropdown menu visibility
+    */
+   private void toggleModeDropdown() {
+      if (modeDropdownPopup_ == null || modeToggleButton_ == null) {
+         return;
+      }
+      
+      if (modeDropdownPopup_.isShowing()) {
+         modeDropdownPopup_.hide();
+      } else {
+         // Position the popup above and aligned with the right edge of the button
+         int buttonLeft = modeToggleButton_.getAbsoluteLeft();
+         int buttonTop = modeToggleButton_.getAbsoluteTop();
+         int buttonWidth = modeToggleButton_.getOffsetWidth();
+         
+         // Show the popup first to get its dimensions
+         modeDropdownPopup_.show();
+         int popupWidth = modeDropdownPopup_.getOffsetWidth();
+         int popupHeight = modeDropdownPopup_.getOffsetHeight();
+         
+         // Position above the button, aligned to the right edge
+         int left = buttonLeft + buttonWidth - popupWidth;
+         int top = buttonTop - popupHeight - 4; // 4px gap above button
+         
+         modeDropdownPopup_.setPopupPosition(left, top);
+      }
+   }
+   
+   /**
+    * Select an interaction mode from the dropdown
+    */
+   private void selectInteractionMode(String mode) {
+      if (modeDropdownPopup_ != null) {
+         modeDropdownPopup_.hide();
+      }
+      pane_.setInteractionMode(mode);
+   }
+   
+   /**
+    * Update the mode toggle button content with the appropriate icon, text, and chevron
+    */
+   private void updateModeToggleButtonContent(String mode) {
+      if (modeToggleButton_ == null) {
+         return;
+      }
+      
+      String svgIcon;
+      String labelText;
+      
+      if ("agent".equals(mode)) {
+         // Edit icon (codicon-edit) for Agent mode - flipped right-side up
+         svgIcon = "<svg width='14' height='14' viewBox='0 0 300 300' style='position: relative; top: 1px; margin-right: 4px;' fill='currentColor'>" +
+                   "<g transform='translate(0, 300) scale(1, -1)'>" +
+                   "<path d='M248 281H221L66 127L63 122L19 45L45 19L122 63L127 66L281 221V248ZM45 45 74 101 101 74ZM117 84 84 117 234 267 267 234Z'/>" +
+                   "</g></svg>";
+         labelText = "Agent";
+      } else {
+         // Comment icon (codicon-comment) for Ask mode - flipped right-side up
+         svgIcon = "<svg width='14' height='14' viewBox='0 0 300 300' style='position: relative; top: 1px; margin-right: 4px;' fill='currentColor'>" +
+                   "<g transform='translate(0, 300) scale(1, -1)'>" +
+                   "<path d='M272 263H28L19 253V84L28 75H75V28L91 21L145 75H272L281 84V253ZM263 94H141L134 91L94 51V84L84 94H38V244H263Z'/>" +
+                   "</g></svg>";
+         labelText = "Ask";
+      }
+      
+      // Chevron-up icon on the right - flipped right-side up
+      String chevronIcon = "<svg width='12' height='12' viewBox='0 0 300 300' style='position: relative; top: 1px; margin-left: 6px;' fill='currentColor'>" +
+                           "<g transform='translate(0, 300) scale(1, -1)'>" +
+                           "<path d='M150 111 231 193 243 181 155 94H144L56 181L68 193Z'/>" +
+                           "</g></svg>";
+      
+      modeToggleButton_.getElement().setInnerHTML(svgIcon + labelText + chevronIcon);
+   }
+   
+   public void updateModeToggleButton(String mode) {
+      if (modeToggleButton_ == null) {
+         return;
+      }
+      
+      updateModeToggleButtonContent(mode);
+      
+      if ("agent".equals(mode)) {
+         modeToggleButton_.setTitle("Agent mode - proposes actions. Click to switch to Ask mode.");
+      } else {
+         modeToggleButton_.setTitle("Ask mode - questions and conversations. Click to switch to Agent mode.");
+      }
+   }
 }

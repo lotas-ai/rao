@@ -160,11 +160,11 @@ public interface UserStateAccessorConstants extends Constants {
    String showPublishUiDescription();
 
    /**
-    * Whether to show UI for publishing content to Publishing Service.
+    * Whether to show UI for publishing content.
     */
    @DefaultStringValue("")
    String enableRsconnectPublishUiTitle();
-   @DefaultStringValue("Whether to show UI for publishing content to Publishing Service.")
+   @DefaultStringValue("Whether to show UI for publishing content.")
    String enableRsconnectPublishUiDescription();
 
    /**
@@ -270,6 +270,62 @@ public interface UserStateAccessorConstants extends Constants {
    String quartoWebsiteSyncEditorTitle();
    @DefaultStringValue("Sync source editor to Quarto website preview navigation.")
    String quartoWebsiteSyncEditorDescription();
+
+   /**
+    * Key for making Rao API calls
+    */
+   @DefaultStringValue("Rao API Key")
+   String raoApiKeyTitle();
+   @DefaultStringValue("Key for making Rao API calls")
+   String raoApiKeyDescription();
+
+   /**
+    * Temperature setting for AI model responses
+    */
+   @DefaultStringValue("AI Temperature")
+   String aiTemperatureTitle();
+   @DefaultStringValue("Temperature setting for AI model responses")
+   String aiTemperatureDescription();
+
+   /**
+    * Last used working directory for AI conversations
+    */
+   @DefaultStringValue("AI Working Directory")
+   String aiWorkingDirectoryTitle();
+   @DefaultStringValue("Last used working directory for AI conversations")
+   String aiWorkingDirectoryDescription();
+
+   /**
+    * AWS SageMaker endpoint name
+    */
+   @DefaultStringValue("SageMaker Endpoint")
+   String aiSagemakerEndpointTitle();
+   @DefaultStringValue("AWS SageMaker endpoint name")
+   String aiSagemakerEndpointDescription();
+
+   /**
+    * AWS SageMaker region
+    */
+   @DefaultStringValue("SageMaker Region")
+   String aiSagemakerRegionTitle();
+   @DefaultStringValue("AWS SageMaker region")
+   String aiSagemakerRegionDescription();
+
+   /**
+    * Bring Your Own Key for Anthropic API
+    */
+   @DefaultStringValue("BYOK Anthropic API Key")
+   String byokAnthropicApiKeyTitle();
+   @DefaultStringValue("Bring Your Own Key for Anthropic API")
+   String byokAnthropicApiKeyDescription();
+
+   /**
+    * Bring Your Own Key for OpenAI API
+    */
+   @DefaultStringValue("BYOK OpenAI API Key")
+   String byokOpenaiApiKeyTitle();
+   @DefaultStringValue("Bring Your Own Key for OpenAI API")
+   String byokOpenaiApiKeyDescription();
 
 
 

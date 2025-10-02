@@ -37,7 +37,6 @@ namespace prefs {
 #define kCranMirrorName "name"
 #define kCranMirrorHost "host"
 #define kCranMirrorUrl "url"
-#define kViewEnableSplashScreen "enableSplashScreen"
 #define kCranMirrorRepos "repos"
 #define kCranMirrorCountry "country"
 #define kCranMirrorSecondary "secondary"
@@ -167,6 +166,7 @@ namespace prefs {
 #define kAnsiConsoleModeOn "on"
 #define kAnsiConsoleModeStrip "strip"
 #define kAnsiConsoleModeOff "off"
+#define kLimitVisibleConsole "limit_visible_console"
 #define kShowInlineToolbarForRCodeChunks "show_inline_toolbar_for_r_code_chunks"
 #define kHighlightCodeChunks "highlight_code_chunks"
 #define kSaveFilesBeforeBuild "save_files_before_build"
@@ -174,8 +174,6 @@ namespace prefs {
 #define kFontSizePoints "font_size_points"
 #define kEditorLineHeight "editor_line_height"
 #define kHelpFontSizePoints "help_font_size_points"
-#define kEnableMousewheelZoom "enable_mousewheel_zoom"
-#define kMousewheelZoomDebounceMs "mousewheel_zoom_debounce_ms"
 #define kEditorTheme "editor_theme"
 #define kServerEditorFontEnabled "server_editor_font_enabled"
 #define kServerEditorFont "server_editor_font"
@@ -191,7 +189,7 @@ namespace prefs {
 #define kPdfPreviewer "pdf_previewer"
 #define kPdfPreviewerNone "none"
 #define kPdfPreviewerDefault "default"
-#define kPdfPreviewerRstudio "rstudio"
+#define kPdfPreviewerRao "rao"
 #define kPdfPreviewerDesktopSynctex "desktop-synctex"
 #define kPdfPreviewerSystem "system"
 #define kAlwaysEnableRnwConcordance "always_enable_rnw_concordance"
@@ -232,6 +230,7 @@ namespace prefs {
 #define kRmdViewerTypePane "pane"
 #define kRmdViewerTypeNone "none"
 #define kShowPublishDiagnostics "show_publish_diagnostics"
+#define kEnableCloudPublishUi "enable_cloud_publish_ui"
 #define kPublishCheckCertificates "publish_check_certificates"
 #define kUsePublishCaBundle "use_publish_ca_bundle"
 #define kPublishCaBundle "publish_ca_bundle"
@@ -334,7 +333,6 @@ namespace prefs {
 #define kRestoreProjectRVersion "restore_project_r_version"
 #define kClangVerbose "clang_verbose"
 #define kSubmitCrashReports "submit_crash_reports"
-#define kEnableSplashScreen "enable_splash_screen"
 #define kDefaultRVersion "default_r_version"
 #define kDefaultRVersionVersion "version"
 #define kDefaultRVersionRHome "r_home"
@@ -423,6 +421,9 @@ namespace prefs {
 #define kUiLanguageEn "en"
 #define kUiLanguageFr "fr"
 #define kAutohideMenubar "autohide_menubar"
+#define kEnableSplashScreen "enable_splash_screen"
+#define kEnableMousewheelZoom "enable_mousewheel_zoom"
+#define kMousewheelZoomDebounceMs "mousewheel_zoom_debounce_ms"
 #define kNativeFileDialogs "native_file_dialogs"
 #define kDiscardPendingConsoleInputOnError "discard_pending_console_input_on_error"
 #define kEditorScrollMultiplier "editor_scroll_multiplier"
@@ -458,6 +459,33 @@ namespace prefs {
 #define kConsoleHighlightConditionsErrorsWarnings "errors_warnings"
 #define kConsoleHighlightConditionsErrors "errors"
 #define kConsoleHighlightConditionsNone "none"
+#define kAiSelectedModel "ai_selected_model"
+#define kAiSecurityMode "ai_security_mode"
+#define kAiSecurityModeSecure "secure"
+#define kAiSecurityModeImprove "improve"
+#define kAiTemperature "ai_temperature"
+#define kAiInteractionMode "ai_interaction_mode"
+#define kAiInteractionModeAsk "ask"
+#define kAiInteractionModeAgent "agent"
+#define kAiWebSearchEnabled "ai_web_search_enabled"
+#define kAiAutoAcceptEdits "ai_auto_accept_edits"
+#define kAiAutoAcceptConsole "ai_auto_accept_console"
+#define kAiAutoAcceptTerminal "ai_auto_accept_terminal"
+#define kAiAutoRunFiles "ai_auto_run_files"
+#define kAiAutoDeleteFiles "ai_auto_delete_files"
+#define kAiAutoAcceptConsoleAllowAnything "ai_auto_accept_console_allow_anything"
+#define kAiAutoAcceptTerminalAllowAnything "ai_auto_accept_terminal_allow_anything"
+#define kAiAutoRunFilesAllowAnything "ai_auto_run_files_allow_anything"
+#define kAiAutoAcceptConsoleAllowList "ai_auto_accept_console_allow_list"
+#define kAiAutoAcceptConsoleDenyList "ai_auto_accept_console_deny_list"
+#define kAiAutoAcceptTerminalAllowList "ai_auto_accept_terminal_allow_list"
+#define kAiAutoAcceptTerminalDenyList "ai_auto_accept_terminal_deny_list"
+#define kAiAutoRunFilesAllowList "ai_auto_run_files_allow_list"
+#define kAiAutoRunFilesDenyList "ai_auto_run_files_deny_list"
+#define kAiUserRules "ai_user_rules"
+#define kAiByokAnthropicEnabled "ai_byok_anthropic_enabled"
+#define kAiByokOpenaiEnabled "ai_byok_openai_enabled"
+#define kAiByokSagemakerEnabled "ai_byok_sagemaker_enabled"
 
 class UserPrefValues: public Preferences
 {
@@ -560,31 +588,31 @@ public:
    core::Error setCustomShellOptions(std::string val);
 
    /**
-    * Show line numbers in RStudio's code editor.
+    * Show line numbers in Rao's code editor.
     */
    bool showLineNumbers();
    core::Error setShowLineNumbers(bool val);
 
    /**
-    * Show relative, rather than absolute, line numbers in RStudio's code editor.
+    * Show relative, rather than absolute, line numbers in Rao's code editor.
     */
    bool relativeLineNumbers();
    core::Error setRelativeLineNumbers(bool val);
 
    /**
-    * Highlight the selected word in RStudio's code editor.
+    * Highlight the selected word in Rao's code editor.
     */
    bool highlightSelectedWord();
    core::Error setHighlightSelectedWord(bool val);
 
    /**
-    * Highlight the selected line in RStudio's code editor.
+    * Highlight the selected line in Rao's code editor.
     */
    bool highlightSelectedLine();
    core::Error setHighlightSelectedLine(bool val);
 
    /**
-    * Layout of panes in the RStudio workbench.
+    * Layout of panes in the Rao workbench.
     */
    core::json::Object panes();
    core::Error setPanes(core::json::Object val);
@@ -614,7 +642,7 @@ public:
    core::Error setAutoDetectIndentation(bool val);
 
    /**
-    * Whether to show the margin guide in the RStudio code editor.
+    * Whether to show the margin guide in the Rao code editor.
     */
    bool showMargin();
    core::Error setShowMargin(bool val);
@@ -632,13 +660,13 @@ public:
    core::Error setMarginColumn(int val);
 
    /**
-    * Whether to show invisible characters, such as spaces and tabs, in the RStudio code editor.
+    * Whether to show invisible characters, such as spaces and tabs, in the Rao code editor.
     */
    bool showInvisibles();
    core::Error setShowInvisibles(bool val);
 
    /**
-    * Style for indentation guides in the RStudio code editor.
+    * Style for indentation guides in the Rao code editor.
     */
    std::string indentGuides();
    core::Error setIndentGuides(std::string val);
@@ -656,7 +684,7 @@ public:
    core::Error setHighlightWebLink(bool val);
 
    /**
-    * The keybindings to use in the RStudio code editor.
+    * The keybindings to use in the Rao code editor.
     */
    std::string editorKeybindings();
    core::Error setEditorKeybindings(std::string val);
@@ -704,19 +732,19 @@ public:
    core::Error setSurroundSelection(std::string val);
 
    /**
-    * Whether to enable code snippets in the RStudio code editor.
+    * Whether to enable code snippets in the Rao code editor.
     */
    bool enableSnippets();
    core::Error setEnableSnippets(bool val);
 
    /**
-    * When to use auto-completion for R code in the RStudio code editor.
+    * When to use auto-completion for R code in the Rao code editor.
     */
    std::string codeCompletion();
    core::Error setCodeCompletion(std::string val);
 
    /**
-    * When to use auto-completion for other languages (such as JavaScript and SQL) in the RStudio code editor.
+    * When to use auto-completion for other languages (such as JavaScript and SQL) in the Rao code editor.
     */
    std::string codeCompletionOther();
    core::Error setCodeCompletionOther(std::string val);
@@ -740,7 +768,7 @@ public:
    core::Error setCodeCompletionCharacters(int val);
 
    /**
-    * When set, RStudio will include all function arguments in the completion list, even if those arguments have already appeared to be used in the current function invocation.
+    * When set, Rao will include all function arguments in the completion list, even if those arguments have already appeared to be used in the current function invocation.
     */
    bool codeCompletionIncludeAlreadyUsed();
    core::Error setCodeCompletionIncludeAlreadyUsed(bool val);
@@ -860,7 +888,7 @@ public:
    core::Error setRestoreSourceDocumentCursorPosition(bool val);
 
    /**
-    * Whether to automatically re-indent code when it's pasted into RStudio.
+    * Whether to automatically re-indent code when it's pasted into Rao.
     */
    bool reindentOnPaste();
    core::Error setReindentOnPaste(bool val);
@@ -962,6 +990,12 @@ public:
    core::Error setAnsiConsoleMode(std::string val);
 
    /**
+    * Whether to only show a limited window of the total console output
+    */
+   bool limitVisibleConsole();
+   core::Error setLimitVisibleConsole(bool val);
+
+   /**
     * Whether to show a toolbar on code chunks in R Markdown documents.
     */
    bool showInlineToolbarForRCodeChunks();
@@ -980,7 +1014,7 @@ public:
    core::Error setSaveFilesBeforeBuild(bool val);
 
    /**
-    * Whether RStudio should save and reload the R workspace when building the project.
+    * Whether Rao should save and reload the R workspace when building the project.
     */
    bool saveAndReloadWorkspaceOnBuild();
    core::Error setSaveAndReloadWorkspaceOnBuild(bool val);
@@ -1004,31 +1038,19 @@ public:
    core::Error setHelpFontSizePoints(double val);
 
    /**
-    * Use Ctrl+Mouse Wheel (Cmd+Mouse Wheel on macOS) to zoom the interface in and out.
-    */
-   bool enableMousewheelZoom();
-   core::Error setEnableMousewheelZoom(bool val);
-
-   /**
-    * A delay in milliseconds to wait before applying the zoom level after a mouse wheel event.
-    */
-   int mousewheelZoomDebounceMs();
-   core::Error setMousewheelZoomDebounceMs(int val);
-
-   /**
-    * The name of the color theme to apply to the text editor in RStudio.
+    * The name of the color theme to apply to the text editor in Rao.
     */
    std::string editorTheme();
    core::Error setEditorTheme(std::string val);
 
    /**
-    * Whether to use a custom editor font in RStudio Server.
+    * Whether to use a custom editor font in Rao Server.
     */
    bool serverEditorFontEnabled();
    core::Error setServerEditorFontEnabled(bool val);
 
    /**
-    * The name of the fixed-width editor font to use with RStudio Server.
+    * The name of the fixed-width editor font to use with Rao Server.
     */
    std::string serverEditorFont();
    core::Error setServerEditorFont(std::string val);
@@ -1040,7 +1062,7 @@ public:
    core::Error setDefaultEncoding(std::string val);
 
    /**
-    * Whether to show the toolbar at the top of the RStudio workbench.
+    * Whether to show the toolbar at the top of the Rao workbench.
     */
    bool toolbarVisible();
    core::Error setToolbarVisible(bool val);
@@ -1082,7 +1104,7 @@ public:
    core::Error setUseRoxygen(bool val);
 
    /**
-    * Whether to use RStudio's data import feature.
+    * Whether to use Rao's data import feature.
     */
    bool useDataimport();
    core::Error setUseDataimport(bool val);
@@ -1148,7 +1170,7 @@ public:
    core::Error setNavigateToBuildError(bool val);
 
    /**
-    * Whether to enable RStudio's Packages pane.
+    * Whether to enable Rao's Packages pane.
     */
    bool packagesPaneEnabled();
    core::Error setPackagesPaneEnabled(bool val);
@@ -1160,7 +1182,7 @@ public:
    core::Error setCppTemplate(std::string val);
 
    /**
-    * Whether to restore the last opened source documents when RStudio starts up.
+    * Whether to restore the last opened source documents when Rao starts up.
     */
    bool restoreSourceDocuments();
    core::Error setRestoreSourceDocuments(bool val);
@@ -1178,7 +1200,7 @@ public:
    core::Error setAutoExpandErrorTracebacks(bool val);
 
    /**
-    * Whether to check for new versions of RStudio when RStudio starts.
+    * Whether to check for new versions of Rao when Rao starts.
     */
    bool checkForUpdates();
    core::Error setCheckForUpdates(bool val);
@@ -1242,6 +1264,12 @@ public:
     */
    bool showPublishDiagnostics();
    core::Error setShowPublishDiagnostics(bool val);
+
+   /**
+    * Whether to show UI for publishing content to cloud service.
+    */
+   bool enableCloudPublishUi();
+   core::Error setEnableCloudPublishUi(bool val);
 
    /**
     * Whether to check remote server SSL certificates when publishing content.
@@ -1406,13 +1434,13 @@ public:
    core::Error setJobsTabVisibility(std::string val);
 
    /**
-    * Whether to show the Workbench Jobs tab in RStudio Pro and RStudio Workbench.
+    * Whether to show the Remote Jobs tab.
     */
    bool showLauncherJobsTab();
    core::Error setShowLauncherJobsTab(bool val);
 
    /**
-    * How to sort jobs in the Workbench Jobs tab in RStudio Pro and RStudio Workbench.
+    * How to sort jobs in the Remote Jobs tab.
     */
    std::string launcherJobsSort();
    core::Error setLauncherJobsSort(std::string val);
@@ -1454,7 +1482,7 @@ public:
    core::Error setWrapTabNavigation(bool val);
 
    /**
-    * The theme to use for the main RStudio user interface.
+    * The theme to use for the main Rao user interface.
     */
    std::string globalTheme();
    core::Error setGlobalTheme(std::string val);
@@ -1508,19 +1536,19 @@ public:
    core::Error setRootDocument(std::string val);
 
    /**
-    * When to show the server home page in RStudio Workbench.
+    * When to show the server home page.
     */
    std::string showUserHomePage();
    core::Error setShowUserHomePage(std::string val);
 
    /**
-    * Whether to reuse sessions when opening projects in RStudio Workbench.
+    * Whether to reuse sessions when opening projects.
     */
    bool reuseSessionsForProjectLinks();
    core::Error setReuseSessionsForProjectLinks(bool val);
 
    /**
-    * Whether to enable RStudio's version control system interface.
+    * Whether to enable Rao's version control system interface.
     */
    bool vcsEnabled();
    core::Error setVcsEnabled(bool val);
@@ -1574,7 +1602,7 @@ public:
    core::Error setCleanBeforeInstall(bool val);
 
    /**
-    * When set, RStudio will build your package in a '_build' sub-directory of your current library paths.
+    * When set, Rao will build your package in a '_build' sub-directory of your current library paths.
     */
    bool useBuildSubdirectory();
    core::Error setUseBuildSubdirectory(bool val);
@@ -1604,7 +1632,7 @@ public:
    core::Error setHideObjectFiles(bool val);
 
    /**
-    * Whether to restore the last project when starting RStudio.
+    * Whether to restore the last project when starting Rao.
     */
    bool restoreLastProject();
    core::Error setRestoreLastProject(bool val);
@@ -1634,7 +1662,7 @@ public:
    core::Error setLatexShellEscape(bool val);
 
    /**
-    * Whether to restore the last version of R used by the project in RStudio Pro and RStudio Workbench.
+    * Whether to restore the last version of R used by the project.
     */
    bool restoreProjectRVersion();
    core::Error setRestoreProjectRVersion(bool val);
@@ -1646,16 +1674,10 @@ public:
    core::Error setClangVerbose(int val);
 
    /**
-    * Whether to automatically submit crash reports to Posit.
+    * Whether to automatically submit crash reports to Lotas Inc.
     */
    bool submitCrashReports();
    core::Error setSubmitCrashReports(bool val);
-
-   /**
-    * Whether to show the splash screen when RStudio is starting.
-    */
-   bool enableSplashScreen();
-   core::Error setEnableSplashScreen(bool val);
 
    /**
     * The R version to use by default.
@@ -1916,7 +1938,7 @@ public:
    core::Error setMemoryQueryIntervalSeconds(int val);
 
    /**
-    * Enable Python terminal hooks. When enabled, the RStudio-configured version of Python will be placed on the PATH.
+    * Enable Python terminal hooks. When enabled, the Rao-configured version of Python will be placed on the PATH.
     */
    bool terminalPythonIntegration();
    core::Error setTerminalPythonIntegration(bool val);
@@ -1928,13 +1950,13 @@ public:
    core::Error setSessionProtocolDebug(bool val);
 
    /**
-    * When enabled, if the active project contains a Python virtual environment, then RStudio will automatically activate this environment on startup.
+    * When enabled, if the active project contains a Python virtual environment, then Rao will automatically activate this environment on startup.
     */
    bool pythonProjectEnvironmentAutomaticActivate();
    core::Error setPythonProjectEnvironmentAutomaticActivate(bool val);
 
    /**
-    * When enabled, RStudio will detect R objects containing null external pointers when building the Environment pane, and avoid introspecting their contents further.
+    * When enabled, Rao will detect R objects containing null external pointers when building the Environment pane, and avoid introspecting their contents further.
     */
    bool checkNullExternalPointers();
    core::Error setCheckNullExternalPointers(bool val);
@@ -1952,7 +1974,25 @@ public:
    core::Error setAutohideMenubar(bool val);
 
    /**
-    * Whether RStudio Desktop will use the operating system's native File and Message dialog boxes.
+    * Show splash screen when Rao starts.
+    */
+   bool enableSplashScreen();
+   core::Error setEnableSplashScreen(bool val);
+
+   /**
+    * Allow using Ctrl/Cmd + mousewheel to zoom the entire IDE.
+    */
+   bool enableMousewheelZoom();
+   core::Error setEnableMousewheelZoom(bool val);
+
+   /**
+    * Delay in milliseconds before applying mousewheel zoom.
+    */
+   int mousewheelZoomDebounceMs();
+   core::Error setMousewheelZoomDebounceMs(int val);
+
+   /**
+    * Whether Rao Desktop will use the operating system's native File and Message dialog boxes.
     */
    bool nativeFileDialogs();
    core::Error setNativeFileDialogs(bool val);
@@ -1982,7 +2022,7 @@ public:
    core::Error setDisableRendererAccessibility(bool val);
 
    /**
-    * When enabled, RStudio will use GitHub Copilot to provide code suggestions.
+    * When enabled, Rao will use GitHub Copilot to provide code suggestions.
     */
    bool copilotEnabled();
    core::Error setCopilotEnabled(bool val);
@@ -2000,25 +2040,25 @@ public:
    core::Error setCopilotCompletionsDelay(int val);
 
    /**
-    * Control the behavior of the Tab key when both Copilot code suggestions and RStudio code completions are visible.
+    * Control the behavior of the Tab key when both Copilot code suggestions and Rao code completions are visible.
     */
    std::string copilotTabKeyBehavior();
    core::Error setCopilotTabKeyBehavior(std::string val);
 
    /**
-    * When enabled, RStudio will index project files with GitHub Copilot.
+    * When enabled, Rao will index project files with GitHub Copilot.
     */
    bool copilotIndexingEnabled();
    core::Error setCopilotIndexingEnabled(bool val);
 
    /**
-    * When enabled, RStudio will show account and billing messages from GitHub Copilot in a message box.
+    * When enabled, Rao will show account and billing messages from GitHub Copilot in a message box.
     */
    bool copilotShowMessages();
    core::Error setCopilotShowMessages(bool val);
 
    /**
-    * When enabled, RStudio will tell Copilot to use the current RStudio project's folder as a workspace.
+    * When enabled, Rao will tell Copilot to use the current Rao project's folder as a workspace.
     */
    bool copilotProjectWorkspace();
    core::Error setCopilotProjectWorkspace(bool val);
@@ -2060,7 +2100,7 @@ public:
    core::Error setReformatOnSave(bool val);
 
    /**
-    * The folder in which RStudio should store project .Rproj.user data.
+    * The folder in which Rao should store project .Rproj.user data.
     */
    std::string projectUserDataDirectory();
    core::Error setProjectUserDataDirectory(std::string val);
@@ -2070,6 +2110,144 @@ public:
     */
    std::string consoleHighlightConditions();
    core::Error setConsoleHighlightConditions(std::string val);
+
+   /**
+    * The AI model to use for conversations
+    */
+   std::string aiSelectedModel();
+   core::Error setAiSelectedModel(std::string val);
+
+   /**
+    * The security level for AI interactions
+    */
+   std::string aiSecurityMode();
+   core::Error setAiSecurityMode(std::string val);
+
+   /**
+    * Temperature setting for AI model responses (0.0 = deterministic, 1.0 = highly variable)
+    */
+   double aiTemperature();
+   core::Error setAiTemperature(double val);
+
+   /**
+    * The interaction mode for the AI assistant
+    */
+   std::string aiInteractionMode();
+   core::Error setAiInteractionMode(std::string val);
+
+   /**
+    * Allow the AI to search the web
+    */
+   bool aiWebSearchEnabled();
+   core::Error setAiWebSearchEnabled(bool val);
+
+   /**
+    * Automatically accept file edit suggestions
+    */
+   bool aiAutoAcceptEdits();
+   core::Error setAiAutoAcceptEdits(bool val);
+
+   /**
+    * Automatically accept console command suggestions
+    */
+   bool aiAutoAcceptConsole();
+   core::Error setAiAutoAcceptConsole(bool val);
+
+   /**
+    * Automatically accept terminal command suggestions
+    */
+   bool aiAutoAcceptTerminal();
+   core::Error setAiAutoAcceptTerminal(bool val);
+
+   /**
+    * Automatically run file execution suggestions
+    */
+   bool aiAutoRunFiles();
+   core::Error setAiAutoRunFiles(bool val);
+
+   /**
+    * Automatically delete files when suggested
+    */
+   bool aiAutoDeleteFiles();
+   core::Error setAiAutoDeleteFiles(bool val);
+
+   /**
+    * Allow auto-accept for all console commands
+    */
+   bool aiAutoAcceptConsoleAllowAnything();
+   core::Error setAiAutoAcceptConsoleAllowAnything(bool val);
+
+   /**
+    * Allow auto-accept for all terminal commands
+    */
+   bool aiAutoAcceptTerminalAllowAnything();
+   core::Error setAiAutoAcceptTerminalAllowAnything(bool val);
+
+   /**
+    * Allow auto-run for all files
+    */
+   bool aiAutoRunFilesAllowAnything();
+   core::Error setAiAutoRunFilesAllowAnything(bool val);
+
+   /**
+    * Whitelist of console commands to auto-accept
+    */
+   core::json::Array aiAutoAcceptConsoleAllowList();
+   core::Error setAiAutoAcceptConsoleAllowList(core::json::Array val);
+
+   /**
+    * Blocklist of console commands to never auto-accept
+    */
+   core::json::Array aiAutoAcceptConsoleDenyList();
+   core::Error setAiAutoAcceptConsoleDenyList(core::json::Array val);
+
+   /**
+    * Whitelist of terminal commands to auto-accept
+    */
+   core::json::Array aiAutoAcceptTerminalAllowList();
+   core::Error setAiAutoAcceptTerminalAllowList(core::json::Array val);
+
+   /**
+    * Blocklist of terminal commands to never auto-accept
+    */
+   core::json::Array aiAutoAcceptTerminalDenyList();
+   core::Error setAiAutoAcceptTerminalDenyList(core::json::Array val);
+
+   /**
+    * Whitelist of file patterns to auto-run
+    */
+   core::json::Array aiAutoRunFilesAllowList();
+   core::Error setAiAutoRunFilesAllowList(core::json::Array val);
+
+   /**
+    * Blocklist of file patterns to never auto-run
+    */
+   core::json::Array aiAutoRunFilesDenyList();
+   core::Error setAiAutoRunFilesDenyList(core::json::Array val);
+
+   /**
+    * Custom rules for the AI assistant
+    */
+   core::json::Array aiUserRules();
+   core::Error setAiUserRules(core::json::Array val);
+
+   /**
+    * Enable Bring Your Own Key for Anthropic
+    */
+   bool aiByokAnthropicEnabled();
+   core::Error setAiByokAnthropicEnabled(bool val);
+
+   /**
+    * Enable Bring Your Own Key for OpenAI
+    */
+   bool aiByokOpenaiEnabled();
+   core::Error setAiByokOpenaiEnabled(bool val);
+
+   /**
+    * Enable Bring Your Own Key for AWS SageMaker
+    */
+   bool aiByokSagemakerEnabled();
+   core::Error setAiByokSagemakerEnabled(bool val);
 
 };
 

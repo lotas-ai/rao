@@ -104,7 +104,7 @@ public class Synctex implements CompilePdfStartedEvent.Handler,
 
       boolean synctexSupported =
                   // internal previewer
-                  pdfPreview == UserPrefs.PDF_PREVIEWER_RSTUDIO ||
+                  pdfPreview == UserPrefs.PDF_PREVIEWER_RAO ||
                   // platform-specific desktop previewer
                   (pdfPreview == UserPrefs.PDF_PREVIEWER_DESKTOP_SYNCTEX &&
                    Desktop.isDesktop());

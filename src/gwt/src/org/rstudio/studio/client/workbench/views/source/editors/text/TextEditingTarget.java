@@ -7800,7 +7800,7 @@ public class TextEditingTarget implements
       String pdfPreview = prefs_.pdfPreviewer().getValue();
       boolean showPdf = !pdfPreview.equals(UserPrefs.PDF_PREVIEWER_NONE);
       boolean useInternalPreview =
-            pdfPreview.equals(UserPrefs.PDF_PREVIEWER_RSTUDIO);
+            pdfPreview.equals(UserPrefs.PDF_PREVIEWER_RAO);
       boolean useDesktopSynctexPreview =
             pdfPreview.equals(UserPrefs.PDF_PREVIEWER_DESKTOP_SYNCTEX) &&
             Desktop.isDesktop();

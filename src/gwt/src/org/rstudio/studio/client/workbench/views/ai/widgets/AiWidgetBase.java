@@ -18,6 +18,7 @@ import com.google.gwt.user.client.ui.VerticalPanel;
 import com.google.gwt.user.client.ui.HTML;
 import com.google.gwt.dom.client.Style.Unit;
 import org.rstudio.core.client.Debug;
+import org.rstudio.core.client.theme.ThemeHelper;
 
 /**
  * Abstract base class for AI widgets that provides common functionality
@@ -59,18 +60,17 @@ public abstract class AiWidgetBase extends Composite
       // Do NOT force 100% width; let it size to container to avoid right overflow
       // buttonStack.setWidth("100%");
       
-      // Add border styling directly to ensure it shows and matches the widget
-      buttonStack.getElement().getStyle().setProperty("backgroundColor", "#f5f5f5");
-      // Match console header/wrapper border color (#666666)
-      buttonStack.getElement().getStyle().setProperty("border", "1px solid #666666");
+      // Background color is handled by CSS theme classes
+      // Match console header/wrapper border color
+      buttonStack.getElement().getStyle().setProperty("border", "1px solid " + ThemeHelper.getVisibleBorder());
       buttonStack.getElement().getStyle().setProperty("borderTop", "none");
       buttonStack.getElement().getStyle().setProperty("borderRadius", "0 0 4px 4px");
       // Pull up to visually connect with the widget, indent both sides equally
       buttonStack.getElement().getStyle().setProperty("margin", "0px 8px 4px 8px");
-      buttonStack.getElement().getStyle().setProperty("boxShadow", "0 1px 3px rgba(0,0,0,0.1)");
+      buttonStack.getElement().getStyle().setProperty("boxShadow", "0 1px 3px " + ThemeHelper.getShadowColor());
       
       // Determine primary action text based on function type
-      String primaryActionText = functionCallType.equals("edit_file") || functionCallType.equals("search_replace") ? 
+      String primaryActionText = functionCallType.equals("search_replace") ? 
          "Accept" : "Run";
       
       // Create primary action button (Run/Accept) with dark green text (correct color)
@@ -82,7 +82,7 @@ public abstract class AiWidgetBase extends Composite
       buttonStack.add(cancelButton);
       
       // Add horizontal divider
-      HTML divider = new HTML("<hr style='margin: 0; border: none; border-top: 1px solid #d0d0d0;'>");
+      HTML divider = new HTML("<hr style='margin: 0; border: none; border-top: 1px solid " + ThemeHelper.getVisibleBorder() + ";'>");
       buttonStack.add(divider);
       
       // Create "Add to allow list" button with dark gray text
@@ -111,21 +111,21 @@ public abstract class AiWidgetBase extends Composite
       button.getElement().getStyle().setWidth(100, Unit.PCT);
       button.getElement().getStyle().setProperty("boxSizing", "border-box");
       
-      // Apply text color based on button type
+      // Apply semantic CSS classes based on button type
       switch (textColor) {
          case "darkRed":
-            button.getElement().getStyle().setColor("#8b0000"); // Same as error text
+            button.addStyleName("ai-cancel-button");
             break;
          case "darkGreen":
-            button.getElement().getStyle().setColor("#006400");
+            button.addStyleName("ai-accept-button");
             break;
          case "darkGray":
-            button.getElement().getStyle().setColor("#666666");
+            button.addStyleName("ai-edit-button");
             break;
       }
       
-      // Add hover effects using DOM events
-      addVerticalStackHoverEffects(button.getElement());
+      // Add hover class for CSS hover effects
+      button.addStyleName("ai-hover-target");
       
       // Add click handler
       addVerticalStackClickHandler(button.getElement(), buttonAction);
@@ -133,24 +133,14 @@ public abstract class AiWidgetBase extends Composite
       return button;
    }
 
-   /**
-    * Adds hover effects to button elements
-    */
-   private native void addVerticalStackHoverEffects(com.google.gwt.dom.client.Element element) /*-{
-      element.addEventListener('mouseenter', function() {
-         element.style.backgroundColor = '#e6e6e6';
-      });
-      element.addEventListener('mouseleave', function() {
-         element.style.backgroundColor = 'transparent';
-      });
-   }-*/;
+   // Hover effects now handled by CSS via ai-hover-target class
 
    /**
     * Determines the text for the "Add to allow list" button based on function type and extracted items
     */
    private String determineAllowListText(String functionCallType, String extractedItems)
    {
-      if (functionCallType.equals("edit_file") || functionCallType.equals("search_replace")) {
+      if (functionCallType.equals("search_replace")) {
          return "Accept all edits automatically";
       }
       
@@ -187,7 +177,7 @@ public abstract class AiWidgetBase extends Composite
          if (buttonAction === 'primary') {
             // This is the Run/Accept button
             var functionCallType = self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiWidgetBase::functionCallType_;
-            if (functionCallType === 'edit_file' || functionCallType === 'search_replace') {
+            if (functionCallType === 'search_replace') {
                self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiWidgetBase::onAcceptClicked()();
             } else {
                self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiWidgetBase::onRunClicked()();
@@ -253,7 +243,7 @@ public abstract class AiWidgetBase extends Composite
    }
    
    /**
-    * Handle accept button clicks - implemented by edit_file/search_replace widgets  
+    * Handle accept button clicks - implemented by search_replace widgets  
     * Default implementation logs an error
     */
    protected void onAcceptClicked() {

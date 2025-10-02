@@ -553,7 +553,7 @@ public class RmdOutput implements RmdRenderStartedEvent.Handler,
       if (".pdf".equals(extension))
       {
          String previewer = prefs_.pdfPreviewer().getValue();
-         if (previewer == UserPrefs.PDF_PREVIEWER_RSTUDIO)
+         if (previewer == UserPrefs.PDF_PREVIEWER_RAO)
          {
             pdfViewer_.viewPdfUrl(
                   result.getOutputUrl(),

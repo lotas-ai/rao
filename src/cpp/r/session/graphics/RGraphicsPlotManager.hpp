@@ -108,6 +108,9 @@ public:
     // retrieve image path based on filename
    virtual core::FilePath imagePath(const std::string& imageFilename) const;
    
+   // retrieve the graphics directory path
+   virtual core::FilePath graphicsPath() const;
+   
    virtual void clear();
 
    virtual RSTUDIO_BOOST_SIGNAL<void ()>& onShowManipulator();

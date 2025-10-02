@@ -107,7 +107,7 @@ public class PDFViewer implements CompilePdfCompletedEvent.Handler,
    public void onCompilePdfCompleted(CompilePdfCompletedEvent event)
    {
       // only handle PDF compile events when we're the preferred viewer
-      if (prefs_.pdfPreviewer().getValue() != UserPrefs.PDF_PREVIEWER_RSTUDIO)
+      if (prefs_.pdfPreviewer().getValue() != UserPrefs.PDF_PREVIEWER_RAO)
          return;
       
       // only handle successful compiles

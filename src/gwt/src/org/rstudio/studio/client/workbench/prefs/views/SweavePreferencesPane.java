@@ -142,7 +142,7 @@ public class SweavePreferencesPane extends PreferencesPane
       }
 
       pdfPreview_.addChoice(constants_.pdfPreviewRStudioViewerOption(),
-                            UserPrefs.PDF_PREVIEWER_RSTUDIO);
+                            UserPrefs.PDF_PREVIEWER_RAO);
 
       pdfPreview_.addChoice(constants_.pdfPreviewSystemViewerOption(),
                             UserPrefs.PDF_PREVIEWER_SYSTEM);

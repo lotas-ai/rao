@@ -245,7 +245,7 @@ core::Error UserStateValues::setShowPublishUi(bool val)
 }
 
 /**
- * Whether to show UI for publishing content to server publishing platforms.
+ * Whether to show UI for publishing content.
  */
 bool UserStateValues::enableRsconnectPublishUi()
 {
@@ -414,6 +414,19 @@ core::Error UserStateValues::setZoteroDataDir(std::string val)
 }
 
 /**
+ * Sync source editor to Quarto website preview navigation.
+ */
+bool UserStateValues::quartoWebsiteSyncEditor()
+{
+   return readPref<bool>("quarto_website_sync_editor");
+}
+
+core::Error UserStateValues::setQuartoWebsiteSyncEditor(bool val)
+{
+   return writePref("quarto_website_sync_editor", val);
+}
+
+/**
  * Key for making Rao API calls
  */
 std::string UserStateValues::raoApiKey()
@@ -427,16 +440,81 @@ core::Error UserStateValues::setRaoApiKey(std::string val)
 }
 
 /**
- * Sync source editor to Quarto website preview navigation.
+ * Temperature setting for AI model responses
  */
-bool UserStateValues::quartoWebsiteSyncEditor()
+double UserStateValues::aiTemperature()
 {
-   return readPref<bool>("quarto_website_sync_editor");
+   return readPref<double>("ai_temperature");
 }
 
-core::Error UserStateValues::setQuartoWebsiteSyncEditor(bool val)
+core::Error UserStateValues::setAiTemperature(double val)
 {
-   return writePref("quarto_website_sync_editor", val);
+   return writePref("ai_temperature", val);
+}
+
+/**
+ * Last used working directory for AI conversations
+ */
+std::string UserStateValues::aiWorkingDirectory()
+{
+   return readPref<std::string>("ai_working_directory");
+}
+
+core::Error UserStateValues::setAiWorkingDirectory(std::string val)
+{
+   return writePref("ai_working_directory", val);
+}
+
+/**
+ * AWS SageMaker endpoint name
+ */
+std::string UserStateValues::aiSagemakerEndpoint()
+{
+   return readPref<std::string>("ai_sagemaker_endpoint");
+}
+
+core::Error UserStateValues::setAiSagemakerEndpoint(std::string val)
+{
+   return writePref("ai_sagemaker_endpoint", val);
+}
+
+/**
+ * AWS SageMaker region
+ */
+std::string UserStateValues::aiSagemakerRegion()
+{
+   return readPref<std::string>("ai_sagemaker_region");
+}
+
+core::Error UserStateValues::setAiSagemakerRegion(std::string val)
+{
+   return writePref("ai_sagemaker_region", val);
+}
+
+/**
+ * Bring Your Own Key for Anthropic API
+ */
+std::string UserStateValues::byokAnthropicApiKey()
+{
+   return readPref<std::string>("byok_anthropic_api_key");
+}
+
+core::Error UserStateValues::setByokAnthropicApiKey(std::string val)
+{
+   return writePref("byok_anthropic_api_key", val);
+}
+
+/**
+ * Bring Your Own Key for OpenAI API
+ */
+std::string UserStateValues::byokOpenaiApiKey()
+{
+   return readPref<std::string>("byok_openai_api_key");
+}
+
+core::Error UserStateValues::setByokOpenaiApiKey(std::string val)
+{
+   return writePref("byok_openai_api_key", val);
 }
 
 std::vector<std::string> UserStateValues::allKeys()
@@ -472,8 +550,14 @@ std::vector<std::string> UserStateValues::allKeys()
       kZoteroUseBetterBibtex,
       kZoteroApiKey,
       kZoteroDataDir,
-      kRaoApiKey,
       kQuartoWebsiteSyncEditor,
+      kRaoApiKey,
+      kAiTemperature,
+      kAiWorkingDirectory,
+      kAiSagemakerEndpoint,
+      kAiSagemakerRegion,
+      kByokAnthropicApiKey,
+      kByokOpenaiApiKey,
    });
 }
    

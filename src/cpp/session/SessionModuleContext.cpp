@@ -385,6 +385,23 @@ SEXP rs_rstudioProgramMode()
    return r::sexp::create(session::options().programMode(), &rProtect);
 }
 
+// This function is now implemented directly in R using ps::ps_exe(ps::ps_parent())
+// See SessionAiLocalBackend.R for the implementation
+
+SEXP rs_resourcesPath()
+{
+   r::sexp::Protect rProtect;
+   FilePath resourcesPath = session::options().rResourcesPath();
+   return r::sexp::create(resourcesPath.getAbsolutePath(), &rProtect);
+}
+
+SEXP rs_localBackendPath()
+{
+   r::sexp::Protect rProtect;
+   FilePath localBackendPath = session::options().localBackendPath();
+   return r::sexp::create(localBackendPath.getAbsolutePath(), &rProtect);
+}
+
 // get rstudio edition
 SEXP rs_rstudioEdition()
 {
@@ -3047,6 +3064,8 @@ Error initialize()
    RS_REGISTER_CALL_METHOD(rs_base64encodeFile);
    RS_REGISTER_CALL_METHOD(rs_htmlEscape);
    RS_REGISTER_CALL_METHOD(rs_enqueClientEvent);
+   RS_REGISTER_CALL_METHOD(rs_resourcesPath);
+   RS_REGISTER_CALL_METHOD(rs_localBackendPath);
    RS_REGISTER_CALL_METHOD(rs_ensureFileHidden);
    RS_REGISTER_CALL_METHOD(rs_generateShortUuid);
    RS_REGISTER_CALL_METHOD(rs_getPersistentValue);

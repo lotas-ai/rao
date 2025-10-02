@@ -341,6 +341,7 @@ core::ProgramStatus Options::read(int argc, char * const argv[], std::ostream& o
    resolveQuartoPath(resourcePath_, &quartoPath_);
    resolveCopilotPath(resourcePath_, &copilotPath_);
    resolveRipgrepPath(resourcePath_, &ripgrepPath_);
+   resolveLocalBackendPath(resourcePath_, &localBackendPath_);
 
    // rsclang
    if (libclangPath_ != kDefaultRsclangPath)
@@ -681,6 +682,20 @@ void Options::resolveRipgrepPath(const FilePath& resourcePath,
    }
 }
 
+void Options::resolveLocalBackendPath(const FilePath& resourcePath,
+                                      std::string* pPath)
+{
+   if (*pPath == kDefaultLocalBackendPath && programMode() == kSessionProgramModeDesktop)
+   {
+      FilePath path = macBinaryPath(resourcePath, "rao-local-backend");
+      *pPath = path.getAbsolutePath();
+   }
+   else
+   {
+      resolvePath(resourcePath, pPath);
+   }
+}
+
 void Options::resolveRsclangPath(const FilePath& resourcePath,
                                  std::string* pPath)
 {
@@ -739,6 +754,11 @@ void Options::resolveRipgrepPath(const FilePath& resourcePath, std::string* pPat
    FilePath versionPath = resolvedPath.completeChildPath("14.1.1");
    *pPath = versionPath.getAbsolutePath();
 #endif
+}
+
+void Options::resolveLocalBackendPath(const FilePath& resourcePath, std::string* pPath)
+{
+   resolvePath(resourcePath, pPath);
 }
 
 void Options::resolveRsclangPath(const FilePath& resourcePath,

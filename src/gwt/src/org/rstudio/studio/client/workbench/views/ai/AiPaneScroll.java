@@ -113,7 +113,7 @@ public class AiPaneScroll
          textarea.style.position = "relative";
          textarea.style.bottom = "0";
          textarea.style.zIndex = "101";
-         textarea.style.backgroundColor = "#ffffff";
+         textarea.classList.add('ai-modal-background');
          textarea.style.marginLeft = "0px";
          textarea.style.marginRight = "0px";
          
@@ -264,15 +264,15 @@ public class AiPaneScroll
                      searchContainer.style.marginBottom = "0px";
                      searchContainer.style.zIndex = "100";
                      searchContainer.style.opacity = "1";
-                     searchContainer.style.visibility = "visible";
-                     searchContainer.style.overflow = "visible";
-                     searchContainer.style.position = "relative";
-                     searchContainer.style.pointerEvents = "auto";
-                     searchContainer.style.display = "block";
-                     searchContainer.style.backgroundColor = "#ffffff";
-                     searchContainer.style.transition = "opacity 0.1s ease";
-                     searchContainer.style.borderTop = "none";
-                     searchContainer.style.borderBottom = "none";
+                  searchContainer.style.visibility = "visible";
+                  searchContainer.style.overflow = "visible";
+                  searchContainer.style.position = "relative";
+                  searchContainer.style.pointerEvents = "auto";
+                  searchContainer.style.display = "block";
+                  searchContainer.classList.add('ai-modal-background');
+                  searchContainer.style.transition = "opacity 0.1s ease";
+                  searchContainer.style.borderTop = "none";
+                  searchContainer.style.borderBottom = "none";
                   }
                }
 
@@ -335,7 +335,7 @@ public class AiPaneScroll
                
                if (!isApiKeyPage) {
                   // Only apply these styles when not on API key page
-                  textarea.style.backgroundColor = "#ffffff";
+                  textarea.classList.add('ai-modal-background');
                   textarea.style.borderRadius = "4px"; // All corners rounded
                   textarea.style.padding = "8px"; // Maintain consistent padding
                }
@@ -365,7 +365,7 @@ public class AiPaneScroll
                         tempParent.style.display = "flex";
                         tempParent.style.flexDirection = "column";
                         tempParent.style.justifyContent = "flex-end";
-                        tempParent.style.backgroundColor = "#ffffff"; // White background
+                        tempParent.classList.add('ai-modal-background');
                         tempParent.style.zIndex = "100";
                         tempParent.style.position = "relative";
                         tempParent.style.border = "none"; // No inner border
@@ -399,7 +399,7 @@ public class AiPaneScroll
                         tempParent.style.paddingTop = "0px";
                         tempParent.style.marginTop = "0px";
                         tempParent.style.marginBottom = "0px";
-                        tempParent.style.backgroundColor = "#ffffff"; // White background
+                        tempParent.classList.add('ai-modal-background');
                         tempParent.style.border = "none"; // No container border
                         tempParent.style.borderRadius = "0px"; // No container rounding
                         tempParent.style.opacity = "1";

@@ -52,14 +52,13 @@ create_core_rs_mocks <- function() {
       assign("active_api_request_id", NULL, envir = cache)
       assign("ai_cancelled", FALSE, envir = cache)
       assign("function_call_depth", 0, envir = cache)
-      assign("last_function_was_edit_file", FALSE, envir = cache)
       assign("ai_in_error", FALSE, envir = cache)
       assign("contextItems", list(), envir = cache)
       return(TRUE)
     },
     ".rs.getConversationSpecificVariables" = function() {
       c("active_api_request_id", "ai_cancelled", "function_call_depth", 
-        "last_function_was_edit_file", "ai_in_error", "contextItems")
+        "ai_in_error", "contextItems")
     },
     ".rs.getConversationVar" = function(varName, defaultValue = NULL) {
       conv_vars <- .rs.getConversationSpecificVariables()
@@ -79,7 +78,6 @@ create_core_rs_mocks <- function() {
       if (!is.null(defaultValue)) return(defaultValue)
       if (varName == "ai_cancelled") return(FALSE)
       if (varName == "function_call_depth") return(0)
-      if (varName == "last_function_was_edit_file") return(FALSE)
       if (varName == "ai_in_error") return(FALSE)
       if (varName == "contextItems") return(list())
       return(NULL)
@@ -318,9 +316,6 @@ create_core_rs_mocks <- function() {
         timestamp = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
         data = list(message = "Mock single function call processed")
       )
-    },
-    ".rs.accept_edit_file_command" = function(edited_code, message_id, request_id) {
-      return(TRUE)
     },
     # Mock createAiOperationResult function
     ".rs.createAiOperationResult" = function(status, data = NULL, error = NULL, functionCall = NULL) {
@@ -582,14 +577,13 @@ create_variable_manager_mocks <- function() {
       assign("active_api_request_id", NULL, envir = cache)
       assign("ai_cancelled", FALSE, envir = cache)
       assign("function_call_depth", 0, envir = cache)
-      assign("last_function_was_edit_file", FALSE, envir = cache)
       assign("ai_in_error", FALSE, envir = cache)
       assign("contextItems", list(), envir = cache)
       return(TRUE)
     },
     ".rs.getConversationSpecificVariables" = function() {
       c("active_api_request_id", "ai_cancelled", "function_call_depth", 
-        "last_function_was_edit_file", "ai_in_error", "contextItems")
+        "ai_in_error", "contextItems")
     },
     ".rs.getConversationVar" = function(varName, defaultValue = NULL) {
       conv_vars <- .rs.getConversationSpecificVariables()
@@ -609,7 +603,6 @@ create_variable_manager_mocks <- function() {
       if (!is.null(defaultValue)) return(defaultValue)
       if (varName == "ai_cancelled") return(FALSE)
       if (varName == "function_call_depth") return(0)
-      if (varName == "last_function_was_edit_file") return(FALSE)
       if (varName == "ai_in_error") return(FALSE)
       if (varName == "contextItems") return(list())
       return(NULL)

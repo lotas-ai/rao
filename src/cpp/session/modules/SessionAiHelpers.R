@@ -263,7 +263,7 @@ tryCatch({
    })
 })
 
-.rs.addFunction("compute_line_diff", function(old_lines, new_lines, is_from_edit_file = FALSE) {
+.rs.addFunction("compute_line_diff", function(old_lines, new_lines, use_unified_diff_format = FALSE) {
    if (is.null(old_lines) || length(old_lines) == 0 || 
        (is.list(old_lines) && length(old_lines) == 0) || 
        identical(old_lines, list()) || identical(old_lines, structure(list(), names = character(0)))) {
@@ -323,8 +323,8 @@ tryCatch({
       }
    }
    
-   # For edit_file widgets, convert to unified diff format for proper display
-   if (is_from_edit_file) {
+   # For file editing widgets, convert to unified diff format for proper display
+   if (use_unified_diff_format) {
       unified_diff <- .rs.convert_to_unified_diff_format(diff, old_lines, new_lines)
       return(list(
          diff = unified_diff,
@@ -626,7 +626,7 @@ tryCatch({
    }
    
    # Use the existing diff computation function
-   diff_result <- .rs.compute_line_diff(original_lines, current_lines, is_from_edit_file = FALSE)
+   diff_result <- .rs.compute_line_diff(original_lines, current_lines, use_unified_diff_format = FALSE)
    
    # Step 5: Convert diff results to the format expected by the Java gutter manager
    # Create a single diff entry with the fresh diff data
@@ -711,7 +711,7 @@ tryCatch({
 
 .rs.addFunction("mark_diff_as_accepted", function(message_id, file_path) {
    # Mark a specific diff as accepted for persistent display
-   # This is called when a user accepts an edit_file change
+   # This is called when a user accepts a file editing change
    
    if (is.null(message_id) || is.null(file_path)) {
       return(FALSE)
@@ -852,36 +852,29 @@ tryCatch({
       return("Unknown")
    }
    
-   # Check if it's a message with related_to pointing to an edit_file function call
-   if (!is.null(target_message$related_to)) {
-      for (i in seq_along(conversation_log)) {
-         if (!is.null(conversation_log[[i]]$function_call) && 
-             !is.null(conversation_log[[i]]$id) &&
-             conversation_log[[i]]$id == target_message$related_to &&
-             !is.null(conversation_log[[i]]$function_call$name) &&
-             conversation_log[[i]]$function_call$name == "edit_file") {
-            
-              args <- if (is.character(conversation_log[[i]]$function_call$arguments)) {
-                jsonlite::fromJSON(conversation_log[[i]]$function_call$arguments, simplifyVector = FALSE)
-              } else {
-                conversation_log[[i]]$function_call$arguments
-              }
-              
-              if (!is.null(args$filename)) {
-                filename <- if (for_display) basename(args$filename) else args$filename
-                return(filename)
-              }
-         }
-      }
-   }
-   
-   # Check if it's a function_call for run_console_cmd, run_terminal_cmd, delete_file, or run_file
+   # Check if it's a function_call for search_replace, run_console_cmd, run_terminal_cmd, delete_file, or run_file
    if (!is.null(target_message$function_call) && 
        !is.null(target_message$function_call$name)) {
       
       function_name <- target_message$function_call$name
       
-      if (function_name == "run_console_cmd") {
+      if (function_name == "search_replace") {
+         # Extract filename from search_replace arguments
+         args <- tryCatch({
+            if (is.character(target_message$function_call$arguments)) {
+               jsonlite::fromJSON(target_message$function_call$arguments, simplifyVector = FALSE)
+            } else {
+               target_message$function_call$arguments
+            }
+         }, error = function(e) {
+            return(NULL)
+         })
+         
+         if (!is.null(args) && !is.null(args$file_path)) {
+            filename <- if (for_display) basename(args$file_path) else args$file_path
+            return(filename)
+         }
+      } else if (function_name == "run_console_cmd") {
          return("Console")
       } else if (function_name == "run_terminal_cmd") {
          return("Terminal")
@@ -1325,243 +1318,6 @@ tryCatch({
    return(result)
 })
 
-.rs.addFunction("get_diff_data_for_file_editing", function(message_id) {
-   # Get pre-computed diff data for file editing widgets (edit_file or search_replace)
-   
-   tryCatch({
-      # First check if we have stored diff data
-      stored_diff <- .rs.get_stored_diff_data(message_id)
-      if (!is.null(stored_diff)) {
-         
-         # Find the function call entry (edit_file OR search_replace)
-         function_call_entry <- NULL
-         function_call_name <- NULL
-         conversation_log <- .rs.read_conversation_log()
-         for (entry in conversation_log) {
-            if (!is.null(entry$id) && entry$id == message_id && 
-                !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
-                (entry$function_call$name == "edit_file" || entry$function_call$name == "search_replace")) {
-               function_call_entry <- entry
-               function_call_name <- entry$function_call$name
-               break
-            }
-         }
-         
-         # Calculate missing fields
-         added_count <- 0
-         deleted_count <- 0
-         if (!is.null(stored_diff$diff)) {
-            for (diff_item in stored_diff$diff) {
-               if (!is.null(diff_item$type)) {
-                  if (diff_item$type == "added") {
-                     added_count <- added_count + 1
-                  } else if (diff_item$type == "deleted") {
-                     deleted_count <- deleted_count + 1
-                  }
-               }
-            }
-         }
-         
-         # Format filename with diff stats
-         filename_with_stats <- "unknown"
-         if (!is.null(function_call_entry)) {
-            args <- tryCatch({
-               if (is.character(function_call_entry$function_call$arguments)) {
-                  jsonlite::fromJSON(function_call_entry$function_call$arguments, simplifyVector = FALSE)
-               } else {
-                  function_call_entry$function_call$arguments
-               }
-            }, error = function(e) {
-               return(NULL)
-            })
-            
-            if (!is.null(args)) {
-               # Extract filename based on function type
-               filename <- if (function_call_name == "search_replace") {
-                  args$file_path
-               } else {
-                  args$filename
-               }
-               
-               if (!is.null(filename)) {
-                  filename_with_stats <- basename(filename)
-                  if (added_count > 0 || deleted_count > 0) {
-                     addition_text <- paste0('<span class="addition">+', added_count, '</span>')
-                     removal_text <- paste0('<span class="removal">-', deleted_count, '</span>')
-                     diff_text <- paste(addition_text, removal_text)
-                     filename_with_stats <- paste0(filename_with_stats, ' <span class="diff-stats">', diff_text, '</span>')
-                  }
-               }
-            }
-         }
-         
-         # Filter diff for display
-         filtered_diff_for_display <- .rs.filter_diff_for_display(stored_diff$diff)
-         
-         # Return simplified structure
-         result <- list(
-            diff = filtered_diff_for_display,
-            is_start_edit = FALSE,
-            is_end_edit = FALSE,
-            is_insert_mode = FALSE,
-            is_line_range_mode = FALSE,
-            start_line = NULL,
-            end_line = NULL,
-            insert_line = NULL,
-            added = as.integer(added_count),
-            deleted = as.integer(deleted_count),
-            filename_with_stats = filename_with_stats
-         )
-         
-         return(result)
-      }
-      
-      # If no stored data, compute it fresh
-      conversation_log <- .rs.read_conversation_log()
-      if (is.null(conversation_log) || length(conversation_log) == 0) {
-         return(list(diff = list()))
-      }
-      
-      # Find the assistant message that's related to this function call
-      assistant_message <- NULL
-      for (entry in conversation_log) {
-         if (!is.null(entry$related_to) && entry$related_to == message_id && 
-             !is.null(entry$role) && entry$role == "assistant") {
-            assistant_message <- entry
-            break
-         }
-      }
-      
-      if (is.null(assistant_message)) {
-         return(list(diff = list()))
-      }
-      
-      # Find the function call (edit_file OR search_replace)
-      function_call_entry <- NULL
-      function_call_name <- NULL
-      for (entry in conversation_log) {
-         if (!is.null(entry$id) && entry$id == message_id && 
-             !is.null(entry$function_call) && !is.null(entry$function_call$name) &&
-             (entry$function_call$name == "edit_file" || entry$function_call$name == "search_replace")) {
-            function_call_entry <- entry
-            function_call_name <- entry$function_call$name
-            break
-         }
-      }
-      
-      if (is.null(function_call_entry)) {
-         return(list(diff = list()))
-      }
-      
-      # Extract arguments from function call
-      args <- tryCatch({
-         if (is.character(function_call_entry$function_call$arguments)) {
-            jsonlite::fromJSON(function_call_entry$function_call$arguments, simplifyVector = FALSE)
-         } else {
-            function_call_entry$function_call$arguments
-         }
-      }, error = function(e) {
-         cat("DEBUG get_diff_data_for_file_editing: Error parsing arguments:", e$message, "\n")
-         return(NULL)
-      })
-      
-      if (is.null(args)) {
-         return(list(diff = list()))
-      }
-      
-      # Extract filename based on function type
-      filename <- if (function_call_name == "search_replace") {
-         args$file_path
-      } else {
-         args$filename
-      }
-      
-      if (is.null(filename)) {
-         return(list(diff = list()))
-      }
-      
-      # Get the new content from the assistant message
-      new_content <- assistant_message$content
-      if (is.null(new_content)) {
-         return(list(diff = list()))
-      }
-      
-      # For both edit_file and search_replace, the new content is the assistant's response
-      cleaned_content <- new_content
-      
-      # Get the previous content from the function_call_output
-      function_output <- NULL
-      for (entry in conversation_log) {
-         if (!is.null(entry$type) && entry$type == "function_call_output" &&
-             !is.null(entry$call_id) && 
-             !is.null(function_call_entry$function_call$call_id) &&
-             entry$call_id == function_call_entry$function_call$call_id) {
-            function_output <- entry
-            break
-         }
-      }
-      
-      previous_content <- if (!is.null(function_output) && !is.null(function_output$output)) {
-         function_output$output
-      } else {
-         ""
-      }
-      
-      # Split content into lines for diff calculation
-      old_lines <- if (nchar(previous_content) > 0) {
-         strsplit(previous_content, "\n", fixed = TRUE)[[1]]
-      } else {
-         character(0)
-      }
-      
-      new_lines <- if (nchar(cleaned_content) > 0) {
-         strsplit(cleaned_content, "\n", fixed = TRUE)[[1]]
-      } else {
-         character(0)
-      }
-      
-      # Use unified diff calculation for both function types
-      diff_result <- .rs.compute_line_diff(old_lines, new_lines, is_from_edit_file = TRUE)
-      .rs.store_diff_data(message_id, diff_result$diff, previous_content, cleaned_content)
-      
-      # Format filename with diff stats
-      filename_with_stats <- basename(filename)
-      if (diff_result$added > 0 || diff_result$deleted > 0) {
-         addition_text <- paste0('<span class="addition">+', diff_result$added, '</span>')
-         removal_text <- paste0('<span class="removal">-', diff_result$deleted, '</span>')
-         diff_text <- paste(addition_text, removal_text)
-         filename_with_stats <- paste0(filename_with_stats, ' <span class="diff-stats">', diff_text, '</span>')
-      }
-      
-      # Filter diff for display
-      filtered_diff_for_display <- .rs.filter_diff_for_display(diff_result$diff)
-      
-      # Return simplified structure
-      result <- list(
-         diff = filtered_diff_for_display,
-         is_start_edit = FALSE,
-         is_end_edit = FALSE,
-         is_insert_mode = FALSE,
-         is_line_range_mode = FALSE,
-         start_line = NULL,
-         end_line = NULL,
-         insert_line = NULL,
-         added = as.integer(diff_result$added),
-         deleted = as.integer(diff_result$deleted),
-         filename_with_stats = filename_with_stats
-      )
-      return(result)
-   }, error = function(e) {
-      cat("DEBUG: Error in get_diff_data_for_file_editing:", e$message, "\n")
-      return(list(diff = list()))
-   })
-})
-
-.rs.addJsonRpcHandler("get_diff_data_for_file_editing", function(message_id) {
-   result <- .rs.get_diff_data_for_file_editing(message_id)
-   return(result)
-})
-
 # Open Document Management Functions
 .rs.addFunction("get_open_document_by_path", function(file_path) {
    # Get open document info by file path
@@ -1908,9 +1664,7 @@ tryCatch({
    return(FALSE)
 })
 
-.rs.addFunction("grep_in_open_documents", function(pattern, case_sensitive = FALSE, include_patterns = NULL, exclude_patterns = NULL) {
-   # Search for pattern in all open document contents
-   # Now supports include/exclude pattern filtering like the disk search
+.rs.addFunction("grep_in_open_documents", function(pattern, case_sensitive = FALSE, include_patterns = NULL, exclude_patterns = NULL, context_before = 0, context_after = 0, multiline = FALSE, search_path = NULL) {
    # Returns list of matches with file paths and line information
    
    pattern <- gsub('\\\\', '\\', pattern, fixed = TRUE)
@@ -1935,11 +1689,9 @@ tryCatch({
       display_path <- NULL
       
       if (!is.null(doc$path) && doc$path != "") {
-         # Saved file with a path - make it relative to cwd
-         cwd <- getwd()
-         display_path <- gsub(paste0("^", cwd, "/"), "", doc$path)
+         # Keep absolute path to match ripgrep output, but expand ~ to full path
+         display_path <- path.expand(doc$path)
       } else if (!is.null(doc$properties) && !is.null(doc$properties$tempName) && doc$properties$tempName != "") {
-         # Unsaved file - construct path from tempName and document ID
          temp_name <- doc$properties$tempName
          
          if (!is.null(doc$id) && doc$id != "") {
@@ -1948,84 +1700,159 @@ tryCatch({
             display_path <- paste0("__UNSAVED__/", temp_name)
          }
       } else {
-         # Skip documents without path or tempName - no fallbacks
          next
       }
-      
       
       if (is.null(display_path)) {
          next
       }
       
-      # Apply include/exclude pattern filtering
-      # For unsaved files, consider the document type when checking patterns
-      should_include_file <- if (startsWith(display_path, "__UNSAVED")) {
-         # For unsaved files, create a temporary filename with extension for pattern matching only
-         pattern_test_name <- temp_name
+      # Check path restriction for open documents
+      if (!is.null(search_path) && search_path != "") {
+         # Get the full document path and expand tilde to compare with search_path
+         full_doc_path <- if (!is.null(doc$path)) path.expand(doc$path) else ""
          
-         # If include/exclude patterns are specified and the temp_name has no extension,
-         # get the extension that would correspond to this document type for testing
-         if ((!is.null(include_patterns) && length(include_patterns) > 0) || 
-             (!is.null(exclude_patterns) && length(exclude_patterns) > 0)) {
-            if (!grepl("\\.", temp_name)) {
-               doc_type <- if (!is.null(doc$type)) doc$type else ""
-               extension <- switch(doc_type,
-                  "r_source" = ".R",        # kSourceDocumentTypeRSource
-                  "r_markdown" = ".Rmd",    # kSourceDocumentTypeRMarkdown
-                  "quarto_markdown" = ".qmd", # kSourceDocumentTypeQuartoMarkdown
-                  "r_html" = ".Rhtml",      # kSourceDocumentTypeRHTML
-                  "sweave" = ".Rnw",        # kSourceDocumentTypeSweave
-                  "cpp" = ".cpp",           # kSourceDocumentTypeCpp
-                  "python" = ".py",         # kSourceDocumentTypePython
-                  "sql" = ".sql",           # kSourceDocumentTypeSQL
-                  "js" = ".js",             # kSourceDocumentTypeJS
-                  "sh" = ".sh",             # kSourceDocumentTypeShell
-                  ""  # default: no extension for unknown types
-               )
-               if (extension != "") {
-                  pattern_test_name <- paste0(temp_name, extension)
-               }
+         # Check if search_path is a specific file or a directory
+         # If it's a file, do exact match; if directory, use startsWith
+         if (grepl("\\.[a-zA-Z0-9]+$", search_path)) {
+            # Looks like a file path (has extension)
+            if (full_doc_path != search_path) {
+               next
+            }
+         } else {
+            # Looks like a directory path
+            if (full_doc_path != "" && !startsWith(full_doc_path, search_path)) {
+               next
             }
          }
-         
-         # Test pattern matching against the test name, but use original display_path for results
-         pattern_test_path <- if (!is.null(doc$id) && doc$id != "") {
-            paste0("__UNSAVED_", substr(doc$id, 1, 4), "__/", pattern_test_name)
-         } else {
-            paste0("__UNSAVED__/", pattern_test_name)
-         }
-         
-         .rs.check_file_pattern_match(pattern_test_path, include_patterns, exclude_patterns)
-      } else {
-         # For saved files, use the display_path directly
-         .rs.check_file_pattern_match(display_path, include_patterns, exclude_patterns)
       }
       
+      # Apply include/exclude pattern filtering
+      should_include_file <- .rs.check_file_pattern_match(display_path, include_patterns, exclude_patterns)
+      
       if (!should_include_file) {
-         next  # Skip this file due to include/exclude patterns
+         next
+      }
+            
+      # Initialize results for this file (even if no matches) so ripgrep knows we searched it
+      # This must come AFTER all the filtering checks
+      if (is.null(results[[display_path]])) {
+         results[[display_path]] <- list()
       }
       
       # Split content into lines
       content_lines <- strsplit(doc$contents, "\n")[[1]]
       
-      # Search each line
-      for (line_num in seq_along(content_lines)) {
-         line_content <- content_lines[line_num]
+      # First pass: find all matching lines
+      matching_lines <- c()
+      
+      if (multiline) {
+         # For multiline mode, test against the entire content
+         # Use dotall equivalent behavior where . matches newlines
+         multiline_pattern <- if (!startsWith(pattern, "(?s)")) paste0("(?s)", pattern) else pattern
          
-         # Perform grep search
+         # Find all matches in the document
          if (case_sensitive) {
-            match_found <- grepl(pattern, line_content, perl = TRUE)
+            matches <- gregexpr(multiline_pattern, doc$contents, perl = TRUE)[[1]]
          } else {
-            match_found <- grepl(pattern, line_content, ignore.case = TRUE, perl = TRUE)
+            matches <- gregexpr(multiline_pattern, doc$contents, ignore.case = TRUE, perl = TRUE)[[1]]
          }
          
-         if (match_found) {
-            # Add match result
+         if (matches[1] != -1) {
+            # For each match, find which lines it spans
+            for (i in seq_along(matches)) {
+               match_start <- matches[i]
+               match_length <- attr(matches, "match.length")[i]
+               match_end <- match_start + match_length - 1
+               
+               # Count newlines before match_start to find starting line
+               # Use the same line splitting method we used for content_lines
+               text_before <- substr(doc$contents, 1, match_start - 1)
+               # If empty, we're on line 1; otherwise count lines
+               if (nchar(text_before) == 0) {
+                  start_line <- 1
+               } else {
+                  lines_before <- length(strsplit(text_before, "\n", fixed = TRUE)[[1]])
+                  start_line <- lines_before + 1
+               }
+               
+               # Count newlines within match to find ending line
+               matched_text <- substr(doc$contents, match_start, match_end)
+               lines_in_match <- length(strsplit(matched_text, "\n", fixed = TRUE)[[1]])
+               # If match spans multiple lines, end_line is start_line + (number of line breaks)
+               end_line <- start_line + (lines_in_match - 1)
+               
+               # Add all lines in this span
+               for (line_num in start_line:end_line) {
+                  if (line_num <= length(content_lines)) {
+                     matching_lines <- c(matching_lines, line_num)
+                  }
+               }
+            }
+            
+            # Remove duplicates
+            matching_lines <- unique(matching_lines)
+         }
+      } else {
+         # Regular line-by-line search
+         for (line_num in seq_along(content_lines)) {
+            line_content <- content_lines[line_num]
+            
+            # Perform grep search
+            if (case_sensitive) {
+               match_found <- grepl(pattern, line_content, perl = TRUE)
+            } else {
+               match_found <- grepl(pattern, line_content, ignore.case = TRUE, perl = TRUE)
+            }
+            
+            if (match_found) {
+               matching_lines <- c(matching_lines, line_num)
+            }
+         }
+      }
+      
+      # Second pass: add matching lines plus context
+      if (length(matching_lines) > 0) {
+         lines_to_include <- c()
+         
+         for (match_line in matching_lines) {
+            # Add context before
+            if (context_before > 0) {
+               for (i in max(1, match_line - context_before):(match_line - 1)) {
+                  lines_to_include <- c(lines_to_include, i)
+               }
+            }
+            
+            # Add match line
+            lines_to_include <- c(lines_to_include, match_line)
+            
+            # Add context after
+            if (context_after > 0) {
+               for (i in (match_line + 1):min(length(content_lines), match_line + context_after)) {
+                  lines_to_include <- c(lines_to_include, i)
+               }
+            }
+         }
+         
+         # Remove duplicates and sort
+         lines_to_include <- unique(sort(lines_to_include))
+         
+         # Add to results
+         for (line_num in lines_to_include) {
+            is_match <- line_num %in% matching_lines
+            line_content <- content_lines[line_num]
+            
+            # Mark context lines with -- prefix (like ripgrep does)
+            if (!is_match) {
+               line_content <- paste0("--", line_content)
+            }
+            
             match_entry <- list(
                file = display_path,
                line = line_num,
                content = line_content,
-               source = "EDITOR"
+               source = "EDITOR",
+               is_match = is_match
             )
             
             if (is.null(results[[display_path]])) {
@@ -2095,4 +1922,299 @@ tryCatch({
    
    # For saved files with duplicates, return the full path to distinguish them
    return(file_path)
+})
+
+.rs.addFunction("format_grep_content", function(ripgrep_output, open_doc_results, pattern, cwd, head_limit = 50, search_file = NULL) {
+   # Format grep output in content mode (default)
+   # search_file: if ripgrep was searching a specific file, pass it here so we can add it to results
+   MAX_RESULTS <- 50
+   results <- list()
+   total_matches <- 0
+   
+   # Add results from open documents first
+   for (file_path in names(open_doc_results)) {
+      for (match_info in open_doc_results[[file_path]]) {
+         if (is.null(results[[file_path]])) {
+            results[[file_path]] <- character(0)
+         }
+         
+         # Check if this is a context line (starts with --)
+         if (startsWith(match_info$content, "--")) {
+            # Context line
+            context_text <- substring(match_info$content, 3)
+            results[[file_path]] <- c(results[[file_path]], 
+                                     paste0("Line ", match_info$line, ": ", context_text, " [EDITOR]"))
+         } else {
+            # Match line
+            results[[file_path]] <- c(results[[file_path]], 
+                                     paste0("Line ", match_info$line, ": ", match_info$content, " [EDITOR]"))
+            total_matches <- total_matches + 1
+         }
+      }
+   }
+   
+   # Process ripgrep output
+   matches <- strsplit(ripgrep_output, "\n")[[1]]
+   matches <- matches[matches != ""]
+   
+   # Respect head_limit but cap at MAX_RESULTS (like vscode does)
+   effective_limit <- if (!is.null(head_limit)) min(head_limit, MAX_RESULTS) else MAX_RESULTS
+   
+   limited_matches <- if (length(matches) > effective_limit) matches[1:effective_limit] else matches
+   
+   match_count_note <- if (length(matches) > effective_limit) {
+      paste0("\n(Showing ", effective_limit, " of ", length(matches), " matches)")
+   } else {
+      ""
+   }
+   
+   # Add disk results, but only for files not already found in editor
+   
+   for (match in limited_matches) {
+      if (match == "") next
+      
+      # Handle both match lines (:) and context lines (-)
+      is_context_line <- FALSE
+      parts <- NULL
+      
+      if (grepl(":", match, fixed = TRUE)) {
+         parts <- strsplit(match, ":", fixed = TRUE)[[1]]
+      } else if (grepl("-", match, fixed = TRUE)) {
+         parts <- strsplit(match, "-", fixed = TRUE)[[1]]
+         is_context_line <- TRUE
+      } else {
+         next
+      }
+      
+      # Handle both formats:
+      # Multi-file: /path/to/file:2:content
+      # Single-file: 2:content (when ripgrep searches one specific file)
+      if (length(parts) >= 3) {
+         # Multi-file format with filepath
+         filepath <- parts[1]
+         line_num <- parts[2]
+         content <- paste(parts[-(1:2)], collapse = if (is_context_line) "-" else ":")
+      } else if (length(parts) == 2 && !is.null(search_file)) {
+         # Single-file format without filepath - use search_file
+         filepath <- search_file
+         line_num <- parts[1]
+         content <- parts[2]
+      } else {
+         next
+      }
+      
+      # Skip if we already have editor results for this file (use absolute path from ripgrep)
+      if (!is.null(open_doc_results[[filepath]])) {
+         next
+      }
+         
+         # Create relative path for display
+         relative_path <- gsub(paste0("^", cwd, "/"), "", filepath)
+         
+         # Skip binary files
+         if (grepl("\\.(png|jpg|jpeg|gif|bmp|ico|pdf|zip|tar|gz|rar|7z|exe|dll|so|dylib)$", relative_path, ignore.case = TRUE)) {
+            next
+         }
+         
+         # Only truncate long lines for match lines, not context lines
+         if (!is_context_line) {
+            content_len <- nchar(content)
+            if (content_len > 100) {
+               match_pos <- regexpr(pattern, content, ignore.case = TRUE, perl = TRUE)[1]
+               
+               if (match_pos > 0) {
+                  start_pos <- max(1, match_pos - 30)
+                  end_pos <- min(content_len, match_pos + 30)
+                  
+                  first_part <- substr(content, 1, 20)
+                  middle_part <- substr(content, start_pos, end_pos)
+                  last_part <- substr(content, content_len - 19, content_len)
+                  
+                  content <- paste0(first_part, "...", middle_part, "...", last_part)
+               }
+            }
+            total_matches <- total_matches + 1
+         }
+         
+         if (is.null(results[[relative_path]])) {
+            results[[relative_path]] <- character(0)
+         }
+         
+         results[[relative_path]] <- c(results[[relative_path]], 
+                                      paste0("Line ", line_num, ": ", content))
+   }
+   
+   # Format final output
+   if (length(results) > 0) {
+      result_lines <- c(paste0("Results:", match_count_note))
+      
+      for (file in names(results)) {
+         result_lines <- c(result_lines, paste0("\nFile: ", file))
+         result_lines <- c(result_lines, results[[file]])
+      }
+      
+      return(paste(result_lines, collapse = "\n"))
+   } else {
+      return("Results:\n\nNo matches found")
+   }
+})
+
+.rs.addFunction("format_grep_files_with_matches", function(ripgrep_output, open_doc_results, head_limit = 50) {
+   # Format grep output in files_with_matches mode
+   MAX_RESULTS <- 50
+   files <- character(0)
+   
+   # Add files from open documents
+   for (file_path in names(open_doc_results)) {
+      if (length(open_doc_results[[file_path]]) > 0) {
+         files <- c(files, file_path)
+      }
+   }
+   
+   # Add files from ripgrep output
+   ripgrep_files <- strsplit(ripgrep_output, "\n")[[1]]
+   ripgrep_files <- ripgrep_files[ripgrep_files != ""]
+   
+   for (file in ripgrep_files) {
+      # Skip if this file is already in open documents (ripgrep returns absolute paths)
+      if (is.null(open_doc_results[[file]])) {
+         files <- c(files, file)
+      }
+   }
+   
+   # Remove duplicates
+   files <- unique(files)
+   
+   # Respect head_limit but cap at MAX_RESULTS
+   effective_limit <- if (!is.null(head_limit)) min(head_limit, MAX_RESULTS) else MAX_RESULTS
+   limited_files <- if (length(files) > effective_limit) files[1:effective_limit] else files
+   
+   if (length(limited_files) == 0) {
+      return("No files with matches found.")
+   }
+   
+   result_lines <- c(paste0("Files with matches:", 
+                           if (length(files) > effective_limit) 
+                              paste0(" (showing first ", effective_limit, " of ", length(files), ")") 
+                           else ""))
+   
+   for (file in limited_files) {
+      result_lines <- c(result_lines, file)
+   }
+   
+   return(paste(result_lines, collapse = "\n"))
+})
+
+.rs.addFunction("format_grep_count", function(ripgrep_output, open_doc_results, head_limit = 50) {
+   # Format grep output in count mode
+   MAX_RESULTS <- 50
+   counts <- list()
+   
+   # Add counts from open documents
+   for (file_path in names(open_doc_results)) {
+      # Count only actual matches, not context lines
+      match_count <- sum(sapply(open_doc_results[[file_path]], function(m) {
+         if (is.null(m$is_match)) TRUE else m$is_match
+      }))
+      if (match_count > 0) {
+         counts[[file_path]] <- match_count
+      }
+   }
+   
+   # Add counts from ripgrep output
+   count_lines <- strsplit(ripgrep_output, "\n")[[1]]
+   count_lines <- count_lines[count_lines != ""]
+   
+   for (line in count_lines) {
+      parts <- strsplit(line, ":", fixed = TRUE)[[1]]
+      if (length(parts) == 2) {
+         file <- parts[1]
+         count <- as.integer(parts[2])
+         
+         # Skip if this file is already in open documents (ripgrep returns absolute paths)
+         if (is.null(open_doc_results[[file]])) {
+            counts[[file]] <- count
+         }
+      }
+   }
+   
+   if (length(counts) == 0) {
+      return("No matches found.")
+   }
+   
+   # Convert to data frame for easier handling
+   count_entries <- data.frame(
+      file = names(counts),
+      count = unlist(counts),
+      stringsAsFactors = FALSE
+   )
+   
+   # Respect head_limit but cap at MAX_RESULTS
+   effective_limit <- if (!is.null(head_limit)) min(head_limit, MAX_RESULTS) else MAX_RESULTS
+   limited_entries <- if (nrow(count_entries) > effective_limit) {
+      count_entries[1:effective_limit, ]
+   } else {
+      count_entries
+   }
+   
+   result_lines <- c(paste0("Match counts:", 
+                          if (nrow(count_entries) > effective_limit) 
+                             paste0(" (showing first ", effective_limit, " of ", nrow(count_entries), ")") 
+                          else ""))
+   
+   for (i in 1:nrow(limited_entries)) {
+      result_lines <- c(result_lines, paste0(limited_entries$file[i], ":", limited_entries$count[i]))
+   }
+   
+   return(paste(result_lines, collapse = "\n"))
+})
+
+.rs.addFunction("get_plot_images", function() {
+   # Get the graphics directory path directly from C++
+   graphics_path <- tryCatch({
+      .rs.getGraphicsPath()
+   }, error = function(e) {
+      NULL
+   })
+   
+   if (is.null(graphics_path) || !dir.exists(graphics_path)) {
+      return(character(0))
+   }
+   
+   # Get all files in the graphics directory
+   all_files <- list.files(graphics_path, full.names = TRUE, all.files = FALSE)
+   
+   if (length(all_files) == 0) {
+      return(character(0))
+   }
+   
+   # Filter to only include image files (exclude .snapshot, .manip, INDEX, and empty.*)
+   # Only keep files that look like UUID.png (or other image extensions)
+   image_files <- all_files[grepl("\\.(png|jpg|jpeg|svg|tiff|bmp|gif)$", all_files, ignore.case = TRUE)]
+   image_files <- image_files[!grepl("^empty\\.", basename(image_files), ignore.case = TRUE)]
+   image_files <- image_files[basename(image_files) != "INDEX"]
+   
+   if (length(image_files) == 0) {
+      return(character(0))
+   }
+   
+   # Sort by modification time (most recent first)
+   file_info <- file.info(image_files)
+   sorted_files <- image_files[order(file_info$mtime, decreasing = TRUE)]
+   
+   return(sorted_files)
+})
+
+.rs.addFunction("get_plot_by_index", function(plot_index) {
+   plots <- .rs.get_plot_images()
+   
+   if (length(plots) == 0) {
+      return(list(success = FALSE, error = "No plots available"))
+   }
+   
+   if (plot_index < 1 || plot_index > length(plots)) {
+      return(list(success = FALSE, error = paste0("Invalid plot index. Available plots: ", length(plots))))
+   }
+   
+   return(list(success = TRUE, path = plots[plot_index]))
 })

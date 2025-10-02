@@ -107,9 +107,6 @@ const char * const kJsCallbacks = R"EOF(
    if (window.parent.aiClick)
       window.onclick = function(e) { window.parent.aiClick(e); } 
 
-   if (window.parent.aiAcceptEditFileCommand)
-      window.aiAcceptEditFileCommand = function(edited_code) { window.parent.aiAcceptEditFileCommand(edited_code); }
-      
    if (window.parent.aiSaveApiKey)
       window.aiSaveApiKey = function(provider, key) { window.parent.aiSaveApiKey(provider, key); }
       
@@ -391,6 +388,34 @@ Error createNewConversation(const json::JsonRpcRequest& request,
    return Success();
 }
 
+Error setInteractionMode(const json::JsonRpcRequest& request,
+                        json::JsonRpcResponse* p_response)
+{
+   std::string mode;
+   Error error = json::readParam(request.params, 0, &mode);
+   if (error)
+      return error;
+   
+   // Call the R function to set the interaction mode
+   r::exec::RFunction setMode(".rs.set_interaction_mode_action");
+   setMode.addParam(mode);
+   return setMode.call();
+}
+
+Error getInteractionMode(const json::JsonRpcRequest& request,
+                        json::JsonRpcResponse* p_response)
+{
+   // Call the R function to get the interaction mode
+   r::exec::RFunction getMode(".rs.get_interaction_mode");
+   std::string mode;
+   Error error = getMode.call(&mode);
+   if (error)
+      return error;
+   
+   p_response->setResult(mode);
+   return Success();
+}
+
 Error aiAcceptSearchReplaceCommand(const json::JsonRpcRequest& request,
                      json::JsonRpcResponse* p_response,
                      const std::string& edited_code,
@@ -434,39 +459,6 @@ Error aiCancelSearchReplaceCommand(const json::JsonRpcRequest& request,
    SEXP result_sexp;
    r::sexp::Protect rp;
    Error error = r::exec::RFunction(".rs.cancel_search_replace_command")
-         .addParam(message_id)
-         .addParam(request_id)  // request_id
-         .call(&result_sexp, &rp);
-
-   if (error) {
-      LOG_ERROR(error);
-      return error;
-   }
-
-   // Check if R function returned a result object with status information
-   if (result_sexp != R_NilValue) {
-      json::Value result_json;
-      Error json_error = r::json::jsonValueFromList(result_sexp, &result_json);
-      if (!json_error) {
-         p_response->setResult(result_json);
-      }
-   }
-
-   return Success();
-}
-
-Error aiAcceptEditFileCommand(const json::JsonRpcRequest& request,
-                     json::JsonRpcResponse* p_response,
-                     const std::string& edited_code,
-                     const std::string& message_id,
-                     const std::string& request_id)
-{
-
-   // Call the R function and capture result
-   SEXP result_sexp;
-   r::sexp::Protect rp;
-   Error error = r::exec::RFunction(".rs.accept_edit_file_command")
-         .addParam(edited_code)
          .addParam(message_id)
          .addParam(request_id)  // request_id
          .call(&result_sexp, &rp);
@@ -1923,7 +1915,6 @@ Error matchTextInOpenDocuments(const json::JsonRpcRequest& request,
             }
             
             // For unsaved documents, we need to provide a usable path identifier
-            // Use the same pattern as the symbol index system
             std::string effective_file_path = file_path;
             if (file_path.empty() && !doc_id.empty()) {
                // Get tempName from document properties
@@ -2170,7 +2161,7 @@ Error getOpenDocumentContent(const json::JsonRpcRequest& request,
          std::string tempName = p_doc->getProperty("tempName");
          if (!tempName.empty())
          {
-            // For tempName matching, use prefix patterns from symbol index:
+            // For tempName matching, use prefix patterns:
             // 1. "__UNSAVED__/" + tempName
             // 2. "__UNSAVED_" + id + "__/" + tempName
             
@@ -2183,8 +2174,8 @@ Error getOpenDocumentContent(const json::JsonRpcRequest& request,
             
             // Check various matching patterns
             if (file_path == tempName ||                          // Direct tempName match
-                file_path == unsavedPathPattern1 ||               // Symbol index pattern 1
-                (!unsavedPathPattern2.empty() && file_path == unsavedPathPattern2)) // Symbol index pattern 2
+                file_path == unsavedPathPattern1 ||               // Pattern 1
+                (!unsavedPathPattern2.empty() && file_path == unsavedPathPattern2)) // Pattern 2
             {
                matches = true;
             }
@@ -2257,7 +2248,7 @@ Error isFileOpenInEditor(const json::JsonRpcRequest& request,
          std::string tempName = p_doc->getProperty("tempName");
          if (!tempName.empty())
          {
-            // For tempName matching, use prefix patterns from symbol index:
+            // For tempName matching, use prefix patterns:
             // 1. "__UNSAVED__/" + tempName
             // 2. "__UNSAVED_" + id + "__/" + tempName
             
@@ -2270,8 +2261,8 @@ Error isFileOpenInEditor(const json::JsonRpcRequest& request,
             
             // Check various matching patterns
             if (file_path == tempName ||                          // Direct tempName match
-                file_path == unsavedPathPattern1 ||               // Symbol index pattern 1
-                (!unsavedPathPattern2.empty() && file_path == unsavedPathPattern2)) // Symbol index pattern 2
+                file_path == unsavedPathPattern1 ||               // Pattern 1
+                (!unsavedPathPattern2.empty() && file_path == unsavedPathPattern2)) // Pattern 2
             {
                matches = true;
             }
@@ -2344,7 +2335,7 @@ Error updateOpenDocumentContent(const json::JsonRpcRequest& request,
          std::string tempName = doc->getProperty("tempName");
          if (!tempName.empty())
          {
-            // For tempName matching, use prefix patterns from symbol index:
+            // For tempName matching, use prefix patterns:
             // 1. "__UNSAVED__/" + tempName
             // 2. "__UNSAVED_" + id + "__/" + tempName
             
@@ -2357,8 +2348,8 @@ Error updateOpenDocumentContent(const json::JsonRpcRequest& request,
             
             // Check various matching patterns
             if (file_path == tempName ||                          // Direct tempName match
-                file_path == unsavedPathPattern1 ||               // Symbol index pattern 1
-                (!unsavedPathPattern2.empty() && file_path == unsavedPathPattern2)) // Symbol index pattern 2
+                file_path == unsavedPathPattern1 ||               // Pattern 1
+                (!unsavedPathPattern2.empty() && file_path == unsavedPathPattern2)) // Pattern 2
             {
                matches = true;
             }
@@ -2559,38 +2550,6 @@ Error cancelConsoleCommand(const json::JsonRpcRequest& request,
       
    // The R function handles the completion
    // Just return success here
-   return Success();
-}
-
-// Function to cancel a pending edit file command
-Error cancelEditFileCommand(const json::JsonRpcRequest& request,
-                           json::JsonRpcResponse* p_response,
-                           const std::string& message_id,
-                           const std::string& request_id)
-{
-
-   // Call the R function and capture result
-   SEXP result_sexp;
-   r::sexp::Protect rp;
-   Error error = r::exec::RFunction(".rs.cancel_edit_file_command")
-      .addParam(message_id)
-      .addParam(request_id)
-      .call(&result_sexp, &rp);
-   
-   if (error) {
-      LOG_ERROR(error);
-      return error;
-   }
-   
-   // Check if R function returned a result object with status information
-   if (result_sexp != R_NilValue) {
-      json::Value result_json;
-      Error json_error = r::json::jsonValueFromList(result_sexp, &result_json);
-      if (!json_error) {
-         p_response->setResult(result_json);
-      }
-   }
-   
    return Success();
 }
 
@@ -2938,16 +2897,23 @@ Error processAiOperation(const json::JsonRpcRequest& request,
 
 void initEnvironment()
 {
-   // environment variable to initialize
+   // environment variables to initialize
    const char * const kRStudioRipgrep = "RSTUDIO_RIPGREP";
+   const char * const kRStudioLocalBackend = "RSTUDIO_LOCAL_BACKEND";
    
    // set RSTUDIO_RIPGREP (leave existing value alone)
    std::string rstudioRipgrep = core::system::getenv(kRStudioRipgrep);
    if (rstudioRipgrep.empty())
       rstudioRipgrep = session::options().ripgrepPath().getAbsolutePath();
    
+   // set RSTUDIO_LOCAL_BACKEND (leave existing value alone)
+   std::string rstudioLocalBackend = core::system::getenv(kRStudioLocalBackend);
+   if (rstudioLocalBackend.empty())
+      rstudioLocalBackend = session::options().localBackendPath().getAbsolutePath();
+   
    r::exec::RFunction sysSetenv("Sys.setenv");
    sysSetenv.addParam(kRStudioRipgrep, rstudioRipgrep);
+   sysSetenv.addParam(kRStudioLocalBackend, rstudioLocalBackend);
 
    // call Sys.setenv
    Error error = sysSetenv.call();
@@ -3707,6 +3673,168 @@ Error setAutomationList(const json::JsonRpcRequest& request,
    return Success();
 }
 
+// BYOK Local Backend RPC Methods
+
+Error startLocalBackendProxy(const json::JsonRpcRequest& request,
+                             json::JsonRpcResponse* pResponse)
+{
+   std::string proxyUrl;
+   Error error = r::exec::RFunction(".rs.ai.startLocalBackendProxy").call(&proxyUrl);
+   
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   pResponse->setResult(proxyUrl);
+   return Success();
+}
+
+Error stopLocalBackendProxy(const json::JsonRpcRequest& request,
+                            json::JsonRpcResponse* pResponse)
+{
+   Error error = r::exec::RFunction(".rs.ai.stopLocalBackendProxy").call();
+   
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   pResponse->setResult(true);
+   return Success();
+}
+
+Error isBYOKEnabled(const json::JsonRpcRequest& request,
+                   json::JsonRpcResponse* pResponse)
+{
+   std::string provider;
+   Error error = json::readParams(request.params, &provider);
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   bool enabled;
+   error = r::exec::RFunction(".rs.ai.isBYOKEnabled")
+      .addParam(provider)
+      .call(&enabled);
+   
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   pResponse->setResult(enabled);
+   return Success();
+}
+
+Error setBYOKApiKey(const json::JsonRpcRequest& request,
+                   json::JsonRpcResponse* pResponse)
+{
+   std::string provider, apiKey;
+   Error error = json::readParams(request.params, &provider, &apiKey);
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   error = r::exec::RFunction(".rs.ai.setBYOKApiKey")
+      .addParam(provider)
+      .addParam(apiKey)
+      .call();
+   
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   pResponse->setResult(true);
+   return Success();
+}
+
+Error setBYOKEnabled(const json::JsonRpcRequest& request,
+                    json::JsonRpcResponse* pResponse)
+{
+   std::string provider;
+   bool enabled;
+   Error error = json::readParams(request.params, &provider, &enabled);
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   error = r::exec::RFunction(".rs.ai.setBYOKEnabled")
+      .addParam(provider)
+      .addParam(enabled)
+      .call();
+   
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   pResponse->setResult(true);
+   return Success();
+}
+
+Error clearBYOKApiKey(const json::JsonRpcRequest& request,
+                     json::JsonRpcResponse* pResponse)
+{
+   std::string provider;
+   Error error = json::readParams(request.params, &provider);
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   error = r::exec::RFunction(".rs.ai.clearBYOKApiKey")
+      .addParam(provider)
+      .call();
+   
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   return Success();
+}
+
+Error hasBYOKApiKey(const json::JsonRpcRequest& request,
+                    json::JsonRpcResponse* pResponse)
+{
+   std::string provider;
+   Error error = json::readParams(request.params, &provider);
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   bool hasKey;
+   error = r::exec::RFunction(".rs.ai.hasBYOKApiKey")
+      .addParam(provider)
+      .call(&hasKey);
+   
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   pResponse->setResult(hasKey);
+   return Success();
+}
+
 Error initialize()
 {
    using boost::bind;
@@ -3758,6 +3886,8 @@ Error initialize()
       (bind(module_context::registerRpcMethod, "extract_r_functions", extractRFunctions))
       (bind(module_context::registerRpcMethod, "extract_bash_functions", extractBashFunctions))
       (bind(module_context::registerRpcMethod, "create_new_conversation", createNewConversation))
+      (bind(module_context::registerRpcMethod, "set_interaction_mode", setInteractionMode))
+      (bind(module_context::registerRpcMethod, "get_interaction_mode", getInteractionMode))
       (bind(module_context::registerRpcMethod, "list_attachments", listAttachments))
       (bind(module_context::registerRpcMethod, "delete_attachment", 
             boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
@@ -3842,17 +3972,6 @@ Error initialize()
                   if (error)
                      return error;
                   return revertAiMessage(request, p_response, message_id);
-               })))
-      (bind(module_context::registerRpcMethod, "accept_edit_file_command", 
-            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
-               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
-                  std::string edited_code;
-                  std::string message_id;
-                  std::string request_id;
-                  Error error = json::readParams(request.params, &edited_code, &message_id, &request_id);
-                  if (error)
-                     return error;
-                  return aiAcceptEditFileCommand(request, p_response, edited_code, message_id, request_id);
                })))
       (bind(module_context::registerRpcMethod, "accept_search_replace_command", 
             boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
@@ -4048,16 +4167,6 @@ Error initialize()
                   if (error)
                      return error;
                   return cancelConsoleCommand(request, p_response, message_id, request_id);
-               })))
-      (bind(module_context::registerRpcMethod, "cancel_edit_file_command", 
-            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
-               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
-                  std::string message_id;
-                  std::string request_id;
-                  Error error = json::readParams(request.params, &message_id, &request_id);
-                  if (error)
-                     return error;
-                  return cancelEditFileCommand(request, p_response, message_id, request_id);
                })))
       (bind(module_context::registerRpcMethod, "match_text_in_open_documents", matchTextInOpenDocuments))
       (bind(module_context::registerRpcMethod, "process_ai_operation", processAiOperation))
@@ -4278,6 +4387,14 @@ Error initialize()
                      return error;
                   return setAutomationList(request, p_response, listType, items);
                })))
+      // BYOK local backend RPC methods
+      (bind(module_context::registerRpcMethod, "start_local_backend_proxy", startLocalBackendProxy))
+      (bind(module_context::registerRpcMethod, "stop_local_backend_proxy", stopLocalBackendProxy))
+      (bind(module_context::registerRpcMethod, "is_byok_enabled", isBYOKEnabled))
+      (bind(module_context::registerRpcMethod, "set_byok_api_key", setBYOKApiKey))
+      (bind(module_context::registerRpcMethod, "set_byok_enabled", setBYOKEnabled))
+      (bind(module_context::registerRpcMethod, "clear_byok_api_key", clearBYOKApiKey))
+      (bind(module_context::registerRpcMethod, "has_byok_api_key", hasBYOKApiKey))
       // User rules management RPC methods
       (bind(module_context::registerRpcMethod, "get_user_rules",
             boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
@@ -4338,6 +4455,7 @@ Error initialize()
       (bind(sourceModuleRFile, "SessionAiAttachments.R"))
       (bind(sourceModuleRFile, "SessionAiImages.R"))
       (bind(sourceModuleRFile, "SessionAiContext.R"))
+      (bind(sourceModuleRFile, "SessionAiLocalBackend.R"))  // BYOK local backend
       (bind(sourceModuleRFile, "SessionAiBackendComms.R"));    // then attachment functions
    
    error = sourceBlock.execute();

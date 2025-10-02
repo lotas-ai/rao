@@ -582,6 +582,11 @@ FilePath PlotManager::imagePath(const std::string& imageFilename) const
    return graphicsPath_.completePath(imageFilename);
 }
 
+FilePath PlotManager::graphicsPath() const
+{
+   return graphicsPath_;
+}
+
 void PlotManager::clear()
 {
    graphicsDevice_.close();

@@ -37,6 +37,7 @@ import org.rstudio.core.client.widget.ToolbarPopupMenu;
 import com.google.gwt.user.client.ui.PasswordTextBox;
 import org.rstudio.studio.client.common.GlobalDisplay;
 import org.rstudio.studio.client.workbench.views.ai.model.AiServerOperations;
+import org.rstudio.core.client.theme.ThemeHelper;
 import org.rstudio.studio.client.workbench.views.ai.model.AiUserProfile;
 import org.rstudio.studio.client.workbench.views.ai.model.AiSubscriptionStatus;
 import org.rstudio.studio.client.server.ServerError;
@@ -52,8 +53,6 @@ public class AiSettingsWidget extends Composite
       void onDeleteApiKey();
       void onSignInWithWebsite();
       void onModelChange(String model);
-      void onWorkingDirectoryChange(String directory);
-      void onBrowseDirectory();
       void onTemperatureChange(double temperature);
       void onSecurityModeChange(String mode);
       void onWebSearchEnabledChange(boolean enabled);
@@ -68,6 +67,9 @@ public class AiSettingsWidget extends Composite
       void onAutoAcceptConsoleAllowAnythingChange(boolean enabled);
       void onAutoAcceptTerminalAllowAnythingChange(boolean enabled);
       void onAutoRunFilesAllowAnythingChange(boolean enabled);
+      void onBYOKEnabledChange(String provider, boolean enabled);
+      void onBYOKApiKeySet(String provider, String apiKey);
+      void onBYOKApiKeyDeleted(String provider);
    }
    
    public interface Styles extends CssResource
@@ -167,9 +169,11 @@ public class AiSettingsWidget extends Composite
    private HTML rulesSection_;
    private HTML securitySection_;
    private HTML automationSection_;
+   private HTML byokSection_;
    
    // State
    private boolean hasApiKey_ = false;
+   private boolean hasAnyAuth_ = false; // True if user has Rao key OR BYOK keys
    private String currentModel_ = null;
    private String currentDirectory_ = null;
    private double currentTemperature_ = 0.5; // Default temperature
@@ -188,6 +192,7 @@ public class AiSettingsWidget extends Composite
    private boolean rulesSectionExpanded_ = true;
    private boolean securitySectionExpanded_ = true;
    private boolean automationSectionExpanded_ = true;
+   private boolean byokSectionExpanded_ = true;
    
    // Automation toggle widgets
    private HTML autoAcceptEditsToggle_;
@@ -198,6 +203,12 @@ public class AiSettingsWidget extends Composite
    
    // Map to store FlowPanel references for automation lists
    private Map<String, FlowPanel> automationListContainers_ = new HashMap<String, FlowPanel>();
+   
+   // BYOK input storage
+   private Map<String, TextBox> byokApiKeyInputs_ = new HashMap<>();
+   private Map<String, String> byokDisplayNames_ = new HashMap<>();
+   private Map<String, FlowPanel> byokInputContainers_ = new HashMap<>();
+   private Map<String, HorizontalPanel> byokStoredContainers_ = new HashMap<>();
    
    public AiSettingsWidget(SettingsHandler handler, 
                           AiServerOperations server, 
@@ -212,10 +223,54 @@ public class AiSettingsWidget extends Composite
       initWidget(createWidget());
       addStyleName(styles_.settingsContainer());
       
+      // Add theme classes to enable CSS theme selectors
+      addThemeClasses();
+      
+      // Register for theme change events
+      eventBus_.addHandler(org.rstudio.studio.client.application.events.ThemeChangedEvent.TYPE, 
+         new org.rstudio.studio.client.application.events.ThemeChangedEvent.Handler() {
+            @Override
+            public void onThemeChanged(org.rstudio.studio.client.application.events.ThemeChangedEvent event) {
+               updateThemeClasses();
+            }
+         });
+      
       // Load initial data
       loadUserProfile();
       loadSubscriptionStatus();
       loadCurrentSettings();
+   }
+   
+   /**
+    * Add theme classes to enable CSS theme selectors to work properly
+    */
+   private void addThemeClasses()
+   {
+      // Get current theme from body class
+      String themeName = ThemeHelper.getCurrentTheme();
+      
+      // Add appropriate theme class
+      if (themeName.equals("dark-grey")) {
+         addStyleName("rstudio-themes-dark-grey");
+      } else if (themeName.equals("alternate")) {
+         addStyleName("rstudio-themes-alternate");
+      } else {
+         addStyleName("rstudio-themes-default");
+      }
+   }
+   
+   /**
+    * Update theme classes when theme changes at runtime
+    */
+   private void updateThemeClasses()
+   {
+      // Remove all existing theme classes
+      removeStyleName("rstudio-themes-default");
+      removeStyleName("rstudio-themes-dark-grey");
+      removeStyleName("rstudio-themes-alternate");
+      
+      // Add the current theme class
+      addThemeClasses();
    }
    
    private Widget createWidget()
@@ -233,11 +288,6 @@ public class AiSettingsWidget extends Composite
       profileSection_ = new HTML();
       profileSection_.addStyleName(styles_.settingsSection());
       mainPanel.add(profileSection_);
-      
-      // Working Directory Section
-      workingDirectorySection_ = new HTML();
-      workingDirectorySection_.addStyleName(styles_.settingsSection());
-      mainPanel.add(workingDirectorySection_);
       
       // Rules Section
       rulesSection_ = new HTML();
@@ -261,11 +311,18 @@ public class AiSettingsWidget extends Composite
       modelSection_.addStyleName(styles_.settingsSection());
       mainPanel.add(modelSection_);
       
+      // BYOK Section (last section)
+      byokSection_ = new HTML();
+      byokSection_.addStyleName(styles_.settingsSection());
+      mainPanel.add(byokSection_);
+      
       // CRITICAL FIX: Wrap in ScrollPanel to enable scrolling like other working widgets
       ScrollPanel scrollPanel = new ScrollPanel(mainPanel);
       scrollPanel.setSize("100%", "100%");
-      scrollPanel.addStyleName("ace_editor"); // Use standard RStudio scrollable styling
-      scrollPanel.addStyleName("ace_scroller");
+      scrollPanel.addStyleName("ace_editor"); // Get ACE theme background from .rstheme files
+      scrollPanel.addStyleName("ace_scroller"); // Standard RStudio scrollable styling
+      scrollPanel.addStyleName("ace_editor_theme"); // Theme context marker
+      scrollPanel.addStyleName("ai-modal-background"); // Transparent background to show ACE theme
       
       return scrollPanel;
    }
@@ -305,11 +362,10 @@ public class AiSettingsWidget extends Composite
                "</div>" +
             "</div>" +
             "<div style='position: absolute; top: 8px; right: 8px; z-index: 10;'>" +
-               "<div style='width: 20px; height: 20px; background: transparent; border: 1px solid #ccc; border-radius: 3px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: border-color 0.2s ease;' " +
-               "onmouseover='this.style.borderColor=\"#999\"' onmouseout='this.style.borderColor=\"#ccc\"' onclick='window.handleProfileChevronClick && window.handleProfileChevronClick();'>" +
-                  "<svg width='10' height='12' viewBox='0 0 10 12' style='flex-shrink: 0;'>" +
-                     "<path d='M2 4L5 2L8 4' stroke='#666' stroke-width='1.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/>" +
-                     "<path d='M2 8L5 10L8 8' stroke='#666' stroke-width='1.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/>" +
+               "<div class='ai-chevron-button' onclick='window.handleProfileChevronClick && window.handleProfileChevronClick();'>" +
+                  "<svg width='10' height='12' viewBox='0 0 10 12' class='ai-chevron-svg'>" +
+                     "<path d='M2 4L5 2L8 4' stroke-width='1.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/>" +
+                     "<path d='M2 8L5 10L8 8' stroke-width='1.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/>" +
                   "</svg>" +
                "</div>" +
             "</div>";
@@ -329,59 +385,7 @@ public class AiSettingsWidget extends Composite
          contentPanel.addStyleName(styles_.sectionContentCollapsed());
       }
       
-      if (!hasApiKey_) {
-         // Sign in button section - use a container with proper alignment
-         VerticalPanel signInContainer = new VerticalPanel();
-         signInContainer.setWidth("100%");
-         signInContainer.addStyleName(styles_.settingRow());
-         
-         HorizontalPanel buttonPanel = new HorizontalPanel();
-         buttonPanel.getElement().getStyle().setProperty("display", "flex");
-         buttonPanel.getElement().getStyle().setProperty("alignItems", "center");
-         
-         // Sign In button
-         signInButton_ = new Button("Sign up/Sign in");
-         signInButton_.addStyleName(styles_.settingButton());
-         signInButton_.addStyleName(styles_.primaryButton());
-         signInButton_.getElement().getStyle().setProperty("marginRight", "8px");
-         addNativeClickHandler(signInButton_.getElement(), "Sign in");
-         
-         // Options button (...)
-         optionsButton_ = new Button("Use API key");
-         optionsButton_.addStyleName(styles_.settingButton());
-         optionsButton_.addStyleName(styles_.primaryButton());
-         optionsButton_.getElement().getStyle().setProperty("flexShrink", "0");
-         addNativeClickHandler(optionsButton_.getElement(), "Options");
-         
-         buttonPanel.add(signInButton_);
-         buttonPanel.add(optionsButton_);
-         signInContainer.add(buttonPanel);
-         contentPanel.add(signInContainer);
-         
-         // API Key input section (initially hidden)
-         apiKeySection_ = new VerticalPanel();
-         apiKeySection_.setWidth("100%");
-         apiKeySection_.addStyleName(styles_.settingRow());
-         apiKeySection_.setVisible(false);
-         
-         Label keyLabel = new Label("API Key");
-         keyLabel.addStyleName(styles_.settingLabel());
-         apiKeySection_.add(keyLabel);
-         
-         apiKeyInput_ = new PasswordTextBox();
-         apiKeyInput_.addStyleName(styles_.settingInput());
-         apiKeyInput_.getElement().setAttribute("placeholder", "Enter your Rao API key from www.lotas.ai/account");
-         apiKeySection_.add(apiKeyInput_);
-         
-         saveApiKeyButton_ = new Button("Save API Key");
-         saveApiKeyButton_.addStyleName(styles_.settingButton());
-         saveApiKeyButton_.addStyleName(styles_.primaryButton());
-         addNativeClickHandler(saveApiKeyButton_.getElement(), "Save API Key");
-         apiKeySection_.add(saveApiKeyButton_);
-         
-         contentPanel.add(apiKeySection_);
-         
-      } else {
+      if (hasApiKey_) {
          // Profile info section
          VerticalPanel profileInfo = new VerticalPanel();
          profileInfo.setWidth("100%");
@@ -416,12 +420,63 @@ public class AiSettingsWidget extends Composite
          deleteApiKeyButton_.addStyleName(styles_.dangerButton());
          deleteApiKeyButton_.addStyleName(styles_.compactButton());
          
-         // Add native DOM click event listener (same pattern as console/terminal/edit file widgets)
+         // Add native DOM click event listener (same pattern as console/terminal widgets)
          addNativeClickHandler(deleteApiKeyButton_.getElement(), "Sign out");
          signOutContainer.add(deleteApiKeyButton_);
          profileInfo.add(signOutContainer);
          
          contentPanel.add(profileInfo);
+      } else {
+         // No Rao API key - show sign in options (even if BYOK keys exist)
+         VerticalPanel signInContainer = new VerticalPanel();
+         signInContainer.setWidth("100%");
+         signInContainer.addStyleName(styles_.settingRow());
+         
+         FlowPanel buttonPanel = new FlowPanel();
+         buttonPanel.getElement().getStyle().setProperty("display", "flex");
+         buttonPanel.getElement().getStyle().setProperty("gap", "8px");
+         
+         // Sign In button
+         signInButton_ = new Button("Sign up/Sign in");
+         signInButton_.addStyleName(styles_.settingButton());
+         signInButton_.addStyleName(styles_.primaryButton());
+         signInButton_.setWidth("120px");
+         addNativeClickHandler(signInButton_.getElement(), "Sign in");
+         
+         // Options button
+         optionsButton_ = new Button("Use API key");
+         optionsButton_.addStyleName(styles_.settingButton());
+         optionsButton_.addStyleName(styles_.primaryButton());
+         optionsButton_.setWidth("120px");
+         addNativeClickHandler(optionsButton_.getElement(), "Options");
+         
+         buttonPanel.add(signInButton_);
+         buttonPanel.add(optionsButton_);
+         signInContainer.add(buttonPanel);
+         contentPanel.add(signInContainer);
+         
+         // API Key input section (initially hidden)
+         apiKeySection_ = new VerticalPanel();
+         apiKeySection_.setWidth("100%");
+         apiKeySection_.addStyleName(styles_.settingRow());
+         apiKeySection_.setVisible(false);
+         
+         Label keyLabel = new Label("API Key");
+         keyLabel.addStyleName(styles_.settingLabel());
+         apiKeySection_.add(keyLabel);
+         
+         apiKeyInput_ = new PasswordTextBox();
+         apiKeyInput_.addStyleName(styles_.settingInput());
+         apiKeyInput_.getElement().setAttribute("placeholder", "Enter your Rao API key from www.lotas.ai/account");
+         apiKeySection_.add(apiKeyInput_);
+         
+         saveApiKeyButton_ = new Button("Save API Key");
+         saveApiKeyButton_.addStyleName(styles_.settingButton());
+         saveApiKeyButton_.addStyleName(styles_.primaryButton());
+         addNativeClickHandler(saveApiKeyButton_.getElement(), "Save API Key");
+         apiKeySection_.add(saveApiKeyButton_);
+         
+         contentPanel.add(apiKeySection_);
       }
       
       // Error message label
@@ -429,12 +484,6 @@ public class AiSettingsWidget extends Composite
       profileErrorLabel_.addStyleName(styles_.errorMessage());
       profileErrorLabel_.setVisible(false);
       contentPanel.add(profileErrorLabel_);
-      
-      // Prompt message label - show after API key is saved
-      directoryPromptLabel_ = new Label("Please set a working directory below to use Rao. Once done, start a new conversation with the + button in the top left.");
-      directoryPromptLabel_.addStyleName(styles_.successMessage());
-      directoryPromptLabel_.setVisible(shouldShowDirectoryPrompt_);
-      contentPanel.add(directoryPromptLabel_);
       
       // Add content panel to section
       section.add(contentPanel);
@@ -473,91 +522,90 @@ public class AiSettingsWidget extends Composite
          contentPanel.addStyleName(styles_.sectionContentCollapsed());
       }
       
-      if (hasApiKey_) {
-         HorizontalPanel modelPanel = new HorizontalPanel();
-         modelPanel.setWidth("100%");
-         modelPanel.addStyleName(styles_.settingRow());
-         
-         VerticalPanel modelContainer = new VerticalPanel();
-         modelContainer.setWidth("100%");
-         
-         HTML modelLabel = new HTML("<b>Choose model</b>");
-         modelLabel.addStyleName(styles_.settingLabel());
-         modelContainer.add(modelLabel);
-         
-         modelSelect_ = new ListBox();
-         modelSelect_.addStyleName(styles_.settingInput());
-         modelSelect_.setWidth("100%");
-         
-         // Add native DOM change event listener (same pattern as buttons)
-         addNativeChangeHandler(modelSelect_.getElement());
-         
-         modelContainer.add(modelSelect_);
-         
-         modelPanel.add(modelContainer);
-         contentPanel.add(modelPanel);
-         
-         // Temperature slider section
-         HorizontalPanel temperaturePanel = new HorizontalPanel();
-         temperaturePanel.setWidth("100%");
-         temperaturePanel.addStyleName(styles_.settingRow());
-         
-         VerticalPanel temperatureContainer = new VerticalPanel();
-         temperatureContainer.setWidth("100%");
-         
-         HTML temperatureLabel = new HTML("<b>Temperature</b>");
-         temperatureLabel.addStyleName(styles_.settingLabel());
-         temperatureContainer.add(temperatureLabel);
-         
-         // Temperature description
-         Label temperatureDescription = new Label("Temperature determines the model's variability from 0 (deterministic) to 1 (highly variable).");
-         temperatureDescription.addStyleName(styles_.settingLabel());
-         temperatureDescription.getElement().getStyle().setProperty("fontWeight", "normal");
-         temperatureDescription.getElement().getStyle().setProperty("fontSize", "13px");
-         temperatureDescription.getElement().getStyle().setProperty("color", "#666666");
-         temperatureDescription.getElement().getStyle().setProperty("marginBottom", "8px");
-         temperatureContainer.add(temperatureDescription);
-         
-         // Container for slider and input using same pattern as working directory
-         FlowPanel sliderInputPanel = new FlowPanel();
-         sliderInputPanel.setWidth("100%");
-         sliderInputPanel.addStyleName(styles_.temperatureRow());
-         
-         // HTML5 range slider
-         temperatureSlider_ = new HTML();
-         temperatureSlider_.getElement().setInnerHTML(
-            "<input type='range' min='0' max='1' step='0.1' value='" + currentTemperature_ + "' style='width: 100%;' />"
-         );
-         temperatureSlider_.addStyleName(styles_.settingInput());
-         
-         // Add native event handlers for slider
-         addNativeSliderChangeHandler(temperatureSlider_.getElement().getFirstChildElement());
-         
-         sliderInputPanel.add(temperatureSlider_);
-         
-         // Numeric input box
-         temperatureInput_ = new TextBox();
-         temperatureInput_.setValue(String.valueOf(currentTemperature_));
-         temperatureInput_.setWidth("60px");
-         temperatureInput_.addStyleName(styles_.settingInput());
-         temperatureInput_.getElement().setAttribute("placeholder", "0.5");
-         
-         // Add native event handlers for input
-         addNativeInputChangeHandler(temperatureInput_.getElement());
-         
-         sliderInputPanel.add(temperatureInput_);
-         
-         temperatureContainer.add(sliderInputPanel);
-         temperaturePanel.add(temperatureContainer);
-         contentPanel.add(temperaturePanel);
-         
-         // Load available models
-         loadAvailableModels();
-      } else {
-         Label noKeyLabel = new Label("Please add your API key first to select a model.");
-         noKeyLabel.addStyleName(styles_.settingLabel());
-         contentPanel.add(noKeyLabel);
-      }
+      // Always create model selection UI - it will handle BYOK keys as well
+      HorizontalPanel modelPanel = new HorizontalPanel();
+      modelPanel.setWidth("100%");
+      modelPanel.addStyleName(styles_.settingRow());
+      
+      VerticalPanel modelContainer = new VerticalPanel();
+      modelContainer.setWidth("100%");
+      
+      HTML modelLabel = new HTML("<b>Choose model</b>");
+      modelLabel.addStyleName(styles_.settingLabel());
+      modelContainer.add(modelLabel);
+      
+      modelSelect_ = new ListBox();
+      modelSelect_.addStyleName(styles_.settingInput());
+      modelSelect_.setWidth("100%");
+      
+      // Add native DOM change event listener (same pattern as buttons)
+      addNativeChangeHandler(modelSelect_.getElement());
+      
+      modelContainer.add(modelSelect_);
+      
+      modelPanel.add(modelContainer);
+      contentPanel.add(modelPanel);
+      
+      // Temperature slider section
+      HorizontalPanel temperaturePanel = new HorizontalPanel();
+      temperaturePanel.setWidth("100%");
+      temperaturePanel.addStyleName(styles_.settingRow());
+      
+      VerticalPanel temperatureContainer = new VerticalPanel();
+      temperatureContainer.setWidth("100%");
+      
+      HTML temperatureLabel = new HTML("<b>Temperature</b>");
+      temperatureLabel.addStyleName(styles_.settingLabel());
+      temperatureContainer.add(temperatureLabel);
+      
+      // Temperature description
+      Label temperatureDescription = new Label("Temperature determines the model's variability from 0 (deterministic) to 1 (highly variable).");
+      temperatureDescription.addStyleName(styles_.settingLabel());
+      temperatureDescription.getElement().getStyle().setProperty("fontWeight", "normal");
+      temperatureDescription.getElement().getStyle().setProperty("fontSize", "13px");
+      temperatureDescription.getElement().getStyle().setProperty("color", ThemeHelper.getSubtleText());
+      temperatureDescription.getElement().getStyle().setProperty("marginBottom", "8px");
+      temperatureContainer.add(temperatureDescription);
+      
+      // Container for slider and input using flexbox layout
+      FlowPanel sliderInputPanel = new FlowPanel();
+      sliderInputPanel.setWidth("100%");
+      sliderInputPanel.addStyleName(styles_.temperatureRow());
+      sliderInputPanel.getElement().getStyle().setProperty("display", "flex");
+      sliderInputPanel.getElement().getStyle().setProperty("gap", "8px");
+      sliderInputPanel.getElement().getStyle().setProperty("alignItems", "center");
+      
+      // HTML5 range slider - takes 85% of width
+      temperatureSlider_ = new HTML();
+      temperatureSlider_.getElement().setInnerHTML(
+         "<input type='range' min='0' max='1' step='0.1' value='" + currentTemperature_ + "' style='width: 100%;' />"
+      );
+      temperatureSlider_.addStyleName(styles_.settingInput());
+      temperatureSlider_.getElement().getStyle().setProperty("flex", "0 0 85%");
+      
+      // Add native event handlers for slider
+      addNativeSliderChangeHandler(temperatureSlider_.getElement().getFirstChildElement());
+      
+      sliderInputPanel.add(temperatureSlider_);
+      
+      // Numeric input box - takes remaining 15% of width
+      temperatureInput_ = new TextBox();
+      temperatureInput_.setValue(String.valueOf(currentTemperature_));
+      temperatureInput_.addStyleName(styles_.settingInput());
+      temperatureInput_.getElement().setAttribute("placeholder", "0.5");
+      temperatureInput_.getElement().getStyle().setProperty("flex", "1");
+      
+      // Add native event handlers for input
+      addNativeInputChangeHandler(temperatureInput_.getElement());
+      
+      sliderInputPanel.add(temperatureInput_);
+      
+      temperatureContainer.add(sliderInputPanel);
+      temperaturePanel.add(temperatureContainer);
+      contentPanel.add(temperaturePanel);
+      
+      // Load available models (handles both Rao API keys and BYOK keys)
+      loadAvailableModels();
       
       // Add content panel to section
       section.add(contentPanel);
@@ -572,98 +620,6 @@ public class AiSettingsWidget extends Composite
          applyImmediateCollapse(modelSection_.getElement());
       } else {
          modelSection_.removeStyleName(styles_.collapsed());
-      }
-   }
-   
-   private void buildWorkingDirectorySection()
-   {
-      VerticalPanel section = new VerticalPanel();
-      section.setWidth("100%");
-      
-      // Section header
-      HorizontalPanel headerPanel = createSectionHeader("Working Directory", "workingDirectory", workingDirectorySectionExpanded_);
-      section.add(headerPanel);
-      
-      // Add chevron button positioned absolutely on the right
-      HTML chevronButton = createChevronButton("workingDirectory", workingDirectorySectionExpanded_);
-      section.add(chevronButton);
-      
-      // Content section (collapsible)
-      VerticalPanel contentPanel = new VerticalPanel();
-      contentPanel.setWidth("100%");
-      contentPanel.addStyleName(styles_.sectionContent());
-      if (!workingDirectorySectionExpanded_) {
-         contentPanel.addStyleName(styles_.sectionContentCollapsed());
-      }
-      
-      Label description = new Label("Setting a narrow working directory helps Rao understand your project context better.");
-      description.addStyleName(styles_.settingLabel());
-      contentPanel.add(description);
-      
-      // Directory input row
-      VerticalPanel directoryContainer = new VerticalPanel();
-      directoryContainer.setWidth("100%");
-      directoryContainer.addStyleName(styles_.settingRow());
-      
-      HTML directoryLabel = new HTML("<b>Current directory</b>");
-      directoryLabel.addStyleName(styles_.settingLabel());
-      directoryContainer.add(directoryLabel);
-      
-      FlowPanel inputPanel = new FlowPanel();
-      inputPanel.setWidth("100%");
-      inputPanel.addStyleName(styles_.directoryRow());
-      
-      workingDirectoryInput_ = new TextBox();
-      workingDirectoryInput_.addStyleName(styles_.settingInput());
-      workingDirectoryInput_.getElement().setAttribute("placeholder", "Enter working directory path");
-      inputPanel.add(workingDirectoryInput_);
-      
-      browseDirectoryButton_ = new Button("Browse...");
-      browseDirectoryButton_.addStyleName(styles_.settingButton());
-      browseDirectoryButton_.addStyleName(styles_.secondaryButton());
-      
-      // Add native DOM click event listener (same pattern as console/terminal/edit file widgets)
-      addNativeClickHandler(browseDirectoryButton_.getElement(), "Browse...");
-      inputPanel.add(browseDirectoryButton_);
-      
-      directoryContainer.add(inputPanel);
-      
-      // Set Directory button below
-      setDirectoryButton_ = new Button("Set Directory");
-      setDirectoryButton_.addStyleName(styles_.settingButton());
-      setDirectoryButton_.addStyleName(styles_.primaryButton());
-      setDirectoryButton_.addStyleName(styles_.compactButton());
-      setDirectoryButton_.getElement().getStyle().setProperty("marginTop", "8px");
-      
-      // Add native DOM click event listener (same pattern as console/terminal/edit file widgets)
-      addNativeClickHandler(setDirectoryButton_.getElement(), "Set Directory");
-      directoryContainer.add(setDirectoryButton_);
-      contentPanel.add(directoryContainer);
-      
-      // Success/Error messages
-      directorySuccessLabel_ = new Label();
-      directorySuccessLabel_.addStyleName(styles_.successMessage());
-      directorySuccessLabel_.setVisible(false);
-      contentPanel.add(directorySuccessLabel_);
-      
-      directoryErrorLabel_ = new Label();
-      directoryErrorLabel_.addStyleName(styles_.errorMessage());
-      directoryErrorLabel_.setVisible(false);
-      contentPanel.add(directoryErrorLabel_);
-      
-      // Add content panel to section
-      section.add(contentPanel);
-      
-      workingDirectorySection_.getElement().setInnerHTML("");
-      workingDirectorySection_.getElement().appendChild(section.getElement());
-      
-      // Apply collapsed class if section is collapsed
-      if (!workingDirectorySectionExpanded_) {
-         workingDirectorySection_.addStyleName(styles_.collapsed());
-         // Immediately apply the visual collapse using JavaScript
-         applyImmediateCollapse(workingDirectorySection_.getElement());
-      } else {
-         workingDirectorySection_.removeStyleName(styles_.collapsed());
       }
    }
    
@@ -739,9 +695,12 @@ public class AiSettingsWidget extends Composite
       newRuleInput_.setVisibleLines(3); // Start with 3 lines
       inputContainer.add(newRuleInput_);
       
-      // Button panel positioned absolutely at bottom right
-      HorizontalPanel buttonPanel = new HorizontalPanel();
-      buttonPanel.addStyleName(styles_.buttonPanel());
+      // Button panel on the right
+      FlowPanel buttonPanel = new FlowPanel();
+      buttonPanel.getElement().getStyle().setProperty("display", "flex");
+      buttonPanel.getElement().getStyle().setProperty("gap", "8px");
+      buttonPanel.getElement().getStyle().setProperty("justifyContent", "flex-end");
+      buttonPanel.getElement().getStyle().setProperty("marginTop", "8px");
       
       saveNewRuleButton_ = new Button("Save");
       saveNewRuleButton_.addStyleName(styles_.lightGrayButton());
@@ -750,7 +709,6 @@ public class AiSettingsWidget extends Composite
       
       cancelNewRuleButton_ = new Button("Cancel");
       cancelNewRuleButton_.addStyleName(styles_.lightGrayButton());
-      cancelNewRuleButton_.getElement().getStyle().setProperty("marginLeft", "4px");
       addNativeClickHandler(cancelNewRuleButton_.getElement(), "Cancel");
       buttonPanel.add(cancelNewRuleButton_);
       
@@ -994,9 +952,12 @@ public class AiSettingsWidget extends Composite
       editInput.setVisibleLines(3); // Start with 3 lines
       editContainer.add(editInput);
       
-      // Button panel positioned absolutely at bottom right
-      HorizontalPanel buttonPanel = new HorizontalPanel();
-      buttonPanel.addStyleName(styles_.buttonPanel());
+      // Button panel on the right
+      FlowPanel buttonPanel = new FlowPanel();
+      buttonPanel.getElement().getStyle().setProperty("display", "flex");
+      buttonPanel.getElement().getStyle().setProperty("gap", "8px");
+      buttonPanel.getElement().getStyle().setProperty("justifyContent", "flex-end");
+      buttonPanel.getElement().getStyle().setProperty("marginTop", "8px");
       
       Button saveButton = new Button("Save");
       saveButton.addStyleName(styles_.lightGrayButton());
@@ -1010,7 +971,6 @@ public class AiSettingsWidget extends Composite
       
       Button cancelButton = new Button("Cancel");
       cancelButton.addStyleName(styles_.lightGrayButton());
-      cancelButton.getElement().getStyle().setProperty("marginLeft", "4px");
       
       // Use the SAME working pattern as all other buttons
       addNativeClickHandler(cancelButton.getElement(), "EditCancel-" + ruleIndex);
@@ -1022,6 +982,16 @@ public class AiSettingsWidget extends Composite
    
    private void storeEditInput(int ruleIndex, TextArea editInput) {
       editInputs_.put(ruleIndex, editInput);
+   }
+   
+   private void storeBYOKInputs(String provider, TextBox apiKeyInput, String displayName) {
+      byokApiKeyInputs_.put(provider, apiKeyInput);
+      byokDisplayNames_.put(provider, displayName);
+   }
+   
+   private void storeBYOKContainers(String provider, FlowPanel inputContainer, HorizontalPanel storedContainer) {
+      byokInputContainers_.put(provider, inputContainer);
+      byokStoredContainers_.put(provider, storedContainer);
    }
    
    private void buildSecuritySection()
@@ -1062,11 +1032,11 @@ public class AiSettingsWidget extends Composite
       securityTogglePanel.setWidth("100%");
       securityTogglePanel.setVerticalAlignment(HorizontalPanel.ALIGN_TOP);
       
-      securityModeText_ = new Label("On secure mode, no analytics are collected and zero data is retained by the model providers. Secure mode only uses search-replace for editing files rather than the third-party Morph LLM fast apply used for edit-file. This must be used for any sensitive data like PHI. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: Secure");
+      securityModeText_ = new Label("On secure mode, no analytics are collected and zero data is retained by the model providers. Secure mode only uses search-replace for editing files. This must be used for any sensitive data like PHI. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: Secure");
       securityModeText_.addStyleName(styles_.settingLabel());
       securityModeText_.getElement().getStyle().setProperty("fontWeight", "normal");
       securityModeText_.getElement().getStyle().setProperty("fontSize", "13px");
-      securityModeText_.getElement().getStyle().setProperty("color", "#666666");
+      securityModeText_.getElement().getStyle().setProperty("color", ThemeHelper.getSubtleText());
       securityModeText_.getElement().getStyle().setProperty("marginRight", "15px");
       securityModeText_.setWidth("100%");
       securityTogglePanel.add(securityModeText_);
@@ -1074,8 +1044,8 @@ public class AiSettingsWidget extends Composite
       
       securityModeToggle_ = new HTML();
       securityModeToggle_.getElement().setInnerHTML(
-         "<div style='position: relative; width: 32px; height: 16px; background: #4CAF50; border-radius: 8px; cursor: pointer; transition: background 0.3s; display: none;' data-setting='security_mode'>" +
-         "<div style='position: absolute; top: 1px; right: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.2);'></div>" +
+         "<div style='position: relative; width: 32px; height: 16px; border-radius: 8px; cursor: pointer; transition: background 0.3s; display: none;' data-setting='security_mode' class='ai-toggle-enabled'>" +
+         "<div style='position: absolute; top: 1px; right: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s; box-shadow: 0 1px 2px " + ThemeHelper.getShadowColor() + ";'></div>" +
          "</div>"
       );
       addNativeSecurityModeChangeHandler(securityModeToggle_.getElement());
@@ -1106,7 +1076,7 @@ public class AiSettingsWidget extends Composite
       webSearchText_.addStyleName(styles_.settingLabel());
       webSearchText_.getElement().getStyle().setProperty("fontWeight", "normal");
       webSearchText_.getElement().getStyle().setProperty("fontSize", "13px");
-      webSearchText_.getElement().getStyle().setProperty("color", "#666666");
+      webSearchText_.getElement().getStyle().setProperty("color", ThemeHelper.getSubtleText());
       webSearchText_.getElement().getStyle().setProperty("marginRight", "15px");
       webSearchText_.setWidth("100%");
       webSearchTogglePanel.add(webSearchText_);
@@ -1114,8 +1084,8 @@ public class AiSettingsWidget extends Composite
       
       webSearchToggle_ = new HTML();
       webSearchToggle_.getElement().setInnerHTML(
-         "<div style='position: relative; width: 32px; height: 16px; background: #ccc; border-radius: 8px; cursor: pointer; transition: background 0.3s; display: none;' data-setting='web_search'>" +
-         "<div style='position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.2);'></div>" +
+         "<div style='position: relative; width: 32px; height: 16px; border-radius: 8px; cursor: pointer; transition: background 0.3s; display: none;' data-setting='web_search' class='ai-toggle-disabled'>" +
+         "<div style='position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s; box-shadow: 0 1px 2px " + ThemeHelper.getShadowColor() + ";'></div>" +
          "</div>"
       );
       addNativeWebSearchChangeHandler(webSearchToggle_.getElement());
@@ -1230,6 +1200,288 @@ public class AiSettingsWidget extends Composite
       }
    }
    
+   private void buildBYOKSection()
+   {
+      VerticalPanel section = new VerticalPanel();
+      section.setWidth("100%");
+      
+      // Section header
+      HorizontalPanel headerPanel = createSectionHeader("Bring Your Own Key", "byok", byokSectionExpanded_);
+      section.add(headerPanel);
+      
+      // Add chevron button
+      HTML chevronButton = createChevronButton("byok", byokSectionExpanded_);
+      section.add(chevronButton);
+      
+      // Content section (collapsible)
+      VerticalPanel contentPanel = new VerticalPanel();
+      contentPanel.setWidth("100%");
+      contentPanel.addStyleName(styles_.sectionContent());
+      if (!byokSectionExpanded_) {
+         contentPanel.addStyleName(styles_.sectionContentCollapsed());
+      }
+      
+      // Description
+      HTML description = new HTML("Use your own API keys for AI providers. Your keys are stored securely and requests are routed through a local proxy.");
+      description.addStyleName(styles_.settingLabel());
+      description.getElement().getStyle().setProperty("marginBottom", "15px");
+      description.getElement().getStyle().setProperty("color", ThemeHelper.getSubtleText());
+      description.getElement().getStyle().setProperty("fontSize", "13px");
+      contentPanel.add(description);
+      
+      // Anthropic BYOK
+      contentPanel.add(createBYOKProviderPanel("anthropic", "Anthropic"));
+      
+      // OpenAI BYOK
+      contentPanel.add(createBYOKProviderPanel("openai", "OpenAI"));
+      
+      // Add content panel to section
+      section.add(contentPanel);
+      
+      byokSection_.getElement().setInnerHTML("");
+      byokSection_.getElement().appendChild(section.getElement());
+      
+      // Apply collapsed class if section is collapsed
+      if (!byokSectionExpanded_) {
+         byokSection_.addStyleName(styles_.collapsed());
+         applyImmediateCollapse(byokSection_.getElement());
+      } else {
+         byokSection_.removeStyleName(styles_.collapsed());
+      }
+   }
+   
+   private VerticalPanel createBYOKProviderPanel(final String provider, String displayName)
+   {
+      VerticalPanel panel = new VerticalPanel();
+      panel.setWidth("100%");
+      panel.addStyleName(styles_.ruleContainer());
+      panel.getElement().getStyle().setProperty("marginBottom", "15px");
+      
+      // Title row with toggle
+      HorizontalPanel titleRow = new HorizontalPanel();
+      titleRow.setWidth("100%");
+      titleRow.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
+      
+      HTML label = new HTML("Use my own " + displayName + " API key");
+      label.addStyleName(styles_.settingLabel());
+      titleRow.add(label);
+      
+      // Toggle (hidden initially until we check status)
+      final HTML toggle = new HTML();
+      toggle.getElement().setInnerHTML(
+         "<div style='position: relative; width: 32px; height: 16px; border-radius: 8px; cursor: pointer; transition: background 0.3s; display: none;' data-byok-provider='" + provider + "' class='ai-toggle-disabled'>" +
+         "<div style='position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s; box-shadow: 0 1px 2px " + ThemeHelper.getShadowColor() + ";'></div>" +
+         "</div>"
+      );
+      titleRow.add(toggle);
+      titleRow.setCellHorizontalAlignment(toggle, HorizontalPanel.ALIGN_RIGHT);
+      
+      panel.add(titleRow);
+      
+      // Stored key display container (initially hidden) - use HorizontalPanel for reliable side-by-side layout
+      final HorizontalPanel storedKeyContainer = new HorizontalPanel();
+      storedKeyContainer.setVisible(false);
+      storedKeyContainer.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
+      storedKeyContainer.getElement().getStyle().setProperty("marginTop", "10px");
+      storedKeyContainer.getElement().getStyle().setProperty("marginBottom", "4px");
+      storedKeyContainer.getElement().setAttribute("data-byok-stored", provider);
+      
+      HTML storedKeyText = new HTML("Key securely stored");
+      storedKeyText.getElement().getStyle().setProperty("fontSize", "13px");
+      storedKeyText.getElement().getStyle().setProperty("color", ThemeHelper.getSubtleText());
+      storedKeyText.getElement().getStyle().setProperty("fontFamily", "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif");
+      storedKeyContainer.add(storedKeyText);
+      
+      // Delete icon - use Label like the × button for list items
+      Label deleteIcon = new Label();
+      deleteIcon.getElement().setInnerHTML("<svg width='16' height='16' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentColor'><path fill-rule='evenodd' clip-rule='evenodd' d='M10 3h3v1h-1v9l-1 1H4l-1-1V4H2V3h3V2a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1zM9 2H6v1h3V2zM4 13h7V4H4v9zm2-8H5v7h1V5zm1 0h1v7H7V5zm2 0h1v7H9V5z'/></svg>");
+      deleteIcon.getElement().getStyle().setProperty("cursor", "pointer");
+      deleteIcon.getElement().getStyle().setProperty("display", "inline-flex");
+      deleteIcon.getElement().getStyle().setProperty("alignItems", "center");
+      deleteIcon.getElement().getStyle().setProperty("userSelect", "none");
+      deleteIcon.getElement().getStyle().setProperty("marginLeft", "8px");
+      
+      // Use the same native click handler pattern as other settings buttons
+      addNativeClickHandler(deleteIcon.getElement(), "DeleteBYOK-" + provider);
+      storedKeyContainer.add(deleteIcon);
+      
+      panel.add(storedKeyContainer);
+      
+      // API key input container (initially hidden) - use FlowPanel to avoid table layout
+      final FlowPanel inputContainer = new FlowPanel();
+      inputContainer.setWidth("100%");
+      inputContainer.setVisible(false);
+      inputContainer.getElement().getStyle().setProperty("marginTop", "10px");
+      inputContainer.getElement().setAttribute("data-byok-input", provider);
+      
+      // Input field - styled exactly like allow/deny list inputs
+      final TextBox apiKeyInput = new TextBox();
+      apiKeyInput.addStyleName(styles_.settingInput());
+      apiKeyInput.setWidth("100%");
+      apiKeyInput.getElement().getStyle().setProperty("fontSize", "13px");
+      apiKeyInput.getElement().getStyle().setProperty("display", "block");
+      apiKeyInput.getElement().setAttribute("placeholder", "Type and press Enter to add");
+      apiKeyInput.getElement().setAttribute("type", "password");
+      inputContainer.add(apiKeyInput);
+      
+      // Store references for the handler
+      storeBYOKInputs(provider, apiKeyInput, displayName);
+      
+      // Add Enter key handler to save API key
+      addNativeBYOKKeyHandler(apiKeyInput.getElement(), provider);
+      
+      panel.add(inputContainer);
+      
+      // Store container references for later use
+      storeBYOKContainers(provider, inputContainer, storedKeyContainer);
+      
+      // Check if BYOK is enabled for this provider and update UI
+      server_.isBYOKEnabled(provider, new ServerRequestCallback<Boolean>()
+      {
+         @Override
+         public void onResponseReceived(Boolean enabled)
+         {
+            // Show toggle
+            toggle.getElement().getFirstChildElement().getStyle().setProperty("display", "block");
+            
+            // Update toggle state
+            if (enabled) {
+               toggle.getElement().getFirstChildElement().addClassName("ai-toggle-enabled");
+               toggle.getElement().getFirstChildElement().removeClassName("ai-toggle-disabled");
+               com.google.gwt.dom.client.Element knob = toggle.getElement().getFirstChildElement().getFirstChildElement().cast();
+               knob.getStyle().setProperty("left", "auto");
+               knob.getStyle().setProperty("right", "1px");
+               
+               // Check if a key is already stored
+               server_.hasBYOKApiKey(provider, new ServerRequestCallback<Boolean>()
+               {
+                  @Override
+                  public void onResponseReceived(Boolean hasKey)
+                  {
+                     if (hasKey) {
+                        storedKeyContainer.setVisible(true);
+                        inputContainer.setVisible(false);
+                     } else {
+                        storedKeyContainer.setVisible(false);
+                        inputContainer.setVisible(true);
+                     }
+                  }
+                  
+                  @Override
+                  public void onError(ServerError error)
+                  {
+                     Debug.log("Error checking if BYOK key exists for " + provider + ": " + error.getMessage());
+                     inputContainer.setVisible(true);
+                  }
+               });
+            } else {
+               toggle.getElement().getFirstChildElement().addClassName("ai-toggle-disabled");
+               toggle.getElement().getFirstChildElement().removeClassName("ai-toggle-enabled");
+               storedKeyContainer.setVisible(false);
+               inputContainer.setVisible(false);
+            }
+            
+            // Add toggle click handler
+            addNativeBYOKToggleHandler(toggle.getElement(), provider, inputContainer.getElement(), storedKeyContainer.getElement());
+         }
+         
+         @Override
+         public void onError(ServerError error)
+         {
+            Debug.log("Error checking BYOK status for " + provider + ": " + error.getMessage());
+         }
+      });
+      
+      return panel;
+   }
+   
+   private native void addNativeBYOKToggleHandler(com.google.gwt.dom.client.Element element, String provider, com.google.gwt.dom.client.Element inputContainer, com.google.gwt.dom.client.Element storedKeyContainer) /*-{
+      var thiz = this;
+      var toggleDiv = element.querySelector('[data-byok-provider="' + provider + '"]');
+      if (toggleDiv) {
+         toggleDiv.onclick = function() {
+            var isEnabled = toggleDiv.classList.contains('ai-toggle-enabled');
+            var newEnabled = !isEnabled;
+            
+            // Update toggle visual
+            if (newEnabled) {
+               toggleDiv.classList.add('ai-toggle-enabled');
+               toggleDiv.classList.remove('ai-toggle-disabled');
+               var knob = toggleDiv.querySelector('div');
+               knob.style.left = 'auto';
+               knob.style.right = '1px';
+               
+               // Check if key is stored to show appropriate container
+               thiz.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::checkAndShowBYOKContainer(Ljava/lang/String;Lcom/google/gwt/dom/client/Element;Lcom/google/gwt/dom/client/Element;)(provider, inputContainer, storedKeyContainer);
+            } else {
+               toggleDiv.classList.remove('ai-toggle-enabled');
+               toggleDiv.classList.add('ai-toggle-disabled');
+               var knob = toggleDiv.querySelector('div');
+               knob.style.left = '1px';
+               knob.style.right = 'auto';
+               inputContainer.style.display = 'none';
+               storedKeyContainer.style.display = 'none';
+            }
+            
+            // Call handler
+            thiz.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleBYOKEnabledChange(Ljava/lang/String;Z)(provider, newEnabled);
+         };
+      }
+   }-*/;
+   
+   private void checkAndShowBYOKContainer(String provider, final com.google.gwt.dom.client.Element inputContainer, final com.google.gwt.dom.client.Element storedKeyContainer)
+   {
+      server_.hasBYOKApiKey(provider, new ServerRequestCallback<Boolean>()
+      {
+         @Override
+         public void onResponseReceived(Boolean hasKey)
+         {
+            if (hasKey) {
+               storedKeyContainer.getStyle().setProperty("display", "block");
+               inputContainer.getStyle().setProperty("display", "none");
+            } else {
+               storedKeyContainer.getStyle().setProperty("display", "none");
+               inputContainer.getStyle().setProperty("display", "block");
+            }
+         }
+         
+         @Override
+         public void onError(ServerError error)
+         {
+            Debug.log("Error checking if BYOK key exists: " + error.getMessage());
+            inputContainer.getStyle().setProperty("display", "block");
+            storedKeyContainer.getStyle().setProperty("display", "none");
+         }
+      });
+   }
+   
+   private void handleBYOKEnabledChange(String provider, boolean enabled)
+   {
+      // Save the enabled state to the server
+      server_.setBYOKEnabled(provider, enabled, new ServerRequestCallback<Boolean>()
+      {
+         @Override
+         public void onResponseReceived(Boolean success)
+         {
+            if (success) {
+               // Now call the handler to start/stop proxy
+               handler_.onBYOKEnabledChange(provider, enabled);
+            } else {
+               globalDisplay_.showErrorMessage("Error", "Failed to save BYOK enabled state");
+            }
+         }
+         
+         @Override
+         public void onError(ServerError error)
+         {
+            globalDisplay_.showErrorMessage(
+               "Save Failed",
+               "Failed to save BYOK enabled state: " + error.getUserMessage()
+            );
+         }
+      });
+   }
+   
    private VerticalPanel createAutomationToggle(String title, String description, String settingName)
    {
       // Create main container with ruleContainer styling to match rules section
@@ -1250,8 +1502,8 @@ public class AiSettingsWidget extends Composite
       // Toggle switch - completely hidden until R values are loaded
       HTML toggle = new HTML();
       toggle.getElement().setInnerHTML(
-         "<div style='position: relative; width: 32px; height: 16px; background: #ccc; border-radius: 8px; cursor: pointer; transition: background 0.3s; display: none;' data-setting='" + settingName + "'>" +
-         "<div style='position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.2);'></div>" +
+         "<div style='position: relative; width: 32px; height: 16px; border-radius: 8px; cursor: pointer; transition: background 0.3s; display: none;' data-setting='" + settingName + "' class='ai-toggle-disabled'>" +
+         "<div style='position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s; box-shadow: 0 1px 2px " + ThemeHelper.getShadowColor() + ";'></div>" +
          "</div>"
       );
       
@@ -1297,7 +1549,7 @@ public class AiSettingsWidget extends Composite
       panel.getElement().getStyle().setProperty("marginTop", "8px");
       panel.getElement().getStyle().setProperty("marginBottom", "8px");
       panel.getElement().getStyle().setProperty("paddingLeft", "12px");
-      panel.getElement().getStyle().setProperty("borderLeft", "2px solid #e0e0e0");
+      panel.getElement().getStyle().setProperty("borderLeft", "2px solid " + ThemeHelper.getDividerColor());
       
       // "Allow anything" toggle
       HorizontalPanel allowAnythingRow = new HorizontalPanel();
@@ -1315,8 +1567,8 @@ public class AiSettingsWidget extends Composite
       
       HTML allowAnythingToggle = new HTML();
       allowAnythingToggle.getElement().setInnerHTML(
-         "<div style='position: relative; width: 28px; height: 14px; background: #ccc; border-radius: 7px; cursor: pointer; transition: background 0.3s; display: none;' data-setting='" + settingName + "_allow_anything'>" +
-         "<div style='position: absolute; top: 1px; left: 1px; width: 12px; height: 12px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s; box-shadow: 0 1px 2px rgba(0,0,0,0.2);'></div>" +
+         "<div style='position: relative; width: 28px; height: 14px; border-radius: 7px; cursor: pointer; transition: background 0.3s; display: none;' data-setting='" + settingName + "_allow_anything' class='ai-toggle-disabled'>" +
+         "<div style='position: absolute; top: 1px; left: 1px; width: 12px; height: 12px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s; box-shadow: 0 1px 2px " + ThemeHelper.getShadowColor() + ";'></div>" +
          "</div>"
       );
       
@@ -1418,12 +1670,12 @@ public class AiSettingsWidget extends Composite
    
    private void addListItemVisualOnly(FlowPanel container, String text, String listType) {
       
-      // Create item container similar to context items
+      // Create item container matching chevron button style
       FlowPanel itemContainer = new FlowPanel();
       itemContainer.getElement().getStyle().setProperty("display", "inline-flex");
       itemContainer.getElement().getStyle().setProperty("alignItems", "center");
-      itemContainer.getElement().getStyle().setProperty("backgroundColor", "white");
-      itemContainer.getElement().getStyle().setProperty("border", "1px solid #cccccc");
+      itemContainer.getElement().getStyle().setProperty("background", "transparent");
+      itemContainer.getElement().getStyle().setProperty("border", "1px solid " + ThemeHelper.getSectionBorder());
       itemContainer.getElement().getStyle().setProperty("borderRadius", "3px");
       itemContainer.getElement().getStyle().setProperty("padding", "2px 6px");
       itemContainer.getElement().getStyle().setProperty("margin", "0 4px 4px 0");
@@ -1432,12 +1684,13 @@ public class AiSettingsWidget extends Composite
       // Text label
       Label textLabel = new Label(text);
       textLabel.getElement().getStyle().setProperty("marginRight", "4px");
+      textLabel.getElement().getStyle().setProperty("color", ThemeHelper.getForeground());
       itemContainer.add(textLabel);
       
       // Remove button
       Label removeButton = new Label("×");
       removeButton.getElement().getStyle().setProperty("cursor", "pointer");
-      removeButton.getElement().getStyle().setProperty("color", "#999999");
+      removeButton.getElement().getStyle().setProperty("color", ThemeHelper.getSubtleText());
       removeButton.getElement().getStyle().setProperty("fontWeight", "bold");
       removeButton.getElement().getStyle().setProperty("fontSize", "14px");
       removeButton.getElement().getStyle().setProperty("width", "12px");
@@ -1626,28 +1879,13 @@ public class AiSettingsWidget extends Composite
          @Override
          public void onResponseReceived(Boolean hasKey) {
             hasApiKey_ = hasKey;
-            updateAllSections();
+            checkForAnyAuthentication();
          }
          
          @Override
          public void onError(ServerError error) {
             hasApiKey_ = false;
-            updateAllSections();
-         }
-      });
-      
-      // Load current working directory
-      server_.getCurrentWorkingDirectory(new ServerRequestCallback<String>() {
-         @Override
-         public void onResponseReceived(String directory) {
-            currentDirectory_ = directory;
-            updateWorkingDirectorySection();
-         }
-         
-         @Override
-         public void onError(ServerError error) {
-            currentDirectory_ = System.getProperty("user.home", "");
-            updateWorkingDirectorySection();
+            checkForAnyAuthentication();
          }
       });
       
@@ -1674,6 +1912,42 @@ public class AiSettingsWidget extends Composite
       refreshRules();
    }
    
+   private void checkForAnyAuthentication()
+   {
+      // Always set hasAnyAuth_ to true so all functionality is available
+      hasAnyAuth_ = true;
+      updateAllSections();
+      
+      // Still check for BYOK keys to determine auth status for profile display
+      if (hasApiKey_) {
+         // User has Rao API key
+      } else {
+         // Check for BYOK keys (for informational purposes only)
+         server_.hasBYOKApiKey("anthropic", new ServerRequestCallback<Boolean>() {
+            @Override
+            public void onResponseReceived(final Boolean hasAnthropicKey) {
+               if (!hasAnthropicKey) {
+                  server_.hasBYOKApiKey("openai", new ServerRequestCallback<Boolean>() {
+                     @Override
+                     public void onResponseReceived(Boolean hasOpenAIKey) {
+                     }
+                     
+                     @Override
+                     public void onError(ServerError error) {
+                        Debug.log("Error checking OpenAI BYOK: " + error.getMessage());
+                     }
+                  });
+               }
+            }
+            
+            @Override
+            public void onError(ServerError error) {
+               Debug.log("Error checking Anthropic BYOK: " + error.getMessage());
+            }
+         });
+      }
+   }
+   
    private void loadAvailableModels() {
       server_.getAvailableModels(new ServerRequestCallback<JsArrayString>() {
          @Override
@@ -1683,16 +1957,25 @@ public class AiSettingsWidget extends Composite
                for (int i = 0; i < models.length(); i++) {
                   modelArray[i] = models.get(i);
                }
+               
+               // Always show all models regardless of authentication status
                updateModelDropdown(modelArray);
             } else {
-               showError("No models available");
+               // No models returned from server
+               if (modelSelect_ != null) {
+                  modelSelect_.clear();
+                  modelSelect_.addItem("Please add your API key or provide BYOK key below", "");
+               }
             }
          }
          
          @Override
          public void onError(ServerError error) {
-            Debug.log("Error loading models: " + error.getMessage());
-            showError("Failed to load models: " + error.getMessage());
+            Debug.log("Error loading models: " + (error != null ? error.getMessage() : "null error"));
+            if (modelSelect_ != null) {
+               modelSelect_.clear();
+               modelSelect_.addItem("Error loading models. Please try again.", "");
+            }
          }
       });
    }
@@ -1707,22 +1990,17 @@ public class AiSettingsWidget extends Composite
                break;
             }
          }
-      } else {
-         Debug.log("currentModel_ is null: " + (currentModel_ == null) + ", modelSelect_ is null: " + (modelSelect_ == null));
       }
    }
    
    private void updateAllSections()
    {
       buildProfileSection();
-      buildWorkingDirectorySection();
       buildRulesSection();
       buildSecuritySection();
       buildAutomationSection();
       buildModelSection();
-      
-      // Ensure directory input is populated after UI is built
-      updateWorkingDirectorySection();
+      buildBYOKSection();
    }
    
    private void updateProfileSection()
@@ -1776,12 +2054,6 @@ public class AiSettingsWidget extends Composite
       }
    }
    
-   private void updateWorkingDirectorySection()
-   {
-      if (workingDirectoryInput_ != null && currentDirectory_ != null) {
-         workingDirectoryInput_.setValue(currentDirectory_);
-      }
-   }
    
    private String formatSubscriptionStatus(String status)
    {
@@ -1873,7 +2145,8 @@ public class AiSettingsWidget extends Composite
       // Usage bar
       HorizontalPanel usageBarContainer = new HorizontalPanel();
       usageBarContainer.setWidth("100%");
-      usageBarContainer.getElement().getStyle().setProperty("backgroundColor", "#f0f0f0");
+      usageBarContainer.getElement().getStyle().setProperty("backgroundColor", ThemeHelper.getDisabledBackground());
+      usageBarContainer.getElement().getStyle().setProperty("border", "1px solid " + ThemeHelper.getBorderColor());
       usageBarContainer.getElement().getStyle().setProperty("borderRadius", "4px");
       usageBarContainer.getElement().getStyle().setProperty("height", "8px");
       usageBarContainer.getElement().getStyle().setProperty("marginTop", "4px");
@@ -1884,7 +2157,7 @@ public class AiSettingsWidget extends Composite
       double usagePercent = Math.min(100.0, Math.max(0.0, (double) monthlyUsed / monthlyLimit * 100.0));
       usageBarFill.setWidth(usagePercent + "%");
       usageBarFill.getElement().getStyle().setProperty("height", "100%");
-      usageBarFill.getElement().getStyle().setProperty("backgroundColor", "#28a745");
+      usageBarFill.getElement().getStyle().setProperty("backgroundColor", ThemeHelper.getSuccessBorderColor());
       usageBarFill.getElement().getStyle().setProperty("transition", "width 0.3s ease");
       
       usageBarContainer.add(usageBarFill);
@@ -1961,57 +2234,12 @@ public class AiSettingsWidget extends Composite
       }
    }
    
-   public void showDirectorySuccess(String message)
-   {
-      if (directorySuccessLabel_ != null) {
-         directorySuccessLabel_.setText(message);
-         directorySuccessLabel_.setVisible(true);
-         directoryErrorLabel_.setVisible(false);
-         
-         // Auto-hide after 10 seconds
-         Timer timer = new Timer() {
-            @Override
-            public void run() {
-               directorySuccessLabel_.setVisible(false);
-            }
-         };
-         timer.schedule(10000);
-      }
-   }
    
-   public void showDirectoryError(String message)
-   {
-      if (directoryErrorLabel_ != null) {
-         directoryErrorLabel_.setText(message);
-         directoryErrorLabel_.setVisible(true);
-         directorySuccessLabel_.setVisible(false);
-         
-         // Auto-hide after 5 seconds
-         Timer timer = new Timer() {
-            @Override
-            public void run() {
-               directoryErrorLabel_.setVisible(false);
-            }
-         };
-         timer.schedule(5000);
-      }
-   }
-   
-   public void updateDirectoryPath(String path)
-   {
-      currentDirectory_ = path;
-      if (workingDirectoryInput_ != null) {
-         workingDirectoryInput_.setValue(path);
-      }
-      shouldShowDirectoryPrompt_ = false;
-      buildProfileSection();
-      showDirectorySuccess("Click the top left + button to start a conversation. Directory updated successfully");
-   }
    
    public void onApiKeySaved()
    {
       hasApiKey_ = true;
-      shouldShowDirectoryPrompt_ = true;
+      hasAnyAuth_ = true;
       updateAllSections();
       loadUserProfile();
       loadSubscriptionStatus();
@@ -2020,7 +2248,7 @@ public class AiSettingsWidget extends Composite
    public void onAuthenticationCompleted()
    {
       hasApiKey_ = true;
-      shouldShowDirectoryPrompt_ = true;
+      hasAnyAuth_ = true;
       updateAllSections();
       loadUserProfile();
       loadSubscriptionStatus();
@@ -2031,7 +2259,7 @@ public class AiSettingsWidget extends Composite
       hasApiKey_ = false;
       userProfile_ = null;
       subscriptionStatus_ = null;
-      updateAllSections();
+      checkForAnyAuthentication(); // Check if BYOK keys are still available
    }
    
    public void onModelChanged(String model)
@@ -2147,7 +2375,7 @@ public class AiSettingsWidget extends Composite
       });
    }
    
-   // Add native DOM event handler using JSNI (same pattern as console/terminal/edit file widgets)
+   // Add native DOM event handler using JSNI (same pattern as console/terminal widgets)
    private native void addNativeChangeHandler(com.google.gwt.dom.client.Element element) /*-{
       var self = this;
       
@@ -2201,7 +2429,13 @@ public class AiSettingsWidget extends Composite
             // Update visual state
             var slider = toggleDiv.querySelector('div');
             var isSecure = newValue === 'secure';
-            toggleDiv.style.background = isSecure ? '#4CAF50' : '#ccc';
+            if (isSecure) {
+               toggleDiv.classList.add('ai-toggle-enabled');
+               toggleDiv.classList.remove('ai-toggle-disabled');
+            } else {
+               toggleDiv.classList.remove('ai-toggle-enabled');
+               toggleDiv.classList.add('ai-toggle-disabled');
+            }
             
             // Use right positioning for secure (green), left for improve (grey)
             if (isSecure) {
@@ -2236,7 +2470,13 @@ public class AiSettingsWidget extends Composite
             // Update visual state
             var slider = toggleDiv.querySelector('div');
             var isEnabled = newValue === 'true';
-            toggleDiv.style.background = isEnabled ? '#4CAF50' : '#ccc';
+            if (isEnabled) {
+               toggleDiv.classList.add('ai-toggle-enabled');
+               toggleDiv.classList.remove('ai-toggle-disabled');
+            } else {
+               toggleDiv.classList.remove('ai-toggle-enabled');
+               toggleDiv.classList.add('ai-toggle-disabled');
+            }
             slider.style.left = isEnabled ? '17px' : '1px';
             
             self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleWebSearchChange()();
@@ -2305,6 +2545,20 @@ public class AiSettingsWidget extends Composite
                // Clear the input
                inputElement.value = '';
             }
+            event.preventDefault();
+            event.stopPropagation();
+         }
+      }, false);
+   }-*/;
+   
+   // Add native DOM event handler for BYOK API key input Enter key
+   private native void addNativeBYOKKeyHandler(com.google.gwt.dom.client.Element inputElement, String provider) /*-{
+      var self = this;
+      
+      inputElement.addEventListener('keydown', function(event) {
+         if (event.key === 'Enter' || event.keyCode === 13) {
+            // Call Java method to save the API key
+            self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleBYOKSaveKey(Ljava/lang/String;)(provider);
             event.preventDefault();
             event.stopPropagation();
          }
@@ -2458,6 +2712,105 @@ public class AiSettingsWidget extends Composite
       buildRulesList();
    }
    
+   private void handleBYOKSaveKey(String provider) {
+      TextBox apiKeyInput = byokApiKeyInputs_.get(provider);
+      String displayName = byokDisplayNames_.get(provider);
+      
+      if (apiKeyInput == null) {
+         globalDisplay_.showErrorMessage("Error", "Could not find API key input for " + provider);
+         return;
+      }
+      
+      String key = apiKeyInput.getValue();
+      
+      if (key != null && !key.isEmpty()) {
+         server_.setBYOKApiKey(provider, key, new ServerRequestCallback<Boolean>()
+         {
+            @Override
+            public void onResponseReceived(Boolean success)
+            {
+               if (success) {
+                  apiKeyInput.setValue("");
+                  globalDisplay_.showMessage(
+                     GlobalDisplay.MSG_INFO,
+                     "API Key Saved",
+                     "Your " + displayName + " API key has been securely stored."
+                  );
+                  
+                  // Switch UI to show stored key display
+                  switchBYOKContainers(provider, false);
+                  
+               handler_.onBYOKApiKeySet(provider, key);
+               
+               // Reload models to show newly available models
+               AiSettingsWidget.this.loadAvailableModels();
+               
+               // Update authentication status
+               checkForAnyAuthentication();
+               }
+            }
+            
+            @Override
+            public void onError(ServerError error)
+            {
+               globalDisplay_.showErrorMessage(
+                  "Save Failed",
+                  error.getUserMessage()
+               );
+            }
+         });
+      } else {
+         globalDisplay_.showErrorMessage("Error", "Please enter a valid API key.");
+      }
+   }
+   
+   private void handleBYOKDeleteKey(String provider) {
+      String displayName = byokDisplayNames_.get(provider);
+      
+      server_.clearBYOKApiKey(provider, new ServerRequestCallback<java.lang.Void>()
+      {
+         @Override
+         public void onResponseReceived(java.lang.Void result)
+         {
+            // Switch UI to show input container
+            switchBYOKContainers(provider, true);
+            
+            handler_.onBYOKApiKeyDeleted(provider);
+            
+            // Reload models to remove models that are no longer available
+            AiSettingsWidget.this.loadAvailableModels();
+            
+            // Update authentication status
+            checkForAnyAuthentication();
+         }
+         
+         @Override
+         public void onError(ServerError error)
+         {
+            Debug.log("Delete key failed for provider: " + provider + " error: " + error.getMessage());
+            globalDisplay_.showErrorMessage(
+               "Delete Failed",
+               error.getUserMessage()
+            );
+         }
+      });
+   }
+   
+   private void switchBYOKContainers(String provider, boolean showInput) {
+      FlowPanel inputContainer = byokInputContainers_.get(provider);
+      HorizontalPanel storedContainer = byokStoredContainers_.get(provider);
+      
+      if (inputContainer != null && storedContainer != null) {
+         if (showInput) {
+            inputContainer.setVisible(true);
+            storedContainer.setVisible(false);
+         } else {
+            inputContainer.setVisible(false);
+            storedContainer.setVisible(true);
+         }
+      }
+   }
+   
    // Native method to get toggle value
    private native String getToggleValue(com.google.gwt.dom.client.Element element) /*-{
       var toggleDiv = element.querySelector('div[data-setting]');
@@ -2475,7 +2828,13 @@ public class AiSettingsWidget extends Composite
          if (offValue === 'secure') {
             // Security mode toggle - secure is green/right, improve is grey/left
             var isSecure = value === 'secure';
-            toggleDiv.style.background = isSecure ? '#4CAF50' : '#ccc';
+            if (isSecure) {
+               toggleDiv.classList.add('ai-toggle-enabled');
+               toggleDiv.classList.remove('ai-toggle-disabled');
+            } else {
+               toggleDiv.classList.remove('ai-toggle-enabled');
+               toggleDiv.classList.add('ai-toggle-disabled');
+            }
             
             if (isSecure) {
                slider.style.left = '';
@@ -2487,7 +2846,13 @@ public class AiSettingsWidget extends Composite
          } else {
             // Automation toggle  
             var isEnabled = value === 'true';
-            toggleDiv.style.background = isEnabled ? '#4CAF50' : '#ccc';
+            if (isEnabled) {
+               toggleDiv.classList.add('ai-toggle-enabled');
+               toggleDiv.classList.remove('ai-toggle-disabled');
+            } else {
+               toggleDiv.classList.remove('ai-toggle-enabled');
+               toggleDiv.classList.add('ai-toggle-disabled');
+            }
             slider.style.left = isEnabled ? '17px' : '1px';
          }
       }
@@ -2528,10 +2893,6 @@ public class AiSettingsWidget extends Composite
                self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleOptionsClick()();
             } else if (buttonText === 'Sign out') {
                self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleDeleteApiKey()();
-            } else if (buttonText === 'Browse...') {
-               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleBrowseDirectory()();
-            } else if (buttonText === 'Set Directory') {
-               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleSetDirectory()();
             } else if (buttonText === '+ Add Rule') {
                self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleAddRule()();
             } else if (buttonText === 'Save') {
@@ -2559,6 +2920,10 @@ public class AiSettingsWidget extends Composite
                var listType = parts[1];
                var text = parts.slice(2).join('-'); // Rejoin in case text contains dashes
                self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleRemoveListItem(Ljava/lang/String;Ljava/lang/String;)(listType, text);
+            } else if (buttonText.startsWith('DeleteBYOK-')) {
+               var provider = buttonText.substring(11); // Remove "DeleteBYOK-" prefix
+               console.log('DeleteBYOK clicked for provider: ' + provider);
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleBYOKDeleteKey(Ljava/lang/String;)(provider);
             }
             
             // Only prevent default for actual button clicks
@@ -2590,19 +2955,6 @@ public class AiSettingsWidget extends Composite
    private void handleOptionsClick() {
       boolean isVisible = apiKeySection_.isVisible();
       apiKeySection_.setVisible(!isVisible);
-   }
-   
-   private void handleBrowseDirectory() {
-      handler_.onBrowseDirectory();
-   }
-   
-   private void handleSetDirectory() {
-      if (workingDirectoryInput_ != null) {
-         String directory = workingDirectoryInput_.getValue();
-         if (directory != null && !directory.trim().isEmpty()) {
-            handler_.onWorkingDirectoryChange(directory.trim());
-         }
-      }
    }
    
    private void handleModelChange() {
@@ -3271,13 +3623,12 @@ public class AiSettingsWidget extends Composite
       HTML chevronButton = new HTML();
       chevronButton.addStyleName(styles_.sectionChevron());
       
-      // Create double chevron SVG icon with transparent background and border
+      // Create double chevron SVG icon with CSS classes for theme support
       String chevronSvg = 
-         "<div style='width: 20px; height: 20px; background: transparent; border: 1px solid #ccc; border-radius: 3px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: border-color 0.2s ease;' " +
-         "onmouseover='this.style.borderColor=\"#999\"' onmouseout='this.style.borderColor=\"#ccc\"'>" +
-         "<svg width='10' height='12' viewBox='0 0 10 12' style='flex-shrink: 0;'>" +
-         "<path d='M2 4L5 2L8 4' stroke='#666' stroke-width='1.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/>" +
-         "<path d='M2 8L5 10L8 8' stroke='#666' stroke-width='1.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/>" +
+         "<div class='ai-chevron-button'>" +
+         "<svg width='10' height='12' viewBox='0 0 10 12' class='ai-chevron-svg'>" +
+         "<path d='M2 4L5 2L8 4' stroke-width='1.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/>" +
+         "<path d='M2 8L5 10L8 8' stroke-width='1.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/>" +
          "</svg>" +
          "</div>";
       
@@ -3319,14 +3670,14 @@ public class AiSettingsWidget extends Composite
             return profileSection_;
          case "model":
             return modelSection_;
-         case "workingDirectory":
-            return workingDirectorySection_;
          case "rules":
             return rulesSection_;
          case "security":
             return securitySection_;
          case "automation":
             return automationSection_;
+         case "byok":
+            return byokSection_;
          default:
             return null;
       }
@@ -3424,14 +3775,14 @@ public class AiSettingsWidget extends Composite
             return profileSectionExpanded_;
          case "model":
             return modelSectionExpanded_;
-         case "workingDirectory":
-            return workingDirectorySectionExpanded_;
          case "rules":
             return rulesSectionExpanded_;
          case "security":
             return securitySectionExpanded_;
          case "automation":
             return automationSectionExpanded_;
+         case "byok":
+            return byokSectionExpanded_;
          default:
             return true;
       }
@@ -3448,9 +3799,6 @@ public class AiSettingsWidget extends Composite
          case "model":
             modelSectionExpanded_ = expanded;
             break;
-         case "workingDirectory":
-            workingDirectorySectionExpanded_ = expanded;
-            break;
          case "rules":
             rulesSectionExpanded_ = expanded;
             break;
@@ -3459,6 +3807,9 @@ public class AiSettingsWidget extends Composite
             break;
          case "automation":
             automationSectionExpanded_ = expanded;
+            break;
+         case "byok":
+            byokSectionExpanded_ = expanded;
             break;
       }
    }
@@ -3664,8 +4015,6 @@ public class AiSettingsWidget extends Composite
       
       if (listsContainer != null) {
          listsContainer.getStyle().setProperty("display", "block");
-      } else {
-         Debug.log("Lists container not found for: " + settingPrefix);
       }
    }
    
@@ -3677,8 +4026,6 @@ public class AiSettingsWidget extends Composite
          // Show the toggle now that we have R data
          toggleElement.getStyle().setProperty("display", "block");
          updateAllowAnythingToggleDisplayStyle(toggleElement, enabled);
-      } else {
-         Debug.log("Toggle element not found for: " + settingName);
       }
       
       // Also update the descriptive label text and show it
@@ -3691,7 +4038,13 @@ public class AiSettingsWidget extends Composite
       var slider = element.querySelector('div');
       
       // Allow-anything toggles: 28x14px with 12px slider
-      element.style.background = enabled ? '#4CAF50' : '#ccc';
+      if (enabled) {
+         element.classList.add('ai-toggle-enabled');
+         element.classList.remove('ai-toggle-disabled');
+      } else {
+         element.classList.remove('ai-toggle-enabled');
+         element.classList.add('ai-toggle-disabled');
+      }
       
       // For allow-anything toggles, use simple left positioning (14px when enabled, 1px when disabled)
       if (slider) {
@@ -3710,8 +4063,6 @@ public class AiSettingsWidget extends Composite
          labelElement.getStyle().setProperty("display", "block");
          String newMessage = getAllowAnythingMessage(baseSettingName, allowAnythingEnabled);
          labelElement.setInnerHTML(newMessage);
-      } else {
-         Debug.log("Label element not found for: " + baseSettingName);
       }
    }
    

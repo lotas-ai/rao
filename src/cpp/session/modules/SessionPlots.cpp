@@ -70,6 +70,15 @@ Error getPlotTempdir(const json::JsonRpcRequest& request,
    return Success();
 }
 
+Error getGraphicsPath(const json::JsonRpcRequest& request,
+                      json::JsonRpcResponse* pResponse)
+{
+   r::session::graphics::Display& display = r::session::graphics::display();
+   FilePath graphicsPath = display.graphicsPath();
+   pResponse->setResult(graphicsPath.getAbsolutePath());
+   return Success();
+}
+
 Error nextPlot(const json::JsonRpcRequest& request, 
                json::JsonRpcResponse* pResponse)
 {   
@@ -919,6 +928,7 @@ Error initialize()
    ExecBlock initBlock;
    initBlock.addFunctions()
       (bind(registerRpcMethod, "get_plot_tempdir", getPlotTempdir))
+      (bind(registerRpcMethod, "get_graphics_path", getGraphicsPath))
       (bind(registerRpcMethod, "next_plot", nextPlot))
       (bind(registerRpcMethod, "previous_plot", previousPlot))
       (bind(registerRpcMethod, "remove_plot", removePlot))

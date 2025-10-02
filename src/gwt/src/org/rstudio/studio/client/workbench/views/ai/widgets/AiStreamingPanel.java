@@ -26,6 +26,7 @@ import org.rstudio.studio.client.workbench.views.ai.events.AiStartConversationEv
 import org.rstudio.studio.client.application.events.EventBus;
 import org.rstudio.core.client.Markdown;
 import org.rstudio.core.client.CommandWithArg;
+import org.rstudio.core.client.theme.ThemeHelper;
 import com.google.gwt.resources.client.ClientBundle;
 import com.google.gwt.resources.client.CssResource;
 import com.google.gwt.core.client.GWT;
@@ -130,12 +131,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       String terminalCommand();
       String terminalWidgetContainer();
       
-      // Edit file widget styles
-      String aiEditFileHeader();
-      String aiEditFileEditor();
-      String aiEditFileButtons();
-      String editFileCommand();
-      String editFileWidgetContainer();
       
       // Search replace widget styles
       String searchReplaceCommand();
@@ -148,7 +143,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       Styles styles();
    }
 
-   private static final Resources RES = GWT.create(Resources.class);
+   public static final Resources RES = GWT.create(Resources.class);
    private static final Styles styles_ = RES.styles();
    static { RES.styles().ensureInjected(); }
 
@@ -158,9 +153,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       streamingMessages_ = new HashMap<>();
       consoleWidgets_ = new HashMap<>();
       terminalWidgets_ = new HashMap<>();
-      editFileWidgets_ = new HashMap<>();
       searchReplaceWidgets_ = new HashMap<>();
-      editFileStreamingContent_ = new HashMap<>();
       searchReplaceStreamingContent_ = new HashMap<>();
       
       // Initialize per-conversation sequence tracking
@@ -180,11 +173,60 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       eventBus_.addHandler(AiStreamDataEvent.TYPE, this);
       eventBus_.addHandler(AiStartConversationEvent.TYPE, this);
       
+      // Register for theme change events to update theme classes
+      eventBus_.addHandler(org.rstudio.studio.client.application.events.ThemeChangedEvent.TYPE, 
+         new org.rstudio.studio.client.application.events.ThemeChangedEvent.Handler() {
+            @Override
+            public void onThemeChanged(org.rstudio.studio.client.application.events.ThemeChangedEvent event) {
+               updateThemeClasses();
+            }
+         });
+      
+      // Add theme classes to enable CSS theme selectors
+      addThemeClasses();
+      
       // Initialize with conversation display HTML structure and CSS
       initializeConversationDisplay();
       
       // Initialize scroll manager
       scrollManager_ = new AiScrollManager(this);
+   }
+   
+   /**
+    * Add theme classes to enable CSS theme selectors to work properly
+    */
+   private void addThemeClasses()
+   {
+      // Get current theme from body class
+      String themeName = ThemeHelper.getCurrentTheme();
+      
+      // Add ace_editor to get ACE theme background (.rstheme files define .ace_editor { background-color: ... })
+      addStyleName("ace_editor");
+      // Add ace_editor_theme as theme context marker
+      addStyleName("ace_editor_theme");
+      
+      // Add appropriate theme class
+      if (themeName.equals("dark-grey")) {
+         addStyleName("rstudio-themes-dark-grey");
+      } else if (themeName.equals("alternate")) {
+         addStyleName("rstudio-themes-alternate");
+      } else {
+         addStyleName("rstudio-themes-default");
+      }
+   }
+   
+   /**
+    * Update theme classes when theme changes at runtime
+    */
+   private void updateThemeClasses()
+   {
+      // Remove all existing theme classes
+      removeStyleName("rstudio-themes-default");
+      removeStyleName("rstudio-themes-dark-grey");
+      removeStyleName("rstudio-themes-alternate");
+      
+      // Add the current theme class
+      addThemeClasses();
    }
    
    /**
@@ -197,12 +239,12 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       htmlBuilder.appendHtmlConstant("<style>");
       htmlBuilder.appendHtmlConstant(".ai-streaming-panel { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; margin: 12px; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
       htmlBuilder.appendHtmlConstant(".message { padding: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; font-size: 14px; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
-      htmlBuilder.appendHtmlConstant(".user { background-color: #e6e6e6; border-radius: 5px; display: inline-block; float: right; max-width: 100%; word-wrap: break-word; margin-bottom: 16px; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
+      htmlBuilder.appendHtmlConstant(".user { border-radius: 5px; display: block; width: 100%; box-sizing: border-box; text-align: left; word-wrap: break-word; margin-bottom: 16px; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
       htmlBuilder.appendHtmlConstant(".assistant { background-color: transparent; text-align: left; word-wrap: break-word; max-width: 100%; position: relative; clear: both; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }"); // Ensure assistant starts below user
-      htmlBuilder.appendHtmlConstant(".user-container { width: 100%; overflow: hidden; text-align: right; position: relative; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
+      htmlBuilder.appendHtmlConstant(".user-container { width: 100%; box-sizing: border-box; overflow: hidden; text-align: left; position: relative; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
       htmlBuilder.appendHtmlConstant(".text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; font-size: 14px; line-height: 1.4; white-space: pre-wrap; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
       htmlBuilder.appendHtmlConstant(".text.markdown-content { white-space: normal; }"); // Override pre-wrap for markdown content
-      htmlBuilder.appendHtmlConstant(".user { text-align: right; position: relative; }");
+      htmlBuilder.appendHtmlConstant(".user { text-align: left; position: relative; }");
       htmlBuilder.appendHtmlConstant(".assistant { text-align: left; }");
       htmlBuilder.appendHtmlConstant(".user .text { text-align: left; max-width: 100%; }");
 
@@ -212,10 +254,10 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       htmlBuilder.appendHtmlConstant(".markdown-content p { margin-top: 0.5em; margin-bottom: 0.5em; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
       htmlBuilder.appendHtmlConstant(".markdown-content ul, .markdown-content ol { margin-top: 0.5em; margin-bottom: 0.5em; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
       htmlBuilder.appendHtmlConstant(".markdown-content li { margin-bottom: 0.25em; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
-      htmlBuilder.appendHtmlConstant(".markdown-content code { background-color: #f0f0f0; padding: 2px 4px; border-radius: 3px; font-family: monospace; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
-      htmlBuilder.appendHtmlConstant(".markdown-content pre { background-color: #f8f8f8; border: 1px solid #ddd; border-radius: 4px; padding: 10px; overflow-x: auto; margin: 0.5em 0; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
+      htmlBuilder.appendHtmlConstant(".markdown-content code { padding: 2px 4px; border-radius: 3px; font-family: monospace; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
+      htmlBuilder.appendHtmlConstant(".markdown-content pre { border-radius: 4px; padding: 10px; overflow-x: auto; margin: 0.5em 0; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
       htmlBuilder.appendHtmlConstant(".markdown-content pre code { background-color: transparent; padding: 0; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
-      htmlBuilder.appendHtmlConstant(".function-call-message { margin-left: 15px; opacity: 0.8; font-size: 14px; color: #666; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
+      htmlBuilder.appendHtmlConstant(".function-call-message { margin-left: 15px; opacity: 0.8; font-size: 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
       htmlBuilder.appendHtmlConstant(".ai-streaming-panel *, .message *, .text *, .markdown-content *, .user *, .assistant * { -webkit-user-select: text !important; -moz-user-select: text !important; -ms-user-select: text !important; user-select: text !important; pointer-events: auto !important; }");
       htmlBuilder.appendHtmlConstant("</style>");
       
@@ -388,9 +430,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          case "create_terminal_command":
             createTerminalCommandSynchronously(event.messageId, event.command, event.explanation, event.requestId, event.functionCallType, event.extractedCommands);
             break;
-         case "edit_file_command":  // Handle both formats from R
-            createEditFileCommandSynchronously(event.messageId, event.filename, event.content, event.explanation, event.requestId, event.skipDiffHighlighting, event.diffData);
-            break;
          case "search_replace_command":  // Handle search_replace commands from R
             createSearchReplaceCommandSynchronously(event.messageId, event.filename, event.content, event.explanation, event.requestId, event.skipDiffHighlighting, event.diffData);
             break;
@@ -458,25 +497,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       }
       
       // Determine what type of content this is
-      if (event.isEditFile())
+      if (event.isSearchReplace())
       {
-         // Create edit file widget immediately if needed
-         if (!editFileWidgets_.containsKey(messageId))
-         {
-            String filename = event.getFilename();
-            if (filename == null || filename.isEmpty()) {
-               throw new RuntimeException("Edit file event missing required filename for messageId: " + messageId);
-            }
-            String requestId = event.getRequestId();
-            createEditFileCommandSynchronously(messageId, filename, "", "Edit file", requestId, false, (com.google.gwt.core.client.JavaScriptObject) null);
-         }
-         
-         // Add content to widget (or replace if replaceContent flag is set)
-         addContentToEditFileWidget(messageId, event.getDelta(), event.isComplete(), event.isCancelled(), event.getReplaceContent(), (com.google.gwt.core.client.JavaScriptObject) null);
-      }
-      else if (event.isSearchReplace())
-      {
-         // Create search replace widget immediately if needed - same pattern as edit_file
+         // Create search replace widget immediately if needed
          if (!searchReplaceWidgets_.containsKey(messageId))
          {
             String filename = event.getFilename();
@@ -584,6 +607,9 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       
       messageDiv.appendChild(textDiv);
       userContainer.appendChild(messageDiv);
+      
+      // Make user message editable on click
+      makeUserMessageEditable(messageDiv, messageId);
       
       // Insert in correct position
       insertElementInOrder(conversationElement, userContainer, messageId, currentProcessingSequence_);
@@ -944,54 +970,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       createAndInjectWidgetSynchronously(messageId, terminalWidget, styles_.terminalCommand(), styles_.terminalWidgetContainer());
    }
    
-   /**
-    * Create edit file command widget synchronously
-    */
-   private void createEditFileCommandSynchronously(String messageId, String filename, String content, String explanation, String requestId, boolean skipDiffHighlighting, com.google.gwt.core.client.JavaScriptObject diffData)
-   {
-      // Hide thinking message when AI response (function call) starts
-      hideThinkingMessage();
-      
-      // Check if this is a cancelled edit by looking for special prefix
-      boolean isCancelled = false;
-      String actualContent = content;
-      if (content != null && content.startsWith("CANCELLED:")) {
-         isCancelled = true;
-         actualContent = content.substring("CANCELLED:".length()); // Remove the prefix
-      }
-      
-      // Create edit file command handler
-      org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget.EditFileCommandHandler handler = 
-         new org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget.EditFileCommandHandler() {
-            @Override
-            public void onAccept(String msgId, String editedContent) {
-               handleAcceptEditFileCommand(msgId, editedContent);
-               onFunctionCallCompleted(msgId);
-            }
-            
-            @Override
-            public void onCancel(String msgId) {
-               handleCancelEditFileCommand(msgId);
-               onFunctionCallCompleted(msgId);
-            }
-         };
-      
-      // Create the edit file widget with appropriate cancellation flag and diff highlighting control
-      // For cancelled edits: isEditable = false (no buttons), isCancelled = true
-      org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget = 
-         new org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget(messageId, filename, actualContent, explanation, requestId, !isCancelled, handler, isCancelled, skipDiffHighlighting, diffData);
-      
-      editFileWidgets_.put(messageId, editFileWidget);
-      
-      // For live streaming: hide buttons until diff is ready
-      // For historical restoration: keep buttons visible since diff is already complete
-      if ((!isCancelled && !recreationMode_) || (!isCancelled && skipDiffHighlighting)) {
-         editFileWidget.hideButtons();
-      }
-      
-      createAndInjectWidgetSynchronously(messageId, editFileWidget, styles_.editFileCommand(), styles_.editFileWidgetContainer());
-   }
-   
    private void createSearchReplaceCommandSynchronously(String messageId, String filename, String content, String explanation, String requestId, boolean skipDiffHighlighting, com.google.gwt.core.client.JavaScriptObject diffData)
    {
       // Hide thinking message when AI response (function call) starts
@@ -1128,74 +1106,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       // If user was at bottom before injection, scroll to bottom after injection
       if (wasAtBottom && !recreationMode_) {
          scrollManager_.smartScrollToBottom();
-      }
-   }
-   
-   /**
-    * Add content to edit file widget (backward compatibility)
-    */
-   private void addContentToEditFileWidget(String messageId, String delta, boolean isComplete, boolean isCancelled)
-   {
-      addContentToEditFileWidget(messageId, delta, isComplete, isCancelled, false, (com.google.gwt.core.client.JavaScriptObject) null);
-   }
-
-   /**
-    * Add content to edit file widget with replaceContent option
-    */
-   private void addContentToEditFileWidget(String messageId, String delta, boolean isComplete, boolean isCancelled, boolean replaceContent, com.google.gwt.core.client.JavaScriptObject diffData)
-   {
-      org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget = editFileWidgets_.get(messageId);
-      if (editFileWidget == null)
-      {
-         return;
-      }
-      
-      // Handle content replacement vs appending
-      String newEditContent;
-      if (replaceContent) {
-         newEditContent = delta;
-         editFileStreamingContent_.put(messageId, newEditContent);
-      } else {
-         // Normal streaming: append to existing content
-         String currentEditContent = editFileStreamingContent_.get(messageId);
-         if (currentEditContent == null)
-         {
-            currentEditContent = "";
-            // Update scroll manager streaming status when starting to stream edit file content
-            updateScrollManagerStreamingStatus();
-         }
-      
-         newEditContent = currentEditContent + delta;
-         editFileStreamingContent_.put(messageId, newEditContent);
-      }
-      
-      if (isComplete)
-      {
-         // Parse and clean content on completion
-         String filename = editFileWidget.getFilename();
-         String cleanedContent = parseCodeBlockContent(newEditContent, filename);
-         
-         editFileWidget.setContent(cleanedContent);
-         
-         // Keep tracking content for cancelled responses to preserve them
-         if (!isCancelled) {
-            // Only clean up tracking for normal completion, not cancellation
-            editFileStreamingContent_.remove(messageId);
-         }
-         
-         // Update scroll manager streaming status
-         updateScrollManagerStreamingStatus();
-         
-         // Hide cancel button when edit_file streaming completes
-         AiPane aiPane = AiPane.getCurrentInstance();
-         if (aiPane != null) {
-            aiPane.hideCancelButton();
-         }
-      }
-      else
-      {
-         // Set raw content for streaming effect
-         editFileWidget.setContent(newEditContent);
       }
    }
    
@@ -1372,29 +1282,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       }
    }
    
-   private void handleAcceptEditFileCommand(String messageId, String content)
-   {
-      org.rstudio.studio.client.workbench.views.ai.AiPane aiPane = 
-         org.rstudio.studio.client.workbench.views.ai.AiPane.getCurrentInstance();
-      if (aiPane != null)
-      {
-         aiPane.handleAcceptEditFileCommand(messageId, content);
-      }
-   }
-   
-   /**
-    * Handle cancel edit file command
-    */
-   private void handleCancelEditFileCommand(String messageId)
-   {
-      org.rstudio.studio.client.workbench.views.ai.AiPane aiPane = 
-         org.rstudio.studio.client.workbench.views.ai.AiPane.getCurrentInstance();
-      if (aiPane != null)
-      {
-         aiPane.handleCancelEditFileCommand(messageId);
-      }
-   }
-   
    /**
     * Handle accept search replace command
     */
@@ -1440,14 +1327,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          if (terminalWidget != null)
          {
             terminalWidget.hideButtons();
-         }
-      }
-      else if ("edit_file".equals(widgetType))
-      {
-         org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget = editFileWidgets_.get(messageId);
-         if (editFileWidget != null)
-         {
-            editFileWidget.hideButtons();
          }
       }
       else if ("search_replace".equals(widgetType))
@@ -1530,30 +1409,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
             }
          }
       }
-      else if ("edit_file".equals(widgetType))
-      {
-         org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget = editFileWidgets_.get(messageId);
-         if (editFileWidget != null)
-         {
-            // For edit_file widgets, we need to create the button container manually
-            // since they don't have a createButtons() method like console/terminal widgets
-            createEditFileButtons(editFileWidget);
-            
-            // Auto-accept if requested
-            if (autoAccept) {
-               Scheduler.get().scheduleDeferred(new ScheduledCommand() {
-                  @Override
-                  public void execute() {
-                     // Trigger the accept button click
-                     AiPane aiPane = AiPane.getCurrentInstance();
-                     if (aiPane != null) {
-                        aiPane.handleAcceptEditFileCommand(messageId, editFileWidget.getContent());
-                     }
-                  }
-               });
-            }
-         }
-      }
       else if ("search_replace".equals(widgetType))
       {
          AiSearchReplaceWidget searchReplaceWidget = searchReplaceWidgets_.get(messageId);
@@ -1628,16 +1483,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
             }
          }
       }
-      else if ("edit_file".equals(widgetType))
-      {
-         org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget editFileWidget = editFileWidgets_.get(messageId);
-         if (editFileWidget != null)
-         {
-            // For edit_file widgets, we need to create the button container manually
-            // since they don't have a createButtons() method like console/terminal widgets
-            createEditFileButtons(editFileWidget);
-         }
-      }
       else if ("search_replace".equals(widgetType))
       {
          AiSearchReplaceWidget searchReplaceWidget = searchReplaceWidgets_.get(messageId);
@@ -1650,14 +1495,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    }
    
    /**
-    * Create buttons for edit_file widgets that were restored without buttons
-    */
-   private void createEditFileButtons(org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget widget)
-   {
-      createFileEditorButtons(widget);
-   }
-   
-   /**
     * Create buttons for search_replace widgets that were restored without buttons
     */
    private void createSearchReplaceButtons(AiSearchReplaceWidget widget)
@@ -1666,7 +1503,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    }
    
    /**
-    * Common method to create buttons for file editor widgets (edit_file and search_replace)
+    * Common method to create buttons for file editor widgets (search_replace)
     */
    private void createFileEditorButtons(org.rstudio.studio.client.workbench.views.ai.widgets.AiFileEditorWidgetBase widget)
    {
@@ -1689,14 +1526,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    {
       return consoleWidgets_.get(messageId);
     }
-   
-   /**
-    * Get edit file widget by message ID
-    */
-   public org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget getEditFileWidget(String messageId)
-   {
-      return editFileWidgets_.get(messageId);
-   }
    
    public org.rstudio.studio.client.workbench.views.ai.widgets.AiSearchReplaceWidget getSearchReplaceWidget(String messageId)
    {
@@ -1867,7 +1696,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
             }
          }
       } catch (Exception e) {
-         Debug.log("EDIT_FILE_DEBUG: Error parsing code block content: " + e.getMessage());
+         Debug.log("FILE_EDIT_DEBUG: Error parsing code block content: " + e.getMessage());
          return content;
       }   
       // Return content without trimming to preserve empty lines
@@ -1918,7 +1747,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
     */
    private void updateScrollManagerStreamingStatus()
    {
-      boolean isStreaming = !streamingMessages_.isEmpty() || !editFileStreamingContent_.isEmpty();
+      boolean isStreaming = !streamingMessages_.isEmpty();
       scrollManager_.setActivelyStreaming(isStreaming);
    }
    
@@ -1930,9 +1759,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       streamingMessages_.clear();
       consoleWidgets_.clear();
       terminalWidgets_.clear();
-      editFileWidgets_.clear();
       searchReplaceWidgets_.clear();
-      editFileStreamingContent_.clear();
       searchReplaceStreamingContent_.clear();
       
       // Reset function call processing state
@@ -2114,18 +1941,6 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
          // Force completion but mark as cancelled to preserve content in display
          if (preservedContent != null && !preservedContent.isEmpty()) {
             updateAssistantMessageContentSynchronously(messageId, "", true, true, (com.google.gwt.core.client.JavaScriptObject) null);
-         }
-      }
-      
-      // Preserve edit file content
-      if (editFileStreamingContent_.containsKey(messageId)) {
-         String editFileContent = editFileStreamingContent_.get(messageId);
-         if (editFileContent != null && !editFileContent.isEmpty()) {
-            // Keep the content in the edit file widget but mark as cancelled
-            addContentToEditFileWidget(messageId, "", true, true, false, (com.google.gwt.core.client.JavaScriptObject) null);
-            if (preservedContent == null) {
-               preservedContent = editFileContent;
-            }
          }
       }
       
@@ -2420,9 +2235,7 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
    private final Map<String, String> streamingMessages_;
    private final Map<String, AiConsoleWidget> consoleWidgets_;
    private final Map<String, AiTerminalWidget> terminalWidgets_;
-   private final Map<String, org.rstudio.studio.client.workbench.views.ai.widgets.AiEditFileWidget> editFileWidgets_;
    private final Map<String, org.rstudio.studio.client.workbench.views.ai.widgets.AiSearchReplaceWidget> searchReplaceWidgets_;
-   private final Map<String, String> editFileStreamingContent_;
    private final Map<String, String> searchReplaceStreamingContent_;
 
    // Per-conversation sequence tracking
@@ -2668,6 +2481,92 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       } catch (e) {
          $wnd.console.log("DEBUG: Error clearing persistent diff indicators: " + e.message);
       }
+   }-*/;
+   
+   /**
+    * Make user message editable on click
+    */
+   private native void makeUserMessageEditable(Element messageDiv, String messageId) /*-{
+      var textDiv = messageDiv.querySelector('.text');
+      if (!textDiv) return;
+      
+      var self = this;
+      messageDiv.style.cursor = 'pointer';
+      
+      messageDiv.addEventListener('click', function() {
+         if (textDiv.hasAttribute('data-editing')) return;
+         
+         textDiv.setAttribute('data-editing', 'true');
+         
+         var originalText = textDiv.innerText || textDiv.textContent;
+         
+         var textarea = $doc.createElement('textarea');
+         textarea.value = originalText;
+         textarea.style.width = '100%';
+         textarea.style.height = 'auto';
+         textarea.style.minHeight = '22px';
+         textarea.style.maxHeight = '150px';
+         textarea.style.boxSizing = 'border-box';
+         textarea.style.resize = 'none';
+         textarea.style.overflow = 'auto';
+         textarea.style.outline = 'none';
+         textarea.style.border = 'none';
+         textarea.style.boxShadow = 'none';
+         textarea.style.padding = '8px';
+         textarea.style.display = 'block';
+         textarea.style.margin = '0';
+         textarea.style.backgroundColor = 'transparent';
+         
+         var computedStyle = window.getComputedStyle(textDiv);
+         textarea.style.fontFamily = computedStyle.fontFamily;
+         textarea.style.fontSize = computedStyle.fontSize;
+         textarea.style.fontWeight = computedStyle.fontWeight;
+         textarea.style.fontStyle = computedStyle.fontStyle;
+         textarea.style.lineHeight = computedStyle.lineHeight || '1.4';
+         textarea.style.color = computedStyle.color;
+         
+         textDiv.innerHTML = '';
+         textDiv.appendChild(textarea);
+         
+         var resizeTextarea = function() {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+         };
+         
+         textarea.addEventListener('input', resizeTextarea);
+         
+         var finishEditing = function(shouldRevert) {
+            var newText = textarea.value;
+            textDiv.removeAttribute('data-editing');
+            
+            if (shouldRevert && newText !== originalText && newText.trim().length > 0) {
+               var aiPane = @org.rstudio.studio.client.workbench.views.ai.AiPane::getCurrentInstance()();
+               if (aiPane) {
+                  aiPane.@org.rstudio.studio.client.workbench.views.ai.AiPane::handleAiRevertAndResubmit(Ljava/lang/String;Ljava/lang/String;)(messageId, newText);
+               }
+            } else {
+               textDiv.innerText = newText;
+            }
+         };
+         
+         textarea.addEventListener('blur', function() {
+            finishEditing(false);
+         });
+         
+         textarea.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+               e.preventDefault();
+               finishEditing(true);
+            } else if (e.key === 'Escape') {
+               e.preventDefault();
+               textDiv.innerText = originalText;
+               textDiv.removeAttribute('data-editing');
+            }
+         });
+         
+         textarea.focus();
+         resizeTextarea();
+      });
    }-*/;
 
 } 

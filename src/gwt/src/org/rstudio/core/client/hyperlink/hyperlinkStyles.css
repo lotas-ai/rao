@@ -1,8 +1,27 @@
 @eval proportionalFont org.rstudio.core.client.theme.ThemeFonts.getProportionalFont();
 @eval fixedWidthFont org.rstudio.core.client.theme.ThemeFonts.getFixedWidthFont();
+
+@external rstudio-themes-default, rstudio-themes-dark-grey, rstudio-themes-alternate, rstudio-themes-dark-menus;
+
 @eval THEME_DEFAULT_BACKGROUND org.rstudio.core.client.theme.ThemeColors.defaultBackground;
 @eval THEME_DARKGREY_BACKGROUND org.rstudio.core.client.theme.ThemeColors.darkGreyBackground;
-@external rstudio-themes-dark-menus;
+@eval THEME_ALTERNATE_BACKGROUND org.rstudio.core.client.theme.ThemeColors.alternateBackground;
+
+@eval THEME_DEFAULT_FOREGROUND org.rstudio.core.client.theme.ThemeColors.defaultForeground;
+@eval THEME_DARKGREY_FOREGROUND org.rstudio.core.client.theme.ThemeColors.darkGreyForeground;
+@eval THEME_ALTERNATE_FOREGROUND org.rstudio.core.client.theme.ThemeColors.alternateForeground;
+
+@eval THEME_DEFAULT_SUBTLE_TEXT org.rstudio.core.client.theme.ThemeColors.defaultSubtleText;
+@eval THEME_DARKGREY_SUBTLE_TEXT org.rstudio.core.client.theme.ThemeColors.darkGreySubtleText;
+@eval THEME_ALTERNATE_SUBTLE_TEXT org.rstudio.core.client.theme.ThemeColors.alternateSubtleText;
+
+@eval THEME_DEFAULT_BORDER org.rstudio.core.client.theme.ThemeColors.defaultBorder;
+@eval THEME_DARKGREY_BORDER org.rstudio.core.client.theme.ThemeColors.darkGreyBorder;
+@eval THEME_ALTERNATE_BORDER org.rstudio.core.client.theme.ThemeColors.alternateBorder;
+
+@eval THEME_DEFAULT_SUCCESS_COLOR org.rstudio.core.client.theme.ThemeColors.defaultSuccessColor;
+@eval THEME_DARKGREY_SUCCESS_COLOR org.rstudio.core.client.theme.ThemeColors.darkGreySuccessColor;
+@eval THEME_ALTERNATE_SUCCESS_COLOR org.rstudio.core.client.theme.ThemeColors.alternateSuccessColor;
 
 .hyperlink {
     text-decoration: underline; 
@@ -40,77 +59,117 @@
     font-family: fixedWidthFont;
 }
 
+/* Base structural styles */
 .hyperlinkPopupHeaderRight {
     font-family: fixedWidthFont;
     float: right;
-    color: #ccc;
     padding-left: 20px;
 }
 
+/* Theme-specific colors */
+.rstudio-themes-default .hyperlinkPopupHeaderRight,
+.rstudio-themes-alternate .hyperlinkPopupHeaderRight {
+    color: THEME_DEFAULT_SUBTLE_TEXT;
+}
+
+.rstudio-themes-dark-grey .hyperlinkPopupHeaderRight {
+    color: THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+/* Base structural styles */
 .hyperlinkPopupHeaderRun::before {
     content: "\025B6";
-    color: green;
     margin-right: 0.5em;
 }
 
-.rstudio-themes-dark-menus .hyperlinkPopupHeaderRun::before {
-    color: #2bc52b;
+/* Theme-specific colors */
+.rstudio-themes-default .hyperlinkPopupHeaderRun::before,
+.rstudio-themes-alternate .hyperlinkPopupHeaderRun::before {
+    color: THEME_DEFAULT_SUCCESS_COLOR;
 }
 
+.rstudio-themes-dark-grey .hyperlinkPopupHeaderRun::before {
+    color: THEME_DARKGREY_SUCCESS_COLOR;
+}
+
+/* Base structural styles */
 .hyperlinkPopupHeaderHelp::before {
     content: "?";
-    color: green;
     margin-right: 0.5em;
     font-weight: bolder;
 }
 
+/* Theme-specific colors */
+.rstudio-themes-default .hyperlinkPopupHeaderHelp::before,
+.rstudio-themes-alternate .hyperlinkPopupHeaderHelp::before {
+    color: THEME_DEFAULT_SUCCESS_COLOR;
+}
+
+.rstudio-themes-dark-grey .hyperlinkPopupHeaderHelp::before {
+    color: THEME_DARKGREY_SUCCESS_COLOR;
+}
+
+/* Base structural styles */
 .hyperlinkPopupHeaderAi::before {
     content: "?";
-    color: green;
     margin-right: 0.5em;
     font-weight: bolder;
 }
 
-.rstudio-themes-dark-menus .hyperlinkPopupHeaderHelp::before {
-    color: #2bc52b;
+/* Theme-specific colors */
+.rstudio-themes-default .hyperlinkPopupHeaderAi::before,
+.rstudio-themes-alternate .hyperlinkPopupHeaderAi::before {
+    color: THEME_DEFAULT_SUCCESS_COLOR;
 }
 
-.rstudio-themes-dark-menus .hyperlinkPopupHeaderAi::before {
-    color: #2bc52b;
+.rstudio-themes-dark-grey .hyperlinkPopupHeaderAi::before {
+    color: THEME_DARKGREY_SUCCESS_COLOR;
 }
 
+/* Base structural styles */
 .helpPreview {
-    color: #000023;
-    background-color: THEME_DEFAULT_BACKGROUND;
     padding: 5px;
-    border-top: 1px solid #ccc;
     z-index: 9001;
-    
     padding: 5px;
     margin-left: 0px;
     width: 100%;
 }
 
+/* Theme-specific colors */
+.rstudio-themes-default .helpPreview,
+.rstudio-themes-alternate .helpPreview {
+    color: THEME_DEFAULT_FOREGROUND;
+    background-color: THEME_DEFAULT_BACKGROUND;
+    border-top: 1px solid THEME_DEFAULT_BORDER;
+}
+
+.rstudio-themes-dark-grey .helpPreview {
+    background-color: THEME_DARKGREY_BACKGROUND;
+    color: THEME_DARKGREY_FOREGROUND;
+    border-top: 1px solid THEME_DARKGREY_BORDER;
+}
+
+/* Base structural styles */
 .aiPreview {
-    color: #000023;
-    background-color: THEME_DEFAULT_BACKGROUND;
     padding: 5px;
-    border-top: 1px solid #ccc;
     z-index: 9001;
-    
     padding: 5px;
     margin-left: 0px;
     width: 100%;
 }
 
-.rstudio-themes-dark-menus .helpPreview {
-    background-color: THEME_DARKGREY_BACKGROUND;
-    color: white;
+/* Theme-specific colors */
+.rstudio-themes-default .aiPreview,
+.rstudio-themes-alternate .aiPreview {
+    color: THEME_DEFAULT_FOREGROUND;
+    background-color: THEME_DEFAULT_BACKGROUND;
+    border-top: 1px solid THEME_DEFAULT_BORDER;
 }
 
-.rstudio-themes-dark-menus .aiPreview {
+.rstudio-themes-dark-grey .aiPreview {
     background-color: THEME_DARKGREY_BACKGROUND;
-    color: white;
+    color: THEME_DARKGREY_FOREGROUND;
+    border-top: 1px solid THEME_DARKGREY_BORDER;
 }
  
 .helpPreviewTitle {
@@ -131,30 +190,53 @@
     margin-bottom: 4px; 
 }
 
+/* Base structural styles */
 .helpPreviewDescription a {
     pointer-events: none;
     text-decoration: none;
-    color: #000023;
 }
 
+/* Theme-specific colors */
+.rstudio-themes-default .helpPreviewDescription a,
+.rstudio-themes-alternate .helpPreviewDescription a {
+    color: THEME_DEFAULT_FOREGROUND;
+}
+
+.rstudio-themes-dark-grey .helpPreviewDescription a {
+    color: THEME_DARKGREY_FOREGROUND;
+}
+
+/* Base structural styles */
 .aiPreviewDescription a {
     pointer-events: none;
     text-decoration: none;
-    color: #000023;
 }
 
-.rstudio-themes-dark-menus .helpPreviewDescription a {
-    color: #FFF;
+/* Theme-specific colors */
+.rstudio-themes-default .aiPreviewDescription a,
+.rstudio-themes-alternate .aiPreviewDescription a {
+    color: THEME_DEFAULT_FOREGROUND;
 }
 
-.rstudio-themes-dark-menus .aiPreviewDescription a {
-    color: #FFF;
+.rstudio-themes-dark-grey .aiPreviewDescription a {
+    color: THEME_DARKGREY_FOREGROUND;
 }
 
-.rstudio-themes-dark-menus .helpPreviewDescription span {
-    color: #bfbfbf !important;
+/* Theme-specific colors for spans */
+.rstudio-themes-default .helpPreviewDescription span,
+.rstudio-themes-alternate .helpPreviewDescription span {
+    color: THEME_DEFAULT_SUBTLE_TEXT !important;
 }
 
-.rstudio-themes-dark-menus .AiPreviewDescription span {
-    color: #bfbfbf !important;
+.rstudio-themes-dark-grey .helpPreviewDescription span {
+    color: THEME_DARKGREY_SUBTLE_TEXT !important;
+}
+
+.rstudio-themes-default .aiPreviewDescription span,
+.rstudio-themes-alternate .aiPreviewDescription span {
+    color: THEME_DEFAULT_SUBTLE_TEXT !important;
+}
+
+.rstudio-themes-dark-grey .aiPreviewDescription span {
+    color: THEME_DARKGREY_SUBTLE_TEXT !important;
 }

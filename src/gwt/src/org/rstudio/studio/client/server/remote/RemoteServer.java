@@ -1741,8 +1741,8 @@ public class RemoteServer implements Server, AiServerOperations
    }
 
    public void showCustomAiTopic(String aiHandler,
-                                   String topic,
-                                   String source)
+                                  String topic,
+                                  String source)
    {
       JSONArray params = new JSONArray();
       params.set(0, new JSONString(aiHandler));
@@ -1752,6 +1752,54 @@ public class RemoteServer implements Server, AiServerOperations
                   SHOW_CUSTOM_AI_TOPIC,
                   params,
                   null);
+   }
+   
+   // BYOK (Bring Your Own Key) implementation
+   public void startLocalBackendProxy(ServerRequestCallback<String> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, START_LOCAL_BACKEND_PROXY, new JSONArray(), requestCallback);
+   }
+   
+   public void stopLocalBackendProxy(ServerRequestCallback<Boolean> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, STOP_LOCAL_BACKEND_PROXY, new JSONArray(), requestCallback);
+   }
+   
+   public void isBYOKEnabled(String provider, ServerRequestCallback<Boolean> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(provider));
+      sendRequest(RPC_SCOPE, IS_BYOK_ENABLED, params, requestCallback);
+   }
+   
+   public void setBYOKApiKey(String provider, String apiKey, ServerRequestCallback<Boolean> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(provider));
+      params.set(1, new JSONString(apiKey));
+      sendRequest(RPC_SCOPE, SET_BYOK_API_KEY, params, requestCallback);
+   }
+   
+   public void setBYOKEnabled(String provider, boolean enabled, ServerRequestCallback<Boolean> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(provider));
+      params.set(1, JSONBoolean.getInstance(enabled));
+      sendRequest(RPC_SCOPE, SET_BYOK_ENABLED, params, requestCallback);
+   }
+   
+   public void clearBYOKApiKey(String provider, ServerRequestCallback<java.lang.Void> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(provider));
+      sendRequest(RPC_SCOPE, CLEAR_BYOK_API_KEY, params, requestCallback);
+   }
+   
+   public void hasBYOKApiKey(String provider, ServerRequestCallback<Boolean> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(provider));
+      sendRequest(RPC_SCOPE, HAS_BYOK_API_KEY, params, requestCallback);
    }
    
    public void getVignetteTitle(String topic,
@@ -1810,15 +1858,6 @@ public class RemoteServer implements Server, AiServerOperations
                   SEARCH,
                   query,
                   requestCallback);
-   }
-
-   public void acceptEditFileCommand(String editedCode, String messageId, String requestId, ServerRequestCallback<JavaScriptObject> requestCallback)
-   {
-      JSONArray params = new JSONArray();
-      params.set(0, new JSONString(editedCode));
-      params.set(1, new JSONString(messageId));
-      params.set(2, new JSONString(requestId != null ? requestId : ""));
-      sendRequest(RPC_SCOPE, ACCEPT_EDIT_FILE_COMMAND, params, requestCallback);
    }
 
    public void acceptSearchReplaceCommand(String editedCode, String messageId, String requestId, ServerRequestCallback<JavaScriptObject> requestCallback)
@@ -1997,6 +2036,18 @@ public class RemoteServer implements Server, AiServerOperations
       params.set(0, new JSONString(provider));
       params.set(1, new JSONString(model));
       sendRequest(RPC_SCOPE, SET_MODEL, params, requestCallback);
+   }
+
+   public void setInteractionMode(String mode, ServerRequestCallback<java.lang.Void> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(mode));
+      sendRequest(RPC_SCOPE, SET_INTERACTION_MODE, params, requestCallback);
+   }
+   
+   public void getInteractionMode(ServerRequestCallback<String> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, GET_INTERACTION_MODE, requestCallback);
    }
 
    public void saveAiAttachment(String filePath,
@@ -7358,9 +7409,17 @@ public class RemoteServer implements Server, AiServerOperations
    private static final String GET_AI = "get_ai";
    private static final String SHOW_AI_TOPIC = "show_ai_topic";
    private static final String GET_CUSTOM_AI = "get_custom_ai";
+   
+   // BYOK (Bring Your Own Key) constants
+   private static final String START_LOCAL_BACKEND_PROXY = "start_local_backend_proxy";
+   private static final String STOP_LOCAL_BACKEND_PROXY = "stop_local_backend_proxy";
+   private static final String IS_BYOK_ENABLED = "is_byok_enabled";
+   private static final String SET_BYOK_API_KEY = "set_byok_api_key";
+   private static final String SET_BYOK_ENABLED = "set_byok_enabled";
+   private static final String CLEAR_BYOK_API_KEY = "clear_byok_api_key";
+   private static final String HAS_BYOK_API_KEY = "has_byok_api_key";
    private static final String GET_CUSTOM_PARAMETER_AI = "get_custom_parameter_ai";
    private static final String SHOW_CUSTOM_AI_TOPIC = "show_custom_ai_topic";
-   private static final String ACCEPT_EDIT_FILE_COMMAND = "accept_edit_file_command";
    private static final String ACCEPT_SEARCH_REPLACE_COMMAND = "accept_search_replace_command";
    private static final String CANCEL_SEARCH_REPLACE_COMMAND = "cancel_search_replace_command";
    private static final String ACCEPT_RUN_LATEST_AI_CODE = "accept_run_latest_ai_code";
@@ -7810,6 +7869,8 @@ public class RemoteServer implements Server, AiServerOperations
    private static final String SIGN_IN_WITH_WEBSITE = "sign_in_with_website";
    private static final String CLEANUP_AUTH_SERVER = "cleanup_auth_server";
    private static final String SET_MODEL = "set_model";
+   private static final String SET_INTERACTION_MODE = "set_interaction_mode";
+   private static final String GET_INTERACTION_MODE = "get_interaction_mode";
    private static final String GET_TEMPERATURE = "get_temperature";
    private static final String SET_TEMPERATURE = "set_temperature";
 
@@ -8162,15 +8223,6 @@ public class RemoteServer implements Server, AiServerOperations
       params.set(0, new JSONString(messageId));
       params.set(1, new JSONString(requestId));
       sendRequest(RPC_SCOPE, "cancel_console_command", params, requestCallback);
-   }
-   
-   @Override
-   public void cancelEditFileCommand(String messageId, String requestId, ServerRequestCallback<JavaScriptObject> requestCallback)
-   {
-      JSONArray params = new JSONArray();
-      params.set(0, new JSONString(messageId));
-      params.set(1, new JSONString(requestId != null ? requestId : ""));
-      sendRequest(RPC_SCOPE, "cancel_edit_file_command", params, requestCallback);
    }
    
    @Override

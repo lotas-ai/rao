@@ -34,6 +34,7 @@ import org.rstudio.studio.client.RStudioGinjector;
 import org.rstudio.studio.client.server.ServerRequestCallback;
 import org.rstudio.studio.client.server.ServerError;
 import org.rstudio.studio.client.workbench.views.ai.model.AiServerOperations;
+import org.rstudio.core.client.theme.ThemeHelper;
 import com.google.gwt.core.client.JavaScriptObject;
 import com.google.gwt.core.client.JsArrayString;
 
@@ -72,8 +73,7 @@ public class AiTerminalWidget extends AiWidgetBase
       // Add Terminal header (always show for terminal widgets)
       Label headerLabel = new Label("Terminal");
       headerLabel.addStyleName("aiTerminalHeader");
-      headerLabel.getElement().getStyle().setBackgroundColor("#666");
-      headerLabel.getElement().getStyle().setColor("white");
+      // Background and text colors are handled by CSS theme classes
       headerLabel.getElement().getStyle().setFontSize(12, Unit.PX);
       headerLabel.getElement().getStyle().setFontWeight(com.google.gwt.dom.client.Style.FontWeight.BOLD);
       headerLabel.getElement().getStyle().setPadding(3, Unit.PX);
@@ -81,17 +81,21 @@ public class AiTerminalWidget extends AiWidgetBase
       headerLabel.getElement().getStyle().setMargin(0, Unit.PX);
       headerLabel.getElement().getStyle().setProperty("width", "100%");
       headerLabel.getElement().getStyle().setProperty("boxSizing", "border-box");
+      headerLabel.getElement().getStyle().setBorderWidth(1, Unit.PX);
+      headerLabel.getElement().getStyle().setBorderStyle(com.google.gwt.dom.client.Style.BorderStyle.SOLID);
+      headerLabel.getElement().getStyle().setBorderColor(ThemeHelper.getVisibleBorder());
+      headerLabel.getElement().getStyle().setProperty("borderBottom", "none");
       container.add(headerLabel);
       
       // Create terminal editor container
       HorizontalPanel editorContainer = new HorizontalPanel();
       editorContainer.setWidth("100%");
-      editorContainer.addStyleName("aiTerminalEditorContainer");
+      editorContainer.addStyleName(AiStreamingPanel.RES.styles().aiTerminalEditorContainer());
+      editorContainer.addStyleName("ace_editor"); // Get background from ACE theme like main console
       editorContainer.getElement().getStyle().setProperty("maxWidth", "100%");
       editorContainer.getElement().getStyle().setProperty("boxSizing", "border-box");
       editorContainer.getElement().getStyle().setMargin(0, Unit.PX);
       editorContainer.getElement().getStyle().setPadding(0, Unit.PX);
-      editorContainer.getElement().getStyle().setProperty("borderCollapse", "collapse");
       
       // Create a wrapper around the entire editor container (prompt + editor) with the border
       SimplePanel terminalWrapper = new SimplePanel();
@@ -99,9 +103,9 @@ public class AiTerminalWidget extends AiWidgetBase
       terminalWrapper.addStyleName("aiTerminalWrapper");
       terminalWrapper.getElement().getStyle().setBorderWidth(1, Unit.PX);
       terminalWrapper.getElement().getStyle().setBorderStyle(com.google.gwt.dom.client.Style.BorderStyle.SOLID);
-      terminalWrapper.getElement().getStyle().setBorderColor("#666");
+      terminalWrapper.getElement().getStyle().setBorderColor(ThemeHelper.getVisibleBorder());
       terminalWrapper.getElement().getStyle().setProperty("borderRadius", "0 0 4px 4px");
-      terminalWrapper.getElement().getStyle().setBackgroundColor("white");
+      // Background color is handled by ACE theme, not manually set
       terminalWrapper.getElement().getStyle().setPadding(0, Unit.PX);
       terminalWrapper.getElement().getStyle().setMargin(0, Unit.PX);
       terminalWrapper.getElement().getStyle().setProperty("lineHeight", "0");
@@ -112,8 +116,8 @@ public class AiTerminalWidget extends AiWidgetBase
       
       // Create terminal prompt
       promptLabel_ = new Label("$");
-      promptLabel_.addStyleName("aiTerminalPrompt");
-      promptLabel_.getElement().getStyle().setColor("#666");
+      promptLabel_.addStyleName(AiStreamingPanel.RES.styles().aiTerminalPrompt());
+      promptLabel_.getElement().getStyle().setColor(ThemeHelper.getSubtleText());
       promptLabel_.getElement().getStyle().setPaddingLeft(3, Unit.PX);
       promptLabel_.getElement().getStyle().setProperty("whiteSpace", "nowrap");
       editorContainer.add(promptLabel_);
@@ -130,9 +134,13 @@ public class AiTerminalWidget extends AiWidgetBase
       terminalInput_.setUseWrapMode(true);
       terminalInput_.autoHeight();
       
+      // Apply the current ACE theme (same as main console) for proper background color
+      terminalInput_.getWidget().getEditor().setTheme(RStudioGinjector.INSTANCE.getAceThemes().getCurrentTheme());
+      
       // Apply font sizing for proper integration
       FontSizer.applyNormalFontSize(terminalInput_.getWidget());
       
+      terminalInput_.getWidget().setWidth("100%");
       editorContainer.add(terminalInput_.getWidget());
       editorContainer.setCellWidth(terminalInput_.getWidget(), "100%");
       

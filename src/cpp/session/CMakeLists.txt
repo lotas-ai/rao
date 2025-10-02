@@ -68,6 +68,10 @@ else()
    else()
       set(RSTUDIO_DEPENDENCIES_RIPGREP_DIR "${RSTUDIO_DEPENDENCIES_DIR}/ripgrep")
    endif()
+   
+   # Set local backend directory - built during session build  
+   # CMAKE_CURRENT_BINARY_DIR is build-server/session, files are in session/bin/rao-local-backend
+   set(RSTUDIO_DEPENDENCIES_LOCAL_BACKEND_DIR "${CMAKE_CURRENT_BINARY_DIR}/bin/rao-local-backend")
 endif()
 
 
@@ -213,7 +217,6 @@ set(SESSION_SOURCE_FILES
    modules/SessionHelp.cpp
    modules/SessionHelpHome.cpp
    modules/SessionAi.cpp
-   modules/SessionSymbolIndex.cpp
    modules/SessionAiHome.cpp
    modules/SessionHistory.cpp
    modules/SessionHistoryArchive.cpp
@@ -659,6 +662,39 @@ if(NOT RSTUDIO_SESSION_WIN32 AND NOT RSESSION_ALTERNATE_BUILD)
 
    # postback
    add_subdirectory(postback)
+   
+   # ai_local_backend TypeScript compilation
+   include("${CMAKE_CURRENT_SOURCE_DIR}/../../node/CMakeNodeTools.txt")
+   
+   file(GLOB_RECURSE AI_BACKEND_SOURCES CONFIGURE_DEPENDS 
+        "resources/ai_local_backend/src/*.ts")
+   list(APPEND AI_BACKEND_SOURCES 
+        resources/ai_local_backend/package.json
+        resources/ai_local_backend/tsconfig.json)
+   
+   add_custom_command(
+      OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/resources/ai_local_backend/dist/rao-local-backend-macos-arm64"
+      DEPENDS ${AI_BACKEND_SOURCES}
+      COMMENT "Building AI local backend (TypeScript → standalone executable)"
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/resources/ai_local_backend"
+      COMMAND ${NPM} install
+      COMMAND ${NPM} run compile
+      COMMAND ${NPM} run package
+   )
+   
+   add_custom_target(ai_local_backend ALL 
+      DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/ai_local_backend/dist/rao-local-backend-macos-arm64")
+   
+   # Copy local backend executables to build bin directory for dev mode
+   # rsession is in build-server/session, but resourcePath is build-server, so copy to ../bin
+   add_custom_command(TARGET ai_local_backend POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/../bin/rao-local-backend"
+      COMMAND ${CMAKE_COMMAND} -E copy_directory
+              "${CMAKE_CURRENT_SOURCE_DIR}/resources/ai_local_backend/dist"
+              "${CMAKE_CURRENT_BINARY_DIR}/../bin/rao-local-backend"
+      COMMENT "Copying local backend executables to build directory")
+   
+   add_dependencies(rsession ai_local_backend)
 
    # HTML resources
    file(GLOB HTML_RESOURCE_FILES "resources/*.html")
@@ -786,6 +822,21 @@ if(NOT RSTUDIO_SESSION_WIN32 AND NOT RSESSION_ALTERNATE_BUILD)
             DESTINATION "${RSTUDIO_INSTALL_BIN}"
             USE_SOURCE_PERMISSIONS)
    endif()
+   
+   # install local backend (same pattern as ripgrep)
+   if(APPLE)
+      install(DIRECTORY "${RSTUDIO_DEPENDENCIES_LOCAL_BACKEND_DIR}" 
+            DESTINATION "${RSTUDIO_INSTALL_RESOURCES}/app/rao-local-backend"
+            USE_SOURCE_PERMISSIONS)
+   elseif(WIN32)
+      install(DIRECTORY "${RSTUDIO_DEPENDENCIES_LOCAL_BACKEND_DIR}/"
+            DESTINATION "${RSTUDIO_INSTALL_BIN}/rao-local-backend"
+            USE_SOURCE_PERMISSIONS)
+   else()
+      install(DIRECTORY "${RSTUDIO_DEPENDENCIES_LOCAL_BACKEND_DIR}"
+            DESTINATION "${RSTUDIO_INSTALL_BIN}/rao-local-backend"
+            USE_SOURCE_PERMISSIONS)
+   endif()
 
    # install embedded packages
    foreach(PKG ${RSTUDIO_EMBEDDED_PACKAGES})
@@ -810,6 +861,7 @@ if(NOT RSTUDIO_SESSION_WIN32 AND NOT RSESSION_ALTERNATE_BUILD)
    # ai resources
    install(DIRECTORY "resources/ai_resources"
            DESTINATION ${RSTUDIO_INSTALL_SUPPORTING}/resources)
+   
 
    # install pagedtable
    install(DIRECTORY "resources/pagedtable"

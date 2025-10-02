@@ -50,8 +50,6 @@ public interface AiServerOperations
 
    void showVignette(String topic, String pkgName);
 
-   void acceptEditFileCommand(String editedCode, String messageId, String requestId, ServerRequestCallback<JavaScriptObject> requestCallback);
-      
    void acceptSearchReplaceCommand(String editedCode, String messageId, String requestId, ServerRequestCallback<JavaScriptObject> requestCallback);
    
    void cancelSearchReplaceCommand(String messageId, String requestId, ServerRequestCallback<JavaScriptObject> requestCallback);
@@ -150,8 +148,6 @@ public interface AiServerOperations
    
    void cancelConsoleCommand(String messageId, String requestId, ServerRequestCallback<java.lang.Void> requestCallback);
 
-   void cancelEditFileCommand(String messageId, String requestId, ServerRequestCallback<JavaScriptObject> requestCallback);
-
    void runScriptInConsole(String script, int messageId, ServerRequestCallback<Void> requestCallback);
    
    void runScriptInTerminal(String script, int messageId, ServerRequestCallback<Void> requestCallback);
@@ -171,6 +167,21 @@ public interface AiServerOperations
    void listImages(ServerRequestCallback<JsArrayString> requestCallback);
    
    void deleteImage(String imagePath, ServerRequestCallback<Void> requestCallback);
+   
+   // BYOK (Bring Your Own Key) operations
+   void startLocalBackendProxy(ServerRequestCallback<String> requestCallback);
+   
+   void stopLocalBackendProxy(ServerRequestCallback<Boolean> requestCallback);
+   
+   void isBYOKEnabled(String provider, ServerRequestCallback<Boolean> requestCallback);
+   
+   void setBYOKApiKey(String provider, String apiKey, ServerRequestCallback<Boolean> requestCallback);
+   
+   void setBYOKEnabled(String provider, boolean enabled, ServerRequestCallback<Boolean> requestCallback);
+   
+   void clearBYOKApiKey(String provider, ServerRequestCallback<java.lang.Void> requestCallback);
+   
+   void hasBYOKApiKey(String provider, ServerRequestCallback<Boolean> requestCallback);
    
    void deleteAllImages(ServerRequestCallback<java.lang.Void> requestCallback);
    
@@ -250,4 +261,8 @@ public interface AiServerOperations
    void getAutomationList(String listType, ServerRequestCallback<JavaScriptObject> requestCallback);
    
    void setAutomationList(String listType, JavaScriptObject items, ServerRequestCallback<java.lang.Void> requestCallback);
+   
+   void setInteractionMode(String mode, ServerRequestCallback<java.lang.Void> requestCallback);
+   
+   void getInteractionMode(ServerRequestCallback<String> requestCallback);
 }

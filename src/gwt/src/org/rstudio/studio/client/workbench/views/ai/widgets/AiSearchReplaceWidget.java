@@ -30,7 +30,7 @@ import org.rstudio.studio.client.server.ServerError;
 
 /**
  * Widget for displaying search_replace function calls with an Ace editor
- * Similar to AiEditFileWidget but specialized for search and replace operations
+ * Specialized for search and replace operations
  */
 public class AiSearchReplaceWidget extends AiFileEditorWidgetBase
 {

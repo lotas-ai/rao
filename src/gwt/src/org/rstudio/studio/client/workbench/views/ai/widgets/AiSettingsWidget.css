@@ -1,9 +1,99 @@
 /* AI Settings Widget CSS */
+
+/* Theme color imports */
+@eval THEME_DEFAULT_BACKGROUND org.rstudio.core.client.theme.ThemeColors.defaultBackground;
+@eval THEME_DARKGREY_BACKGROUND org.rstudio.core.client.theme.ThemeColors.darkGreyBackground;
+@eval THEME_ALTERNATE_BACKGROUND org.rstudio.core.client.theme.ThemeColors.alternateBackground;
+
+@eval THEME_DEFAULT_FOREGROUND org.rstudio.core.client.theme.ThemeColors.defaultForeground;
+@eval THEME_DARKGREY_FOREGROUND org.rstudio.core.client.theme.ThemeColors.darkGreyForeground;
+@eval THEME_ALTERNATE_FOREGROUND org.rstudio.core.client.theme.ThemeColors.alternateForeground;
+
+@eval THEME_DEFAULT_SUBTLE_TEXT org.rstudio.core.client.theme.ThemeColors.defaultSubtleText;
+@eval THEME_DARKGREY_SUBTLE_TEXT org.rstudio.core.client.theme.ThemeColors.darkGreySubtleText;
+@eval THEME_ALTERNATE_SUBTLE_TEXT org.rstudio.core.client.theme.ThemeColors.alternateSubtleText;
+
+@eval THEME_DEFAULT_BORDER_COLOR org.rstudio.core.client.theme.ThemeColors.defaultBorderColor;
+@eval THEME_DARKGREY_BORDER_COLOR org.rstudio.core.client.theme.ThemeColors.darkGreyBorderColor;
+@eval THEME_ALTERNATE_BORDER_COLOR org.rstudio.core.client.theme.ThemeColors.alternateBorderColor;
+
+@eval THEME_DEFAULT_DISABLED_BACKGROUND org.rstudio.core.client.theme.ThemeColors.defaultDisabledBackground;
+@eval THEME_DARKGREY_DISABLED_BACKGROUND org.rstudio.core.client.theme.ThemeColors.darkGreyDisabledBackground;
+@eval THEME_ALTERNATE_DISABLED_BACKGROUND org.rstudio.core.client.theme.ThemeColors.alternateDisabledBackground;
+
+@eval THEME_DEFAULT_SUCCESS_COLOR org.rstudio.core.client.theme.ThemeColors.defaultSuccessColor;
+@eval THEME_DARKGREY_SUCCESS_COLOR org.rstudio.core.client.theme.ThemeColors.darkGreySuccessColor;
+@eval THEME_ALTERNATE_SUCCESS_COLOR org.rstudio.core.client.theme.ThemeColors.alternateSuccessColor;
+
+@eval THEME_DEFAULT_ERROR_COLOR org.rstudio.core.client.theme.ThemeColors.defaultErrorColor;
+@eval THEME_DARKGREY_ERROR_COLOR org.rstudio.core.client.theme.ThemeColors.darkGreyErrorColor;
+@eval THEME_ALTERNATE_ERROR_COLOR org.rstudio.core.client.theme.ThemeColors.alternateErrorColor;
+
+@eval THEME_DEFAULT_DIVIDER_COLOR org.rstudio.core.client.theme.ThemeColors.defaultDividerColor;
+@eval THEME_DARKGREY_DIVIDER_COLOR org.rstudio.core.client.theme.ThemeColors.darkGreyDividerColor;
+@eval THEME_ALTERNATE_DIVIDER_COLOR org.rstudio.core.client.theme.ThemeColors.alternateDividerColor;
+
+@eval THEME_DEFAULT_SHADOW_COLOR org.rstudio.core.client.theme.ThemeColors.defaultShadowColor;
+@eval THEME_DARKGREY_SHADOW_COLOR org.rstudio.core.client.theme.ThemeColors.darkGreyShadowColor;
+@eval THEME_ALTERNATE_SHADOW_COLOR org.rstudio.core.client.theme.ThemeColors.alternateShadowColor;
+
+@eval THEME_DEFAULT_SECTION_BACKGROUND org.rstudio.core.client.theme.ThemeColors.defaultSectionBackground;
+@eval THEME_DARKGREY_SECTION_BACKGROUND org.rstudio.core.client.theme.ThemeColors.darkGreySectionBackground;
+@eval THEME_ALTERNATE_SECTION_BACKGROUND org.rstudio.core.client.theme.ThemeColors.alternateSectionBackground;
+
+@eval THEME_DEFAULT_SECTION_BORDER org.rstudio.core.client.theme.ThemeColors.defaultSectionBorder;
+@eval THEME_DARKGREY_SECTION_BORDER org.rstudio.core.client.theme.ThemeColors.darkGreySectionBorder;
+@eval THEME_ALTERNATE_SECTION_BORDER org.rstudio.core.client.theme.ThemeColors.alternateSectionBorder;
+
+@eval THEME_DEFAULT_INPUT_BORDER org.rstudio.core.client.theme.ThemeColors.defaultInputBorder;
+@eval THEME_DARKGREY_INPUT_BORDER org.rstudio.core.client.theme.ThemeColors.darkGreyInputBorder;
+@eval THEME_ALTERNATE_INPUT_BORDER org.rstudio.core.client.theme.ThemeColors.alternateInputBorder;
+
+@eval THEME_DEFAULT_SLIDER_BACKGROUND org.rstudio.core.client.theme.ThemeColors.defaultSliderBackground;
+@eval THEME_DARKGREY_SLIDER_BACKGROUND org.rstudio.core.client.theme.ThemeColors.darkGreySliderBackground;
+@eval THEME_ALTERNATE_SLIDER_BACKGROUND org.rstudio.core.client.theme.ThemeColors.alternateSliderBackground;
+
+@eval THEME_DEFAULT_SLIDER_THUMB org.rstudio.core.client.theme.ThemeColors.defaultSliderThumb;
+@eval THEME_DARKGREY_SLIDER_THUMB org.rstudio.core.client.theme.ThemeColors.darkGreySliderThumb;
+@eval THEME_ALTERNATE_SLIDER_THUMB org.rstudio.core.client.theme.ThemeColors.alternateSliderThumb;
+
+@eval THEME_DEFAULT_BUTTON_BACKGROUND org.rstudio.core.client.theme.ThemeColors.defaultButtonBackground;
+@eval THEME_DARKGREY_BUTTON_BACKGROUND org.rstudio.core.client.theme.ThemeColors.darkGreyButtonBackground;
+@eval THEME_ALTERNATE_BUTTON_BACKGROUND org.rstudio.core.client.theme.ThemeColors.alternateButtonBackground;
+
+@eval THEME_DEFAULT_BUTTON_HOVER_BACKGROUND org.rstudio.core.client.theme.ThemeColors.defaultButtonHoverBackground;
+@eval THEME_DARKGREY_BUTTON_HOVER_BACKGROUND org.rstudio.core.client.theme.ThemeColors.darkGreyButtonHoverBackground;
+@eval THEME_ALTERNATE_BUTTON_HOVER_BACKGROUND org.rstudio.core.client.theme.ThemeColors.alternateButtonHoverBackground;
+
+@eval THEME_DEFAULT_BUTTON_ACTIVE_BACKGROUND org.rstudio.core.client.theme.ThemeColors.defaultButtonActiveBackground;
+@eval THEME_DARKGREY_BUTTON_ACTIVE_BACKGROUND org.rstudio.core.client.theme.ThemeColors.darkGreyButtonActiveBackground;
+@eval THEME_ALTERNATE_BUTTON_ACTIVE_BACKGROUND org.rstudio.core.client.theme.ThemeColors.alternateButtonActiveBackground;
+
+@eval THEME_DEFAULT_BUTTON_BORDER org.rstudio.core.client.theme.ThemeColors.defaultButtonBorder;
+@eval THEME_DARKGREY_BUTTON_BORDER org.rstudio.core.client.theme.ThemeColors.darkGreyButtonBorder;
+@eval THEME_ALTERNATE_BUTTON_BORDER org.rstudio.core.client.theme.ThemeColors.alternateButtonBorder;
+
+@eval THEME_DEFAULT_BUTTON_HOVER_BORDER org.rstudio.core.client.theme.ThemeColors.defaultButtonHoverBorder;
+@eval THEME_DARKGREY_BUTTON_HOVER_BORDER org.rstudio.core.client.theme.ThemeColors.darkGreyButtonHoverBorder;
+@eval THEME_ALTERNATE_BUTTON_HOVER_BORDER org.rstudio.core.client.theme.ThemeColors.alternateButtonHoverBorder;
+
+@eval THEME_DEFAULT_STATUS_COLOR org.rstudio.core.client.theme.ThemeColors.defaultStatusColor;
+@eval THEME_DARKGREY_STATUS_COLOR org.rstudio.core.client.theme.ThemeColors.darkGreyStatusColor;
+@eval THEME_ALTERNATE_STATUS_COLOR org.rstudio.core.client.theme.ThemeColors.alternateStatusColor;
+
+@eval THEME_DEFAULT_TOGGLE_ACTIVE org.rstudio.core.client.theme.ThemeColors.defaultToggleActive;
+@eval THEME_DARKGREY_TOGGLE_ACTIVE org.rstudio.core.client.theme.ThemeColors.darkGreyToggleActive;
+@eval THEME_ALTERNATE_TOGGLE_ACTIVE org.rstudio.core.client.theme.ThemeColors.alternateToggleActive;
+@eval THEME_DEFAULT_TOGGLE_BACKGROUND org.rstudio.core.client.theme.ThemeColors.defaultToggleBackground;
+@eval THEME_DARKGREY_TOGGLE_BACKGROUND org.rstudio.core.client.theme.ThemeColors.darkGreyToggleBackground;
+@eval THEME_ALTERNATE_TOGGLE_BACKGROUND org.rstudio.core.client.theme.ThemeColors.alternateToggleBackground;
+
+/* External class declarations for theme classes and other unobfuscated classes */
+@external rstudio-themes-default, rstudio-themes-dark-grey, rstudio-themes-alternate, ai-chevron-button, ai-chevron-svg, ai-toggle-enabled, ai-toggle-disabled, gwt-VerticalPanel, gwt-FlowPanel, gwt-HorizontalPanel, ai-modal-background, ace_editor, ace_scroller, ace_editor_theme;
 .settingsContainer {
     height: 100vh;
     overflow-y: auto;
     padding: 16px;
-    background-color: #ffffff;
     /* Match AI streaming panel font exactly */
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
     font-size: 14px;
@@ -14,34 +104,82 @@
     -moz-user-select: text;
     -ms-user-select: text;
     user-select: text;
+    /* Background color is handled by ace_editor and ace_editor_theme classes */
+}
+
+/* Settings container background - ensure it uses ace editor theme background */
+/* These rules apply to the settings widget when it's displayed in the center container */
+.rstudio-themes-default.settingsContainer.ace_editor_theme,
+.rstudio-themes-alternate.settingsContainer.ace_editor_theme {
+    background-color: transparent !important;
+    color: THEME_DEFAULT_FOREGROUND !important;
+}
+
+.rstudio-themes-dark-grey.settingsContainer.ace_editor_theme {
+    background-color: transparent !important;
+    color: THEME_DARKGREY_FOREGROUND !important;
+}
+
+/* Also apply to ai-modal-background elements within settings */
+.rstudio-themes-default .ai-modal-background.ace_editor_theme,
+.rstudio-themes-alternate .ai-modal-background.ace_editor_theme {
+    background-color: transparent !important;
+    color: THEME_DEFAULT_FOREGROUND !important;
+}
+
+.rstudio-themes-dark-grey .ai-modal-background.ace_editor_theme {
+    background-color: transparent !important;
+    color: THEME_DARKGREY_FOREGROUND !important;
 }
 
 .settingsHeader {
     font-size: 18px;
     font-weight: 600;
     margin-bottom: 20px;
-    color: #333333;
     /* Match AI streaming panel font exactly */
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
 }
 
+/* Settings header - theme-specific colors */
+/* Scoped to settings widget descendants */
+.rstudio-themes-default.settingsContainer .settingsHeader,
+.rstudio-themes-alternate.settingsContainer .settingsHeader {
+    color: THEME_DEFAULT_FOREGROUND;
+}
+
+.rstudio-themes-dark-grey.settingsContainer .settingsHeader {
+    color: THEME_DARKGREY_FOREGROUND;
+}
+
 .settingsSection {
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
+    border: 1px solid; /* Border style without color */
     border-radius: 4px; /* Reduced from 8px to 4px for smaller corner radius */
     padding: 8px 16px; /* Further reduced from 12px to 8px top/bottom */
     margin-bottom: 8px; /* Further reduced from 12px to 8px */
     box-sizing: border-box;
-    width: 100%;
+    width: 100% !important;
+    max-width: 100% !important;
     overflow: hidden;
     position: relative; /* Enable absolute positioning for chevron */
+}
+
+/* Settings section - theme-specific colors */
+/* Scoped to settings widget descendants */
+.rstudio-themes-default.settingsContainer .settingsSection,
+.rstudio-themes-alternate.settingsContainer .settingsSection {
+    background-color: THEME_DEFAULT_SECTION_BACKGROUND;
+    border-color: THEME_DEFAULT_SECTION_BORDER;
+}
+
+.rstudio-themes-dark-grey.settingsContainer .settingsSection {
+    background-color: THEME_DARKGREY_SECTION_BACKGROUND;
+    border-color: THEME_DARKGREY_SECTION_BORDER;
 }
 
 .sectionTitle {
     font-size: 16px;
     font-weight: 600;
     margin-bottom: 16px;
-    color: #333333;
     /* Match AI streaming panel font exactly */
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
     line-height: 1.2;
@@ -52,6 +190,16 @@
     user-select: text;
 }
 
+/* Scoped to settings widget descendants */
+.rstudio-themes-default.settingsContainer .sectionTitle,
+.rstudio-themes-alternate.settingsContainer .sectionTitle {
+    color: THEME_DEFAULT_FOREGROUND;
+}
+
+.rstudio-themes-dark-grey.settingsContainer .sectionTitle {
+    color: THEME_DARKGREY_FOREGROUND;
+}
+
 /* When section title is in a header panel, remove bottom margin for proper alignment */
 .sectionHeaderPanel .sectionTitle {
     margin-bottom: 0;
@@ -60,7 +208,8 @@
 
 .settingRow {
     margin-bottom: 4px; /* Further reduced from 8px to 4px */
-    width: 100%;
+    width: 100% !important;
+    max-width: 100% !important;
     box-sizing: border-box;
 }
 
@@ -68,7 +217,6 @@
     display: block;
     margin-bottom: 6px;
     font-weight: 500;
-    color: #555555;
     /* Match AI streaming panel font exactly */
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
     font-size: 14px;
@@ -79,15 +227,38 @@
     user-select: text;
 }
 
+.rstudio-themes-default .settingLabel,
+.rstudio-themes-alternate .settingLabel {
+    color: THEME_DEFAULT_SUBTLE_TEXT;
+}
+
+.rstudio-themes-dark-grey .settingLabel {
+    color: THEME_DARKGREY_SUBTLE_TEXT;
+}
+
 .settingInput {
-    width: 100%;
+    width: 100% !important;
+    max-width: 100% !important;
     padding: 6px 8px; /* Reduced from 8px 12px */
-    border: 1px solid #ced4da;
+    border: 1px solid; /* Border style without color */
     border-radius: 4px;
     font-size: 14px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
     box-sizing: border-box;
     outline: none;
+}
+
+.rstudio-themes-default .settingInput,
+.rstudio-themes-alternate .settingInput {
+    border-color: THEME_DEFAULT_INPUT_BORDER;
+    background-color: THEME_DEFAULT_BACKGROUND;
+    color: THEME_DEFAULT_FOREGROUND;
+}
+
+.rstudio-themes-dark-grey .settingInput {
+    border-color: THEME_DARKGREY_INPUT_BORDER;
+    background-color: THEME_DARKGREY_BACKGROUND;
+    color: THEME_DARKGREY_FOREGROUND;
 }
 
 .settingInput:focus {
@@ -100,10 +271,18 @@
     width: 100%;
     height: 6px;
     border-radius: 3px;
-    background: #ddd;
     outline: none;
     opacity: 0.7;
     transition: opacity 0.2s;
+}
+
+.rstudio-themes-default .settingInput input[type=range],
+.rstudio-themes-alternate .settingInput input[type=range] {
+    background: THEME_DEFAULT_SLIDER_BACKGROUND;
+}
+
+.rstudio-themes-dark-grey .settingInput input[type=range] {
+    background: THEME_DARKGREY_SLIDER_BACKGROUND;
 }
 
 .settingInput input[type=range]:focus {
@@ -121,29 +300,42 @@
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #007acc;
     cursor: pointer;
+}
+
+.rstudio-themes-default .settingInput input[type=range]::-webkit-slider-thumb,
+.rstudio-themes-alternate .settingInput input[type=range]::-webkit-slider-thumb {
+    background: THEME_DEFAULT_SLIDER_THUMB;
+}
+
+.rstudio-themes-dark-grey .settingInput input[type=range]::-webkit-slider-thumb {
+    background: THEME_DARKGREY_SLIDER_THUMB;
 }
 
 .settingInput input[type=range]::-moz-range-thumb {
     width: 18px;
     height: 18px;
     border-radius: 50%;
-    background: #007acc;
     cursor: pointer;
     border: none;
+}
+
+.rstudio-themes-default .settingInput input[type=range]::-moz-range-thumb,
+.rstudio-themes-alternate .settingInput input[type=range]::-moz-range-thumb {
+    background: THEME_DEFAULT_SLIDER_THUMB;
+}
+
+.rstudio-themes-dark-grey .settingInput input[type=range]::-moz-range-thumb {
+    background: THEME_DARKGREY_SLIDER_THUMB;
 }
 
 .settingButton {
     padding: 6px 8px; /* Match the text input padding */
     height: auto; /* Let height be determined by content and padding */
-    border: 1px solid #999999;
-    border-radius: 4px;
-    background-color: #e9ecef;
+    border-radius: 3px;
     /* Match AI streaming panel font exactly */
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
     font-size: 14px;
-    color: #333333;
     cursor: pointer;
     pointer-events: auto;
     z-index: 1000;
@@ -158,60 +350,125 @@
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
+    border: 1px solid; /* Border style without color */
+    background: transparent;
+    transition: border-color 0.2s ease;
 }
 
-.settingButton:hover {
-    background-color: #dee2e6;
-    border-color: #777777;
+.rstudio-themes-default .settingButton,
+.rstudio-themes-alternate .settingButton {
+    border-color: THEME_DEFAULT_SECTION_BORDER;
+    color: THEME_DEFAULT_FOREGROUND;
 }
 
-.settingButton:active {
-    background-color: #ced4da;
+.rstudio-themes-dark-grey .settingButton {
+    border-color: THEME_DARKGREY_SECTION_BORDER;
+    color: THEME_DARKGREY_FOREGROUND;
 }
 
-.primaryButton {
-    background-color: #e9ecef;
-    color: #333333;
-    border-color: #999999;
+.rstudio-themes-default .settingButton:hover,
+.rstudio-themes-alternate .settingButton:hover {
+    border-color: THEME_DEFAULT_SUBTLE_TEXT;
 }
 
-.primaryButton:hover {
-    background-color: #dee2e6;
-    border-color: #777777;
+.rstudio-themes-dark-grey .settingButton:hover {
+    border-color: THEME_DARKGREY_SUBTLE_TEXT;
 }
 
-.primaryButton:active {
-    background-color: #ced4da;
+.rstudio-themes-default .settingButton:active,
+.rstudio-themes-alternate .settingButton:active {
+    border-color: THEME_DEFAULT_SUBTLE_TEXT;
 }
 
-.secondaryButton {
-    background-color: #e9ecef;
-    color: #333333;
-    border-color: #999999;
+.rstudio-themes-dark-grey .settingButton:active {
+    border-color: THEME_DARKGREY_SUBTLE_TEXT;
 }
 
-.secondaryButton:hover {
-    background-color: #dee2e6;
-    border-color: #777777;
+.rstudio-themes-default .primaryButton,
+.rstudio-themes-alternate .primaryButton {
+    /* Inherits transparent background from .settingButton */
+    color: THEME_DEFAULT_FOREGROUND;
 }
 
-.secondaryButton:active {
-    background-color: #ced4da;
+.rstudio-themes-dark-grey .primaryButton {
+    /* Inherits transparent background from .settingButton */
+    color: THEME_DARKGREY_FOREGROUND;
 }
 
-.dangerButton {
-    background-color: #e9ecef;
-    color: #333333;
-    border-color: #999999;
+.rstudio-themes-default .primaryButton:hover,
+.rstudio-themes-alternate .primaryButton:hover {
+    /* Inherits border-color change from .settingButton:hover */
 }
 
-.dangerButton:hover {
-    background-color: #dee2e6;
-    border-color: #777777;
+.rstudio-themes-dark-grey .primaryButton:hover {
+    /* Inherits border-color change from .settingButton:hover */
 }
 
-.dangerButton:active {
-    background-color: #ced4da;
+.rstudio-themes-default .primaryButton:active,
+.rstudio-themes-alternate .primaryButton:active {
+    /* Inherits border-color change from .settingButton:active */
+}
+
+.rstudio-themes-dark-grey .primaryButton:active {
+    /* Inherits border-color change from .settingButton:active */
+}
+
+.rstudio-themes-default .secondaryButton,
+.rstudio-themes-alternate .secondaryButton {
+    /* Inherits transparent background from .settingButton */
+    color: THEME_DEFAULT_FOREGROUND;
+}
+
+.rstudio-themes-dark-grey .secondaryButton {
+    /* Inherits transparent background from .settingButton */
+    color: THEME_DARKGREY_FOREGROUND;
+}
+
+.rstudio-themes-default .secondaryButton:hover,
+.rstudio-themes-alternate .secondaryButton:hover {
+    /* Inherits border-color change from .settingButton:hover */
+}
+
+.rstudio-themes-dark-grey .secondaryButton:hover {
+    /* Inherits border-color change from .settingButton:hover */
+}
+
+.rstudio-themes-default .secondaryButton:active,
+.rstudio-themes-alternate .secondaryButton:active {
+    /* Inherits border-color change from .settingButton:active */
+}
+
+.rstudio-themes-dark-grey .secondaryButton:active {
+    /* Inherits border-color change from .settingButton:active */
+}
+
+.rstudio-themes-default .dangerButton,
+.rstudio-themes-alternate .dangerButton {
+    /* Inherits transparent background from .settingButton */
+    color: THEME_DEFAULT_FOREGROUND;
+}
+
+.rstudio-themes-dark-grey .dangerButton {
+    /* Inherits transparent background from .settingButton */
+    color: THEME_DARKGREY_FOREGROUND;
+}
+
+.rstudio-themes-default .dangerButton:hover,
+.rstudio-themes-alternate .dangerButton:hover {
+    /* Inherits border-color change from .settingButton:hover */
+}
+
+.rstudio-themes-dark-grey .dangerButton:hover {
+    /* Inherits border-color change from .settingButton:hover */
+}
+
+.rstudio-themes-default .dangerButton:active,
+.rstudio-themes-alternate .dangerButton:active {
+    /* Inherits border-color change from .settingButton:active */
+}
+
+.rstudio-themes-dark-grey .dangerButton:active {
+    /* Inherits border-color change from .settingButton:active */
 }
 
 /* Make primary and danger buttons shorter than browse button */
@@ -228,7 +485,6 @@
     font-size: 14px;
     font-weight: normal;
     display: inline-block;
-    color: #495057;
     /* Match AI streaming panel font exactly */
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
     /* Ensure text can be selected */
@@ -238,28 +494,67 @@
     user-select: text;
 }
 
-.statusActive {
-    color: #495057;
+.rstudio-themes-default .statusBadge,
+.rstudio-themes-alternate .statusBadge {
+    color: THEME_DEFAULT_STATUS_COLOR;
 }
 
-.statusTrial {
-    color: #495057;
+.rstudio-themes-dark-grey .statusBadge {
+    color: THEME_DARKGREY_STATUS_COLOR;
 }
 
-.statusPastDue {
-    color: #495057;
+.rstudio-themes-default .statusActive,
+.rstudio-themes-alternate .statusActive {
+    color: THEME_DEFAULT_STATUS_COLOR;
 }
 
-.statusPaymentActionRequired {
-    color: #495057;
+.rstudio-themes-dark-grey .statusActive {
+    color: THEME_DARKGREY_STATUS_COLOR;
 }
 
-.statusCancelled {
-    color: #495057;
+.rstudio-themes-default .statusTrial,
+.rstudio-themes-alternate .statusTrial {
+    color: THEME_DEFAULT_STATUS_COLOR;
 }
 
-.statusExpired {
-    color: #495057;
+.rstudio-themes-dark-grey .statusTrial {
+    color: THEME_DARKGREY_STATUS_COLOR;
+}
+
+.rstudio-themes-default .statusPastDue,
+.rstudio-themes-alternate .statusPastDue {
+    color: THEME_DEFAULT_STATUS_COLOR;
+}
+
+.rstudio-themes-dark-grey .statusPastDue {
+    color: THEME_DARKGREY_STATUS_COLOR;
+}
+
+.rstudio-themes-default .statusPaymentActionRequired,
+.rstudio-themes-alternate .statusPaymentActionRequired {
+    color: THEME_DEFAULT_STATUS_COLOR;
+}
+
+.rstudio-themes-dark-grey .statusPaymentActionRequired {
+    color: THEME_DARKGREY_STATUS_COLOR;
+}
+
+.rstudio-themes-default .statusCancelled,
+.rstudio-themes-alternate .statusCancelled {
+    color: THEME_DEFAULT_STATUS_COLOR;
+}
+
+.rstudio-themes-dark-grey .statusCancelled {
+    color: THEME_DARKGREY_STATUS_COLOR;
+}
+
+.rstudio-themes-default .statusExpired,
+.rstudio-themes-alternate .statusExpired {
+    color: THEME_DEFAULT_STATUS_COLOR;
+}
+
+.rstudio-themes-dark-grey .statusExpired {
+    color: THEME_DARKGREY_STATUS_COLOR;
 }
 
 .profileInfo {
@@ -286,7 +581,6 @@
 .profileName {
     grid-column: 3;
     font-size: 14px;
-    color: #666;
     font-weight: normal;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
     justify-self: end;
@@ -295,6 +589,15 @@
     -moz-user-select: text;
     -ms-user-select: text;
     user-select: text;
+}
+
+.rstudio-themes-default .profileName,
+.rstudio-themes-alternate .profileName {
+    color: THEME_DEFAULT_SUBTLE_TEXT;
+}
+
+.rstudio-themes-dark-grey .profileName {
+    color: THEME_DARKGREY_SUBTLE_TEXT;
 }
 
 /* Sign out button container */
@@ -315,23 +618,39 @@
 
 /* Directory row - using CSS Grid for exact control */
 .directoryRow {
-    display: grid;
+    display: grid !important;
     grid-template-columns: 1fr auto;
     gap: 8px;
     align-items: stretch; /* Make both elements same height */
-    width: 100%;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box;
 }
 
 .directoryRow .settingInput {
     grid-column: 1;
-    width: 100%;
+    width: 100% !important;
+    max-width: 100% !important;
     padding: 6px 8px;
-    border: 1px solid #ced4da;
+    border: 1px solid; /* Border style without color */
     border-radius: 4px;
     font-size: 14px;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
     box-sizing: border-box;
     min-height: 0; /* Allow grid to control height */
+}
+
+.rstudio-themes-default .directoryRow .settingInput,
+.rstudio-themes-alternate .directoryRow .settingInput {
+    border-color: THEME_DEFAULT_INPUT_BORDER;
+    background-color: THEME_DEFAULT_BACKGROUND;
+    color: THEME_DEFAULT_FOREGROUND;
+}
+
+.rstudio-themes-dark-grey .directoryRow .settingInput {
+    border-color: THEME_DARKGREY_INPUT_BORDER;
+    background-color: THEME_DARKGREY_BACKGROUND;
+    color: THEME_DARKGREY_FOREGROUND;
 }
 
 .directoryRow .settingButton {
@@ -365,7 +684,15 @@
     width: 100%;
     border: none;
     outline: none;
-    background: #ddd;
+}
+
+.rstudio-themes-default .temperatureRow .settingInput input[type=range],
+.rstudio-themes-alternate .temperatureRow .settingInput input[type=range] {
+    background: THEME_DEFAULT_SLIDER_BACKGROUND;
+}
+
+.rstudio-themes-dark-grey .temperatureRow .settingInput input[type=range] {
+    background: THEME_DARKGREY_SLIDER_BACKGROUND;
 }
 
 /* Temperature text input in grid layout */
@@ -373,26 +700,51 @@
     grid-column: 2;
     width: 60px;
     min-width: 60px;
-    border: 1px solid #ced4da;
+    border: 1px solid; /* Border style without color */
     border-radius: 4px;
     padding: 6px 8px;
     box-sizing: border-box;
 }
 
+.rstudio-themes-default .temperatureRow input[type=text],
+.rstudio-themes-alternate .temperatureRow input[type=text] {
+    border-color: THEME_DEFAULT_INPUT_BORDER;
+}
+
+.rstudio-themes-dark-grey .temperatureRow input[type=text] {
+    border-color: THEME_DARKGREY_INPUT_BORDER;
+}
+
 .errorMessage {
-    color: #dc3545;
     /* Match AI streaming panel font exactly */
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
     font-size: 14px;
     margin-top: 4px;
 }
 
+.rstudio-themes-default .errorMessage,
+.rstudio-themes-alternate .errorMessage {
+    color: THEME_DEFAULT_ERROR_COLOR;
+}
+
+.rstudio-themes-dark-grey .errorMessage {
+    color: THEME_DARKGREY_ERROR_COLOR;
+}
+
 .successMessage {
-    color: #28a745;
     /* Match AI streaming panel font exactly */
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
     font-size: 14px;
     margin-top: 4px;
+}
+
+.rstudio-themes-default .successMessage,
+.rstudio-themes-alternate .successMessage {
+    color: THEME_DEFAULT_SUCCESS_COLOR;
+}
+
+.rstudio-themes-dark-grey .successMessage {
+    color: THEME_DARKGREY_SUCCESS_COLOR;
 }
 
 /* Collapsible section styles */
@@ -409,11 +761,13 @@
 }
 
 .sectionContent {
-    width: 100%;
+    width: 100% !important;
+    max-width: 100% !important;
     margin-top: 8px;
     transition: height 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
     opacity: 1;
     overflow: visible;
+    box-sizing: border-box;
 }
 
 .sectionContentCollapsed {
@@ -432,17 +786,24 @@
 
 /* Rules section styling */
 .lightGrayButton {
-    background-color: #f0f0f0 !important;
     border: none !important;
-    color: #666 !important;
     font-size: 12px !important;
     padding: 2px 6px !important;
     cursor: pointer !important;
 }
 
+.rstudio-themes-default .lightGrayButton,
+.rstudio-themes-alternate .lightGrayButton {
+    background-color: THEME_DEFAULT_DISABLED_BACKGROUND !important;
+    color: THEME_DEFAULT_SUBTLE_TEXT !important;
+}
+
+.rstudio-themes-dark-grey .lightGrayButton {
+    background-color: THEME_DARKGREY_DISABLED_BACKGROUND !important;
+    color: THEME_DARKGREY_SUBTLE_TEXT !important;
+}
+
 .ruleTextArea {
-    background-color: #ffffff !important;
-    border: 1px solid #dee2e6 !important;
     border-radius: 4px !important;
     padding: 8px 16px !important;
     font-size: 14px !important;
@@ -454,11 +815,22 @@
     max-width: 100% !important;
     width: 100% !important;
     box-sizing: border-box !important;
+    border: 1px solid !important; /* Border style without color */
+}
+
+.rstudio-themes-default .ruleTextArea,
+.rstudio-themes-alternate .ruleTextArea {
+    background-color: THEME_DEFAULT_BACKGROUND !important;
+    border-color: THEME_DEFAULT_SECTION_BORDER !important;
+}
+
+.rstudio-themes-dark-grey .ruleTextArea {
+    background-color: THEME_DARKGREY_BACKGROUND !important;
+    border-color: THEME_DARKGREY_SECTION_BORDER !important;
 }
 
 .ruleContainer {
-    background-color: #ffffff !important;
-    border: 1px solid #dee2e6 !important;
+    border: 1px solid !important; /* Border style without color */
     border-radius: 4px !important;
     padding: 8px 16px !important;
     margin-bottom: 4px !important;
@@ -466,15 +838,34 @@
     width: 100% !important;
 }
 
+.rstudio-themes-default .ruleContainer,
+.rstudio-themes-alternate .ruleContainer {
+    background-color: THEME_DEFAULT_BACKGROUND !important;
+    border-color: THEME_DEFAULT_SECTION_BORDER !important;
+}
+
+.rstudio-themes-dark-grey .ruleContainer {
+    background-color: THEME_DARKGREY_SECTION_BACKGROUND !important;
+    border-color: THEME_DARKGREY_SECTION_BORDER !important;
+}
+
 .ruleText {
     font-weight: normal !important;
     font-size: 14px !important;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
     line-height: 1.4 !important;
-    color: #555555 !important;
     flex: 1 !important;
     margin-right: 10px !important;
     width: 100% !important;
+}
+
+.rstudio-themes-default .ruleText,
+.rstudio-themes-alternate .ruleText {
+    color: THEME_DEFAULT_SUBTLE_TEXT !important;
+}
+
+.rstudio-themes-dark-grey .ruleText {
+    color: THEME_DARKGREY_FOREGROUND !important;
 }
 
 .optionsButton {
@@ -489,20 +880,30 @@
     line-height: 1 !important;
     padding: 0 !important;
     cursor: pointer !important;
-    color: #666 !important;
     pointer-events: auto !important;
 }
 
-.optionsButton:hover {
-    color: #333 !important;
+.rstudio-themes-default .optionsButton,
+.rstudio-themes-alternate .optionsButton {
+    color: THEME_DEFAULT_SUBTLE_TEXT !important;
+}
+
+.rstudio-themes-dark-grey .optionsButton {
+    color: THEME_DARKGREY_SUBTLE_TEXT !important;
+}
+
+.rstudio-themes-default .optionsButton:hover,
+.rstudio-themes-alternate .optionsButton:hover {
+    color: THEME_DEFAULT_FOREGROUND !important;
+}
+
+.rstudio-themes-dark-grey .optionsButton:hover {
+    color: THEME_DARKGREY_FOREGROUND !important;
 }
 
 .optionsMenu {
     position: fixed !important;
     z-index: 10000 !important;
-    border: 1px solid #dee2e6 !important;
-    background-color: white !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
     border-radius: 4px !important;
     min-width: 60px !important;
     overflow: visible !important;
@@ -510,6 +911,20 @@
     font-size: 14px !important;
     line-height: 1.4 !important;
     width: 100% !important;
+    border: 1px solid !important; /* Border style without color */
+}
+
+.rstudio-themes-default .optionsMenu,
+.rstudio-themes-alternate .optionsMenu {
+    box-shadow: 0 2px 8px THEME_DEFAULT_SHADOW_COLOR !important;
+    border-color: THEME_DEFAULT_SECTION_BORDER !important;
+    background-color: THEME_DEFAULT_BACKGROUND !important;
+}
+
+.rstudio-themes-dark-grey .optionsMenu {
+    box-shadow: 0 2px 8px THEME_DARKGREY_SHADOW_COLOR !important;
+    border-color: THEME_DARKGREY_SECTION_BORDER !important;
+    background-color: THEME_DARKGREY_BACKGROUND !important;
 }
 
 .menuButton {
@@ -518,15 +933,28 @@
     font-size: 14px !important;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
     line-height: 1.4 !important;
-    color: #333 !important;
     background-color: transparent !important;
     border: none !important;
     text-align: left !important;
     cursor: pointer !important;
 }
 
-.menuButton:hover {
-    background-color: #f5f5f5 !important;
+.rstudio-themes-default .menuButton,
+.rstudio-themes-alternate .menuButton {
+    color: THEME_DEFAULT_FOREGROUND !important;
+}
+
+.rstudio-themes-dark-grey .menuButton {
+    color: THEME_DARKGREY_FOREGROUND !important;
+}
+
+.rstudio-themes-default .menuButton:hover,
+.rstudio-themes-alternate .menuButton:hover {
+    background-color: THEME_DEFAULT_DISABLED_BACKGROUND !important;
+}
+
+.rstudio-themes-dark-grey .menuButton:hover {
+    background-color: THEME_DARKGREY_DISABLED_BACKGROUND !important;
 }
 
 .buttonPanel {
@@ -559,4 +987,124 @@
     height: 20px !important;
     padding: 2px 6px !important;
     font-size: 12px !important;
+}
+
+/* Chevron button styles */
+.ai-chevron-button {
+   width: 20px;
+   height: 20px;
+   background: transparent;
+   border: 1px solid; /* Border style without color */
+   border-radius: 3px;
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   cursor: pointer;
+   transition: border-color 0.2s ease;
+}
+
+.rstudio-themes-default .ai-chevron-button,
+.rstudio-themes-alternate .ai-chevron-button {
+   border-color: THEME_DEFAULT_SECTION_BORDER;
+}
+
+.rstudio-themes-dark-grey .ai-chevron-button {
+   border-color: THEME_DARKGREY_SECTION_BORDER;
+}
+
+.rstudio-themes-default .ai-chevron-button:hover,
+.rstudio-themes-alternate .ai-chevron-button:hover {
+   border-color: THEME_DEFAULT_SUBTLE_TEXT;
+}
+
+.rstudio-themes-dark-grey .ai-chevron-button:hover {
+   border-color: THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+/* Toggle switches - enabled state (on) */
+.rstudio-themes-default .ai-toggle-enabled {
+   background-color: THEME_DEFAULT_TOGGLE_ACTIVE !important;
+}
+
+.rstudio-themes-dark-grey .ai-toggle-enabled {
+   background-color: THEME_DARKGREY_TOGGLE_ACTIVE !important;
+}
+
+.rstudio-themes-alternate .ai-toggle-enabled {
+   background-color: THEME_ALTERNATE_TOGGLE_ACTIVE !important;
+}
+
+/* Toggle switches - disabled state (off) */
+.rstudio-themes-default .ai-toggle-disabled {
+   background-color: THEME_DEFAULT_TOGGLE_BACKGROUND !important;
+}
+
+.rstudio-themes-dark-grey .ai-toggle-disabled {
+   background-color: THEME_DARKGREY_TOGGLE_BACKGROUND !important;
+}
+
+.rstudio-themes-alternate .ai-toggle-disabled {
+   background-color: THEME_ALTERNATE_TOGGLE_BACKGROUND !important;
+}
+
+/* Chevron SVG styles */
+.ai-chevron-svg {
+   flex-shrink: 0;
+}
+
+/* Ensure all GWT panels take full width */
+.settingsSection .gwt-VerticalPanel,
+.settingsSection .gwt-FlowPanel,
+.settingsSection .gwt-HorizontalPanel {
+   width: 100% !important;
+   max-width: 100% !important;
+   box-sizing: border-box !important;
+}
+
+/* Ensure all table cells in settings take full width */
+.settingsSection table,
+.settingsSection tbody,
+.settingsSection tr,
+.settingsSection td {
+   width: 100% !important;
+   max-width: 100% !important;
+   box-sizing: border-box !important;
+}
+
+/* Ensure allow/deny list tables and their tbody take full width */
+table[data-lists-container] {
+   width: 100% !important;
+   max-width: 100% !important;
+   display: block !important;
+   box-sizing: border-box !important;
+}
+
+table[data-lists-container] tbody {
+   width: 100% !important;
+   max-width: 100% !important;
+   display: block !important;
+   box-sizing: border-box !important;
+}
+
+table[data-lists-container] tr {
+   width: 100% !important;
+   max-width: 100% !important;
+   display: block !important;
+   box-sizing: border-box !important;
+}
+
+table[data-lists-container] td {
+   width: 100% !important;
+   max-width: 100% !important;
+   display: block !important;
+   box-sizing: border-box !important;
+}
+
+.rstudio-themes-default .ai-chevron-svg path,
+.rstudio-themes-alternate .ai-chevron-svg path {
+   stroke: THEME_DEFAULT_SUBTLE_TEXT;
+}
+
+.rstudio-themes-dark-grey .ai-chevron-svg path {
+   stroke: THEME_DARKGREY_SUBTLE_TEXT;
 }

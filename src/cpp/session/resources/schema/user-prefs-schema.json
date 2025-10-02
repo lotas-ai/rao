@@ -1682,6 +1682,24 @@
             "title": "Auto hide menu bar",
             "description": "Hide desktop menu bar until Alt key is pressed."
         },
+        "enable_splash_screen": {
+            "type": "boolean",
+            "default": true,
+            "title": "Enable splash screen",
+            "description": "Show splash screen when Rao starts."
+        },
+        "enable_mousewheel_zoom": {
+            "type": "boolean",
+            "default": false,
+            "title": "Enable mousewheel zoom",
+            "description": "Allow using Ctrl/Cmd + mousewheel to zoom the entire IDE."
+        },
+        "mousewheel_zoom_debounce_ms": {
+            "type": "integer",
+            "default": 100,
+            "title": "Mousewheel zoom debounce (ms)",
+            "description": "Delay in milliseconds before applying mousewheel zoom."
+        },
         "native_file_dialogs": {
             "description": "Whether Rao Desktop will use the operating system's native File and Message dialog boxes.",
             "title": "Use native file and message dialog boxes",
@@ -1810,6 +1828,155 @@
             "default": "errors_warnings_messages",
             "title": "Use extended display for",
             "description": "When enabled, R errors, warnings, and messages will receive an extended display with custom styles applied."
+        },
+        "ai_selected_model": {
+            "type": "string",
+            "default": "claude-sonnet-4-5-20250929",
+            "title": "Default AI Model",
+            "description": "The AI model to use for conversations"
+        },
+        "ai_security_mode": {
+            "type": "string",
+            "enum": ["secure", "improve"],
+            "default": "improve",
+            "title": "Security Mode",
+            "description": "The security level for AI interactions"
+        },
+        "ai_temperature": {
+            "type": "number",
+            "default": 0.5,
+            "minimum": 0.0,
+            "maximum": 1.0,
+            "title": "AI Temperature",
+            "description": "Temperature setting for AI model responses (0.0 = deterministic, 1.0 = highly variable)"
+        },
+        "ai_interaction_mode": {
+            "type": "string",
+            "enum": ["ask", "agent"],
+            "default": "agent",
+            "title": "Interaction Mode",
+            "description": "The interaction mode for the AI assistant"
+        },
+        "ai_web_search_enabled": {
+            "type": "boolean",
+            "default": false,
+            "title": "Enable Web Search",
+            "description": "Allow the AI to search the web"
+        },
+        "ai_auto_accept_edits": {
+            "type": "boolean",
+            "default": false,
+            "title": "Auto-accept File Edits",
+            "description": "Automatically accept file edit suggestions"
+        },
+        "ai_auto_accept_console": {
+            "type": "boolean",
+            "default": false,
+            "title": "Auto-accept Console Commands",
+            "description": "Automatically accept console command suggestions"
+        },
+        "ai_auto_accept_terminal": {
+            "type": "boolean",
+            "default": false,
+            "title": "Auto-accept Terminal Commands",
+            "description": "Automatically accept terminal command suggestions"
+        },
+        "ai_auto_run_files": {
+            "type": "boolean",
+            "default": false,
+            "title": "Auto-run Files",
+            "description": "Automatically run file execution suggestions"
+        },
+        "ai_auto_delete_files": {
+            "type": "boolean",
+            "default": false,
+            "title": "Auto-delete Files",
+            "description": "Automatically delete files when suggested"
+        },
+        "ai_auto_accept_console_allow_anything": {
+            "type": "boolean",
+            "default": false,
+            "title": "Allow All Console Commands",
+            "description": "Allow auto-accept for all console commands"
+        },
+        "ai_auto_accept_terminal_allow_anything": {
+            "type": "boolean",
+            "default": false,
+            "title": "Allow All Terminal Commands",
+            "description": "Allow auto-accept for all terminal commands"
+        },
+        "ai_auto_run_files_allow_anything": {
+            "type": "boolean",
+            "default": false,
+            "title": "Allow Running All Files",
+            "description": "Allow auto-run for all files"
+        },
+        "ai_auto_accept_console_allow_list": {
+            "type": "array",
+            "items": { "type": "string" },
+            "default": [],
+            "title": "Console Command Whitelist",
+            "description": "Whitelist of console commands to auto-accept"
+        },
+        "ai_auto_accept_console_deny_list": {
+            "type": "array",
+            "items": { "type": "string" },
+            "default": [],
+            "title": "Console Command Blocklist",
+            "description": "Blocklist of console commands to never auto-accept"
+        },
+        "ai_auto_accept_terminal_allow_list": {
+            "type": "array",
+            "items": { "type": "string" },
+            "default": [],
+            "title": "Terminal Command Whitelist",
+            "description": "Whitelist of terminal commands to auto-accept"
+        },
+        "ai_auto_accept_terminal_deny_list": {
+            "type": "array",
+            "items": { "type": "string" },
+            "default": [],
+            "title": "Terminal Command Blocklist",
+            "description": "Blocklist of terminal commands to never auto-accept"
+        },
+        "ai_auto_run_files_allow_list": {
+            "type": "array",
+            "items": { "type": "string" },
+            "default": [],
+            "title": "File Whitelist",
+            "description": "Whitelist of file patterns to auto-run"
+        },
+        "ai_auto_run_files_deny_list": {
+            "type": "array",
+            "items": { "type": "string" },
+            "default": [],
+            "title": "File Blocklist",
+            "description": "Blocklist of file patterns to never auto-run"
+        },
+        "ai_user_rules": {
+            "type": "array",
+            "items": { "type": "string" },
+            "default": [],
+            "title": "Custom AI Rules",
+            "description": "Custom rules for the AI assistant"
+        },
+        "ai_byok_anthropic_enabled": {
+            "type": "boolean",
+            "default": false,
+            "title": "BYOK Anthropic Enabled",
+            "description": "Enable Bring Your Own Key for Anthropic"
+        },
+        "ai_byok_openai_enabled": {
+            "type": "boolean",
+            "default": false,
+            "title": "BYOK OpenAI Enabled",
+            "description": "Enable Bring Your Own Key for OpenAI"
+        },
+        "ai_byok_sagemaker_enabled": {
+            "type": "boolean",
+            "default": false,
+            "title": "BYOK SageMaker Enabled",
+            "description": "Enable Bring Your Own Key for AWS SageMaker"
         }
       }
 }
