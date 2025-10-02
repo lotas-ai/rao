@@ -70,8 +70,9 @@ else()
    endif()
    
    # Set local backend directory - built during session build  
-   # CMAKE_CURRENT_BINARY_DIR is build-server/session, files are in session/bin/rao-local-backend
-   set(RSTUDIO_DEPENDENCIES_LOCAL_BACKEND_DIR "${CMAKE_CURRENT_BINARY_DIR}/bin/rao-local-backend")
+   # CMAKE_CURRENT_BINARY_DIR is build-server/session, but the local backend is copied
+   # alongside other desktop binaries in build-server/bin/rao-local-backend
+   set(RSTUDIO_DEPENDENCIES_LOCAL_BACKEND_DIR "${CMAKE_CURRENT_BINARY_DIR}/../bin/rao-local-backend")
 endif()
 
 
