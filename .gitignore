@@ -60,3 +60,19 @@ CLAUDE.md
 /dependencies/windows/ripgrep
 src/node/desktop/package.json.orig
 /temp_nupkg_extraction
+
+# AI Local Backend build outputs
+/src/cpp/session/resources/ai_local_backend/out/
+/src/cpp/session/resources/ai_local_backend/dist/
+
+# Log files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Environment files
+.env
+.env.local
+.env.*.local
