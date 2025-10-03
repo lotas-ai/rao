@@ -331,14 +331,15 @@
 # Add the missing R function implementations for Settings widget operations
 
 .rs.addJsonRpcHandler("get_user_profile", function() {
-  backend_config <- .rs.get_backend_config()
+  # Always use production backend URL for profile (not local backend)
+  backend_url <- .rs.get_production_backend_url()
   api_key <- .rs.get_api_key("rao")
   
   if (is.null(api_key)) {
     return(list(error = "No API key configured"))
   }
   
-  url <- paste0(backend_config$url, "/api/user/profile")
+  url <- paste0(backend_url, "/api/user/profile")
   
   request <- httr2::request(url)
   request <- httr2::req_headers(request, "Authorization" = paste("Bearer", api_key))
@@ -396,14 +397,15 @@
 
 # Add R function implementations that the C++ layer calls
 .rs.addFunction("get_user_profile", function() {
-  backend_config <- .rs.get_backend_config()
+  # Always use production backend URL for profile (not local backend)
+  backend_url <- .rs.get_production_backend_url()
   api_key <- .rs.get_api_key("rao")
   
   if (is.null(api_key)) {
     return(list(error = "No API key configured"))
   }
   
-  url <- paste0(backend_config$url, "/api/user/profile")
+  url <- paste0(backend_url, "/api/user/profile")
   request <- httr2::request(url)
   request <- httr2::req_headers(request, "Authorization" = paste("Bearer", api_key))
   
@@ -417,7 +419,8 @@
 })
 
 .rs.addFunction("get_subscription_status", function() {
-  backend_config <- .rs.get_backend_config()
+  # Always use production backend URL for subscription status (not local backend)
+  backend_url <- .rs.get_production_backend_url()
   api_key <- .rs.get_api_key("rao")
   
   if (is.null(api_key)) {
@@ -428,7 +431,7 @@
     response <- httr2::resp_body_json(
       httr2::req_perform(
         httr2::req_headers(
-          httr2::request(paste0(backend_config$url, "/api/user/subscription-status")),
+          httr2::request(paste0(backend_url, "/api/user/subscription-status")),
           "Authorization" = paste("Bearer", api_key)
         )
       )

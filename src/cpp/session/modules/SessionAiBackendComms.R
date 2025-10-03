@@ -63,6 +63,16 @@
   }
 })
 
+.rs.addFunction("get_production_backend_url", function() {
+  # Always returns the production backend URL, regardless of BYOK status
+  # Used for profile, subscription, and other account management endpoints
+  if (is.null(.rs.getVar("backend_environment_checked")) || !.rs.getVar("backend_environment_checked")) {
+    .rs.detect_backend_environment()
+  }
+  
+  return(.rs.getVar("backend_server_url"))
+})
+
 .rs.addFunction("get_backend_config", function(conversation = NULL, additional_data = NULL) {
   # Check if BYOK is enabled for any provider
   byok_enabled <- .rs.ai.isBYOKEnabled("openai") || .rs.ai.isBYOKEnabled("anthropic") || .rs.ai.isBYOKEnabled("sagemaker")

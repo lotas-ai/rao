@@ -1145,7 +1145,7 @@ public class AiToolbars
       settingsButtonElement.getStyle().setProperty("cursor", "pointer");
       settingsButtonElement.getStyle().setProperty("padding", "2px");
       settingsButtonElement.getStyle().setProperty("marginLeft", "-4px");
-      settingsButtonElement.getStyle().setProperty("marginTop", "-2px");
+      settingsButtonElement.getStyle().setProperty("marginTop", "-4px");
       settingsButtonElement.getStyle().setProperty("transform", "scale(0.9)");
       
       // Create settings-gear icon SVG (codicon-settings-gear) with theme-based color via CSS
@@ -1182,6 +1182,7 @@ public class AiToolbars
       newConversationElement.getStyle().setProperty("border", "none");
       newConversationElement.getStyle().setProperty("cursor", "pointer");
       newConversationElement.getStyle().setProperty("padding", "2px");
+      newConversationElement.getStyle().setProperty("marginTop", "-2px");
       newConversationElement.getStyle().setProperty("transform", "scale(0.9)");
       
       // Create add icon SVG (codicon-add) with theme-based color via CSS
@@ -1215,6 +1216,7 @@ public class AiToolbars
       backButtonElement.getStyle().setProperty("border", "none");
       backButtonElement.getStyle().setProperty("cursor", "pointer");
       backButtonElement.getStyle().setProperty("padding", "2px");
+      backButtonElement.getStyle().setProperty("marginTop", "-2px");
       
       // Create chevron-left icon SVG (codicon-chevron-left) with theme-based color via CSS
       backButtonElement.setInnerHTML(
@@ -1291,6 +1293,7 @@ public class AiToolbars
       forwardButtonElement.getStyle().setProperty("border", "none");
       forwardButtonElement.getStyle().setProperty("cursor", "pointer");
       forwardButtonElement.getStyle().setProperty("padding", "2px");
+      forwardButtonElement.getStyle().setProperty("marginTop", "-2px");
       
       // Create chevron-right icon SVG (codicon-chevron-right) with theme-based color via CSS
       forwardButtonElement.setInnerHTML(
@@ -1371,6 +1374,7 @@ public class AiToolbars
       titleElement.getStyle().setMarginRight(0, Unit.PX);
       titleElement.getStyle().setCursor(Style.Cursor.POINTER);
       titleElement.getStyle().setFontSize(13, Unit.PX);
+      titleElement.getStyle().setProperty("marginTop", "-2px");
       
       // Add a custom dropdown arrow using an inline-block element
       Element arrowSpan = Document.get().createSpanElement();
@@ -1378,7 +1382,7 @@ public class AiToolbars
       arrowSpan.getStyle().setDisplay(Style.Display.INLINE_BLOCK);
       arrowSpan.getStyle().setMarginLeft(3, Unit.PX);
       arrowSpan.getStyle().setPosition(Style.Position.RELATIVE);
-      arrowSpan.getStyle().setTop(0, Unit.PX);
+      arrowSpan.getStyle().setTop(-2, Unit.PX);
       arrowSpan.setInnerHTML("&#9662;"); // Unicode down triangle
       titleElement.appendChild(arrowSpan);
       
