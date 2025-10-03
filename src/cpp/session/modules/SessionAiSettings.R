@@ -908,9 +908,11 @@
               # Handle error case
               error_html <- paste0(
                 '<!DOCTYPE html>',
-                '<html><head><title>Authentication Failed</title></head>',
+                '<html><head>',
+                '<meta charset="UTF-8">',
+                '<title>Authentication Failed</title></head>',
                 '<body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px;">',
-                '<div style="color: red; font-size: 48px; margin-bottom: 16px;">✗</div>',
+                '<div style="color: red; font-size: 48px; margin-bottom: 16px;">&#x2717;</div>',
                 '<h2 style="color: #333; margin-bottom: 8px;">Authentication Failed</h2>',
                 '<p style="color: #666;">No API key received. Please try again.</p>',
                 '</body></html>'
