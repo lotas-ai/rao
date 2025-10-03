@@ -1075,9 +1075,9 @@ body .ace_editor_theme .gwt-HTML.ace_editor_theme.rstudio-themes-alternate {
 
 /* Button colors for console/terminal widgets */
 .ai-accept-button {
-   color: #28a745 !important; /* Dark green for Run button */
+   color: #006400 !important; /* Darker green for Run button */
 }
 
 .ai-cancel-button {
-   color: #dc3545 !important; /* Dark red for Cancel button */
+   color: #8b0000 !important; /* Darker red for Cancel button */
 }

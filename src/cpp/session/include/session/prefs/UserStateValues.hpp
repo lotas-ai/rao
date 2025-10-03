@@ -120,8 +120,8 @@ namespace prefs {
 #define kAiWorkingDirectory "ai_working_directory"
 #define kAiSagemakerEndpoint "ai_sagemaker_endpoint"
 #define kAiSagemakerRegion "ai_sagemaker_region"
-#define kByokAnthropicApiKey "byok_anthropic_api_key"
-#define kByokOpenaiApiKey "byok_openai_api_key"
+#define kAiByokAnthropicApiKey "ai_byok_anthropic_api_key"
+#define kAiByokOpenaiApiKey "ai_byok_openai_api_key"
 
 class UserStateValues: public Preferences
 {
@@ -346,14 +346,14 @@ public:
    /**
     * Bring Your Own Key for Anthropic API
     */
-   std::string byokAnthropicApiKey();
-   core::Error setByokAnthropicApiKey(std::string val);
+   std::string aiByokAnthropicApiKey();
+   core::Error setAiByokAnthropicApiKey(std::string val);
 
    /**
     * Bring Your Own Key for OpenAI API
     */
-   std::string byokOpenaiApiKey();
-   core::Error setByokOpenaiApiKey(std::string val);
+   std::string aiByokOpenaiApiKey();
+   core::Error setAiByokOpenaiApiKey(std::string val);
 
 };
 

@@ -1,7 +1,7 @@
 /*
  * AiToolbars.java
  *
- * Copyright (C) 2025 by William Nickols
+ * Copyright (C) 2025 by Lotas Inc.
  *
  * This program is licensed to you under the terms of version 3 of the
  * GNU Affero General Public License. This program is distributed WITHOUT
@@ -193,7 +193,7 @@ public class AiToolbars
       attachButtonElement.getStyle().setProperty("marginRight", "5px");
       attachButtonElement.getStyle().setProperty("cursor", "pointer");
       attachButtonElement.getStyle().setProperty("color", ThemeHelper.getSubtleText());
-      attachButtonElement.getStyle().setProperty("fontSize", "12px");
+      attachButtonElement.getStyle().setProperty("fontSize", "11px");
       attachButtonElement.getStyle().setProperty("fontFamily", "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif");
       attachButtonElement.getStyle().setProperty("height", "18px");
       attachButtonElement.getStyle().setProperty("lineHeight", "14px");

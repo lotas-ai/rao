@@ -1,6 +1,6 @@
 # SessionAiHelpers.R
 #
-# Copyright (C) 2025 by William Nickols
+# Copyright (C) 2025 by Lotas Inc.
 #
 # This program is licensed to you under the terms of version 3 of the
 # GNU Affero General Public License. This program is distributed WITHOUT
@@ -15,7 +15,28 @@
 
 .rs.setVar("ai_in_error", FALSE)
 
-
+.rs.addFunction("normalize_file_path", function(path) {
+  # Normalize file paths by expanding tilde and resolving to absolute path
+  # This ensures consistent path format between R and Java
+  if (is.null(path) || is.na(path) || nchar(path) == 0) {
+    return(path)
+  }
+    
+  expanded <- path.expand(path)
+  
+  # Try normalizePath first (works for existing files)
+  normalized <- normalizePath(expanded, mustWork = FALSE)
+  
+  # If file doesn't exist and path is still relative, manually construct absolute path
+  if (!file.exists(normalized) && !startsWith(normalized, "/") && !grepl("^[A-Za-z]:", normalized)) {
+    # Relative path for non-existent file - construct absolute path from working directory
+    normalized <- file.path(getwd(), normalized)
+    # Normalize the constructed path to clean up . and ..
+    normalized <- normalizePath(normalized, mustWork = FALSE)
+  }
+  
+  return(normalized)
+})
 
 .rs.addFunction("find_highest_conversation_index", function() {
    base_ai_dir <- .rs.get_ai_base_dir()
@@ -1530,8 +1551,8 @@ tryCatch({
 })
 
 .rs.addFunction("apply_file_edit", function(file_path, new_content, edit_metadata = NULL) {
-   # Apply edit to file - to editor if open, otherwise to disk
-   # This is the main routing function for applying edits
+   # Apply edit to file - ALWAYS write to disk AND update editor if open
+   # This ensures consistency and prevents "file changed on disk" warnings
    
    if (is.null(file_path) || !is.character(file_path) || length(file_path) == 0) {
       return(FALSE)
@@ -1541,31 +1562,9 @@ tryCatch({
       cat("DEBUG apply_file_edit: Invalid new_content, returning FALSE\n")
       return(FALSE)
    }
-      
-   # First try to update the open document via the new RPC mechanism
-   # This will update both the source database and trigger a client refresh
-   # For apply_file_edit (accept operations), always mark_clean = FALSE to keep document marked as dirty
-   result <- tryCatch({
-      .rs.invokeRpc("update_open_document_content", file_path, new_content, FALSE)
-   }, error = function(e) {
-      cat("DEBUG apply_file_edit: RPC failed with error:", e$message, "\n")
-      FALSE
-   })
    
-   if (result) {
-      # Successfully updated the open document
-      return(TRUE)
-   }
-   
-   # If the document is not open, or RPC failed, fall back to file system update
-   disk_result <- .rs.apply_edit_to_disk(file_path, new_content, edit_metadata)
-   return(disk_result)
-})
-
-.rs.addFunction("apply_edit_to_disk", function(file_path, new_content, edit_metadata = NULL) {
-   # Apply edit directly to disk file (original behavior)
-   
-   tryCatch({
+   # Step 1: Write to disk first
+   disk_success <- tryCatch({
       # Create directory if needed
       file_dir <- dirname(file_path)
       if (!dir.exists(file_dir)) {
@@ -1575,12 +1574,28 @@ tryCatch({
       # Write content to file
       content_lines <- strsplit(new_content, "\n")[[1]]
       writeLines(content_lines, file_path)
-      
-      return(TRUE)
+      TRUE
    }, error = function(e) {
-      cat("Error writing to disk:", e$message, "\n")
+      cat("ERROR apply_file_edit: Failed to write to disk:", e$message, "\n")
       return(FALSE)
    })
+   
+   if (!disk_success) {
+      return(FALSE)
+   }
+   
+   # Step 2: If file is open in editor, update the editor content and mark as clean
+   # This syncs the editor with the disk and prevents "file changed on disk" warnings
+   if (.rs.is_file_open_in_editor(file_path)) {
+      tryCatch({
+         # mark_clean = TRUE because we just saved to disk, so editor should match disk
+         .rs.invokeRpc("update_open_document_content", file_path, new_content, TRUE)
+      }, error = function(e) {
+         cat("DEBUG apply_file_edit: Editor update failed (non-fatal):", e$message, "\n")
+      })
+   }
+   
+   return(TRUE)
 })
 
 .rs.addFunction("check_file_pattern_match", function(file_path, include_patterns = NULL, exclude_patterns = NULL) {

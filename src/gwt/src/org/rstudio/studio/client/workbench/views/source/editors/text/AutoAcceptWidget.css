@@ -1,0 +1,188 @@
+@external erdos-ai-auto-accept-section-widget;
+@external erdos-ai-auto-accept-buttons;
+@external erdos-ai-auto-accept-accept-button;
+@external erdos-ai-auto-accept-reject-button;
+@external erdos-ai-auto-accept-deleted-lines;
+@external in-code-chunk;
+@external rstudio-themes-default;
+@external rstudio-themes-alternate;
+@external rstudio-themes-flat;
+@external rstudio-themes-dark-grey;
+@external ace_marker-layer;
+@external ace_foreign_line;
+
+@eval THEME_DEFAULT_BORDER org.rstudio.core.client.theme.ThemeColors.defaultBorder;
+@eval THEME_DARKGREY_BORDER org.rstudio.core.client.theme.ThemeColors.darkGreyBorder;
+@eval THEME_ALTERNATE_BORDER org.rstudio.core.client.theme.ThemeColors.alternateBorder;
+
+@eval THEME_DEFAULT_SUCCESS_BG org.rstudio.core.client.theme.ThemeColors.defaultSuccessBackground;
+@eval THEME_DARKGREY_SUCCESS_BG org.rstudio.core.client.theme.ThemeColors.darkGreySuccessBackground;
+@eval THEME_ALTERNATE_SUCCESS_BG org.rstudio.core.client.theme.ThemeColors.alternateSuccessBackground;
+
+@eval THEME_DEFAULT_WARNING_BG org.rstudio.core.client.theme.ThemeColors.defaultWarningBackground;
+@eval THEME_DARKGREY_WARNING_BG org.rstudio.core.client.theme.ThemeColors.darkGreyWarningBackground;
+@eval THEME_ALTERNATE_WARNING_BG org.rstudio.core.client.theme.ThemeColors.alternateWarningBackground;
+
+/* Auto-accept widget section container */
+.erdos-ai-auto-accept-section-widget {
+  margin: 0;
+  padding: 0;
+}
+
+/* Deleted lines container */
+.erdos-ai-auto-accept-deleted-lines {
+  margin: 0;
+  padding: 0;
+}
+
+/* Button container - compact, on the right, directly below deleted lines */
+.erdos-ai-auto-accept-buttons {
+  display: flex;
+  gap: 0;
+  margin: 0 4px 0 auto;
+  padding: 0 0 2px 0;
+  width: fit-content;
+}
+
+/* Accept button - hangs off the line above */
+.erdos-ai-auto-accept-accept-button {
+  border: 1px solid;
+  border-top: none;
+  cursor: pointer;
+  padding: 2px 7px;
+  font-size: 9px;
+  height: 13.5px;
+  line-height: 10px;
+  border-radius: 0 0 0 3px;
+  white-space: nowrap;
+}
+
+.rstudio-themes-default .erdos-ai-auto-accept-accept-button {
+  background-color: THEME_DEFAULT_SUCCESS_BG;
+  color: #2d5a2d;
+  border-color: THEME_DEFAULT_BORDER;
+}
+
+.rstudio-themes-default .erdos-ai-auto-accept-accept-button:hover {
+  background-color: #8fc98f;
+}
+
+.rstudio-themes-alternate .erdos-ai-auto-accept-accept-button {
+  background-color: THEME_ALTERNATE_SUCCESS_BG;
+  color: #2d5a2d;
+  border-color: THEME_ALTERNATE_BORDER;
+}
+
+.rstudio-themes-alternate .erdos-ai-auto-accept-accept-button:hover {
+  background-color: #8fc98f;
+}
+
+.rstudio-themes-dark-grey .erdos-ai-auto-accept-accept-button {
+  background-color: THEME_DARKGREY_SUCCESS_BG;
+  color: #80ff80;
+  border-color: THEME_DARKGREY_BORDER;
+}
+
+.rstudio-themes-dark-grey .erdos-ai-auto-accept-accept-button:hover {
+  background-color: rgba(128, 255, 128, 0.3);
+}
+
+/* Reject button - hangs off the line above */
+.erdos-ai-auto-accept-reject-button {
+  border: 1px solid;
+  border-top: none;
+  border-left: none;
+  cursor: pointer;
+  padding: 2px 7px;
+  font-size: 9px;
+  height: 13.5px;
+  line-height: 10px;
+  border-radius: 0 0 3px 0;
+  white-space: nowrap;
+}
+
+.rstudio-themes-default .erdos-ai-auto-accept-reject-button {
+  background-color: THEME_DEFAULT_WARNING_BG;
+  color: #7a2e28;
+  border-color: THEME_DEFAULT_BORDER;
+}
+
+.rstudio-themes-default .erdos-ai-auto-accept-reject-button:hover {
+  background-color: #f28a82;
+}
+
+.rstudio-themes-alternate .erdos-ai-auto-accept-reject-button {
+  background-color: THEME_ALTERNATE_WARNING_BG;
+  color: #7a2e28;
+  border-color: THEME_ALTERNATE_BORDER;
+}
+
+.rstudio-themes-alternate .erdos-ai-auto-accept-reject-button:hover {
+  background-color: #f28a82;
+}
+
+.rstudio-themes-dark-grey .erdos-ai-auto-accept-reject-button {
+  background-color: THEME_DARKGREY_WARNING_BG;
+  color: #ffb380;
+  border-color: THEME_DARKGREY_BORDER;
+}
+
+.rstudio-themes-dark-grey .erdos-ai-auto-accept-reject-button:hover {
+  background-color: rgba(255, 179, 128, 0.3);
+}
+
+/* Code chunk background matching styles */
+/* When in code chunks, the ace_foreign_line class is added to elements */
+/* This automatically picks up the chunk background color from the theme's .rstheme file */
+/* Each theme defines .ace_marker-layer .ace_foreign_line { background-color: ... } */
+/* By adding the ace_foreign_line class, our widgets inherit that background color */
+
+/* Accept button in code chunk - blend success color with chunk background */
+/* Light themes (default, alternate, flat) */
+.rstudio-themes-default .erdos-ai-auto-accept-accept-button.in-code-chunk,
+.rstudio-themes-alternate .erdos-ai-auto-accept-accept-button.in-code-chunk,
+.rstudio-themes-flat .erdos-ai-auto-accept-accept-button.in-code-chunk {
+  background-color: rgba(163, 230, 163, 0.4);
+  color: #2d5a2d;
+}
+
+.rstudio-themes-default .erdos-ai-auto-accept-accept-button.in-code-chunk:hover,
+.rstudio-themes-alternate .erdos-ai-auto-accept-accept-button.in-code-chunk:hover,
+.rstudio-themes-flat .erdos-ai-auto-accept-accept-button.in-code-chunk:hover {
+  background-color: rgba(143, 201, 143, 0.6);
+}
+
+.rstudio-themes-dark-grey .erdos-ai-auto-accept-accept-button.in-code-chunk {
+  background-color: rgba(128, 255, 128, 0.15);
+  color: #80ff80;
+}
+
+.rstudio-themes-dark-grey .erdos-ai-auto-accept-accept-button.in-code-chunk:hover {
+  background-color: rgba(128, 255, 128, 0.25);
+}
+
+/* Reject button in code chunk - blend warning color with chunk background */
+/* Light themes (default, alternate, flat) */
+.rstudio-themes-default .erdos-ai-auto-accept-reject-button.in-code-chunk,
+.rstudio-themes-alternate .erdos-ai-auto-accept-reject-button.in-code-chunk,
+.rstudio-themes-flat .erdos-ai-auto-accept-reject-button.in-code-chunk {
+  background-color: rgba(252, 175, 162, 0.4);
+  color: #7a2e28;
+}
+
+.rstudio-themes-default .erdos-ai-auto-accept-reject-button.in-code-chunk:hover,
+.rstudio-themes-alternate .erdos-ai-auto-accept-reject-button.in-code-chunk:hover,
+.rstudio-themes-flat .erdos-ai-auto-accept-reject-button.in-code-chunk:hover {
+  background-color: rgba(242, 138, 130, 0.6);
+}
+
+.rstudio-themes-dark-grey .erdos-ai-auto-accept-reject-button.in-code-chunk {
+  background-color: rgba(255, 179, 128, 0.15);
+  color: #ffb380;
+}
+
+.rstudio-themes-dark-grey .erdos-ai-auto-accept-reject-button.in-code-chunk:hover {
+  background-color: rgba(255, 179, 128, 0.25);
+}
+
+

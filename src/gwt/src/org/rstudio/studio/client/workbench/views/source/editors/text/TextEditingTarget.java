@@ -1605,8 +1605,8 @@ public class TextEditingTarget implements
                }
             });
       
-      // Initialize persistent diff indicators for the file if it has a path (deferred)
-      if (document.getPath() != null && !document.getPath().isEmpty() && 
+      // Initialize diff display (coordinator will check auto-accept and choose appropriate system)
+      if (document.getPath() != null && !document.getPath().isEmpty() &&
           docDisplay_ instanceof org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor)
       {
          final String filePath = document.getPath();
@@ -1617,7 +1617,9 @@ public class TextEditingTarget implements
             {
                org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor aceEditor = 
                   (org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor) docDisplay_;
-               aceEditor.initializePersistentDiffIndicators(filePath);
+               
+               // Use coordinator to check for auto-accept and initialize appropriate system
+               aceEditor.initializeDiffDisplay(filePath);
             }
          });
       }
@@ -3038,7 +3040,8 @@ public class TextEditingTarget implements
             {
                org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor aceEditor = 
                   (org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor) docDisplay_;
-               aceEditor.initializePersistentDiffIndicators(docUpdateSentinel_.getPath());
+               // Refresh diff display (re-checks auto-accept and reloads appropriate system)
+               aceEditor.refreshDiffDisplay(docUpdateSentinel_.getPath());
             }
          }
       });
@@ -4356,9 +4359,9 @@ public class TextEditingTarget implements
                org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor aceEditor = 
                   (org.rstudio.studio.client.workbench.views.source.editors.text.AceEditor) docDisplay_;
                
-               // Re-initialize persistent diff indicators to reflect the reverted state
+               // Refresh diff display to reflect the reverted state
                if (docUpdateSentinel_ != null && docUpdateSentinel_.getPath() != null) {
-                  aceEditor.initializePersistentDiffIndicators(docUpdateSentinel_.getPath());
+                  aceEditor.refreshDiffDisplay(docUpdateSentinel_.getPath());
                }
             }
          }

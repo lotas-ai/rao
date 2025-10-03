@@ -1,7 +1,7 @@
 /*
  * AiSearch.java
  *
- * Copyright (C) 2025 by William Nickols
+ * Copyright (C) 2025 by Lotas Inc.
  *
  * This program is licensed to you under the terms of version 3 of the
  * GNU Affero General Public License. This program is distributed WITHOUT
@@ -31,6 +31,7 @@ import org.rstudio.studio.client.server.ServerErrorCause;
 import org.rstudio.studio.client.server.ServerRequestCallback;
 import org.rstudio.studio.client.workbench.views.ai.events.ShowAiEvent;
 import org.rstudio.studio.client.workbench.views.ai.events.UpdateThinkingMessageEvent;
+import org.rstudio.studio.client.workbench.views.ai.events.UpdateBufferStatusEvent;
 import org.rstudio.studio.client.workbench.views.ai.model.AiServerOperations;
 import org.rstudio.studio.client.workbench.commands.Commands;
 import org.rstudio.studio.client.workbench.views.ai.AiPane;
@@ -92,6 +93,28 @@ public class AiSearch
                   }
                } else {
                   Debug.log("DEBUG: aiPane or streaming panel is null - cannot handle thinking message");
+               }
+            }
+         });
+      
+      // Register for buffer status update events
+      eventBus_.addHandler(UpdateBufferStatusEvent.TYPE, 
+         new UpdateBufferStatusEvent.Handler() {
+            @Override
+            public void onUpdateBufferStatus(UpdateBufferStatusEvent event) {
+               AiPane aiPane = AiPane.getCurrentInstance();
+               if (aiPane != null && aiPane.getStreamingPanel() != null) {
+                  int bufferCount = event.getBufferCount();
+                  boolean isProcessing = event.isProcessing();
+                  
+                  if (bufferCount > 0 && isProcessing) {
+                     String message = bufferCount == 1 
+                        ? "1 more tool call incoming..." 
+                        : bufferCount + " more tool calls incoming...";
+                     aiPane.getStreamingPanel().showBufferStatusMessage(message);
+                  } else {
+                     aiPane.getStreamingPanel().hideBufferStatusMessage();
+                  }
                }
             }
          });         

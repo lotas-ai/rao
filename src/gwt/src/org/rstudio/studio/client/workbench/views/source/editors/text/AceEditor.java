@@ -357,7 +357,7 @@ public class AceEditor implements DocDisplay,
       vim_ = new Vim(this);
       bgLinkHighlighter_ = new AceEditorBackgroundLinkHighlighter(this);
       bgChunkHighlighter_ = new AceBackgroundHighlighter(this);
-      persistentDiffManager_ = null;
+      diffDisplayCoordinator_ = null;
 
       widget_.addValueChangeHandler(evt ->
       {
@@ -2497,52 +2497,81 @@ public class AceEditor implements DocDisplay,
    }
    
    /**
-    * Initialize persistent diff indicators for the given file path
+    * Initialize diff display (auto-accept or persistent) for the given file path
     */
-   public void initializePersistentDiffIndicators(String filePath)
+   public void initializeDiffDisplay(String filePath)
    {
-      if (persistentDiffManager_ == null && filePath != null)
+      if (diffDisplayCoordinator_ == null && filePath != null)
       {
-         persistentDiffManager_ = new PersistentDiffGutterManager(this, filePath);
+         diffDisplayCoordinator_ = new DiffDisplayCoordinator(this, filePath);
       }
       
-      if (persistentDiffManager_ != null)
+      if (diffDisplayCoordinator_ != null)
       {
-         persistentDiffManager_.initialize();
-         
-         // Expose the persistent diff manager to JavaScript for native access
-         exposePersistentDiffManagerToJs();
+         diffDisplayCoordinator_.initialize();
       }
    }
    
    /**
-    * Clear persistent diff indicators
+    * Refresh diff display (re-check auto-accept status and reload)
     */
+   public void refreshDiffDisplay(String filePath)
+   {
+      if (diffDisplayCoordinator_ == null && filePath != null)
+      {
+         diffDisplayCoordinator_ = new DiffDisplayCoordinator(this, filePath);
+      }
+      
+      if (diffDisplayCoordinator_ != null)
+      {
+         diffDisplayCoordinator_.refresh();
+      }
+   }
+   
+   /**
+    * Legacy method for backwards compatibility - now uses coordinator
+    */
+   @Deprecated
+   public void initializePersistentDiffIndicators(String filePath)
+   {
+      initializeDiffDisplay(filePath);
+   }
+   
+   /**
+    * Clear all diff indicators
+    */
+   public void clearDiffDisplay()
+   {
+      if (diffDisplayCoordinator_ != null)
+      {
+         diffDisplayCoordinator_.deactivate();
+      }
+   }
+   
+   /**
+    * Legacy method for backwards compatibility
+    */
+   @Deprecated
    public void clearPersistentDiffIndicators()
    {
-      if (persistentDiffManager_ != null)
-      {
-         persistentDiffManager_.clearAll();
-      }
+      clearDiffDisplay();
    }
    
    /**
-    * Get the persistent diff manager
+    * Get the diff display coordinator
     */
+   public DiffDisplayCoordinator getDiffDisplayCoordinator()
+   {
+      return diffDisplayCoordinator_;
+   }
+   
+   /**
+    * Legacy method for backwards compatibility - returns null since we now use coordinator
+    */
+   @Deprecated
    public PersistentDiffGutterManager getPersistentDiffManager()
    {
-      return persistentDiffManager_;
-   }
-   
-   /**
-    * Expose persistent diff manager to JavaScript for native access
-    */
-   private void exposePersistentDiffManagerToJs()
-   {
-      if (persistentDiffManager_ != null)
-      {
-         exposePersistentDiffManagerNative(this, persistentDiffManager_);
-      }
+      return null;
    }
    
    /**
@@ -3637,6 +3666,11 @@ public class AceEditor implements DocDisplay,
    public EditSession getSession()
    {
       return widget_.getEditor().getSession();
+   }
+   
+   public AceBackgroundHighlighter getBackgroundHighlighter()
+   {
+      return bgChunkHighlighter_;
    }
 
    public HandlerRegistration addBlurHandler(BlurHandler handler)
@@ -4900,7 +4934,7 @@ public class AceEditor implements DocDisplay,
    private final AceEditorMixins mixins_;
    private final AceEditorEditLinesHelper editLines_;
    private EditorBehavior behavior_;
-   private PersistentDiffGutterManager persistentDiffManager_;
+   private DiffDisplayCoordinator diffDisplayCoordinator_;
 
    private static final ExternalJavaScriptLoader getLoader(StaticDataResource release)
    {
@@ -4951,3 +4985,4 @@ public class AceEditor implements DocDisplay,
    private final List<HandlerRegistration> editorEventListeners_;
    private static final EditorsTextConstants constants_ = GWT.create(EditorsTextConstants.class);
 }
+

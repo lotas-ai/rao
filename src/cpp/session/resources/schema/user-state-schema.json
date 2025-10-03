@@ -434,13 +434,13 @@
             "title": "SageMaker Region",
             "description": "AWS SageMaker region"
         },
-        "byok_anthropic_api_key": {
+        "ai_byok_anthropic_api_key": {
             "type": "string",
             "default": "",
             "title": "BYOK Anthropic API Key",
             "description": "Bring Your Own Key for Anthropic API"
         },
-        "byok_openai_api_key": {
+        "ai_byok_openai_api_key": {
             "type": "string",
             "default": "",
             "title": "BYOK OpenAI API Key",

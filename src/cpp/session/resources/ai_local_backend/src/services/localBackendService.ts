@@ -1619,9 +1619,12 @@ export class LocalBackendService implements ILocalBackendService {
 	 * Process conversation summarization request
 	 */
 	async processSummarizationRequest(request: any, request_id: string, outputStream: any): Promise<void> {		
-		// Use the model and provider from the request
-		const model = request.model;
+		// Use the provider from the request
 		const provider = request.provider;
+		
+		// Use cheap model for cost optimization (same as conversation name generation)
+		// Don't use the model from request as it might be null
+		const model = this.selectCheapModel(provider);
 		
 		// Get target query number from request
 		const targetQueryNumber = request.target_query_number;

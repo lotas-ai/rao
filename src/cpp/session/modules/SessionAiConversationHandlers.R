@@ -1,6 +1,6 @@
 # SessionAiConversationHandlers.R
 #
-# Copyright (C) 2025 by William Nickols
+# Copyright (C) 2025 by Lotas Inc.
 #
 # This program is licensed to you under the terms of version 3 of the
 # GNU Affero General Public License. This program is distributed WITHOUT
@@ -393,6 +393,8 @@
    
    .rs.check_required_packages()
    
+   .rs.accept_and_clear_all_auto_accept_tracking()
+   
    conversation_id <- .rs.get_current_conversation_index()
    
    .rs.store_conversation_variables(conversation_id)
@@ -434,6 +436,8 @@
 })
 
 .rs.addFunction("create_new_conversation", function() {
+   .rs.accept_and_clear_all_auto_accept_tracking()
+   
    new_index <- .rs.create_new_conversation_runner()
    
    # Clear all persistent diff indicators when starting a new conversation

@@ -1,7 +1,7 @@
 /*
  * AiStreamingPanel.java
  *
- * Copyright (C) 2025 by William Nickols
+ * Copyright (C) 2025 by Lotas Inc.
  *
  * This program is licensed to you under the terms of version 3 of the
  * GNU Affero General Public License. This program is distributed WITHOUT
@@ -131,6 +131,8 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       String terminalCommand();
       String terminalWidgetContainer();
       
+      // File editor widget styles (search_replace, edit_file)
+      String aiFileEditorWrapper();
       
       // Search replace widget styles
       String searchReplaceCommand();
@@ -2215,6 +2217,74 @@ public class AiStreamingPanel extends HTML implements AiStreamDataEvent.Handler,
       if (style != null && style.getParentElement() != null)
       {
          style.getParentElement().removeChild(style);
+      }
+   }
+   
+   /**
+    * Show a buffer status message in the streaming panel
+    */
+   public void showBufferStatusMessage(String messageText)
+   {
+      // Create buffer status message synchronously
+      Element conversationElement = getElementById("streaming-conversation");
+      if (conversationElement == null)
+      {
+         return;
+      }
+      
+      // Remove any existing buffer status message first
+      hideBufferStatusMessage();
+      
+      // Create buffer status message container (same structure as thinking message)
+      Element bufferContainer = Document.get().createDivElement();
+      bufferContainer.setClassName("assistant-container buffer-status-message-container");
+      bufferContainer.setAttribute("data-buffer-status", "true");
+      bufferContainer.setId("ai-buffer-status-message");
+      
+      Element messageDiv = Document.get().createDivElement();
+      messageDiv.setClassName("message assistant buffer-status-message");
+      
+      Element textDiv = Document.get().createDivElement();
+      textDiv.setClassName("text");
+      
+      // Create buffer status content with animation (matching thinking message structure)
+      Element bufferContent = Document.get().createDivElement();
+      bufferContent.setClassName("buffer-status-content");
+      bufferContent.getStyle().setProperty("display", "flex");
+      bufferContent.getStyle().setProperty("alignItems", "center");
+      
+      Element bufferText = Document.get().createSpanElement();
+      bufferText.setInnerText(messageText);
+      bufferText.setClassName("buffer-status-text");
+      
+      bufferContent.appendChild(bufferText);
+      textDiv.appendChild(bufferContent);
+      messageDiv.appendChild(textDiv);
+      bufferContainer.appendChild(messageDiv);
+      
+      // Add to conversation (append at end)
+      conversationElement.appendChild(bufferContainer);
+      
+      // Scroll to bottom to show the message (use smart scroll)
+      scrollManager_.smartScrollToBottom();
+   }
+   
+   /**
+    * Hide the buffer status message in the streaming panel
+    */
+   public void hideBufferStatusMessage()
+   {
+      Element bufferMessage = getElementById("ai-buffer-status-message");
+      if (bufferMessage != null && bufferMessage.getParentElement() != null)
+      {
+         bufferMessage.getParentElement().removeChild(bufferMessage);
+      }
+      
+      // Also remove any elements with buffer-status attribute
+      Element conversationElement = getElementById("streaming-conversation");
+      if (conversationElement != null)
+      {
+         removeElementsByAttribute(conversationElement, "data-buffer-status", "true");
       }
    }
    

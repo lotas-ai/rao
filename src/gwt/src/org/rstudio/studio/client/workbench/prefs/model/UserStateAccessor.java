@@ -768,24 +768,24 @@ public class UserStateAccessor extends Prefs
    /**
     * Bring Your Own Key for Anthropic API
     */
-   public PrefValue<String> byokAnthropicApiKey()
+   public PrefValue<String> aiByokAnthropicApiKey()
    {
       return string(
-         "byok_anthropic_api_key",
-         _constants.byokAnthropicApiKeyTitle(), 
-         _constants.byokAnthropicApiKeyDescription(), 
+         "ai_byok_anthropic_api_key",
+         _constants.aiByokAnthropicApiKeyTitle(), 
+         _constants.aiByokAnthropicApiKeyDescription(), 
          "");
    }
 
    /**
     * Bring Your Own Key for OpenAI API
     */
-   public PrefValue<String> byokOpenaiApiKey()
+   public PrefValue<String> aiByokOpenaiApiKey()
    {
       return string(
-         "byok_openai_api_key",
-         _constants.byokOpenaiApiKeyTitle(), 
-         _constants.byokOpenaiApiKeyDescription(), 
+         "ai_byok_openai_api_key",
+         _constants.aiByokOpenaiApiKeyTitle(), 
+         _constants.aiByokOpenaiApiKeyDescription(), 
          "");
    }
 
@@ -863,10 +863,10 @@ public class UserStateAccessor extends Prefs
          aiSagemakerEndpoint().setValue(layer, source.getString("ai_sagemaker_endpoint"));
       if (source.hasKey("ai_sagemaker_region"))
          aiSagemakerRegion().setValue(layer, source.getString("ai_sagemaker_region"));
-      if (source.hasKey("byok_anthropic_api_key"))
-         byokAnthropicApiKey().setValue(layer, source.getString("byok_anthropic_api_key"));
-      if (source.hasKey("byok_openai_api_key"))
-         byokOpenaiApiKey().setValue(layer, source.getString("byok_openai_api_key"));
+      if (source.hasKey("ai_byok_anthropic_api_key"))
+         aiByokAnthropicApiKey().setValue(layer, source.getString("ai_byok_anthropic_api_key"));
+      if (source.hasKey("ai_byok_openai_api_key"))
+         aiByokOpenaiApiKey().setValue(layer, source.getString("ai_byok_openai_api_key"));
    }
    public List<PrefValue<?>> allPrefs()
    {
@@ -907,8 +907,8 @@ public class UserStateAccessor extends Prefs
       prefs.add(aiWorkingDirectory());
       prefs.add(aiSagemakerEndpoint());
       prefs.add(aiSagemakerRegion());
-      prefs.add(byokAnthropicApiKey());
-      prefs.add(byokOpenaiApiKey());
+      prefs.add(aiByokAnthropicApiKey());
+      prefs.add(aiByokOpenaiApiKey());
       return prefs;
    }
    

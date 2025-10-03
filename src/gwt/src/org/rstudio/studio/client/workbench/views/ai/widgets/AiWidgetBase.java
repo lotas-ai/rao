@@ -1,7 +1,7 @@
 /*
  * AiWidgetBase.java
  *
- * Copyright (C) 2025 by William Nickols
+ * Copyright (C) 2025 by Lotas Inc.
  *
  * This program is licensed to you under the terms of version 3 of the
  * GNU Affero General Public License. This program is distributed WITHOUT
@@ -15,7 +15,10 @@ package org.rstudio.studio.client.workbench.views.ai.widgets;
 import com.google.gwt.user.client.ui.Composite;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.VerticalPanel;
+import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.HTML;
+import com.google.gwt.user.client.ui.Widget;
+import com.google.gwt.user.client.ui.Panel;
 import com.google.gwt.dom.client.Style.Unit;
 import org.rstudio.core.client.Debug;
 import org.rstudio.core.client.theme.ThemeHelper;
@@ -30,6 +33,12 @@ public abstract class AiWidgetBase extends Composite
    protected final String messageId_;
    protected final String requestId_;
    protected final String functionCallType_;
+   
+   // Collapsible state
+   protected boolean isExpanded_ = true;
+   protected com.google.gwt.dom.client.Element chevronButton_;
+   protected Widget contentContainer_;
+   protected Panel headerPanel_;
    
    // Constructor for common fields
    protected AiWidgetBase(String messageId, String requestId)
@@ -68,6 +77,8 @@ public abstract class AiWidgetBase extends Composite
       // Pull up to visually connect with the widget, indent both sides equally
       buttonStack.getElement().getStyle().setProperty("margin", "0px 8px 4px 8px");
       buttonStack.getElement().getStyle().setProperty("boxShadow", "0 1px 3px " + ThemeHelper.getShadowColor());
+      buttonStack.getElement().setAttribute("style", 
+         buttonStack.getElement().getAttribute("style") + " table-layout: auto !important; width: auto !important;");
       
       // Determine primary action text based on function type
       String primaryActionText = functionCallType.equals("search_replace") ? 
@@ -108,8 +119,9 @@ public abstract class AiWidgetBase extends Composite
       button.getElement().getStyle().setProperty("lineHeight", "1.1"); // Tight line spacing
       button.getElement().getStyle().setProperty("transition", "background-color 0.2s");
       button.getElement().getStyle().setProperty("userSelect", "none");
-      button.getElement().getStyle().setWidth(100, Unit.PCT);
       button.getElement().getStyle().setProperty("boxSizing", "border-box");
+      button.getElement().getStyle().setProperty("textAlign", "left");
+      button.getElement().getStyle().setProperty("fontFamily", "sans-serif");
       
       // Apply semantic CSS classes based on button type
       switch (textColor) {
@@ -264,5 +276,200 @@ public abstract class AiWidgetBase extends Composite
     */
    protected void onAllowListClicked() {
       // onAllowListClicked not implemented for this widget type
+   }
+   
+   /**
+    * Create a copy button for copying widget content to clipboard
+    * Returns an HTML widget with two rounded squares SVG icon
+    */
+   protected HTML createCopyButton()
+   {
+      HTML copyContainer = new HTML();
+      copyContainer.addStyleName("ai-widget-copy-button");
+      
+      // Style as standalone copy button with no box
+      copyContainer.getElement().getStyle().setProperty("cursor", "pointer");
+      copyContainer.getElement().getStyle().setProperty("display", "inline-flex");
+      copyContainer.getElement().getStyle().setProperty("alignItems", "center");
+      copyContainer.getElement().getStyle().setProperty("justifyContent", "center");
+      copyContainer.getElement().getStyle().setProperty("padding", "0");
+      copyContainer.getElement().getStyle().setProperty("background", "none");
+      copyContainer.getElement().getStyle().setProperty("border", "none");
+      copyContainer.getElement().getStyle().setOpacity(0.7);
+      copyContainer.getElement().getStyle().setProperty("marginRight", "4px");
+      
+      // Create SVG with two rounded squares (bottom-left and top-right)
+      // Using thicker stroke for better visibility
+      String copySvg = "<svg width='14' height='14' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'>" +
+                       "<rect x='2' y='5' width='9' height='9' rx='1.5' stroke='currentColor' stroke-width='1.25' fill='none'/>" +
+                       "<rect x='5' y='2' width='9' height='9' rx='1.5' stroke='currentColor' stroke-width='1.25' fill='none'/>" +
+                       "</svg>";
+      copyContainer.setHTML(copySvg);
+      
+      // Add hover effect using JSNI
+      addCopyHoverEffect(copyContainer.getElement());
+      
+      return copyContainer;
+   }
+   
+   /**
+    * Add hover effect to copy button
+    */
+   private native void addCopyHoverEffect(com.google.gwt.dom.client.Element element) /*-{
+      element.addEventListener('mouseenter', function() {
+         element.style.opacity = '1';
+      }, false);
+      
+      element.addEventListener('mouseleave', function() {
+         element.style.opacity = '0.7';
+      }, false);
+   }-*/;
+   
+   /**
+    * Show check icon briefly when copy succeeds, then restore copy icon
+    */
+   protected native void showCopySuccessAnimation(com.google.gwt.dom.client.Element element) /*-{
+      // Save original HTML
+      var originalHTML = element.innerHTML;
+      
+      // Show check icon with thicker stroke
+      var checkSvg = "<svg width='14' height='14' viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'>" +
+                     "<path d='M14 3L6 13L2 9' stroke='currentColor' stroke-width='1.25' stroke-linecap='round' stroke-linejoin='round'/>" +
+                     "</svg>";
+      element.innerHTML = checkSvg;
+      element.style.opacity = '1';
+      
+      // Restore original icon after 1 second
+      setTimeout(function() {
+         element.innerHTML = originalHTML;
+         element.style.opacity = '0.7';
+      }, 1000);
+   }-*/;
+   
+   /**
+    * Create a chevron button for collapsing/expanding the widget
+    * Returns an HTML widget with the chevron SVG
+    */
+   protected HTML createChevronButton()
+   {
+      HTML chevronContainer = new HTML();
+      chevronContainer.addStyleName("ai-widget-chevron-button");
+      
+      // Style as standalone chevron with no box
+      chevronContainer.getElement().getStyle().setProperty("cursor", "pointer");
+      chevronContainer.getElement().getStyle().setProperty("display", "inline-flex");
+      chevronContainer.getElement().getStyle().setProperty("alignItems", "center");
+      chevronContainer.getElement().getStyle().setProperty("justifyContent", "center");
+      chevronContainer.getElement().getStyle().setProperty("padding", "0");
+      chevronContainer.getElement().getStyle().setProperty("background", "none");
+      chevronContainer.getElement().getStyle().setProperty("border", "none");
+      chevronContainer.getElement().getStyle().setOpacity(0.7);
+      chevronContainer.getElement().getStyle().setProperty("transform", "translateY(-2px)"); // Move up 2px
+      
+      // Create chevron SVG (starts in down/expanded state)
+      String chevronSvg = createChevronSvg("down");
+      chevronContainer.setHTML(chevronSvg);
+      
+      // Store the element for later updates
+      chevronButton_ = chevronContainer.getElement();
+      
+      // Add click handler
+      addChevronClickHandler(chevronButton_);
+      
+      // Add hover effect using JSNI
+      addChevronHoverEffect(chevronButton_);
+      
+      return chevronContainer;
+   }
+   
+   /**
+    * Add hover effect to chevron button
+    */
+   private native void addChevronHoverEffect(com.google.gwt.dom.client.Element element) /*-{
+      element.addEventListener('mouseenter', function() {
+         element.style.opacity = '1';
+      }, false);
+      
+      element.addEventListener('mouseleave', function() {
+         element.style.opacity = '0.7';
+      }, false);
+   }-*/;
+   
+   /**
+    * Create SVG for chevron in specified direction
+    */
+   protected String createChevronSvg(String direction)
+   {
+      String path;
+      if ("down".equals(direction)) {
+         // Chevron pointing down (expanded state)
+         path = "M10 16L16 10L18 12L10 20L2 12L4 10Z";
+      } else {
+         // Chevron pointing right (collapsed state)
+         path = "M16 10L10 16L12 18L20 10L12 2L10 4Z";
+      }
+      
+      return "<svg width='16' height='16' viewBox='0 0 24 24' class='ai-widget-chevron-svg'>" +
+             "<path d='" + path + "' fill='currentColor' stroke='currentColor' stroke-width='0.35'/>" +
+             "</svg>";
+   }
+   
+   /**
+    * Add click handler to chevron button using JSNI
+    */
+   private native void addChevronClickHandler(com.google.gwt.dom.client.Element element) /*-{
+      var self = this;
+      
+      var clickHandler = function(event) {
+         self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiWidgetBase::toggleCollapsed()();
+         event.preventDefault();
+         event.stopPropagation();
+      };
+      
+      element.addEventListener('click', clickHandler, false);
+   }-*/;
+   
+   /**
+    * Toggle the collapsed/expanded state of the widget
+    */
+   protected void toggleCollapsed()
+   {
+      isExpanded_ = !isExpanded_;
+      
+      // Update chevron direction: down when expanded, right when collapsed
+      if (chevronButton_ != null) {
+         String direction = isExpanded_ ? "down" : "right";
+         chevronButton_.setInnerHTML(createChevronSvg(direction));
+         
+         // Adjust vertical position: up 2px when down, normal position when right
+         String transform = isExpanded_ ? "translateY(-2px)" : "translateY(1px)";
+         chevronButton_.getStyle().setProperty("transform", transform);
+      }
+      
+      // Toggle content visibility
+      if (contentContainer_ != null) {
+         contentContainer_.setVisible(isExpanded_);
+      }
+      
+      // Update header styling based on collapsed state
+      if (headerPanel_ != null) {
+         if (isExpanded_) {
+            // Expanded: rounded top corners only, no bottom border
+            headerPanel_.getElement().getStyle().setProperty("borderRadius", "4px 4px 0 0");
+            headerPanel_.getElement().getStyle().setProperty("borderBottom", "none");
+         } else {
+            // Collapsed: all corners rounded, show bottom border
+            headerPanel_.getElement().getStyle().setProperty("borderRadius", "4px");
+            headerPanel_.getElement().getStyle().setProperty("borderBottom", "1px solid " + ThemeHelper.getVisibleBorder());
+         }
+      }
+   }
+   
+   /**
+    * Set the content container that should be collapsed/expanded
+    */
+   protected void setContentContainer(Widget container)
+   {
+      contentContainer_ = container;
    }
 } 

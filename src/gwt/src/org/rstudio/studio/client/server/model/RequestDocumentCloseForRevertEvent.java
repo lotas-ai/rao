@@ -1,7 +1,7 @@
 /*
  * RequestDocumentCloseForRevertEvent.java
  *
- * Copyright (C) 2025 by William Nickols
+ * Copyright (C) 2025 by Lotas Inc.
  *
  * Unless you have received this program directly from Posit Software pursuant
  * to the terms of a commercial license agreement with Posit Software, then

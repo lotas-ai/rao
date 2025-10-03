@@ -304,6 +304,8 @@ SEXP rs_enqueClientEvent(SEXP nameSEXP, SEXP dataSEXP)
          type = session::client_events::kConsoleActivate;
       else if (name == "update_thinking_message")
          type = session::client_events::kUpdateThinkingMessage;
+      else if (name == "update_buffer_status")
+         type = session::client_events::kUpdateBufferStatus;
       else if (name == "format_document_completed")
          type = session::client_events::kFormatDocumentCompleted;
       else if (name == "store_active_request_id")
@@ -316,6 +318,10 @@ SEXP rs_enqueClientEvent(SEXP nameSEXP, SEXP dataSEXP)
       {
          type = session::client_events::kAiAuthenticationCompleted;
       }
+      else if (name == "track_auto_accept_edit")
+         type = session::client_events::kTrackAutoAcceptEdit;
+      else if (name == "accept_and_clear_auto_accept_tracking")
+         type = session::client_events::kAcceptAndClearAutoAcceptTracking;
       else if (name == "request_document_close_for_revert")
          type = session::client_events::kRequestDocumentCloseForRevert;
 

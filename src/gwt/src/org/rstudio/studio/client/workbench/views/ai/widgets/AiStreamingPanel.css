@@ -1,5 +1,5 @@
 /* External declarations for unobfuscated classes */
-@external markdown-content, text, ai-streaming-panel, user, assistant, message, error, aiConsoleWrapper, aiConsoleHeader, aiTerminalWrapper, aiTerminalHeader, aiSearchReplaceHeader, diff-stats, diff-stats-container, addition, removal, ace_editor, ace_gutter, ace_gutter-layer, ace_scroller, ace_content, ace_text-layer, ace_line_group, ace_line, ace_scrollbar-h, ace_scrollbar-inner, ace_diff_added, ace_diff_deleted, ace_keyword, ace_theme-monokai, ace_theme-twilight, ace_theme-vibrant_ink, ace_test_line_0, ace_test_line_1, ace_test_line_2, thinking-message, thinking-content, thinking-text, thinking-message-container, error-message-container, error-content, error-icon-text, error-icon, error-text, error-close-button, function-call-message, rstudio-themes-default, rstudio-themes-dark-grey, rstudio-themes-alternate;
+@external markdown-content, text, ai-streaming-panel, user, assistant, message, error, aiConsoleWrapper, aiConsoleHeader, aiTerminalWrapper, aiTerminalHeader, aiSearchReplaceHeader, diff-stats, diff-stats-container, addition, removal, ace_editor, ace_gutter, ace_gutter-layer, ace_scroller, ace_content, ace_text-layer, ace_line_group, ace_line, ace_scrollbar-h, ace_scrollbar-inner, ace_diff_added, ace_diff_deleted, ace_keyword, ace_theme-monokai, ace_theme-twilight, ace_theme-vibrant_ink, ace_test_line_0, ace_test_line_1, ace_test_line_2, thinking-message, thinking-content, thinking-text, thinking-message-container, buffer-status-message, buffer-status-content, buffer-status-text, buffer-status-message-container, error-message-container, error-content, error-icon-text, error-icon, error-text, error-close-button, function-call-message, rstudio-themes-default, rstudio-themes-dark-grey, rstudio-themes-alternate, ai-widget-chevron-button, ai-widget-chevron-svg, loading;
 
 /* ---------- IMPORT EXISTING THEME COLORS ---------- */
 @eval THEME_DEFAULT_BACKGROUND org.rstudio.core.client.theme.ThemeColors.defaultBackground;
@@ -65,6 +65,27 @@
 
 /* ---------- END IMPORTS ---------- */
 
+/* AI Widget Chevron Button */
+.ai-widget-chevron-button {
+   cursor: pointer;
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+   padding: 0;
+   background: none;
+   border: none;
+   opacity: 0.7;
+   transition: opacity 0.2s;
+}
+
+.ai-widget-chevron-button:hover {
+   opacity: 1;
+}
+
+.ai-widget-chevron-svg {
+   display: block;
+}
+
 /* AI Console Widget Styles */
 .aiConsoleWidget {
    margin: 10px 0;
@@ -93,9 +114,11 @@
 .aiConsoleWrapper {
    width: 100%;
    max-width: 100%;
+   max-height: 170px;
    margin-bottom: 8px;
    box-sizing: border-box;
-   overflow: hidden;
+   overflow-y: auto;
+   overflow-x: hidden;
 }
 
 .aiConsoleHeader {
@@ -103,6 +126,7 @@
    margin: 0;
    box-sizing: border-box;
    font-family: sans-serif;
+   table-layout: fixed; /* Allow cells with width=100% to expand */
 }
 
 /* Theme-specific header colors */
@@ -127,9 +151,12 @@
 .aiConsoleEditor {
    flex: 1;
    min-height: 24px;
+   width: 100% !important;
+   max-width: 100% !important;
    border: none;
    padding: 4px;
    font-family: monospace;
+   box-sizing: border-box;
    /* Background color is handled by ACE theme system, not CSS */
 }
 
@@ -147,6 +174,39 @@
 /* ACE editor width constraints - proper approach using editor configuration */
 .aiConsoleEditor .ace_scrollbar-h {
    display: none !important;
+}
+
+
+
+/* File editor wrapper - constrain the container, not internal elements */
+.aiFileEditorWrapper {
+   width: 100%;
+   max-width: 100%;
+   max-height: 170px !important;
+   overflow-y: auto !important;
+   overflow-x: hidden !important;
+   box-sizing: border-box;
+}
+
+/* Constrain ACE editor inside file editor wrapper */
+.aiFileEditorWrapper .ace_editor {
+   width: 100% !important;
+   max-width: 100% !important;
+   box-sizing: border-box !important;
+}
+
+/* Constrain loading ACE editors during streaming */
+.ace_editor.loading {
+   width: 100% !important;
+   max-width: 100% !important;
+   box-sizing: border-box !important;
+}
+
+/* Constrain all ACE content areas */
+.ace_editor .ace_scroller,
+.ace_editor .ace_content {
+   max-width: 100% !important;
+   box-sizing: border-box !important;
 }
 
 /* Default and alternate themes */
@@ -198,6 +258,9 @@
 
 .consoleWidgetContainer {
    width: 100%;
+   max-width: 100%;
+   overflow-x: hidden;
+   box-sizing: border-box;
 }
 
 /* AI Terminal Widget Styles */
@@ -206,6 +269,7 @@
    margin: 0;
    box-sizing: border-box;
    font-family: sans-serif;
+   table-layout: fixed; /* Allow cells with width=100% to expand */
 }
 
 /* Theme-specific terminal header colors */
@@ -229,9 +293,11 @@
 .aiTerminalWrapper {
    width: 100%;
    max-width: 100%;
+   max-height: 170px;
    margin-bottom: 8px;
    box-sizing: border-box;
-   overflow: hidden;
+   overflow-y: auto;
+   overflow-x: hidden;
 }
 
 .aiTerminalPrompt {
@@ -251,10 +317,13 @@
 
 .aiTerminalEditor {
    min-height: 24px;
+   width: 100% !important;
+   max-width: 100% !important;
    border: none;
    padding: 4px;
    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
    background-color: transparent;
+   box-sizing: border-box;
 }
 
 .aiTerminalEditor:focus {
@@ -295,15 +364,18 @@
 
 .terminalWidgetContainer {
    width: 100%;
+   max-width: 100%;
+   overflow-x: hidden;
+   box-sizing: border-box;
    margin: 10px 0;
 }
 
-/* Diff stats styling */
+/* Diff stats styling - now inline after filename, not absolutely positioned */
 .diff-stats-container {
-   position: absolute;
-   right: 8px;
-   bottom: 3px;
+   display: inline-block;
    line-height: inherit;
+   vertical-align: baseline; /* Align with filename baseline */
+   font-size: 12px; /* Match filename font size */
 }
 
 .diff-stats {
@@ -316,13 +388,13 @@
 
 .diff-stats .addition {
    color: THEME_DEFAULT_SUCCESS_COLOR !important;
-   font-weight: bold;
+   font-weight: normal;
    display: inline;
 }
 
 .diff-stats .removal {
    color: THEME_DEFAULT_WARNING_COLOR !important;
-   font-weight: bold;
+   font-weight: normal;
    display: inline;
    margin-left: 4px;
 }
@@ -332,6 +404,9 @@
    border-top: none;
    border-radius: 0 0 4px 4px;
    margin: 0 8px 4px 8px;
+   max-width: calc(100% - 16px);
+   width: auto;
+   box-sizing: border-box;
 }
 
 .rstudio-themes-default .aiVerticalButtonStack,
@@ -360,6 +435,7 @@
    margin: 0;
    box-sizing: border-box;
    font-family: sans-serif;
+   table-layout: fixed; /* Allow cells with width=100% to expand */
 }
 
 /* Theme-specific search replace header colors */
@@ -399,6 +475,27 @@
 
 .searchReplaceWidgetContainer {
    width: 100%;
+   max-width: 100%;
+   overflow-x: hidden;
+   box-sizing: border-box;
+}
+
+/* Constrain all presentation tables inside widgets */
+.searchReplaceWidgetContainer table[role="presentation"],
+.consoleWidgetContainer table[role="presentation"],
+.terminalWidgetContainer table[role="presentation"] {
+   width: 100% !important;
+   max-width: 100% !important;
+   table-layout: fixed !important;
+   box-sizing: border-box !important;
+}
+
+.searchReplaceWidgetContainer table[role="presentation"] td,
+.consoleWidgetContainer table[role="presentation"] td,
+.terminalWidgetContainer table[role="presentation"] td {
+   max-width: 100% !important;
+   overflow: hidden !important;
+   box-sizing: border-box !important;
 }
 
 /* ACE Editor Diff Highlighting Styles */
@@ -491,6 +588,44 @@ div.ace_diff_deleted,
       opacity: 1; 
       transform: scale(1.02); 
    }
+}
+
+/* Buffer status message styles (matching thinking message) */
+.buffer-status-message-container {
+   margin-bottom: 12px;
+}
+
+.buffer-status-message {
+   opacity: 0.8;
+   font-style: italic;
+   background-color: transparent;
+   text-align: left;
+   word-wrap: break-word;
+   max-width: 100%;
+   position: relative;
+   clear: both;
+   padding: 8px;
+   border-radius: 8px;
+}
+
+.buffer-status-content {
+   display: flex;
+   align-items: center;
+}
+
+.buffer-status-text {
+   animation: thinking-pulse 1.5s infinite ease-in-out;
+   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+   font-size: 14px;
+}
+
+.rstudio-themes-default .buffer-status-text,
+.rstudio-themes-alternate .buffer-status-text {
+   color: THEME_DEFAULT_SUBTLE_TEXT;
+}
+
+.rstudio-themes-dark-grey .buffer-status-text {
+   color: THEME_DARKGREY_SUBTLE_TEXT;
 }
 
 /* Error Message Styles - Simple gray design */

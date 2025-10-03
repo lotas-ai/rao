@@ -28,4 +28,28 @@ public class UndoManager extends JavaScriptObject
    public native final void markClean() /*-{
       this.markClean();
    }-*/;
+   
+   public native final int getRevision() /*-{
+      return this.getRevision();
+   }-*/;
+   
+   public native final int getUndoStackLength() /*-{
+      return this.$undoStack ? this.$undoStack.length : 0;
+   }-*/;
+   
+   public native final int getRedoStackLength() /*-{
+      return this.$redoStack ? this.$redoStack.length : 0;
+   }-*/;
+   
+   public native final boolean canUndo() /*-{
+      return this.canUndo();
+   }-*/;
+   
+   public native final boolean canRedo() /*-{
+      return this.canRedo();
+   }-*/;
+   
+   public native final int startNewGroup() /*-{
+      return this.startNewGroup();
+   }-*/;
 }

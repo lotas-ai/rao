@@ -1,7 +1,7 @@
 /*
  * AiConsoleWidget.java
  *
- * Copyright (C) 2025 by William Nickols
+ * Copyright (C) 2025 by Lotas Inc.
  *
  * This program is licensed to you under the terms of version 3 of the
  * GNU Affero General Public License. This program is distributed WITHOUT
@@ -72,27 +72,66 @@ public class AiConsoleWidget extends AiWidgetBase
       container_.getElement().getStyle().setPadding(0, Unit.PX);
       container_.getElement().getStyle().setMargin(0, Unit.PX);
       
-      // Add header (determine based on command type)
+      // Create header with chevron button using simple flex layout
       String headerText = determineHeaderText();
-      headerLabel_ = new Label(headerText);
-      headerLabel_.addStyleName("aiConsoleHeader");
-      // Background and text colors are handled by CSS theme classes
-      headerLabel_.getElement().getStyle().setFontSize(12, Unit.PX);
-      headerLabel_.getElement().getStyle().setFontWeight(com.google.gwt.dom.client.Style.FontWeight.BOLD);
-      headerLabel_.getElement().getStyle().setPadding(3, Unit.PX);
-      headerLabel_.getElement().getStyle().setProperty("borderRadius", "4px 4px 0 0");
-      headerLabel_.getElement().getStyle().setMargin(0, Unit.PX);
-      headerLabel_.getElement().getStyle().setProperty("width", "100%");
-      headerLabel_.getElement().getStyle().setProperty("boxSizing", "border-box");
-      headerLabel_.getElement().getStyle().setBorderWidth(1, Unit.PX);
-      headerLabel_.getElement().getStyle().setBorderStyle(com.google.gwt.dom.client.Style.BorderStyle.SOLID);
-      headerLabel_.getElement().getStyle().setBorderColor(ThemeHelper.getVisibleBorder());
-      headerLabel_.getElement().getStyle().setProperty("borderBottom", "none");
-      container_.add(headerLabel_);
+      FlowPanel headerPanel = new FlowPanel();
+      headerPanel.setWidth("100%");
+      headerPanel.addStyleName("aiConsoleHeader");
+      headerPanel.getElement().getStyle().setFontSize(12, Unit.PX);
+      headerPanel.getElement().getStyle().setProperty("fontWeight", "650");
+      headerPanel.getElement().getStyle().setPadding(3, Unit.PX);
+      headerPanel.getElement().getStyle().setPaddingLeft(4, Unit.PX);
+      headerPanel.getElement().getStyle().setProperty("borderRadius", "4px 4px 0 0");
+      headerPanel.getElement().getStyle().setMargin(0, Unit.PX);
+      headerPanel.getElement().getStyle().setProperty("boxSizing", "border-box");
+      headerPanel.getElement().getStyle().setBorderWidth(1, Unit.PX);
+      headerPanel.getElement().getStyle().setBorderStyle(com.google.gwt.dom.client.Style.BorderStyle.SOLID);
+      headerPanel.getElement().getStyle().setBorderColor(ThemeHelper.getVisibleBorder());
+      headerPanel.getElement().getStyle().setProperty("borderBottom", "none");
+      headerPanel.getElement().getStyle().setProperty("position", "relative");
+      headerPanel.getElement().getStyle().setProperty("display", "flex");
+      headerPanel.getElement().getStyle().setProperty("alignItems", "center");
+      headerPanel.getElement().getStyle().setProperty("justifyContent", "space-between");
       
-      // Create console editor container
-      HorizontalPanel editorContainer = new HorizontalPanel();
-      editorContainer.setWidth("100%");
+      // Store reference for collapse functionality
+      headerPanel_ = headerPanel;
+      
+      // Add header label
+      headerLabel_ = new Label(headerText);
+      headerPanel.add(headerLabel_);
+      
+      // Create container for copy button and chevron (right side of header)
+      FlowPanel rightButtonsPanel = new FlowPanel();
+      rightButtonsPanel.getElement().getStyle().setProperty("display", "flex");
+      rightButtonsPanel.getElement().getStyle().setProperty("alignItems", "center");
+      rightButtonsPanel.getElement().getStyle().setProperty("gap", "4px");
+      
+      // Add copy button (left of chevron)
+      HTML copyButton = createCopyButton();
+      copyButtonElement_ = copyButton.getElement();
+      addCopyClickHandler(copyButtonElement_);
+      rightButtonsPanel.add(copyButton);
+      
+      // Add chevron button on the far right
+      HTML chevron = createChevronButton();
+      rightButtonsPanel.add(chevron);
+      
+      headerPanel.add(rightButtonsPanel);
+      
+      container_.add(headerPanel);
+      
+      // Create a vertical panel to hold all collapsible content (wrapper + future buttons)
+      VerticalPanel collapsibleContent = new VerticalPanel();
+      collapsibleContent.setWidth("100%");
+      collapsibleContent.setSpacing(0);
+      collapsibleContent.getElement().getStyle().setPadding(0, Unit.PX);
+      collapsibleContent.getElement().getStyle().setMargin(0, Unit.PX);
+      
+      // Create console editor container using FlowPanel for proper flex layout
+      FlowPanel editorContainer = new FlowPanel();
+      editorContainer.getElement().getStyle().setProperty("display", "flex");
+      editorContainer.getElement().getStyle().setProperty("alignItems", "flex-start");
+      editorContainer.getElement().getStyle().setProperty("width", "100%");
       editorContainer.addStyleName(AiStreamingPanel.RES.styles().aiConsoleEditorContainer());
       editorContainer.addStyleName("ace_editor"); // Get background from ACE theme like main console
       editorContainer.getElement().getStyle().setProperty("maxWidth", "100%");
@@ -115,7 +154,6 @@ public class AiConsoleWidget extends AiWidgetBase
       consoleWrapper_.getElement().getStyle().setProperty("display", "block");
       consoleWrapper_.getElement().getStyle().setProperty("boxSizing", "border-box");
       consoleWrapper_.getElement().getStyle().setProperty("maxWidth", "100%");
-      consoleWrapper_.getElement().getStyle().setProperty("overflow", "hidden");
       
       // Create console prompt (matching main RStudio console)
       Label promptLabel = new Label(">");
@@ -153,11 +191,17 @@ public class AiConsoleWidget extends AiWidgetBase
       
       // Add editor directly to container, then container to wrapper
       editor_.getWidget().setWidth("100%");
+      editor_.getWidget().getElement().getStyle().setProperty("flex", "1");
       editorContainer.add(editor_.getWidget());
-      editorContainer.setCellWidth(editor_.getWidget(), "100%");
       consoleWrapper_.setWidget(editorContainer);
 
-      container_.add(consoleWrapper_);
+      collapsibleContent.add(consoleWrapper_);
+      
+      // Add collapsible content to container
+      container_.add(collapsibleContent);
+      
+      // Set the content container for collapse/expand functionality
+      setContentContainer(collapsibleContent);
       
       // Don't create buttons during widget creation - they will be created when streaming completes
       
@@ -243,30 +287,29 @@ public class AiConsoleWidget extends AiWidgetBase
          return; // Buttons already created
       }
       
-      // Find the main container to add buttons to
-      Widget widget = this.getWidget();
-      if (!(widget instanceof VerticalPanel)) {
+      // Buttons should be added to the collapsible content container
+      if (contentContainer_ == null || !(contentContainer_ instanceof VerticalPanel)) {
          return;
       }
-      VerticalPanel container = (VerticalPanel) widget;
+      VerticalPanel collapsibleContent = (VerticalPanel) contentContainer_;
       
       // Create the new vertical button stack using functions from R
       verticalButtonStack_ = createVerticalButtonStack(functionCallType_, extractedFunctions_);
       
-      // Create a horizontal panel to hold the button stack on the right
-      HorizontalPanel buttonRow = new HorizontalPanel();
-      buttonRow.setWidth("100%");
-      buttonRow.setHorizontalAlignment(HorizontalPanel.ALIGN_RIGHT);
-      buttonRow.getElement().getStyle().setMargin(0, Unit.PX); // Remove any margin
-      buttonRow.getElement().getStyle().setPadding(0, Unit.PX); // Remove any padding
+      // Create a DIV wrapper with flexbox to hold the button stack on the right
+      FlowPanel buttonWrapper = new FlowPanel();
+      buttonWrapper.getElement().getStyle().setProperty("display", "flex");
+      buttonWrapper.getElement().getStyle().setProperty("justifyContent", "flex-end");
+      buttonWrapper.getElement().getStyle().setProperty("width", "100%");
+      buttonWrapper.getElement().getStyle().setMargin(0, Unit.PX);
+      buttonWrapper.getElement().getStyle().setPadding(0, Unit.PX);
       
-      // Add the button stack to the right side
-      buttonRow.add(verticalButtonStack_);
-      buttonRow.setCellHorizontalAlignment(verticalButtonStack_, HorizontalPanel.ALIGN_RIGHT);
+      // Add the button stack to the wrapper
+      buttonWrapper.add(verticalButtonStack_);
       
-      // Add the button row to the main container with no spacing
-      container.add(buttonRow);
-      container.setCellHeight(buttonRow, "0px"); // Minimize height
+      // Add the button wrapper to the collapsible content with no spacing
+      collapsibleContent.add(buttonWrapper);
+      collapsibleContent.setCellHeight(buttonWrapper, "0px"); // Minimize height
    }
 
    // Fields to store extracted functions and files passed from R
@@ -308,14 +351,13 @@ public class AiConsoleWidget extends AiWidgetBase
       if (verticalButtonStack_ != null) {
          // Find the parent container and recreate the button stack
          Widget parent = verticalButtonStack_.getParent();
-         if (parent instanceof HorizontalPanel) {
-            HorizontalPanel buttonRow = (HorizontalPanel) parent;
-            buttonRow.remove(verticalButtonStack_);
+         if (parent instanceof FlowPanel) {
+            FlowPanel buttonWrapper = (FlowPanel) parent;
+            buttonWrapper.remove(verticalButtonStack_);
             
             // Recreate with updated items
             verticalButtonStack_ = createVerticalButtonStack(functionCallType_, extractedItems);
-            buttonRow.add(verticalButtonStack_);
-            buttonRow.setCellHorizontalAlignment(verticalButtonStack_, HorizontalPanel.ALIGN_RIGHT);
+            buttonWrapper.add(verticalButtonStack_);
          }
       }
    }
@@ -371,7 +413,7 @@ public class AiConsoleWidget extends AiWidgetBase
       editor.getWidget().getEditor().getRenderer().setShowGutter(false);
       
       // Set console-like styling
-      editor.getWidget().addStyleName("aiConsoleEditor");
+      editor.getWidget().addStyleName(AiStreamingPanel.RES.styles().aiConsoleEditor());
       
       // Apply the current ACE theme (same as main console) for proper background color
       editor.getWidget().getEditor().setTheme(RStudioGinjector.INSTANCE.getAceThemes().getCurrentTheme());
@@ -653,6 +695,12 @@ public class AiConsoleWidget extends AiWidgetBase
    public void setCommand(String command)
    {
       editor_.setCode(command, false);
+      
+      // Auto-scroll to bottom
+      if (consoleWrapper_ != null)
+      {
+         consoleWrapper_.getElement().setScrollTop(consoleWrapper_.getElement().getScrollHeight());
+      }
    }
    
    /**
@@ -677,9 +725,39 @@ public class AiConsoleWidget extends AiWidgetBase
       }
    }
    
+   /**
+    * Add click handler for copy button using JSNI
+    */
+   private native void addCopyClickHandler(com.google.gwt.dom.client.Element element) /*-{
+      var self = this;
+      
+      var clickHandler = function(event) {
+         self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiConsoleWidget::onCopyClicked()();
+         event.preventDefault();
+         event.stopPropagation();
+      };
+      
+      element.addEventListener('click', clickHandler, false);
+   }-*/;
+   
+   /**
+    * Handle copy button click - copies command text to clipboard
+    */
+   private void onCopyClicked()
+   {
+      String command = editor_.getCode();
+      org.rstudio.core.client.dom.Clipboard.setText(command);
+      
+      // Show success animation
+      if (copyButtonElement_ != null) {
+         showCopySuccessAnimation(copyButtonElement_);
+      }
+   }
+   
    private final String explanation_;
    private final ConsoleCommandHandler handler_;
    private final boolean isEditable_;
    private AceEditor editor_;
    private VerticalPanel verticalButtonStack_;
+   private com.google.gwt.dom.client.Element copyButtonElement_;
 } 

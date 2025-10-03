@@ -1,7 +1,7 @@
 /*
  * AiContext.java
  *
- * Copyright (C) 2025 by William Nickols
+ * Copyright (C) 2025 by Lotas Inc.
  *
  * This program is licensed to you under the terms of version 3 of the
  * GNU Affero General Public License. This program is distributed WITHOUT
@@ -509,6 +509,7 @@ public class AiContext
       containerElement.getStyle().setProperty("overflow", "hidden");
       containerElement.getStyle().setProperty("whiteSpace", "nowrap");
       containerElement.getStyle().setProperty("fontSize", "11px");
+      containerElement.getStyle().setProperty("fontFamily", "sans-serif");
       containerElement.getStyle().setProperty("verticalAlign", "middle");
       containerElement.getStyle().setProperty("flexShrink", "0"); // Prevent file items from shrinking in the scroll container
       
@@ -538,6 +539,7 @@ public class AiContext
       fileNameElement.getStyle().setProperty("lineHeight", "16px");
       fileNameElement.getStyle().setProperty("paddingTop", "0");
       fileNameElement.getStyle().setProperty("fontSize", "11px");
+      fileNameElement.getStyle().setProperty("fontFamily", "sans-serif");
       
       fileItemContainer.add(fileNameLabel);
       
@@ -631,6 +633,7 @@ public class AiContext
       containerElement.getStyle().setProperty("overflow", "hidden");
       containerElement.getStyle().setProperty("whiteSpace", "nowrap");
       containerElement.getStyle().setProperty("fontSize", "11px");
+      containerElement.getStyle().setProperty("fontFamily", "sans-serif");
       containerElement.getStyle().setProperty("verticalAlign", "middle");
       containerElement.getStyle().setProperty("flexShrink", "0");
       
@@ -693,6 +696,7 @@ public class AiContext
       labelElement.getStyle().setProperty("lineHeight", "16px");
       labelElement.getStyle().setProperty("paddingTop", "0");
       labelElement.getStyle().setProperty("fontSize", "11px");
+      labelElement.getStyle().setProperty("fontFamily", "sans-serif");
       
       return label;
    }

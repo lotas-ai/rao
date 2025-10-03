@@ -1,0 +1,203 @@
+@external rstudio-themes-default, rstudio-themes-alternate, rstudio-themes-dark-grey;
+@external ace_marker-layer;
+@external erdos-ai-auto-accept-added-line, erdos-ai-auto-accept-deleted-lines, auto-accept-chevron-svg;
+
+@eval THEME_DEFAULT_BACKGROUND org.rstudio.core.client.theme.ThemeColors.defaultBackground;
+@eval THEME_DARKGREY_BACKGROUND org.rstudio.core.client.theme.ThemeColors.darkGreyBackground;
+@eval THEME_ALTERNATE_BACKGROUND org.rstudio.core.client.theme.ThemeColors.alternateBackground;
+
+@eval THEME_DEFAULT_BORDER org.rstudio.core.client.theme.ThemeColors.defaultBorder;
+@eval THEME_DARKGREY_BORDER org.rstudio.core.client.theme.ThemeColors.darkGreyBorder;
+@eval THEME_ALTERNATE_BORDER org.rstudio.core.client.theme.ThemeColors.alternateBorder;
+
+@eval THEME_DEFAULT_FOREGROUND org.rstudio.core.client.theme.ThemeColors.defaultForeground;
+@eval THEME_DARKGREY_FOREGROUND org.rstudio.core.client.theme.ThemeColors.darkGreyForeground;
+@eval THEME_ALTERNATE_FOREGROUND org.rstudio.core.client.theme.ThemeColors.alternateForeground;
+
+@eval THEME_DEFAULT_SUBTLE_TEXT org.rstudio.core.client.theme.ThemeColors.defaultSubtleText;
+@eval THEME_DARKGREY_SUBTLE_TEXT org.rstudio.core.client.theme.ThemeColors.darkGreySubtleText;
+@eval THEME_ALTERNATE_SUBTLE_TEXT org.rstudio.core.client.theme.ThemeColors.alternateSubtleText;
+
+@eval THEME_DEFAULT_SHADOW_COLOR org.rstudio.core.client.theme.ThemeColors.defaultShadowColor;
+@eval THEME_DARKGREY_SHADOW_COLOR org.rstudio.core.client.theme.ThemeColors.darkGreyShadowColor;
+@eval THEME_ALTERNATE_SHADOW_COLOR org.rstudio.core.client.theme.ThemeColors.alternateShadowColor;
+
+@eval THEME_DEFAULT_SUCCESS_BACKGROUND org.rstudio.core.client.theme.ThemeColors.defaultSuccessBackground;
+@eval THEME_DARKGREY_SUCCESS_BACKGROUND org.rstudio.core.client.theme.ThemeColors.darkGreySuccessBackground;
+@eval THEME_ALTERNATE_SUCCESS_BACKGROUND org.rstudio.core.client.theme.ThemeColors.alternateSuccessBackground;
+
+@eval THEME_DEFAULT_WARNING_BACKGROUND org.rstudio.core.client.theme.ThemeColors.defaultWarningBackground;
+@eval THEME_DARKGREY_WARNING_BACKGROUND org.rstudio.core.client.theme.ThemeColors.darkGreyWarningBackground;
+@eval THEME_ALTERNATE_WARNING_BACKGROUND org.rstudio.core.client.theme.ThemeColors.alternateWarningBackground;
+
+@eval THEME_DEFAULT_INACTIVE org.rstudio.core.client.theme.ThemeColors.defaultInactiveBackground;
+@eval THEME_DARKGREY_INACTIVE org.rstudio.core.client.theme.ThemeColors.darkGreyInactiveBackground;
+@eval THEME_ALTERNATE_INACTIVE org.rstudio.core.client.theme.ThemeColors.alternateInactiveBackground;
+
+.floatingBar {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 4px;
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 1000;
+  border: 1px solid;
+  height: 28px;
+  pointer-events: auto;
+  white-space: nowrap;
+  flex-wrap: nowrap;
+}
+
+.floatingBar.reviewMode {
+  cursor: pointer;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-weight: 400;
+}
+
+.rstudio-themes-default .floatingBar.reviewMode:hover,
+.rstudio-themes-alternate .floatingBar.reviewMode:hover {
+  border-color: THEME_DEFAULT_SUBTLE_TEXT;
+}
+
+.rstudio-themes-dark-grey .floatingBar.reviewMode:hover {
+  border-color: THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+.rstudio-themes-default .floatingBar,
+.rstudio-themes-alternate .floatingBar {
+  background-color: THEME_DEFAULT_BACKGROUND;
+  border-color: THEME_DEFAULT_BORDER;
+  box-shadow: 0 2px 8px THEME_DEFAULT_SHADOW_COLOR;
+}
+
+.rstudio-themes-dark-grey .floatingBar {
+  background-color: THEME_DARKGREY_BACKGROUND;
+  border-color: THEME_DARKGREY_BORDER;
+  box-shadow: 0 2px 8px THEME_DARKGREY_SHADOW_COLOR;
+}
+
+/* Section and file navigation containers */
+.sectionNav,
+.fileNav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* Chevrons - minimal styling, no hover effects */
+.chevron {
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  flex-shrink: 0;
+}
+
+.rightChevron {
+  margin-left: -6px;
+}
+
+.rstudio-themes-default .chevron,
+.rstudio-themes-alternate .chevron {
+  color: THEME_DEFAULT_SUBTLE_TEXT;
+}
+
+.rstudio-themes-dark-grey .chevron {
+  color: THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+.actionButton {
+  padding: 2px 10px;
+  height: 24px;
+  margin: 0 1px;
+  border-radius: 3px;
+  cursor: pointer;
+  border: 1px solid;
+  font-size: 12px;
+  font-weight: 400;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.rstudio-themes-default .actionButton,
+.rstudio-themes-alternate .actionButton {
+  color: THEME_DEFAULT_SUBTLE_TEXT;
+  background-color: THEME_DEFAULT_INACTIVE;
+  border-color: THEME_DEFAULT_BORDER;
+}
+
+.rstudio-themes-dark-grey .actionButton {
+  color: THEME_DARKGREY_SUBTLE_TEXT;
+  background-color: THEME_DARKGREY_INACTIVE;
+  border-color: THEME_DARKGREY_BORDER;
+}
+
+.rstudio-themes-default .actionButton:hover,
+.rstudio-themes-alternate .actionButton:hover {
+  border-color: THEME_DEFAULT_SUBTLE_TEXT;
+}
+
+.rstudio-themes-dark-grey .actionButton:hover {
+  border-color: THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+.counter {
+  padding: 0 2px;
+  font-size: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-weight: 400;
+  line-height: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.rstudio-themes-default .counter,
+.rstudio-themes-alternate .counter {
+  color: THEME_DEFAULT_SUBTLE_TEXT;
+}
+
+.rstudio-themes-dark-grey .counter {
+  color: THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+/* ACE Editor full-line markers for added lines (green background) */
+.rstudio-themes-default .ace_marker-layer .erdos-ai-auto-accept-added-line,
+.rstudio-themes-alternate .ace_marker-layer .erdos-ai-auto-accept-added-line {
+  background-color: THEME_DEFAULT_SUCCESS_BACKGROUND;
+  position: absolute;
+  z-index: 1;
+}
+
+.rstudio-themes-dark-grey .ace_marker-layer .erdos-ai-auto-accept-added-line {
+  background-color: THEME_DARKGREY_SUCCESS_BACKGROUND;
+  position: absolute;
+  z-index: 1;
+}
+
+/* Deleted lines container (red background) */
+.rstudio-themes-default .erdos-ai-auto-accept-deleted-lines,
+.rstudio-themes-alternate .erdos-ai-auto-accept-deleted-lines {
+  background-color: THEME_DEFAULT_WARNING_BACKGROUND;
+  margin: 0;
+  padding: 0;
+}
+
+.rstudio-themes-dark-grey .erdos-ai-auto-accept-deleted-lines {
+  background-color: THEME_DARKGREY_WARNING_BACKGROUND;
+  margin: 0;
+  padding: 0;
+}
+

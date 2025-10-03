@@ -700,6 +700,13 @@ public class RemoteServer implements Server, AiServerOperations
    }
    
    @Override
+   public void normalizeFilePath(String path,
+                                 ServerRequestCallback<String> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, NORMALIZE_FILE_PATH, path, requestCallback);
+   }
+   
+   @Override
    public void copilotVerifyInstalled(ServerRequestCallback<Boolean> requestCallback)
    {
       sendRequest(RPC_SCOPE, "copilot_verify_installed", requestCallback);
@@ -1802,6 +1809,30 @@ public class RemoteServer implements Server, AiServerOperations
       sendRequest(RPC_SCOPE, HAS_BYOK_API_KEY, params, requestCallback);
    }
    
+   public void setSageMakerEndpoint(String endpoint, ServerRequestCallback<Boolean> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(endpoint));
+      sendRequest(RPC_SCOPE, SET_SAGEMAKER_ENDPOINT, params, requestCallback);
+   }
+   
+   public void getSageMakerEndpoint(ServerRequestCallback<String> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, GET_SAGEMAKER_ENDPOINT, new JSONArray(), requestCallback);
+   }
+   
+   public void setSageMakerRegion(String region, ServerRequestCallback<Boolean> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(region));
+      sendRequest(RPC_SCOPE, SET_SAGEMAKER_REGION, params, requestCallback);
+   }
+   
+   public void getSageMakerRegion(ServerRequestCallback<String> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, GET_SAGEMAKER_REGION, new JSONArray(), requestCallback);
+   }
+   
    public void getVignetteTitle(String topic,
                                 String pkgName, 
                                 ServerRequestCallback<String> requestCallback)
@@ -2049,7 +2080,7 @@ public class RemoteServer implements Server, AiServerOperations
    {
       sendRequest(RPC_SCOPE, GET_INTERACTION_MODE, requestCallback);
    }
-
+   
    public void saveAiAttachment(String filePath,
                               ServerRequestCallback<java.lang.Void> requestCallback)
    {
@@ -7316,6 +7347,7 @@ public class RemoteServer implements Server, AiServerOperations
    private static final String SUSPEND_FOR_RESTART = "suspend_for_restart";
    private static final String PING = "ping";
    private static final String RSTUDIOAPI_RESPONSE = "rstudioapi_response";
+   private static final String NORMALIZE_FILE_PATH = "normalize_file_path";
    private static final String AUTH_STATUS = "auth_status";
 
    private static final String SET_WORKBENCH_METRICS = "set_workbench_metrics";
@@ -7418,6 +7450,10 @@ public class RemoteServer implements Server, AiServerOperations
    private static final String SET_BYOK_ENABLED = "set_byok_enabled";
    private static final String CLEAR_BYOK_API_KEY = "clear_byok_api_key";
    private static final String HAS_BYOK_API_KEY = "has_byok_api_key";
+   private static final String SET_SAGEMAKER_ENDPOINT = "set_sagemaker_endpoint";
+   private static final String GET_SAGEMAKER_ENDPOINT = "get_sagemaker_endpoint";
+   private static final String SET_SAGEMAKER_REGION = "set_sagemaker_region";
+   private static final String GET_SAGEMAKER_REGION = "get_sagemaker_region";
    private static final String GET_CUSTOM_PARAMETER_AI = "get_custom_parameter_ai";
    private static final String SHOW_CUSTOM_AI_TOPIC = "show_custom_ai_topic";
    private static final String ACCEPT_SEARCH_REPLACE_COMMAND = "accept_search_replace_command";

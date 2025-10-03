@@ -1,7 +1,7 @@
 /*
  * SessionAi.cpp
  *
- * Copyright (C) 2025 by William Nickols
+ * Copyright (C) 2025 by Lotas Inc.
  *
  * This program is licensed to you under the terms of version 3 of the
  * GNU Affero General Public License. This program is distributed WITHOUT
@@ -1694,6 +1694,25 @@ Error extractBashFunctions(const json::JsonRpcRequest& request,
    }
    
    p_response->setResult(commands_array);
+   return Success();
+}
+
+Error normalizeFilePath(const json::JsonRpcRequest& request,
+                       json::JsonRpcResponse* p_response)
+{
+   std::string path;
+   Error error = json::readParam(request.params, 0, &path);
+   if (error)
+      return error;
+   
+   r::sexp::Protect r_protect;
+   SEXP result;
+   error = r::exec::RFunction(".rs.normalize_file_path", path).call(&result, &r_protect);
+   if (error)
+      return error;
+   
+   std::string normalized_path = r::sexp::asString(result);
+   p_response->setResult(normalized_path);
    return Success();
 }
    
@@ -3835,6 +3854,92 @@ Error hasBYOKApiKey(const json::JsonRpcRequest& request,
    return Success();
 }
 
+Error setSageMakerEndpoint(const json::JsonRpcRequest& request,
+                           json::JsonRpcResponse* pResponse)
+{
+   std::string endpoint;
+   Error error = json::readParams(request.params, &endpoint);
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   bool success;
+   error = r::exec::RFunction(".rs.ai.setSageMakerEndpoint")
+      .addParam(endpoint)
+      .call(&success);
+
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   pResponse->setResult(success);
+   return Success();
+}
+
+Error getSageMakerEndpoint(const json::JsonRpcRequest& request,
+                           json::JsonRpcResponse* pResponse)
+{
+   std::string endpoint;
+   Error error = r::exec::RFunction(".rs.ai.getSageMakerEndpoint")
+      .call(&endpoint);
+
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   pResponse->setResult(endpoint);
+   return Success();
+}
+
+Error setSageMakerRegion(const json::JsonRpcRequest& request,
+                         json::JsonRpcResponse* pResponse)
+{
+   std::string region;
+   Error error = json::readParams(request.params, &region);
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   bool success;
+   error = r::exec::RFunction(".rs.ai.setSageMakerRegion")
+      .addParam(region)
+      .call(&success);
+
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   pResponse->setResult(success);
+   return Success();
+}
+
+Error getSageMakerRegion(const json::JsonRpcRequest& request,
+                         json::JsonRpcResponse* pResponse)
+{
+   std::string region;
+   Error error = r::exec::RFunction(".rs.ai.getSageMakerRegion")
+      .call(&region);
+
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   pResponse->setResult(region);
+   return Success();
+}
+
 Error initialize()
 {
    using boost::bind;
@@ -3885,6 +3990,7 @@ Error initialize()
       (bind(module_context::registerRpcMethod, "add_chat_context", addChatContext))
       (bind(module_context::registerRpcMethod, "extract_r_functions", extractRFunctions))
       (bind(module_context::registerRpcMethod, "extract_bash_functions", extractBashFunctions))
+      (bind(module_context::registerRpcMethod, "normalize_file_path", normalizeFilePath))
       (bind(module_context::registerRpcMethod, "create_new_conversation", createNewConversation))
       (bind(module_context::registerRpcMethod, "set_interaction_mode", setInteractionMode))
       (bind(module_context::registerRpcMethod, "get_interaction_mode", getInteractionMode))
@@ -4395,6 +4501,11 @@ Error initialize()
       (bind(module_context::registerRpcMethod, "set_byok_enabled", setBYOKEnabled))
       (bind(module_context::registerRpcMethod, "clear_byok_api_key", clearBYOKApiKey))
       (bind(module_context::registerRpcMethod, "has_byok_api_key", hasBYOKApiKey))
+      // SageMaker configuration RPC methods
+      (bind(module_context::registerRpcMethod, "set_sagemaker_endpoint", setSageMakerEndpoint))
+      (bind(module_context::registerRpcMethod, "get_sagemaker_endpoint", getSageMakerEndpoint))
+      (bind(module_context::registerRpcMethod, "set_sagemaker_region", setSageMakerRegion))
+      (bind(module_context::registerRpcMethod, "get_sagemaker_region", getSageMakerRegion))
       // User rules management RPC methods
       (bind(module_context::registerRpcMethod, "get_user_rules",
             boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
@@ -4445,6 +4556,7 @@ Error initialize()
       (bind(sourceModuleRFile, "SessionAiParse.R"))      // code parsing functions
       (bind(sourceModuleRFile, "SessionAiAPI.R"))        // then API functions 
       (bind(sourceModuleRFile, "SessionAiSettings.R")) // then key management
+      (bind(sourceModuleRFile, "SessionAiAutoAccept.R")) // auto-accept tracking functions
       (bind(sourceModuleRFile, "SessionAiButtons.R"))
       (bind(sourceModuleRFile, "SessionAiConversationDisplay.R"))
       (bind(sourceModuleRFile, "SessionAiIO.R"))

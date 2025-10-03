@@ -219,13 +219,16 @@ const int kConsoleWritePendingWarning = 201;
 const int kShowAi = 202;
 const int kFormatDocumentCompleted = 203;
 const int kUpdateThinkingMessage = 204;
-const int kStoreActiveRequestId = 205;
-const int kAiStreamData = 206;
-const int kAiOperation = 207;
-const int kRefreshDocumentContent = 208;
-const int kRequestDocumentCloseForRevert = 209;
-const int kCopilotStatusChanged = 210;
-const int kAiAuthenticationCompleted = 211;
+const int kUpdateBufferStatus = 205;
+const int kStoreActiveRequestId = 206;
+const int kAiStreamData = 207;
+const int kAiOperation = 208;
+const int kRefreshDocumentContent = 209;
+const int kRequestDocumentCloseForRevert = 210;
+const int kCopilotStatusChanged = 211;
+const int kAiAuthenticationCompleted = 212;
+const int kTrackAutoAcceptEdit = 213;
+const int kAcceptAndClearAutoAcceptTracking = 214;
 
 }
 
@@ -620,6 +623,8 @@ std::string ClientEvent::typeName() const
          return "format_document_completed";
       case client_events::kUpdateThinkingMessage:
          return "update_thinking_message";
+      case client_events::kUpdateBufferStatus:
+         return "update_buffer_status";
       case client_events::kStoreActiveRequestId:
          return "store_active_request_id";
       case client_events::kAiStreamData:
@@ -634,6 +639,10 @@ std::string ClientEvent::typeName() const
          return "copilot_status_changed";
       case client_events::kAiAuthenticationCompleted:
          return "ai_authentication_completed";
+      case client_events::kTrackAutoAcceptEdit:
+         return "track_auto_accept_edit";
+      case client_events::kAcceptAndClearAutoAcceptTracking:
+         return "accept_and_clear_auto_accept_tracking";
       default:
          LOG_WARNING_MESSAGE("unexpected event type: " + 
                              safe_convert::numberToString(type_));

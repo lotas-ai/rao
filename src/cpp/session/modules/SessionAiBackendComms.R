@@ -1,7 +1,7 @@
 #
 # SessionAiBackendComms.R
 #
-# Copyright (C) 2025 by William Nickols
+# Copyright (C) 2025 by Lotas Inc.
 #
 # This program is licensed to you under the terms of version 3 of the
 # GNU Affero General Public License. This program is distributed WITHOUT
@@ -1254,15 +1254,25 @@
   
   # Start async summarization request
   tryCatch({
+    # Use the active provider
+    provider <- .rs.get_active_provider()
+    if (is.null(provider)) {
+      return(FALSE)
+    }
+    
+    auth <- .rs.generate_backend_auth(provider)
+    if (is.null(auth)) {
+      return(FALSE)
+    }
     
     async_info <- .rs.run_api_request_async(
       request_data = list(
         request_type = "summarize_conversation",
         conversation = conversation_portion,  # Only the specific query portion
-        provider = "openai",
-        model = "gpt-4.1-mini", # Backend will override this anyway
+        provider = provider,
+        model = NULL,  # Let backend choose appropriate model for summarization
         request_id = request_id,
-        auth = .rs.generate_backend_auth("openai"),
+        auth = auth,
         target_query_number = target_query_number,
         previous_summary = previous_summary  # Include previous summary
       ),
@@ -1423,7 +1433,6 @@
     stream_file <- state$stream_file
     
     if (is.null(stream_file)) {
-      cat("DEBUG: No stream file found in state\n")
       .rs.clear_background_summarization_state()
       return(FALSE)
     }

@@ -494,27 +494,27 @@ core::Error UserStateValues::setAiSagemakerRegion(std::string val)
 /**
  * Bring Your Own Key for Anthropic API
  */
-std::string UserStateValues::byokAnthropicApiKey()
+std::string UserStateValues::aiByokAnthropicApiKey()
 {
-   return readPref<std::string>("byok_anthropic_api_key");
+   return readPref<std::string>("ai_byok_anthropic_api_key");
 }
 
-core::Error UserStateValues::setByokAnthropicApiKey(std::string val)
+core::Error UserStateValues::setAiByokAnthropicApiKey(std::string val)
 {
-   return writePref("byok_anthropic_api_key", val);
+   return writePref("ai_byok_anthropic_api_key", val);
 }
 
 /**
  * Bring Your Own Key for OpenAI API
  */
-std::string UserStateValues::byokOpenaiApiKey()
+std::string UserStateValues::aiByokOpenaiApiKey()
 {
-   return readPref<std::string>("byok_openai_api_key");
+   return readPref<std::string>("ai_byok_openai_api_key");
 }
 
-core::Error UserStateValues::setByokOpenaiApiKey(std::string val)
+core::Error UserStateValues::setAiByokOpenaiApiKey(std::string val)
 {
-   return writePref("byok_openai_api_key", val);
+   return writePref("ai_byok_openai_api_key", val);
 }
 
 std::vector<std::string> UserStateValues::allKeys()
@@ -556,8 +556,8 @@ std::vector<std::string> UserStateValues::allKeys()
       kAiWorkingDirectory,
       kAiSagemakerEndpoint,
       kAiSagemakerRegion,
-      kByokAnthropicApiKey,
-      kByokOpenaiApiKey,
+      kAiByokAnthropicApiKey,
+      kAiByokOpenaiApiKey,
    });
 }
    

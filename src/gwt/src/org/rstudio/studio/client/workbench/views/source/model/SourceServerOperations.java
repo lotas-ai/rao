@@ -288,4 +288,6 @@ public interface SourceServerOperations extends FilesServerOperations,
    public void rstudioApiResponse(JavaScriptObject response,
                                   ServerRequestCallback<Void> requestCallback);
    
+   public void normalizeFilePath(String path,
+                                 ServerRequestCallback<String> requestCallback);
 }

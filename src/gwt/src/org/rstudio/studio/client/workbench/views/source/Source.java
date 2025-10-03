@@ -3106,7 +3106,8 @@ public class Source implements InsertSourceEvent.Handler,
                   
                   // Update the content directly through the ACE editor's native interface
                   // This will update the actual DOM element with the gwt-HTML and ace_editor classes
-                  aceEditor.setCode(content, false);
+                  // Use true to preserve cursor and scroll position when accepting changes
+                  aceEditor.setCode(content, true);
                   
                   // Synchronize client-side dirty state with server-side decision
                   // For revert operations (shouldMarkClean=true), mark the document as clean

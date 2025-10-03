@@ -47,7 +47,7 @@ public class ThemeColors
    public static String defaultWarningBorder                      = "#dc3545";
    public static String defaultTestBackground1                     = "rgba(76, 175, 80, 0.2)";
    public static String defaultTestBackground2                     = "rgba(244, 67, 54, 0.2)";
-   public static String defaultTestBackground3                     = "white";
+   public static String defaultTestBackground3                     = "transparent";
    public static String defaultSectionBackground                  = "#f8f9fa";
    public static String defaultSectionBorder                     = "#dee2e6";
    public static String defaultInputBorder                       = "#ced4da";
@@ -91,7 +91,7 @@ public class ThemeColors
    public static String darkGreyWarningBorder                     = "#ffb380";
    public static String darkGreyTestBackground1                    = "rgba(128, 255, 128, 0.2)";
    public static String darkGreyTestBackground2                    = "rgba(255, 179, 128, 0.2)";
-   public static String darkGreyTestBackground3                    = "rgb(78, 92, 104)";
+   public static String darkGreyTestBackground3                    = "transparent";
    public static String darkGreySectionBackground                 = "rgb(57, 67, 75)";
    public static String darkGreySectionBorder                    = "rgb(12, 31, 48)";
    public static String darkGreyInputBorder                      = "rgb(12, 31, 48)";
@@ -139,7 +139,7 @@ public class ThemeColors
    public static String alternateWarningBorder                   = "#dc3545";
    public static String alternateTestBackground1                  = "rgba(76, 175, 80, 0.2)";
    public static String alternateTestBackground2                  = "rgba(244, 67, 54, 0.2)";
-   public static String alternateTestBackground3                  = "white";
+   public static String alternateTestBackground3                  = "transparent";
    public static String alternateSectionBackground               = "#f8f9fa";
    public static String alternateSectionBorder                  = "rgb(181, 210, 226)";
    public static String alternateInputBorder                    = "rgb(181, 210, 226)";

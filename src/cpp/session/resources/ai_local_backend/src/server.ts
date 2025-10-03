@@ -43,7 +43,7 @@ async function startProxyServer() {
         const webSearchEnabledHeader = req.headers['x-rao-web-search-enabled'] as string;
         const webSearchEnabled = webSearchEnabledHeader?.toLowerCase() === 'true';
         
-        if (request_type === 'generate_conversation_name') {                
+        if (request_type === 'generate_conversation_name') {
             const result = await service.generateConversationName(req.body);
             const sseData = JSON.stringify({
                 conversation_name: result?.conversationName || "Untitled Conversation",
@@ -60,7 +60,7 @@ async function startProxyServer() {
             };
             await service.processSummarizationRequest(req.body, request_id, outputStream);
             res.end();
-        } else {                    
+        } else {
             const contextWithByok = { ...contextData, byok_keys };
             
             await service.processStreamingQuery(

@@ -504,4 +504,36 @@ public class AceBackgroundHighlighter
    private static final int STATE_CHUNK_START  = 2;
    private static final int STATE_CHUNK_BODY   = 3;
    private static final int STATE_CHUNK_END    = 4;
+   
+   // Public API Methods ----
+   
+   /**
+    * Check if a row is inside a code chunk
+    */
+   public boolean isRowInCodeChunk(int row)
+   {
+      if (!enabled_ || !rowStates_.isSet(row))
+         return false;
+      
+      int state = rowStates_.get(row, STATE_TEXT);
+      return state == STATE_CHUNK_START || 
+             state == STATE_CHUNK_BODY || 
+             state == STATE_CHUNK_END;
+   }
+   
+   /**
+    * Get the state of a specific row
+    */
+   public int getRowState(int row)
+   {
+      return rowStates_.get(row, STATE_TEXT);
+   }
+   
+   /**
+    * Check if chunk highlighting is enabled
+    */
+   public boolean isEnabled()
+   {
+      return enabled_;
+   }
 }

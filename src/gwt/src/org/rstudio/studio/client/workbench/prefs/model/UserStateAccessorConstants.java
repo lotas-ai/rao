@@ -315,17 +315,17 @@ public interface UserStateAccessorConstants extends Constants {
     * Bring Your Own Key for Anthropic API
     */
    @DefaultStringValue("BYOK Anthropic API Key")
-   String byokAnthropicApiKeyTitle();
+   String aiByokAnthropicApiKeyTitle();
    @DefaultStringValue("Bring Your Own Key for Anthropic API")
-   String byokAnthropicApiKeyDescription();
+   String aiByokAnthropicApiKeyDescription();
 
    /**
     * Bring Your Own Key for OpenAI API
     */
    @DefaultStringValue("BYOK OpenAI API Key")
-   String byokOpenaiApiKeyTitle();
+   String aiByokOpenaiApiKeyTitle();
    @DefaultStringValue("Bring Your Own Key for OpenAI API")
-   String byokOpenaiApiKeyDescription();
+   String aiByokOpenaiApiKeyDescription();
 
 
 

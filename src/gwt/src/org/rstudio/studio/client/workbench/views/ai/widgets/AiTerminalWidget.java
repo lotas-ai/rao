@@ -1,7 +1,7 @@
 /*
  * AiTerminalWidget.java
  *
- * Copyright (C) 2025 by William Nickols
+ * Copyright (C) 2025 by Lotas Inc.
  *
  * Unless you have received this program directly from Posit Software pursuant
  * to the terms of a commercial license agreement with Posit Software, then
@@ -18,6 +18,7 @@ import com.google.gwt.core.client.GWT;
 import com.google.gwt.dom.client.Style.Unit;
 import com.google.gwt.user.client.ui.Button;
 import com.google.gwt.user.client.ui.Composite;
+import com.google.gwt.user.client.ui.FlowPanel;
 import com.google.gwt.user.client.ui.HTML;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Label;
@@ -52,6 +53,7 @@ public class AiTerminalWidget extends AiWidgetBase
    
    private Label promptLabel_;
    private AceEditor terminalInput_;
+   private SimplePanel terminalWrapper_;
    private VerticalPanel verticalButtonStack_;
    
    public AiTerminalWidget(String messageId, String command, String explanation, String requestId, TerminalCommandHandler handler)
@@ -70,26 +72,65 @@ public class AiTerminalWidget extends AiWidgetBase
       VerticalPanel container = new VerticalPanel();
       container.setWidth("100%");
       
-      // Add Terminal header (always show for terminal widgets)
-      Label headerLabel = new Label("Terminal");
-      headerLabel.addStyleName("aiTerminalHeader");
-      // Background and text colors are handled by CSS theme classes
-      headerLabel.getElement().getStyle().setFontSize(12, Unit.PX);
-      headerLabel.getElement().getStyle().setFontWeight(com.google.gwt.dom.client.Style.FontWeight.BOLD);
-      headerLabel.getElement().getStyle().setPadding(3, Unit.PX);
-      headerLabel.getElement().getStyle().setProperty("borderRadius", "4px 4px 0 0");
-      headerLabel.getElement().getStyle().setMargin(0, Unit.PX);
-      headerLabel.getElement().getStyle().setProperty("width", "100%");
-      headerLabel.getElement().getStyle().setProperty("boxSizing", "border-box");
-      headerLabel.getElement().getStyle().setBorderWidth(1, Unit.PX);
-      headerLabel.getElement().getStyle().setBorderStyle(com.google.gwt.dom.client.Style.BorderStyle.SOLID);
-      headerLabel.getElement().getStyle().setBorderColor(ThemeHelper.getVisibleBorder());
-      headerLabel.getElement().getStyle().setProperty("borderBottom", "none");
-      container.add(headerLabel);
+      // Create header with chevron button using simple flex layout
+      FlowPanel headerPanel = new FlowPanel();
+      headerPanel.setWidth("100%");
+      headerPanel.addStyleName("aiTerminalHeader");
+      headerPanel.getElement().getStyle().setFontSize(12, Unit.PX);
+      headerPanel.getElement().getStyle().setProperty("fontWeight", "650");
+      headerPanel.getElement().getStyle().setPadding(3, Unit.PX);
+      headerPanel.getElement().getStyle().setPaddingLeft(4, Unit.PX);
+      headerPanel.getElement().getStyle().setProperty("borderRadius", "4px 4px 0 0");
+      headerPanel.getElement().getStyle().setMargin(0, Unit.PX);
+      headerPanel.getElement().getStyle().setProperty("boxSizing", "border-box");
+      headerPanel.getElement().getStyle().setBorderWidth(1, Unit.PX);
+      headerPanel.getElement().getStyle().setBorderStyle(com.google.gwt.dom.client.Style.BorderStyle.SOLID);
+      headerPanel.getElement().getStyle().setBorderColor(ThemeHelper.getVisibleBorder());
+      headerPanel.getElement().getStyle().setProperty("borderBottom", "none");
+      headerPanel.getElement().getStyle().setProperty("position", "relative");
+      headerPanel.getElement().getStyle().setProperty("display", "flex");
+      headerPanel.getElement().getStyle().setProperty("alignItems", "center");
+      headerPanel.getElement().getStyle().setProperty("justifyContent", "space-between");
       
-      // Create terminal editor container
-      HorizontalPanel editorContainer = new HorizontalPanel();
-      editorContainer.setWidth("100%");
+      // Store reference for collapse functionality
+      headerPanel_ = headerPanel;
+      
+      // Add header label
+      Label headerLabel = new Label("Terminal");
+      headerPanel.add(headerLabel);
+      
+      // Create container for copy button and chevron (right side of header)
+      FlowPanel rightButtonsPanel = new FlowPanel();
+      rightButtonsPanel.getElement().getStyle().setProperty("display", "flex");
+      rightButtonsPanel.getElement().getStyle().setProperty("alignItems", "center");
+      rightButtonsPanel.getElement().getStyle().setProperty("gap", "4px");
+      
+      // Add copy button (left of chevron)
+      HTML copyButton = createCopyButton();
+      copyButtonElement_ = copyButton.getElement();
+      addCopyClickHandler(copyButtonElement_);
+      rightButtonsPanel.add(copyButton);
+      
+      // Add chevron button on the far right
+      HTML chevron = createChevronButton();
+      rightButtonsPanel.add(chevron);
+      
+      headerPanel.add(rightButtonsPanel);
+      
+      container.add(headerPanel);
+      
+      // Create a vertical panel to hold all collapsible content (wrapper + future buttons)
+      VerticalPanel collapsibleContent = new VerticalPanel();
+      collapsibleContent.setWidth("100%");
+      collapsibleContent.setSpacing(0);
+      collapsibleContent.getElement().getStyle().setPadding(0, Unit.PX);
+      collapsibleContent.getElement().getStyle().setMargin(0, Unit.PX);
+      
+      // Create terminal editor container using FlowPanel for proper flex layout
+      FlowPanel editorContainer = new FlowPanel();
+      editorContainer.getElement().getStyle().setProperty("display", "flex");
+      editorContainer.getElement().getStyle().setProperty("alignItems", "flex-start");
+      editorContainer.getElement().getStyle().setProperty("width", "100%");
       editorContainer.addStyleName(AiStreamingPanel.RES.styles().aiTerminalEditorContainer());
       editorContainer.addStyleName("ace_editor"); // Get background from ACE theme like main console
       editorContainer.getElement().getStyle().setProperty("maxWidth", "100%");
@@ -98,21 +139,20 @@ public class AiTerminalWidget extends AiWidgetBase
       editorContainer.getElement().getStyle().setPadding(0, Unit.PX);
       
       // Create a wrapper around the entire editor container (prompt + editor) with the border
-      SimplePanel terminalWrapper = new SimplePanel();
-      terminalWrapper.setWidth("100%");
-      terminalWrapper.addStyleName("aiTerminalWrapper");
-      terminalWrapper.getElement().getStyle().setBorderWidth(1, Unit.PX);
-      terminalWrapper.getElement().getStyle().setBorderStyle(com.google.gwt.dom.client.Style.BorderStyle.SOLID);
-      terminalWrapper.getElement().getStyle().setBorderColor(ThemeHelper.getVisibleBorder());
-      terminalWrapper.getElement().getStyle().setProperty("borderRadius", "0 0 4px 4px");
+      terminalWrapper_ = new SimplePanel();
+      terminalWrapper_.setWidth("100%");
+      terminalWrapper_.addStyleName("aiTerminalWrapper");
+      terminalWrapper_.getElement().getStyle().setBorderWidth(1, Unit.PX);
+      terminalWrapper_.getElement().getStyle().setBorderStyle(com.google.gwt.dom.client.Style.BorderStyle.SOLID);
+      terminalWrapper_.getElement().getStyle().setBorderColor(ThemeHelper.getVisibleBorder());
+      terminalWrapper_.getElement().getStyle().setProperty("borderRadius", "0 0 4px 4px");
       // Background color is handled by ACE theme, not manually set
-      terminalWrapper.getElement().getStyle().setPadding(0, Unit.PX);
-      terminalWrapper.getElement().getStyle().setMargin(0, Unit.PX);
-      terminalWrapper.getElement().getStyle().setProperty("lineHeight", "0");
-      terminalWrapper.getElement().getStyle().setProperty("display", "block");
-      terminalWrapper.getElement().getStyle().setProperty("boxSizing", "border-box");
-      terminalWrapper.getElement().getStyle().setProperty("maxWidth", "100%");
-      terminalWrapper.getElement().getStyle().setProperty("overflow", "hidden");
+      terminalWrapper_.getElement().getStyle().setPadding(0, Unit.PX);
+      terminalWrapper_.getElement().getStyle().setMargin(0, Unit.PX);
+      terminalWrapper_.getElement().getStyle().setProperty("lineHeight", "0");
+      terminalWrapper_.getElement().getStyle().setProperty("display", "block");
+      terminalWrapper_.getElement().getStyle().setProperty("boxSizing", "border-box");
+      terminalWrapper_.getElement().getStyle().setProperty("maxWidth", "100%");
       
       // Create terminal prompt
       promptLabel_ = new Label("$");
@@ -121,7 +161,6 @@ public class AiTerminalWidget extends AiWidgetBase
       promptLabel_.getElement().getStyle().setPaddingLeft(3, Unit.PX);
       promptLabel_.getElement().getStyle().setProperty("whiteSpace", "nowrap");
       editorContainer.add(promptLabel_);
-      editorContainer.setCellVerticalAlignment(promptLabel_, HorizontalPanel.ALIGN_MIDDLE);
       
       // Create ACE editor for command input (to match console styling)
       terminalInput_ = new AceEditor();
@@ -134,6 +173,9 @@ public class AiTerminalWidget extends AiWidgetBase
       terminalInput_.setUseWrapMode(true);
       terminalInput_.autoHeight();
       
+      // Set terminal styling
+      terminalInput_.getWidget().addStyleName(AiStreamingPanel.RES.styles().aiTerminalEditor());
+      
       // Apply the current ACE theme (same as main console) for proper background color
       terminalInput_.getWidget().getEditor().setTheme(RStudioGinjector.INSTANCE.getAceThemes().getCurrentTheme());
       
@@ -141,12 +183,18 @@ public class AiTerminalWidget extends AiWidgetBase
       FontSizer.applyNormalFontSize(terminalInput_.getWidget());
       
       terminalInput_.getWidget().setWidth("100%");
+      terminalInput_.getWidget().getElement().getStyle().setProperty("flex", "1");
       editorContainer.add(terminalInput_.getWidget());
-      editorContainer.setCellWidth(terminalInput_.getWidget(), "100%");
       
       // Add editorContainer to wrapper
-      terminalWrapper.setWidget(editorContainer);
-      container.add(terminalWrapper);
+      terminalWrapper_.setWidget(editorContainer);
+      collapsibleContent.add(terminalWrapper_);
+      
+      // Add collapsible content to container
+      container.add(collapsibleContent);
+      
+      // Set the content container for collapse/expand functionality
+      setContentContainer(collapsibleContent);
       
       // Don't create buttons during widget creation - they will be created when streaming completes
       
@@ -161,30 +209,29 @@ public class AiTerminalWidget extends AiWidgetBase
          return; // Buttons already created
       }
       
-      // Find the main container to add buttons to
-      Widget widget = this.getWidget();
-      if (!(widget instanceof VerticalPanel)) {
+      // Buttons should be added to the collapsible content container
+      if (contentContainer_ == null || !(contentContainer_ instanceof VerticalPanel)) {
          return;
       }
-      VerticalPanel container = (VerticalPanel) widget;
+      VerticalPanel collapsibleContent = (VerticalPanel) contentContainer_;
       
       // Create the new vertical button stack using commands from R
       verticalButtonStack_ = createVerticalButtonStack(functionCallType_, extractedCommands_);
       
-      // Create a horizontal panel to hold the button stack on the right
-      HorizontalPanel buttonRow = new HorizontalPanel();
-      buttonRow.setWidth("100%");
-      buttonRow.setHorizontalAlignment(HorizontalPanel.ALIGN_RIGHT);
-      buttonRow.getElement().getStyle().setMargin(0, Unit.PX); // Remove any margin
-      buttonRow.getElement().getStyle().setPadding(0, Unit.PX); // Remove any padding
+      // Create a DIV wrapper with flexbox to hold the button stack on the right
+      FlowPanel buttonWrapper = new FlowPanel();
+      buttonWrapper.getElement().getStyle().setProperty("display", "flex");
+      buttonWrapper.getElement().getStyle().setProperty("justifyContent", "flex-end");
+      buttonWrapper.getElement().getStyle().setProperty("width", "100%");
+      buttonWrapper.getElement().getStyle().setMargin(0, Unit.PX);
+      buttonWrapper.getElement().getStyle().setPadding(0, Unit.PX);
       
-      // Add the button stack to the right side
-      buttonRow.add(verticalButtonStack_);
-      buttonRow.setCellHorizontalAlignment(verticalButtonStack_, HorizontalPanel.ALIGN_RIGHT);
+      // Add the button stack to the wrapper
+      buttonWrapper.add(verticalButtonStack_);
       
-      // Add the button row to the main container with no spacing
-      container.add(buttonRow);
-      container.setCellHeight(buttonRow, "0px"); // Minimize height
+      // Add the button wrapper to the collapsible content with no spacing
+      collapsibleContent.add(buttonWrapper);
+      collapsibleContent.setCellHeight(buttonWrapper, "0px"); // Minimize height
    }
 
    // Field to store extracted commands passed from R
@@ -207,14 +254,13 @@ public class AiTerminalWidget extends AiWidgetBase
       if (verticalButtonStack_ != null) {
          // Find the parent container and recreate the button stack
          Widget parent = verticalButtonStack_.getParent();
-         if (parent instanceof HorizontalPanel) {
-            HorizontalPanel buttonRow = (HorizontalPanel) parent;
-            buttonRow.remove(verticalButtonStack_);
+         if (parent instanceof FlowPanel) {
+            FlowPanel buttonWrapper = (FlowPanel) parent;
+            buttonWrapper.remove(verticalButtonStack_);
             
             // Recreate with updated commands
             verticalButtonStack_ = createVerticalButtonStack(functionCallType_, extractedCommands_);
-            buttonRow.add(verticalButtonStack_);
-            buttonRow.setCellHorizontalAlignment(verticalButtonStack_, HorizontalPanel.ALIGN_RIGHT);
+            buttonWrapper.add(verticalButtonStack_);
          }
       }
    }
@@ -428,10 +474,47 @@ public class AiTerminalWidget extends AiWidgetBase
    public void setCommand(String command)
    {
       terminalInput_.setCode(command, false);
+      
+      // Auto-scroll to bottom
+      if (terminalWrapper_ != null)
+      {
+         terminalWrapper_.getElement().setScrollTop(terminalWrapper_.getElement().getScrollHeight());
+      }
    }
    
    public void focus()
    {
       terminalInput_.focus();
    }
+   
+   /**
+    * Add click handler for copy button using JSNI
+    */
+   private native void addCopyClickHandler(com.google.gwt.dom.client.Element element) /*-{
+      var self = this;
+      
+      var clickHandler = function(event) {
+         self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiTerminalWidget::onCopyClicked()();
+         event.preventDefault();
+         event.stopPropagation();
+      };
+      
+      element.addEventListener('click', clickHandler, false);
+   }-*/;
+   
+   /**
+    * Handle copy button click - copies command text to clipboard
+    */
+   private void onCopyClicked()
+   {
+      String command = terminalInput_.getCode();
+      org.rstudio.core.client.dom.Clipboard.setText(command);
+      
+      // Show success animation
+      if (copyButtonElement_ != null) {
+         showCopySuccessAnimation(copyButtonElement_);
+      }
+   }
+   
+   private com.google.gwt.dom.client.Element copyButtonElement_;
 } 

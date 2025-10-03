@@ -253,6 +253,7 @@ import org.rstudio.studio.client.workbench.views.vcs.common.events.VcsRefreshEve
 import org.rstudio.studio.client.workbench.views.viewer.events.ViewerNavigateEvent;
 import org.rstudio.studio.client.workbench.views.ai.events.StoreActiveRequestIdEvent;
 import org.rstudio.studio.client.workbench.views.ai.events.UpdateThinkingMessageEvent;
+import org.rstudio.studio.client.workbench.views.ai.events.UpdateBufferStatusEvent;
 import org.rstudio.studio.client.workbench.views.ai.events.AiStartConversationEvent;
 import org.rstudio.studio.client.workbench.views.ai.events.AiLoadConversationEvent;
 import org.rstudio.core.client.Debug;
@@ -450,6 +451,27 @@ public class ClientEventDispatcher
          {
             // Fire authentication completion event
             eventBus_.dispatchEvent(new org.rstudio.studio.client.workbench.views.ai.events.AiAuthenticationCompletedEvent());
+         }
+         else if (type == ClientEvent.TrackAutoAcceptEdit)
+         {
+            // Handle auto-accept tracking event
+            com.google.gwt.core.client.JavaScriptObject jsData = event.getData();
+            
+            String filePath = getStringFromRData(jsData, "filePath");
+            String acceptedContent = getStringFromRData(jsData, "acceptedContent");
+            String conversationIndex = getStringFromRData(jsData, "conversationIndex");
+            
+            if (filePath != null && acceptedContent != null && conversationIndex != null) {
+               // Update the auto-accept tracker
+               org.rstudio.studio.client.workbench.views.source.editors.text.AutoAcceptTracker.getInstance()
+                  .trackEdit(filePath, acceptedContent, conversationIndex);
+            }
+         }
+         else if (type == ClientEvent.AcceptAndClearAutoAcceptTracking)
+         {
+            // Clear all auto-accept tracking (accepts current state when switching conversations)
+            org.rstudio.studio.client.workbench.views.source.editors.text.AutoAcceptTracker.getInstance()
+               .clearAll();
          }
          else if (type == ClientEvent.ConsoleOutput)
          {
@@ -1336,6 +1358,11 @@ public class ClientEventDispatcher
          {
             UpdateThinkingMessageEvent.Data data = event.getData();
             eventBus_.dispatchEvent(new UpdateThinkingMessageEvent(data));
+         }
+         else if (type == ClientEvent.UpdateBufferStatus)
+         {
+            UpdateBufferStatusEvent.Data data = event.getData();
+            eventBus_.dispatchEvent(new UpdateBufferStatusEvent(data));
          }
          else if (type == ClientEvent.StoreActiveRequestId)
          {

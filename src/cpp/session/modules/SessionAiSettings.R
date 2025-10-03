@@ -1,6 +1,6 @@
 # SessionAiSettings.R
 #
-# Copyright (C) 2025 by William Nickols
+# Copyright (C) 2025 by Lotas Inc.
 #
 # This program is licensed to you under the terms of version 3 of the
 # GNU Affero General Public License. This program is distributed WITHOUT
@@ -119,24 +119,72 @@
 
 # Helper function to get available models for a provider
 .rs.addFunction("get_available_models", function(provider = NULL) {
-  if (is.null(provider)) {
-    # Return all available models if no provider specified
-    return(c("claude-sonnet-4-5-20250929", "gpt-5-mini"))
-  } else if (provider == "openai") {
-    return(c("gpt-5-mini"))
-  } else if (provider == "anthropic") {
-    return(c("claude-sonnet-4-5-20250929"))
+  # Check if user is signed in with Rao API key
+  is_signed_in <- .rs.get_api_key_status()
+  
+  # If signed in, show all models regardless of BYOK settings
+  if (is_signed_in) {
+    all_models <- c("claude-sonnet-4-5-20250929", "gpt-5-mini")
+    
+    # Filter by provider if specified
+    if (!is.null(provider)) {
+      if (provider == "openai") {
+        return(all_models[grepl("^gpt-", all_models)])
+      } else if (provider == "anthropic") {
+        return(all_models[grepl("^claude-", all_models)])
+      }
+    }
+    
+    return(all_models)
   }
-  return(c())
+  
+  # Not signed in - only show models for enabled BYOK providers
+  available_models <- c()
+  
+  # Check if BYOK Anthropic is enabled
+  if (.rs.ai.isBYOKEnabled("anthropic")) {
+    available_models <- c(available_models, "claude-sonnet-4-5-20250929")
+  }
+  
+  # Check if BYOK OpenAI is enabled
+  if (.rs.ai.isBYOKEnabled("openai")) {
+    available_models <- c(available_models, "gpt-5-mini")
+  }
+  
+  # If a specific provider is requested, filter to only that provider's models
+  if (!is.null(provider)) {
+    if (provider == "openai") {
+      available_models <- available_models[grepl("^gpt-", available_models)]
+    } else if (provider == "anthropic") {
+      available_models <- available_models[grepl("^claude-", available_models)]
+    }
+  }
+  
+  return(available_models)
 })
 
 .rs.addFunction("get_model_display_names", function() {
   models <- .rs.get_available_models()
-  display_names <- c(
-    "claude-sonnet-4-5-20250929 (Superior coding and analysis - recommended)",
-    "gpt-5-mini (Reasoning tier)"
+  
+  # Define all possible display names
+  all_display_names <- list(
+    "claude-sonnet-4-5-20250929" = "claude-sonnet-4-5-20250929 (Superior coding and analysis - recommended)",
+    "gpt-5-mini" = "gpt-5-mini (Reasoning tier)"
   )
-  names(display_names) <- models
+  
+  # Return only display names for available models
+  if (length(models) == 0) {
+    return(character(0))
+  }
+  
+  display_names <- sapply(models, function(m) {
+    if (!is.null(all_display_names[[m]])) {
+      return(all_display_names[[m]])
+    } else {
+      return(m)  # Fallback to model name if no display name defined
+    }
+  }, USE.NAMES = TRUE)
+  
   return(display_names)
 })
 
@@ -1217,7 +1265,7 @@
 
 # BYOK API Key Management
 .rs.addJsonRpcHandler("has_byok_api_key", function(provider) {
-  key_name <- paste0("byok_", provider, "_api_key")
+  key_name <- paste0("ai_byok_", provider, "_api_key")
   api_key <- .rs.readUserState(key_name)
   has_key <- !is.null(api_key) && nchar(api_key) > 0
   return(has_key)

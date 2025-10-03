@@ -1,6 +1,6 @@
 # SessionAiSearch.R
 #
-# Copyright (C) 2025 by William Nickols
+# Copyright (C) 2025 by Lotas Inc.
 #
 # This program is licensed to you under the terms of version 3 of the
 # GNU Affero General Public License. This program is distributed WITHOUT
@@ -1505,83 +1505,7 @@
       endLine <- startLine + 199  # Default to reading 200 lines if endLine is missing
    }
    
-   baseMaxLines <- 50
-   baseMaxChars <- 5000
-   
    absoluteMaxLines <- 250
-   absoluteMaxChars <- 25000
-   
-   maxLines <- baseMaxLines
-   maxChars <- baseMaxChars
-   
-   prevReadSameFile <- FALSE
-   prevMaxLines <- baseMaxLines
-   
-   for (i in length(current_log):1) {
-      if (!is.null(current_log[[i]]$function_call) && 
-          !is.null(current_log[[i]]$function_call$name) && 
-          (current_log[[i]]$function_call$name == "read_file" || current_log[[i]]$function_call$name == "read_file_lines")) {
-         
-         prevArgs <- tryCatch({
-            .rs.safe_parse_function_arguments(current_log[[i]])
-         }, error = function(e) {
-            NULL
-         })
-         
-         prev_file_path <- if (!is.null(prevArgs$filename)) prevArgs$filename else prevArgs$file_path
-         
-         if (!is.null(prevArgs) && !is.null(prev_file_path) && prev_file_path == file_path) {
-            prevReadSameFile <- TRUE
-            
-            for (j in i:length(current_log)) {
-               if (!is.null(current_log[[j]]$type) && 
-                  current_log[[j]]$type == "function_call_output" && 
-                  current_log[[j]]$call_id == current_log[[i]]$function_call$call_id) {
-                  
-                  output <- current_log[[j]]$output
-                  maxLinesMatch <- regexpr("Truncated due to length at line ([0-9]+)", output)
-                  
-                  if (maxLinesMatch > 0) {
-                     truncLine <- as.integer(sub(".*Truncated due to length at line ([0-9]+).*", "\\1", regmatches(output, maxLinesMatch)))
-                     
-                     prevStartLine <- if (!is.null(prevArgs$start_line_one_indexed)) prevArgs$start_line_one_indexed else prevArgs$start_line
-                     
-                     if (!is.na(truncLine) && !is.null(prevStartLine) && truncLine > prevStartLine) {
-                        line_count <- truncLine - prevStartLine
-                        if (line_count > prevMaxLines) {
-                           prevMaxLines <- line_count
-                        }
-                     }
-                  } else {
-                     linesMatch <- regexpr("Lines ([0-9]+)-([0-9]+)", output)
-                     if (linesMatch > 0) {
-                        linesStr <- regmatches(output, linesMatch)
-                        startEndLines <- as.integer(strsplit(gsub("Lines ([0-9]+)-([0-9]+)", "\\1,\\2", linesStr), ",")[[1]])
-                        if (length(startEndLines) == 2) {
-                           line_count <- startEndLines[2] - startEndLines[1] + 1
-                           if (line_count > prevMaxLines) {
-                              prevMaxLines <- line_count
-                           }
-                        }
-                     }
-                  }
-                  
-                  break
-               }
-            }
-         }
-      }
-   }
-   
-   if (prevReadSameFile) {
-      maxLines <- prevMaxLines * 2
-      maxChars <- baseMaxChars * (maxLines / baseMaxLines)
-      
-      if (maxLines > absoluteMaxLines) {
-         maxLines <- absoluteMaxLines
-         maxChars <- absoluteMaxChars
-      }
-   }
    
    # First try to get content from editor (handles both saved and unsaved files)
    effective_content <- .rs.get_effective_file_content(file_path)
@@ -1615,69 +1539,21 @@
             # Set end_line_to_read for error case
             end_line_to_read <- startLine
          } else {
-            # When user explicitly provides both start and end lines, respect their exact request
-            # Only apply automatic expansion logic for cases where the request is ambiguous
+            # Respect user's exact request, but cap at absoluteMaxLines
             user_requested_range <- endLine - startLine + 1
-            should_respect_exact_range <- !is.null(startLine) && !is.null(endLine) && user_requested_range <= 50
+            lines_to_read <- min(user_requested_range, absoluteMaxLines)
+            end_line_to_read <- startLine + lines_to_read - 1
             
-            if (should_respect_exact_range) {
-               # User requested a small specific range - give them exactly what they asked for
-               end_line_to_read <- endLine
-               lines_to_read <- user_requested_range
-               
-               requested_lines <- all_lines[startLine:end_line_to_read]
-               result <- paste(requested_lines, collapse = "\n")
-               
-               # No truncation for exact ranges - user gets exactly what they asked for
-               header <- paste0("File: ", file_path, "\nLines ", startLine, "-", end_line_to_read, " (of ", length(all_lines), " total lines):\n\n")
-               file_content <- paste0(header, result)
-            } else {
-               # Apply the existing logic for larger ranges or ambiguous requests
-               lines_to_read <- min(endLine - startLine + 1, maxLines)
-               
-               if ((endLine - startLine + 1) >= 200 && lines_to_read < 200) {
-                  lines_to_read <- 200
-               }
-               
-               end_line_to_read <- startLine + lines_to_read - 1
-               
-               requested_lines <- all_lines[startLine:end_line_to_read]
-               
-               total_chars <- sum(nchar(requested_lines)) + length(requested_lines)
-               
-               result <- paste(requested_lines, collapse = "\n")
-               
-               if (end_line_to_read < endLine || total_chars > maxChars) {
-               if (total_chars > maxChars) {
-                  chars_count <- 0
-                  lines_included <- 0
-                  for (i in 1:length(requested_lines)) {
-                     line_len <- nchar(requested_lines[i]) + 1
-                     if (chars_count + line_len <= maxChars) {
-                        chars_count <- chars_count + line_len
-                        lines_included <- i
-                     } else {
-                        break
-                     }
-                  }
-                  
-                           if (lines_included == 0) {
-                     lines_included <- 1
-                  }
-                  requested_lines <- requested_lines[1:lines_included]
-                  result <- paste(requested_lines, collapse = "\n")
-                  truncated_line <- startLine + lines_included
-               } else {
-                  truncated_line <- end_line_to_read + 1
-               }
-               
-                  result <- paste0(result, "\n\n...[Truncated due to length at line ", truncated_line, ". If more lines are needed, start reading from here. The number of lines you can read doubles on each call.]")
-               }
-               
-               header <- paste0("File: ", file_path, "\nLines ", startLine, "-", end_line_to_read, " (of ", length(all_lines), " total lines):\n\n")
-               
-               file_content <- paste0(header, result)
+            requested_lines <- all_lines[startLine:end_line_to_read]
+            result <- paste(requested_lines, collapse = "\n")
+            
+            # Add truncation message if we had to cap the range
+            if (end_line_to_read < endLine) {
+               result <- paste0(result, "\n\n...[Truncated at line ", end_line_to_read + 1, " due to ", absoluteMaxLines, " line limit. Request lines ", end_line_to_read + 1, "-", endLine, " in a new read_file call.]")
             }
+            
+            header <- paste0("File: ", file_path, "\nLines ", startLine, "-", end_line_to_read, " (of ", length(all_lines), " total lines):\n\n")
+            file_content <- paste0(header, result)
          }
       }
    }

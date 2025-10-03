@@ -220,6 +220,7 @@ extern const int kConsoleWritePendingError;
 extern const int kConsoleWritePendingWarning;
 extern const int kFormatDocumentCompleted;
 extern const int kUpdateThinkingMessage;
+extern const int kUpdateBufferStatus;
 extern const int kStoreActiveRequestId;
 extern const int kAiStreamData;
 extern const int kAiOperation;
@@ -227,6 +228,8 @@ extern const int kRefreshDocumentContent;
 extern const int kRequestDocumentCloseForRevert;
 extern const int kCopilotStatusChanged;
 extern const int kAiAuthenticationCompleted;
+extern const int kTrackAutoAcceptEdit;
+extern const int kAcceptAndClearAutoAcceptTracking;
 
 }
    

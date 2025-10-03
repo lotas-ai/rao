@@ -49,6 +49,10 @@ public class Document extends JavaScriptObject
    public native final int positionToIndex(Position pos, int startRow) /*-{
       return this.positionToIndex(pos, startRow);
    }-*/;
+   
+   public native final void remove(Range range) /*-{
+      this.remove(range);
+   }-*/;
 
    public final String getDocumentDump()
    {

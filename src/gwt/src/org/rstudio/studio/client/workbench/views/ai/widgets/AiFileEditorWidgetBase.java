@@ -1,7 +1,7 @@
 /*
  * AiFileEditorWidgetBase.java
  *
- * Copyright (C) 2025 by William Nickols
+ * Copyright (C) 2025 by Lotas Inc.
  *
  * This program is licensed to you under the terms of version 3 of the
  * GNU Affero General Public License. This program is distributed WITHOUT
@@ -59,8 +59,15 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
       // Create header panel with filename and diff stats
       createHeaderPanel(filename, container);
       
+      // Create a vertical panel to hold all collapsible content (editor + future buttons)
+      VerticalPanel collapsibleContent = new VerticalPanel();
+      collapsibleContent.setWidth("100%");
+      collapsibleContent.setSpacing(0);
+      collapsibleContent.getElement().getStyle().setPadding(0, Unit.PX);
+      collapsibleContent.getElement().getStyle().setMargin(0, Unit.PX);
+      
       // Create editor wrapper with common styling
-      SimplePanel editorWrapper = createEditorWrapper();
+      editorWrapper_ = createEditorWrapper();
       
       // Create the ACE editor
       editor_ = createFileEditor(filename);
@@ -73,13 +80,19 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
          editor_.retokenizeDocument();
       }
       
-      editorWrapper.setWidget(editor_.getWidget());
-      container.add(editorWrapper);
+      editorWrapper_.setWidget(editor_.getWidget());
+      collapsibleContent.add(editorWrapper_);
       
       // Create buttons if editable and diff data is available (not during streaming)
       if (isEditable_ && !isCancelled_ && preComputedDiffData_ != null) {
-         createButtonContainer(container);
+         createButtonContainer(collapsibleContent);
       }
+      
+      // Add collapsible content to container
+      container.add(collapsibleContent);
+      
+      // Set the content container for collapse/expand functionality
+      setContentContainer(collapsibleContent);
       
       return container;
    }
@@ -102,28 +115,39 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
     */
    private void createHeaderPanel(String filename, VerticalPanel container)
    {
-      headerPanel_ = new HorizontalPanel();
-      headerPanel_.setWidth("100%");
-      headerPanel_.addStyleName(getHeaderStyleClass());
+      // Use FlowPanel with flexbox for simple layout
+      FlowPanel headerPanel = new FlowPanel();
+      headerPanel.setWidth("100%");
+      headerPanel.addStyleName(getHeaderStyleClass());
       
-      headerPanel_.getElement().getStyle().setFontSize(12, Unit.PX);
-      headerPanel_.getElement().getStyle().setFontWeight(com.google.gwt.dom.client.Style.FontWeight.BOLD);
-      headerPanel_.getElement().getStyle().setPadding(3, Unit.PX);
-      headerPanel_.getElement().getStyle().setProperty("borderRadius", "4px 4px 0 0");
-      headerPanel_.getElement().getStyle().setMargin(0, Unit.PX);
-      headerPanel_.getElement().getStyle().setProperty("boxSizing", "border-box");
-      headerPanel_.getElement().getStyle().setBorderWidth(1, Unit.PX);
-      headerPanel_.getElement().getStyle().setBorderStyle(com.google.gwt.dom.client.Style.BorderStyle.SOLID);
-      headerPanel_.getElement().getStyle().setBorderColor(ThemeHelper.getVisibleBorder());
-      headerPanel_.getElement().getStyle().setProperty("borderBottom", "none");
-      headerPanel_.getElement().getStyle().setProperty("position", "relative");
+      headerPanel.getElement().getStyle().setFontSize(12, Unit.PX);
+      headerPanel.getElement().getStyle().setProperty("fontWeight", "650");
+      headerPanel.getElement().getStyle().setPadding(3, Unit.PX);
+      headerPanel.getElement().getStyle().setPaddingLeft(4, Unit.PX);
+      headerPanel.getElement().getStyle().setProperty("borderRadius", "4px 4px 0 0");
+      headerPanel.getElement().getStyle().setMargin(0, Unit.PX);
+      headerPanel.getElement().getStyle().setProperty("boxSizing", "border-box");
+      headerPanel.getElement().getStyle().setBorderWidth(1, Unit.PX);
+      headerPanel.getElement().getStyle().setBorderStyle(com.google.gwt.dom.client.Style.BorderStyle.SOLID);
+      headerPanel.getElement().getStyle().setBorderColor(ThemeHelper.getVisibleBorder());
+      headerPanel.getElement().getStyle().setProperty("borderBottom", "none");
+      headerPanel.getElement().getStyle().setProperty("position", "relative");
+      headerPanel.getElement().getStyle().setProperty("display", "flex");
+      headerPanel.getElement().getStyle().setProperty("alignItems", "center");
+      headerPanel.getElement().getStyle().setProperty("justifyContent", "space-between");
+      
+      // Store reference for collapse functionality
+      headerPanel_ = headerPanel;
+      
+      // Left container: filename + diff-stats
+      FlowPanel leftContainer = new FlowPanel();
+      leftContainer.getElement().getStyle().setProperty("display", "flex");
+      leftContainer.getElement().getStyle().setProperty("alignItems", "baseline");
+      leftContainer.getElement().getStyle().setProperty("gap", "8px");
       
       // Create filename label
       filenameLabel_ = new Label();
       filenameLabel_.addStyleName("filename");
-      filenameLabel_.getElement().getStyle().setFontWeight(com.google.gwt.dom.client.Style.FontWeight.BOLD);
-      
-      Label diffStatsLabel = null;
       
       if (filename != null && !filename.isEmpty()) {
          // Parse filename and diff stats
@@ -134,23 +158,41 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
             
             // Extract and create separate diff-stats element
             String diffStatsHtml = filename.substring(filename.indexOf("<span"));
-            diffStatsLabel = new Label();
+            HTML diffStatsLabel = new HTML();
             diffStatsLabel.getElement().setInnerHTML(diffStatsHtml);
             diffStatsLabel.addStyleName("diff-stats-container");
+            
+            leftContainer.add(filenameLabel_);
+            leftContainer.add(diffStatsLabel);
          } else {
             filenameLabel_.setText(filename);
+            leftContainer.add(filenameLabel_);
          }
+      } else {
+         leftContainer.add(filenameLabel_);
       }
       
-      // Add filename first (left side)
-      headerPanel_.add(filenameLabel_);
+      // Create container for copy button and chevron (right side of header)
+      FlowPanel rightButtonsPanel = new FlowPanel();
+      rightButtonsPanel.getElement().getStyle().setProperty("display", "flex");
+      rightButtonsPanel.getElement().getStyle().setProperty("alignItems", "center");
+      rightButtonsPanel.getElement().getStyle().setProperty("gap", "4px");
       
-      // Add diff-stats second (will float right)
-      if (diffStatsLabel != null) {
-         headerPanel_.add(diffStatsLabel);
-      }
+      // Add copy button (left of chevron)
+      HTML copyButton = createCopyButton();
+      copyButtonElement_ = copyButton.getElement();
+      addCopyClickHandler(copyButtonElement_);
+      rightButtonsPanel.add(copyButton);
       
-      container.add(headerPanel_);
+      // Add chevron button on the right
+      HTML chevron = createChevronButton();
+      rightButtonsPanel.add(chevron);
+      
+      // Add to header: [left container] ... [copy + chevron]
+      headerPanel.add(leftContainer);
+      headerPanel.add(rightButtonsPanel);
+      
+      container.add(headerPanel);
    }
    
    /**
@@ -160,6 +202,7 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
    {
       SimplePanel wrapper = new SimplePanel();
       wrapper.setWidth("100%");
+      wrapper.addStyleName(AiStreamingPanel.RES.styles().aiFileEditorWrapper());
       wrapper.getElement().getStyle().setProperty("boxSizing", "border-box");
       wrapper.getElement().getStyle().setBorderWidth(1, Unit.PX);
       wrapper.getElement().getStyle().setBorderStyle(com.google.gwt.dom.client.Style.BorderStyle.SOLID);
@@ -275,6 +318,14 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
          editor_.setCode(content, false);
          editor_.retokenizeDocument();
          
+         // Auto-scroll to bottom after setting content
+         if (editorWrapper_ != null)
+         {
+            com.google.gwt.core.client.Scheduler.get().scheduleDeferred(() -> {
+               editorWrapper_.getElement().setScrollTop(editorWrapper_.getElement().getScrollHeight());
+            });
+         }
+         
          // Apply diff highlighting after setting content
          com.google.gwt.core.client.Scheduler.get().scheduleDeferred(() -> {
             applyDiffHighlighting();
@@ -292,6 +343,12 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
          String currentContent = editor_.getCode();
          String newContent = currentContent + delta;
          editor_.setCode(newContent, false);
+         
+         // Auto-scroll to bottom during streaming
+         if (editorWrapper_ != null)
+         {
+            editorWrapper_.getElement().setScrollTop(editorWrapper_.getElement().getScrollHeight());
+         }
       }
    }
    
@@ -534,12 +591,22 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
          
          // Extract and create separate diff-stats element
          String diffStatsHtml = newFilename.substring(newFilename.indexOf("<span"));
-         Label diffStatsLabel = new Label();
+         HTML diffStatsLabel = new HTML();
          diffStatsLabel.getElement().setInnerHTML(diffStatsHtml);
          diffStatsLabel.addStyleName("diff-stats-container");
          
-         // Add diff-stats to header panel (will float right)
-         headerPanel_.add(diffStatsLabel);
+         // Get the left container (first child of header panel)
+         if (headerPanel_ instanceof FlowPanel) {
+            FlowPanel headerFlow = (FlowPanel) headerPanel_;
+            if (headerFlow.getWidgetCount() > 0) {
+               Widget leftContainerWidget = headerFlow.getWidget(0);
+               if (leftContainerWidget instanceof FlowPanel) {
+                  FlowPanel leftContainer = (FlowPanel) leftContainerWidget;
+                  // Add diff-stats after filename (position 1)
+                  leftContainer.insert(diffStatsLabel, 1);
+               }
+            }
+         }
       } else {
          filenameLabel_.setText(newFilename);
       }
@@ -751,6 +818,70 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
     */
    protected abstract String getEditorIdPrefix();
    
+   /**
+    * Add click handler for copy button using JSNI
+    */
+   private native void addCopyClickHandler(com.google.gwt.dom.client.Element element) /*-{
+      var self = this;
+      
+      var clickHandler = function(event) {
+         self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiFileEditorWidgetBase::onCopyClicked()();
+         event.preventDefault();
+         event.stopPropagation();
+      };
+      
+      element.addEventListener('click', clickHandler, false);
+   }-*/;
+   
+   /**
+    * Handle copy button click - copies result lines (added + unchanged) to clipboard
+    * Matches vscode erdos AI behavior: only copy the result lines, not the deleted lines
+    */
+   private void onCopyClicked()
+   {
+      if (preComputedDiffData_ != null) {
+         // Extract result lines from diff data (added + unchanged lines)
+         com.google.gwt.core.client.JsArray<com.google.gwt.core.client.JavaScriptObject> diffArray = getDiffArray(preComputedDiffData_);
+         
+         if (diffArray != null) {
+            StringBuilder resultLines = new StringBuilder();
+            
+            for (int i = 0; i < diffArray.length(); i++) {
+               com.google.gwt.core.client.JavaScriptObject diffLine = diffArray.get(i);
+               String lineType = getLineType(diffLine);
+               String lineContent = getLineContent(diffLine);
+               
+               // Only include added and unchanged lines (skip deleted lines)
+               if (lineType != null) {
+                  lineType = lineType.trim();
+                  if ("added".equals(lineType) || "unchanged".equals(lineType)) {
+                     resultLines.append(lineContent != null ? lineContent : "");
+                     if (i < diffArray.length() - 1) {
+                        resultLines.append("\n");
+                     }
+                  }
+               }
+            }
+            
+            org.rstudio.core.client.dom.Clipboard.setText(resultLines.toString());
+            
+            // Show success animation
+            if (copyButtonElement_ != null) {
+               showCopySuccessAnimation(copyButtonElement_);
+            }
+         }
+      } else {
+         // Fallback: copy entire editor content if no diff data available
+         String content = editor_.getCode();
+         org.rstudio.core.client.dom.Clipboard.setText(content);
+         
+         // Show success animation
+         if (copyButtonElement_ != null) {
+            showCopySuccessAnimation(copyButtonElement_);
+         }
+      }
+   }
+   
    // Common fields
    protected final String filename_;
    protected final String explanation_;
@@ -760,10 +891,11 @@ public abstract class AiFileEditorWidgetBase extends AiWidgetBase
    protected final com.google.gwt.core.client.JavaScriptObject preComputedDiffData_;
    
    protected AceEditor editor_;
+   protected SimplePanel editorWrapper_;
    protected VerticalPanel verticalButtonStack_;
-   protected HorizontalPanel headerPanel_;
    protected Label filenameLabel_;
    protected JsArrayInteger diffMarkers_;
+   protected com.google.gwt.dom.client.Element copyButtonElement_;
    
    @Override
    protected void setVerticalStackEnabled(boolean enabled) {

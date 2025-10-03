@@ -1,7 +1,7 @@
 #
 # SessionAiAPI.R
 #
-# Copyright (C) 2025 by William Nickols
+# Copyright (C) 2025 by Lotas Inc.
 #
 # This program is licensed to you under the terms of version 3 of the
 # GNU Affero General Public License. This program is distributed WITHOUT
@@ -450,12 +450,11 @@
     # Check if BYOK is enabled and route accordingly
     provider <- final_request_data$provider
     model <- final_request_data$model
-        
+    
     use_byok <- FALSE
-    if (!is.null(provider) && !is.null(model)) {
+    if (!is.null(provider)) {
       use_byok <- tryCatch({
-        result <- .rs.ai.shouldUseBYOK(provider, model)
-        result
+        .rs.ai.shouldUseBYOK(provider, model)
       }, error = function(e) {
         FALSE
       })
@@ -495,7 +494,7 @@
     writeLines("READY", stream_file)
     
     bg_process <- callr::r_bg(
-      func = function(request_data, stream_file, config_url, request_id, security_mode, web_search_enabled) {
+      func = function(request_data, stream_file, config_url, request_id, security_mode, web_search_enabled, use_byok) {
         # Load required libraries in background process
         
         tryCatch({
@@ -648,7 +647,11 @@
             # Provide status-specific fallback messages if we don't have a good error message
             if (is.null(error_message) || nchar(trimws(error_message)) == 0 || error_message == paste("HTTP", status_code, "error from backend server")) {
               if (status_code == 401) {
-                error_message <- "Authentication failed. Invalid log-in or API key."
+                if (use_byok) {
+                  error_message <- "Authentication failed. Please check your API key in Settings."
+                } else {
+                  error_message <- "Authentication failed. Invalid log-in or API key."
+                }
               } else if (status_code == 403) {
                 error_message <- "Access forbidden. Please check your API key permissions."
               } else if (status_code == 404) {
@@ -718,7 +721,8 @@
         config_url = config$url,
         request_id = request_id,
         security_mode = security_mode,
-        web_search_enabled = web_search_enabled
+        web_search_enabled = web_search_enabled,
+        use_byok = use_byok
       ),
       supervise = TRUE
     )
@@ -912,7 +916,6 @@
       backend_cancelled <- tryCatch({
         .rs.cancel_backend_request(cancel_request_id)
       }, error = function(e) {
-        cat("CANCEL DEBUG: Error calling cancel_backend_request:", e$message, "\n")
         FALSE
       })
       
@@ -2255,6 +2258,13 @@
     # Include buffered_function_calls flag if present
     if (!is.null(last_event_data$buffered_function_calls) && last_event_data$buffered_function_calls == TRUE) {
       result$buffered_function_calls <- TRUE
+      
+      # CRITICAL: When streaming completes and all function calls have been buffered,
+      # hide the "more tool calls incoming" message
+      .rs.enqueClientEvent("update_buffer_status", list(
+        buffer_count = 0,
+        is_processing = FALSE
+      ))
     }
     
     # Include the assistant message ID so it can be passed to process_assistant_response
@@ -2313,6 +2323,18 @@
     }
     existing_widget_calls[[call_id]] <- TRUE
     .rs.set_conversation_var("early_widget_calls", existing_widget_calls)
+  }
+  
+  # CRITICAL: Check BEFORE adding if there's already a function call
+  # If so, show the message immediately (this is when the new call STARTS streaming in)
+  current_buffer_size <- length(buffer)
+  if (current_buffer_size >= 1) {
+    # There's already at least one function call, so show count including this new one
+    additional_count <- current_buffer_size  # This will be the count AFTER adding the new one
+    .rs.enqueClientEvent("update_buffer_status", list(
+      buffer_count = additional_count,
+      is_processing = TRUE
+    ))
   }
   
   # Add the function call to buffer with timestamp

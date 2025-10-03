@@ -951,8 +951,17 @@ public class PersistentDiffGutterManager
    
    /**
     * Call R backend to get persistent diff data
+    * Note: This should only be called when we've already confirmed there's no auto-accept tracking
     */
    private void callGetPersistentDiffData()
+   {
+      // TextEditingTarget now checks for auto-accept tracking first and only initializes
+      // PersistentDiffGutterManager when there's no auto-accept tracking, so we can
+      // directly load persistent diff data without double-checking
+      loadPersistentDiffData();
+   }
+   
+   private void loadPersistentDiffData()
    {
       try {
          RStudioGinjector.INSTANCE.getServer().getPersistentDiffData(filePath_, new ServerRequestCallback<JavaScriptObject>()

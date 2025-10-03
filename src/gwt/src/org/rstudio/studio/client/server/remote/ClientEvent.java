@@ -207,6 +207,7 @@ class ClientEvent extends JavaScriptObject
    public static final String FormatDocumentCompleted = "format_document_completed";
    public static final String RunAutomation = "run_automation";
    public static final String UpdateThinkingMessage = "update_thinking_message";
+   public static final String UpdateBufferStatus = "update_buffer_status";
    public static final String StoreActiveRequestId = "store_active_request_id";
    public static final String AiStreamData = "ai_stream_data";
    public static final String AiStartConversation = "ai_start_conversation";
@@ -216,6 +217,8 @@ class ClientEvent extends JavaScriptObject
    public static final String RequestDocumentCloseForRevert = "request_document_close_for_revert";
    public static final String CopilotStatusChanged = "copilot_status_changed";
    public static final String AiAuthenticationCompleted = "ai_authentication_completed";
+   public static final String TrackAutoAcceptEdit = "track_auto_accept_edit";
+   public static final String AcceptAndClearAutoAcceptTracking = "accept_and_clear_auto_accept_tracking";
    
    protected ClientEvent()
    {

@@ -1,7 +1,7 @@
 /*
  * AiSettingsWidget.java
  *
- * Copyright (C) 2025 by William Nickols
+ * Copyright (C) 2025 by Lotas Inc.
  *
  * This program is licensed to you under the terms of version 3 of the
  * GNU Affero General Public License. This program is distributed WITHOUT
@@ -209,6 +209,14 @@ public class AiSettingsWidget extends Composite
    private Map<String, String> byokDisplayNames_ = new HashMap<>();
    private Map<String, FlowPanel> byokInputContainers_ = new HashMap<>();
    private Map<String, HorizontalPanel> byokStoredContainers_ = new HashMap<>();
+   
+   // SageMaker-specific fields
+   private TextBox sagemakerAccessKeyInput_;
+   private TextBox sagemakerSecretKeyInput_;
+   private TextBox sagemakerEndpointInput_;
+   private TextBox sagemakerRegionInput_;
+   private FlowPanel sagemakerInputContainer_;
+   private HorizontalPanel sagemakerStoredContainer_;
    
    public AiSettingsWidget(SettingsHandler handler, 
                           AiServerOperations server, 
@@ -1235,6 +1243,9 @@ public class AiSettingsWidget extends Composite
       // OpenAI BYOK
       contentPanel.add(createBYOKProviderPanel("openai", "OpenAI"));
       
+      // SageMaker BYOK (special panel with multiple inputs)
+      contentPanel.add(createSageMakerProviderPanel());
+      
       // Add content panel to section
       section.add(contentPanel);
       
@@ -1395,6 +1406,274 @@ public class AiSettingsWidget extends Composite
       return panel;
    }
    
+   private VerticalPanel createSageMakerProviderPanel()
+   {
+      final String provider = "sagemaker";
+      final String displayName = "AWS SageMaker";
+      
+      VerticalPanel panel = new VerticalPanel();
+      panel.setWidth("100%");
+      panel.addStyleName(styles_.ruleContainer());
+      panel.getElement().getStyle().setProperty("marginBottom", "15px");
+      
+      // Title row with toggle
+      HorizontalPanel titleRow = new HorizontalPanel();
+      titleRow.setWidth("100%");
+      titleRow.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
+      
+      HTML label = new HTML("Use my own " + displayName + " endpoint");
+      label.addStyleName(styles_.settingLabel());
+      titleRow.add(label);
+      
+      // Toggle (hidden initially until we check status)
+      final HTML toggle = new HTML();
+      toggle.getElement().setInnerHTML(
+         "<div style='position: relative; width: 32px; height: 16px; border-radius: 8px; cursor: pointer; transition: background 0.3s; display: none;' data-byok-provider='" + provider + "' class='ai-toggle-disabled'>" +
+         "<div style='position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s; box-shadow: 0 1px 2px " + ThemeHelper.getShadowColor() + ";'></div>" +
+         "</div>"
+      );
+      titleRow.add(toggle);
+      titleRow.setCellHorizontalAlignment(toggle, HorizontalPanel.ALIGN_RIGHT);
+      
+      panel.add(titleRow);
+      
+      // Stored key display container (initially hidden)
+      sagemakerStoredContainer_ = new HorizontalPanel();
+      sagemakerStoredContainer_.setVisible(false);
+      sagemakerStoredContainer_.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
+      sagemakerStoredContainer_.getElement().getStyle().setProperty("marginTop", "10px");
+      sagemakerStoredContainer_.getElement().getStyle().setProperty("marginBottom", "4px");
+      sagemakerStoredContainer_.getElement().setAttribute("data-byok-stored", provider);
+      
+      HTML storedKeyText = new HTML("Credentials and endpoint configured");
+      storedKeyText.getElement().getStyle().setProperty("fontSize", "13px");
+      storedKeyText.getElement().getStyle().setProperty("color", ThemeHelper.getSubtleText());
+      storedKeyText.getElement().getStyle().setProperty("fontFamily", "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif");
+      sagemakerStoredContainer_.add(storedKeyText);
+      
+      // Delete icon
+      Label deleteIcon = new Label();
+      deleteIcon.getElement().setInnerHTML("<svg width='16' height='16' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentColor'><path fill-rule='evenodd' clip-rule='evenodd' d='M10 3h3v1h-1v9l-1 1H4l-1-1V4H2V3h3V2a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1zM9 2H6v1h3V2zM4 13h7V4H4v9zm2-8H5v7h1V5zm1 0h1v7H7V5zm2 0h1v7H9V5z'/></svg>");
+      deleteIcon.getElement().getStyle().setProperty("cursor", "pointer");
+      deleteIcon.getElement().getStyle().setProperty("display", "inline-flex");
+      deleteIcon.getElement().getStyle().setProperty("alignItems", "center");
+      deleteIcon.getElement().getStyle().setProperty("marginLeft", "10px");
+      deleteIcon.getElement().getStyle().setProperty("padding", "4px");
+      deleteIcon.getElement().getStyle().setProperty("borderRadius", "3px");
+      deleteIcon.getElement().getStyle().setProperty("transition", "background 0.2s");
+      
+      addNativeClickHandler(deleteIcon.getElement(), "DeleteBYOK-" + provider);
+      sagemakerStoredContainer_.add(deleteIcon);
+      
+      panel.add(sagemakerStoredContainer_);
+      
+      // Input container (initially hidden)
+      sagemakerInputContainer_ = new FlowPanel();
+      sagemakerInputContainer_.setWidth("100%");
+      sagemakerInputContainer_.setVisible(false);
+      sagemakerInputContainer_.getElement().getStyle().setProperty("marginTop", "10px");
+      sagemakerInputContainer_.getElement().setAttribute("data-byok-input", provider);
+      
+      // AWS Access Key ID input
+      sagemakerAccessKeyInput_ = new TextBox();
+      sagemakerAccessKeyInput_.addStyleName(styles_.settingInput());
+      sagemakerAccessKeyInput_.setWidth("100%");
+      sagemakerAccessKeyInput_.getElement().getStyle().setProperty("fontSize", "13px");
+      sagemakerAccessKeyInput_.getElement().getStyle().setProperty("display", "block");
+      sagemakerAccessKeyInput_.getElement().setAttribute("placeholder", "AWS Access Key ID");
+      sagemakerAccessKeyInput_.getElement().setAttribute("type", "password");
+      sagemakerInputContainer_.add(sagemakerAccessKeyInput_);
+      
+      // AWS Secret Access Key input
+      sagemakerSecretKeyInput_ = new TextBox();
+      sagemakerSecretKeyInput_.addStyleName(styles_.settingInput());
+      sagemakerSecretKeyInput_.setWidth("100%");
+      sagemakerSecretKeyInput_.getElement().getStyle().setProperty("fontSize", "13px");
+      sagemakerSecretKeyInput_.getElement().getStyle().setProperty("display", "block");
+      sagemakerSecretKeyInput_.getElement().setAttribute("placeholder", "AWS Secret Access Key");
+      sagemakerSecretKeyInput_.getElement().setAttribute("type", "password");
+      sagemakerInputContainer_.add(sagemakerSecretKeyInput_);
+      
+      // SageMaker Endpoint Name input
+      sagemakerEndpointInput_ = new TextBox();
+      sagemakerEndpointInput_.addStyleName(styles_.settingInput());
+      sagemakerEndpointInput_.setWidth("100%");
+      sagemakerEndpointInput_.getElement().getStyle().setProperty("fontSize", "13px");
+      sagemakerEndpointInput_.getElement().getStyle().setProperty("display", "block");
+      sagemakerEndpointInput_.getElement().setAttribute("placeholder", "SageMaker Endpoint Name");
+      sagemakerInputContainer_.add(sagemakerEndpointInput_);
+      
+      // AWS Region input
+      sagemakerRegionInput_ = new TextBox();
+      sagemakerRegionInput_.addStyleName(styles_.settingInput());
+      sagemakerRegionInput_.setWidth("100%");
+      sagemakerRegionInput_.getElement().getStyle().setProperty("fontSize", "13px");
+      sagemakerRegionInput_.getElement().getStyle().setProperty("display", "block");
+      sagemakerRegionInput_.getElement().setAttribute("placeholder", "AWS Region (e.g., us-east-1)");
+      sagemakerRegionInput_.setValue("us-east-1");
+      sagemakerInputContainer_.add(sagemakerRegionInput_);
+      
+      // Save button styled like other settings buttons
+      Button saveSageMakerButton = new Button("Save Configuration");
+      saveSageMakerButton.addStyleName(styles_.settingButton());
+      saveSageMakerButton.addStyleName(styles_.primaryButton());
+      saveSageMakerButton.getElement().getStyle().setProperty("marginTop", "8px");
+      addNativeClickHandler(saveSageMakerButton.getElement(), "SaveSageMaker");
+      sagemakerInputContainer_.add(saveSageMakerButton);
+      
+      panel.add(sagemakerInputContainer_);
+      
+      // Check if BYOK is enabled for SageMaker and update UI
+      server_.isBYOKEnabled(provider, new ServerRequestCallback<Boolean>()
+      {
+         @Override
+         public void onResponseReceived(Boolean enabled)
+         {
+            // Show toggle
+            toggle.getElement().getFirstChildElement().getStyle().setProperty("display", "block");
+            
+            // Update toggle state
+            if (enabled) {
+               toggle.getElement().getFirstChildElement().addClassName("ai-toggle-enabled");
+               toggle.getElement().getFirstChildElement().removeClassName("ai-toggle-disabled");
+               com.google.gwt.dom.client.Element knob = toggle.getElement().getFirstChildElement().getFirstChildElement().cast();
+               knob.getStyle().setProperty("left", "auto");
+               knob.getStyle().setProperty("right", "1px");
+               
+               // Check if credentials are stored
+               server_.hasBYOKApiKey(provider, new ServerRequestCallback<Boolean>()
+               {
+                  @Override
+                  public void onResponseReceived(Boolean hasKey)
+                  {
+                     if (hasKey) {
+                        sagemakerStoredContainer_.setVisible(true);
+                        sagemakerInputContainer_.setVisible(false);
+                        
+                        // Load existing endpoint and region values
+                        server_.getSageMakerEndpoint(new ServerRequestCallback<String>()
+                        {
+                           @Override
+                           public void onResponseReceived(String endpoint)
+                           {
+                              sagemakerEndpointInput_.setValue(endpoint);
+                           }
+                           
+                           @Override
+                           public void onError(ServerError error)
+                           {
+                              Debug.log("Error loading SageMaker endpoint: " + error.getMessage());
+                           }
+                        });
+                        
+                        server_.getSageMakerRegion(new ServerRequestCallback<String>()
+                        {
+                           @Override
+                           public void onResponseReceived(String region)
+                           {
+                              sagemakerRegionInput_.setValue(region);
+                           }
+                           
+                           @Override
+                           public void onError(ServerError error)
+                           {
+                              Debug.log("Error loading SageMaker region: " + error.getMessage());
+                           }
+                        });
+                     } else {
+                        sagemakerStoredContainer_.setVisible(false);
+                        sagemakerInputContainer_.setVisible(true);
+                     }
+                  }
+                  
+                  @Override
+                  public void onError(ServerError error)
+                  {
+                     Debug.log("Error checking if BYOK key exists for " + provider + ": " + error.getMessage());
+                     sagemakerInputContainer_.setVisible(true);
+                  }
+               });
+            } else {
+               toggle.getElement().getFirstChildElement().addClassName("ai-toggle-disabled");
+               toggle.getElement().getFirstChildElement().removeClassName("ai-toggle-enabled");
+               sagemakerStoredContainer_.setVisible(false);
+               sagemakerInputContainer_.setVisible(false);
+            }
+            
+            // Add toggle click handler
+            addNativeSageMakerToggleHandler(toggle.getElement(), sagemakerInputContainer_.getElement(), sagemakerStoredContainer_.getElement());
+         }
+         
+         @Override
+         public void onError(ServerError error)
+         {
+            Debug.log("Error checking BYOK status for " + provider + ": " + error.getMessage());
+         }
+      });
+      
+      return panel;
+   }
+   
+   private native void addNativeSageMakerToggleHandler(com.google.gwt.dom.client.Element element, com.google.gwt.dom.client.Element inputContainer, com.google.gwt.dom.client.Element storedKeyContainer) /*-{
+      var thiz = this;
+      var toggleDiv = element.querySelector('[data-byok-provider="sagemaker"]');
+      if (toggleDiv) {
+         toggleDiv.onclick = function() {
+            var isEnabled = toggleDiv.classList.contains('ai-toggle-enabled');
+            var newEnabled = !isEnabled;
+            
+            // Update toggle visual
+            if (newEnabled) {
+               toggleDiv.classList.add('ai-toggle-enabled');
+               toggleDiv.classList.remove('ai-toggle-disabled');
+               var knob = toggleDiv.querySelector('div');
+               knob.style.left = 'auto';
+               knob.style.right = '1px';
+               
+               // Check if credentials are stored to show appropriate container
+               thiz.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::checkAndShowSageMakerContainer(Lcom/google/gwt/dom/client/Element;Lcom/google/gwt/dom/client/Element;)(inputContainer, storedKeyContainer);
+            } else {
+               toggleDiv.classList.remove('ai-toggle-enabled');
+               toggleDiv.classList.add('ai-toggle-disabled');
+               var knob = toggleDiv.querySelector('div');
+               knob.style.left = '1px';
+               knob.style.right = 'auto';
+               inputContainer.style.display = 'none';
+               storedKeyContainer.style.display = 'none';
+            }
+            
+            // Call handler
+            thiz.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleBYOKEnabledChange(Ljava/lang/String;Z)("sagemaker", newEnabled);
+         };
+      }
+   }-*/;
+   
+   private void checkAndShowSageMakerContainer(final com.google.gwt.dom.client.Element inputContainer, final com.google.gwt.dom.client.Element storedKeyContainer)
+   {
+      server_.hasBYOKApiKey("sagemaker", new ServerRequestCallback<Boolean>()
+      {
+         @Override
+         public void onResponseReceived(Boolean hasKey)
+         {
+            if (hasKey) {
+               storedKeyContainer.getStyle().setProperty("display", "block");
+               inputContainer.getStyle().setProperty("display", "none");
+            } else {
+               storedKeyContainer.getStyle().setProperty("display", "none");
+               inputContainer.getStyle().setProperty("display", "block");
+            }
+         }
+         
+         @Override
+         public void onError(ServerError error)
+         {
+            Debug.log("Error checking if BYOK key exists: " + error.getMessage());
+            inputContainer.getStyle().setProperty("display", "block");
+            storedKeyContainer.getStyle().setProperty("display", "none");
+         }
+      });
+   }
+   
    private native void addNativeBYOKToggleHandler(com.google.gwt.dom.client.Element element, String provider, com.google.gwt.dom.client.Element inputContainer, com.google.gwt.dom.client.Element storedKeyContainer) /*-{
       var thiz = this;
       var toggleDiv = element.querySelector('[data-byok-provider="' + provider + '"]');
@@ -1466,6 +1745,9 @@ public class AiSettingsWidget extends Composite
             if (success) {
                // Now call the handler to start/stop proxy
                handler_.onBYOKEnabledChange(provider, enabled);
+               
+               // Reload models to show/hide models based on enabled state
+               AiSettingsWidget.this.loadAvailableModels();
             } else {
                globalDisplay_.showErrorMessage("Error", "Failed to save BYOK enabled state");
             }
@@ -1964,7 +2246,7 @@ public class AiSettingsWidget extends Composite
                // No models returned from server
                if (modelSelect_ != null) {
                   modelSelect_.clear();
-                  modelSelect_.addItem("Please add your API key or provide BYOK key below", "");
+                  modelSelect_.addItem("Please sign in or bring your own key.", "");
                }
             }
          }
@@ -1974,7 +2256,7 @@ public class AiSettingsWidget extends Composite
             Debug.log("Error loading models: " + (error != null ? error.getMessage() : "null error"));
             if (modelSelect_ != null) {
                modelSelect_.clear();
-               modelSelect_.addItem("Error loading models. Please try again.", "");
+               modelSelect_.addItem("Please sign in or bring your own key.", "");
             }
          }
       });
@@ -2243,6 +2525,7 @@ public class AiSettingsWidget extends Composite
       updateAllSections();
       loadUserProfile();
       loadSubscriptionStatus();
+      loadAvailableModels();
    }
    
    public void onAuthenticationCompleted()
@@ -2252,6 +2535,7 @@ public class AiSettingsWidget extends Composite
       updateAllSections();
       loadUserProfile();
       loadSubscriptionStatus();
+      loadAvailableModels();
    }
    
    public void onApiKeyDeleted()
@@ -2259,7 +2543,8 @@ public class AiSettingsWidget extends Composite
       hasApiKey_ = false;
       userProfile_ = null;
       subscriptionStatus_ = null;
-      checkForAnyAuthentication(); // Check if BYOK keys are still available
+      checkForAnyAuthentication();
+      loadAvailableModels();
    }
    
    public void onModelChanged(String model)
@@ -2364,6 +2649,36 @@ public class AiSettingsWidget extends Composite
          @Override
          public void onResponseReceived(String currentModel) {
             currentModel_ = currentModel;
+            
+            // Check if current model is still available
+            boolean modelStillAvailable = false;
+            for (int i = 0; i < modelSelect_.getItemCount(); i++) {
+               if (modelSelect_.getValue(i).equals(currentModel)) {
+                  modelStillAvailable = true;
+                  break;
+               }
+            }
+            
+            // If current model is not available, auto-select first available model
+            if (!modelStillAvailable && modelSelect_.getItemCount() > 0) {
+               String firstModel = modelSelect_.getValue(0);
+               currentModel_ = firstModel;
+               // Determine provider from model name
+               String provider = getProviderFromModel(firstModel);
+               // Save the new selection
+               server_.setModel(provider, firstModel, new ServerRequestCallback<Void>() {
+                  @Override
+                  public void onResponseReceived(Void result) {
+                     handler_.onModelChange(firstModel);
+                  }
+                  
+                  @Override
+                  public void onError(ServerError error) {
+                     Debug.logError(error);
+                  }
+               });
+            }
+            
             selectCurrentModel();
          }
          
@@ -2772,8 +3087,45 @@ public class AiSettingsWidget extends Composite
          @Override
          public void onResponseReceived(java.lang.Void result)
          {
-            // Switch UI to show input container
-            switchBYOKContainers(provider, true);
+            // For SageMaker, also clear endpoint and region
+            if (provider.equals("sagemaker")) {
+               server_.setSageMakerEndpoint("", new ServerRequestCallback<Boolean>() {
+                  @Override
+                  public void onResponseReceived(Boolean success) {
+                     Debug.log("SageMaker endpoint cleared");
+                  }
+                  
+                  @Override
+                  public void onError(ServerError error) {
+                     Debug.log("Error clearing SageMaker endpoint: " + error.getMessage());
+                  }
+               });
+               
+               server_.setSageMakerRegion("us-east-1", new ServerRequestCallback<Boolean>() {
+                  @Override
+                  public void onResponseReceived(Boolean success) {
+                     Debug.log("SageMaker region reset to default");
+                  }
+                  
+                  @Override
+                  public void onError(ServerError error) {
+                     Debug.log("Error resetting SageMaker region: " + error.getMessage());
+                  }
+               });
+               
+               // Switch UI to show input container for SageMaker
+               sagemakerInputContainer_.setVisible(true);
+               sagemakerStoredContainer_.setVisible(false);
+               
+               // Clear input fields
+               sagemakerAccessKeyInput_.setValue("");
+               sagemakerSecretKeyInput_.setValue("");
+               sagemakerEndpointInput_.setValue("");
+               sagemakerRegionInput_.setValue("us-east-1");
+            } else {
+               // Switch UI to show input container for other providers
+               switchBYOKContainers(provider, true);
+            }
             
             handler_.onBYOKApiKeyDeleted(provider);
             
@@ -2809,6 +3161,124 @@ public class AiSettingsWidget extends Composite
             storedContainer.setVisible(true);
          }
       }
+   }
+   
+   private void handleSaveSageMakerConfig() {
+      String accessKey = sagemakerAccessKeyInput_.getValue();
+      String secretKey = sagemakerSecretKeyInput_.getValue();
+      String endpoint = sagemakerEndpointInput_.getValue();
+      String region = sagemakerRegionInput_.getValue();
+      
+      // Validate inputs
+      if (accessKey == null || accessKey.trim().isEmpty()) {
+         globalDisplay_.showErrorMessage("Error", "Please enter AWS Access Key ID.");
+         return;
+      }
+      
+      if (secretKey == null || secretKey.trim().isEmpty()) {
+         globalDisplay_.showErrorMessage("Error", "Please enter AWS Secret Access Key.");
+         return;
+      }
+      
+      if (endpoint == null || endpoint.trim().isEmpty()) {
+         globalDisplay_.showErrorMessage("Error", "Please enter SageMaker Endpoint Name.");
+         return;
+      }
+      
+      if (region == null || region.trim().isEmpty()) {
+         globalDisplay_.showErrorMessage("Error", "Please enter AWS Region.");
+         return;
+      }
+      
+      // Create AWS credentials JSON
+      String awsCredentialsJson = "{\"accessKeyId\":\"" + accessKey + "\",\"secretAccessKey\":\"" + secretKey + "\"}";
+      
+      // Save AWS credentials first
+      server_.setBYOKApiKey("sagemaker", awsCredentialsJson, new ServerRequestCallback<Boolean>()
+      {
+         @Override
+         public void onResponseReceived(Boolean success)
+         {
+            if (success) {
+               // Then save endpoint
+               server_.setSageMakerEndpoint(endpoint, new ServerRequestCallback<Boolean>()
+               {
+                  @Override
+                  public void onResponseReceived(Boolean endpointSuccess)
+                  {
+                     if (endpointSuccess) {
+                        // Finally save region
+                        server_.setSageMakerRegion(region, new ServerRequestCallback<Boolean>()
+                        {
+                           @Override
+                           public void onResponseReceived(Boolean regionSuccess)
+                           {
+                              if (regionSuccess) {
+                                 // Clear input fields
+                                 sagemakerAccessKeyInput_.setValue("");
+                                 sagemakerSecretKeyInput_.setValue("");
+                                 sagemakerEndpointInput_.setValue("");
+                                 sagemakerRegionInput_.setValue("us-east-1");
+                                 
+                                 globalDisplay_.showMessage(
+                                    GlobalDisplay.MSG_INFO,
+                                    "Configuration Saved",
+                                    "Your SageMaker configuration has been securely stored."
+                                 );
+                                 
+                                 // Switch UI to show stored container
+                                 sagemakerInputContainer_.setVisible(false);
+                                 sagemakerStoredContainer_.setVisible(true);
+                                 
+                                 handler_.onBYOKApiKeySet("sagemaker", awsCredentialsJson);
+                                 
+                                 // Reload models to show newly available models
+                                 AiSettingsWidget.this.loadAvailableModels();
+                                 
+                                 // Update authentication status
+                                 checkForAnyAuthentication();
+                              } else {
+                                 globalDisplay_.showErrorMessage("Error", "Failed to save SageMaker region.");
+                              }
+                           }
+                           
+                           @Override
+                           public void onError(ServerError error)
+                           {
+                              globalDisplay_.showErrorMessage(
+                                 "Save Failed",
+                                 "Failed to save SageMaker region: " + error.getUserMessage()
+                              );
+                           }
+                        });
+                     } else {
+                        globalDisplay_.showErrorMessage("Error", "Failed to save SageMaker endpoint.");
+                     }
+                  }
+                  
+                  @Override
+                  public void onError(ServerError error)
+                  {
+                     globalDisplay_.showErrorMessage(
+                        "Save Failed",
+                        "Failed to save SageMaker endpoint: " + error.getUserMessage()
+                     );
+                  }
+               });
+            } else {
+               globalDisplay_.showErrorMessage("Error", "Failed to save AWS credentials.");
+            }
+         }
+         
+         @Override
+         public void onError(ServerError error)
+         {
+            globalDisplay_.showErrorMessage(
+               "Save Failed",
+               "Failed to save AWS credentials: " + error.getUserMessage()
+            );
+         }
+      });
    }
    
    // Native method to get toggle value
@@ -2922,8 +3392,9 @@ public class AiSettingsWidget extends Composite
                self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleRemoveListItem(Ljava/lang/String;Ljava/lang/String;)(listType, text);
             } else if (buttonText.startsWith('DeleteBYOK-')) {
                var provider = buttonText.substring(11); // Remove "DeleteBYOK-" prefix
-               console.log('DeleteBYOK clicked for provider: ' + provider);
                self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleBYOKDeleteKey(Ljava/lang/String;)(provider);
+            } else if (buttonText === 'SaveSageMaker') {
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleSaveSageMakerConfig()();
             }
             
             // Only prevent default for actual button clicks
@@ -3720,7 +4191,6 @@ public class AiSettingsWidget extends Composite
             if (sectionElement.classList) {
                sectionElement.classList.remove(collapsedClass);
             }
-            console.log('Section expanded');
          } else {
             
             // Add the collapsed class which should have !important rules
@@ -3764,6 +4234,17 @@ public class AiSettingsWidget extends Composite
     */
    private String getCollapsedClassName() {
       return styles_.collapsed();
+   }
+   
+   private String getProviderFromModel(String model) {
+      if (model.startsWith("claude-")) {
+         return "anthropic";
+      } else if (model.startsWith("gpt-") || model.startsWith("o1-")) {
+         return "openai";
+      } else if (model.toLowerCase().contains("sagemaker")) {
+         return "sagemaker";
+      }
+      return "anthropic"; // default
    }
    
    /**

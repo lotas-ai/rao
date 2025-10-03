@@ -1,7 +1,7 @@
 /*
  * AiServerOperations.java
  *
- * Copyright (C) 2025 by William Nickols
+ * Copyright (C) 2025 by Lotas Inc.
  *
  * This program is licensed to you under the terms of version 3 of the
  * GNU Affero General Public License. This program is distributed WITHOUT
@@ -182,6 +182,14 @@ public interface AiServerOperations
    void clearBYOKApiKey(String provider, ServerRequestCallback<java.lang.Void> requestCallback);
    
    void hasBYOKApiKey(String provider, ServerRequestCallback<Boolean> requestCallback);
+   
+   void setSageMakerEndpoint(String endpoint, ServerRequestCallback<Boolean> requestCallback);
+   
+   void getSageMakerEndpoint(ServerRequestCallback<String> requestCallback);
+   
+   void setSageMakerRegion(String region, ServerRequestCallback<Boolean> requestCallback);
+   
+   void getSageMakerRegion(ServerRequestCallback<String> requestCallback);
    
    void deleteAllImages(ServerRequestCallback<java.lang.Void> requestCallback);
    

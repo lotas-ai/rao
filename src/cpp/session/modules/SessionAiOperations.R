@@ -1,6 +1,6 @@
 # SessionAiOperations.R
 #
-# Copyright (C) 2025 by William Nickols
+# Copyright (C) 2025 by Lotas Inc.
 #
 # This program is licensed to you under the terms of version 3 of the
 # GNU Affero General Public License. This program is distributed WITHOUT
@@ -561,6 +561,10 @@
       return(FALSE)
    }
    
+   # Normalize file path immediately to ensure consistent format
+   # This is critical for auto-accept tracking to work correctly
+   file_path <- .rs.normalize_file_path(file_path)
+   
    # Handle special case: empty old_string means create/append to file
    is_create_mode <- FALSE
    is_append_mode <- FALSE
@@ -622,6 +626,16 @@
       } else {
          new_content <- sub(flexible_pattern, new_string, current_content, perl = TRUE)
       }
+   }
+   
+   # Track auto-accepted edit BEFORE applying the edit (if enabled)
+   auto_accept_edits <- .rs.get_auto_accept_edits()
+   if (auto_accept_edits) {
+      tryCatch({
+         .rs.track_auto_accept_edit(file_path, conversation_index)
+      }, error = function(e) {
+         warning("Error tracking auto-accept edit:", e$message, "\n")
+      })
    }
    
    # Apply the file edit
@@ -720,7 +734,13 @@
 
    # Update document
    if (modification_made && file_written) {
-      .rs.api.documentOpen(file_path)
+      tryCatch({
+         .rs.api.documentOpen(file_path)
+      }, error = function(e) {
+         # For new files, documentOpen may fail if the file doesn't exist in the document system yet
+         # This is expected and safe to ignore - the file will be opened when the user interacts with it
+         cat("Note: Could not open document (may be a new file):", e$message, "\n")
+      })
       .rs.save_script_to_history(file_path)
    }
    

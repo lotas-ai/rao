@@ -21,10 +21,17 @@ if (!.rs.hasVar("local_backend_env")) {
    }
    
    # Get the local backend path from environment variable (like ripgrep)
-   backend_bin_dir <- Sys.getenv("RSTUDIO_LOCAL_BACKEND")
+   backend_base_dir <- Sys.getenv("RSTUDIO_LOCAL_BACKEND")
    
-   if (backend_bin_dir == "" || !dir.exists(backend_bin_dir)) {
-      stop("Local backend binaries not found at: ", backend_bin_dir)
+   if (backend_base_dir == "" || !dir.exists(backend_base_dir)) {
+      stop("Local backend binaries not found at: ", backend_base_dir)
+   }
+   
+   # The binaries are in a subdirectory (like ripgrep's version directory)
+   backend_bin_dir <- file.path(backend_base_dir, "rao-local-backend")
+   if (!dir.exists(backend_bin_dir)) {
+      # Fallback: check if binaries are directly in the base directory
+      backend_bin_dir <- backend_base_dir
    }
    
    # Determine platform-specific executable name
@@ -152,19 +159,18 @@ if (!.rs.hasVar("local_backend_env")) {
 # ============================================================================
 
 .rs.addFunction("ai.isBYOKEnabled", function(provider) {
-   # Check AI setting
+   # Check AI setting - must match Java preference name
+   # Only check the enabled flag, not whether key exists
+   # This allows models to be available even if key isn't set yet
+   # Note: get_ai_pref automatically adds "ai_" prefix, so we don't include it here
    setting_name <- paste0("byok_", provider, "_enabled")
    enabled <- .rs.get_ai_pref(setting_name, FALSE)
    
-   if (is.null(enabled) || !enabled) {
+   if (is.null(enabled)) {
       return(FALSE)
    }
    
-   # Check if API key exists
-   api_key <- .rs.ai.getBYOKApiKey(provider)
-   has_key <- !is.null(api_key) && nchar(api_key) > 0
-   
-   return(has_key)
+   return(enabled)
 })
 
 # ============================================================================
@@ -179,8 +185,8 @@ if (!.rs.hasVar("local_backend_env")) {
       return(stored_key)
    }
    
-   # Check persistent storage
-   key_name <- paste0("byok_", provider, "_api_key")
+   # Check persistent storage - must match Java UserState name
+   key_name <- paste0("ai_byok_", provider, "_api_key")
    persistent_key <- .rs.readUserState(key_name)
    if (!is.null(persistent_key) && nchar(persistent_key) > 0) {
       # Load into memory for performance and return
@@ -192,7 +198,7 @@ if (!.rs.hasVar("local_backend_env")) {
 })
 
 .rs.addFunction("ai.setBYOKApiKey", function(provider, api_key) {
-   key_name <- paste0("byok_", provider, "_api_key")
+   key_name <- paste0("ai_byok_", provider, "_api_key")
    
    # Store persistently using the same infrastructure as main API key
    .rs.writeUserState(key_name, api_key)
@@ -203,13 +209,14 @@ if (!.rs.hasVar("local_backend_env")) {
 })
 
 .rs.addFunction("ai.setBYOKEnabled", function(provider, enabled) {
-   # Save the enabled state using the established pattern
+   # Save the enabled state using the established pattern - must match Java preference name
+   # Note: set_ai_pref automatically adds "ai_" prefix, so we don't include it here
    setting_name <- paste0("byok_", provider, "_enabled")
    .rs.set_ai_pref(setting_name, enabled)
 })
 
 .rs.addFunction("ai.clearBYOKApiKey", function(provider) {
-   key_name <- paste0("byok_", provider, "_api_key")
+   key_name <- paste0("ai_byok_", provider, "_api_key")
    
    # Clear from persistent storage
    .rs.writeUserState(key_name, "")
@@ -300,8 +307,7 @@ if (!.rs.hasVar("local_backend_env")) {
    
    # If provider is already set, just check if BYOK is enabled for it
    if (!is.null(provider) && provider != "") {
-      result <- .rs.ai.isBYOKEnabled(provider)
-      return(result)
+      return(.rs.ai.isBYOKEnabled(provider))
    }
    
    # If provider not set, try to map from model
@@ -322,5 +328,44 @@ if (!.rs.hasVar("local_backend_env")) {
    
    # Neither provider nor model is set
    return(FALSE)
+})
+
+# ============================================================================
+# SageMaker Configuration Management
+# ============================================================================
+
+.rs.addFunction("ai.setSageMakerEndpoint", function(endpoint) {
+   .rs.set_ai_state("sagemaker_endpoint", endpoint)
+   return(TRUE)
+})
+
+.rs.addFunction("ai.getSageMakerEndpoint", function() {
+   return(.rs.get_ai_state("sagemaker_endpoint", ""))
+})
+
+.rs.addFunction("ai.setSageMakerRegion", function(region) {
+   .rs.set_ai_state("sagemaker_region", region)
+   return(TRUE)
+})
+
+.rs.addFunction("ai.getSageMakerRegion", function() {
+   return(.rs.get_ai_state("sagemaker_region", "us-east-1"))
+})
+
+# JSON RPC handlers for SageMaker configuration
+.rs.addJsonRpcHandler("set_sagemaker_endpoint", function(endpoint) {
+   return(.rs.ai.setSageMakerEndpoint(endpoint))
+})
+
+.rs.addJsonRpcHandler("get_sagemaker_endpoint", function() {
+   return(.rs.ai.getSageMakerEndpoint())
+})
+
+.rs.addJsonRpcHandler("set_sagemaker_region", function(region) {
+   return(.rs.ai.setSageMakerRegion(region))
+})
+
+.rs.addJsonRpcHandler("get_sagemaker_region", function() {
+   return(.rs.ai.getSageMakerRegion())
 })
 
