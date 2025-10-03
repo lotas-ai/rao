@@ -261,6 +261,18 @@
     color: THEME_DARKGREY_FOREGROUND;
 }
 
+/* Placeholder text color - theme based */
+.rstudio-themes-default .settingInput::placeholder,
+.rstudio-themes-alternate .settingInput::placeholder {
+    color: THEME_DEFAULT_SUBTLE_TEXT;
+    opacity: 0.7;
+}
+
+.rstudio-themes-dark-grey .settingInput::placeholder {
+    color: THEME_DARKGREY_SUBTLE_TEXT;
+    opacity: 0.7;
+}
+
 .settingInput:focus {
     outline: none;
     box-shadow: none;
@@ -822,11 +834,13 @@
 .rstudio-themes-alternate .ruleTextArea {
     background-color: THEME_DEFAULT_BACKGROUND !important;
     border-color: THEME_DEFAULT_SECTION_BORDER !important;
+    color: THEME_DEFAULT_FOREGROUND !important;
 }
 
 .rstudio-themes-dark-grey .ruleTextArea {
     background-color: THEME_DARKGREY_BACKGROUND !important;
     border-color: THEME_DARKGREY_SECTION_BORDER !important;
+    color: THEME_DARKGREY_FOREGROUND !important;
 }
 
 .ruleContainer {
@@ -1107,4 +1121,156 @@ table[data-lists-container] td {
 
 .rstudio-themes-dark-grey .ai-chevron-svg path {
    stroke: THEME_DARKGREY_SUBTLE_TEXT;
+}
+
+/* Toggle box shadow - theme based */
+.toggleShadow {
+    box-shadow: 0 1px 2px !important;
+}
+
+.rstudio-themes-default.settingsContainer .toggleShadow,
+.rstudio-themes-alternate.settingsContainer .toggleShadow {
+    box-shadow: 0 1px 2px THEME_DEFAULT_SHADOW_COLOR !important;
+}
+
+.rstudio-themes-dark-grey.settingsContainer .toggleShadow {
+    box-shadow: 0 1px 2px THEME_DARKGREY_SHADOW_COLOR !important;
+}
+
+/* List item container - theme based borders */
+.listItemContainer {
+    display: inline-flex !important;
+    align-items: center !important;
+    background: transparent !important;
+    border: 1px solid !important;
+    border-radius: 3px !important;
+    padding: 2px 6px !important;
+    margin: 0 4px 4px 0 !important;
+    font-size: 12px !important;
+}
+
+.rstudio-themes-default.settingsContainer .listItemContainer,
+.rstudio-themes-alternate.settingsContainer .listItemContainer {
+    border-color: THEME_DEFAULT_SECTION_BORDER !important;
+}
+
+.rstudio-themes-dark-grey.settingsContainer .listItemContainer {
+    border-color: THEME_DARKGREY_SECTION_BORDER !important;
+}
+
+/* Settings description text - theme based */
+.settingsDescription {
+    font-size: 13px !important;
+    font-weight: normal !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
+}
+
+.rstudio-themes-default.settingsContainer .settingsDescription,
+.rstudio-themes-alternate.settingsContainer .settingsDescription {
+    color: THEME_DEFAULT_SUBTLE_TEXT !important;
+}
+
+.rstudio-themes-dark-grey.settingsContainer .settingsDescription {
+    color: THEME_DARKGREY_SUBTLE_TEXT !important;
+}
+
+/* Key stored text - theme based */
+.keyStoredText {
+    font-size: 13px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
+}
+
+.rstudio-themes-default.settingsContainer .keyStoredText,
+.rstudio-themes-alternate.settingsContainer .keyStoredText {
+    color: THEME_DEFAULT_SUBTLE_TEXT !important;
+}
+
+.rstudio-themes-dark-grey.settingsContainer .keyStoredText {
+    color: THEME_DARKGREY_SUBTLE_TEXT !important;
+}
+
+/* Allow/deny list panel - theme based borders */
+.allowDenyPanel {
+    margin-top: 8px !important;
+    margin-bottom: 8px !important;
+    padding-left: 12px !important;
+    border-left: 2px solid !important;
+}
+
+.rstudio-themes-default.settingsContainer .allowDenyPanel,
+.rstudio-themes-alternate.settingsContainer .allowDenyPanel {
+    border-left-color: THEME_DEFAULT_BORDER !important;
+}
+
+.rstudio-themes-dark-grey.settingsContainer .allowDenyPanel {
+    border-left-color: THEME_DARKGREY_BORDER !important;
+}
+
+/* List item text - theme based */
+.listItemText {
+    margin-right: 4px !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif !important;
+    font-size: 12px !important;
+}
+
+.rstudio-themes-default.settingsContainer .listItemText,
+.rstudio-themes-alternate.settingsContainer .listItemText {
+    color: THEME_DEFAULT_FOREGROUND !important;
+}
+
+.rstudio-themes-dark-grey.settingsContainer .listItemText {
+    color: THEME_DARKGREY_FOREGROUND !important;
+}
+
+/* List item remove button - theme based */
+.listItemRemove {
+    cursor: pointer !important;
+    font-weight: bold !important;
+    font-size: 14px !important;
+    width: 12px !important;
+}
+
+.rstudio-themes-default.settingsContainer .listItemRemove,
+.rstudio-themes-alternate.settingsContainer .listItemRemove {
+    color: THEME_DEFAULT_SUBTLE_TEXT !important;
+}
+
+.rstudio-themes-dark-grey.settingsContainer .listItemRemove {
+    color: THEME_DARKGREY_SUBTLE_TEXT !important;
+}
+
+/* Usage bar container - theme based */
+.usageBarContainer {
+    width: 100% !important;
+    border-radius: 4px !important;
+    height: 8px !important;
+    margin-top: 4px !important;
+    margin-bottom: 8px !important;
+    border: 1px solid !important;
+}
+
+.rstudio-themes-default.settingsContainer .usageBarContainer,
+.rstudio-themes-alternate.settingsContainer .usageBarContainer {
+    background-color: THEME_DEFAULT_DISABLED_BACKGROUND !important;
+    border-color: THEME_DEFAULT_BORDER !important;
+}
+
+.rstudio-themes-dark-grey.settingsContainer .usageBarContainer {
+    background-color: THEME_DARKGREY_DISABLED_BACKGROUND !important;
+    border-color: THEME_DARKGREY_BORDER !important;
+}
+
+/* Usage bar fill - theme based */
+.usageBarFill {
+    height: 100% !important;
+    transition: width 0.3s ease !important;
+}
+
+.rstudio-themes-default.settingsContainer .usageBarFill,
+.rstudio-themes-alternate.settingsContainer .usageBarFill {
+    background-color: THEME_DEFAULT_SUCCESS_COLOR !important;
+}
+
+.rstudio-themes-dark-grey.settingsContainer .usageBarFill {
+    background-color: THEME_DARKGREY_SUCCESS_COLOR !important;
 }

@@ -1130,127 +1130,227 @@ public class AiToolbars
    {
       Toolbar toolbar = new Toolbar(constants_.aiTabLabel());
 
-      toolbar.addLeftWidget(commands_.aiHome().createToolbarButton());
+      // Create settings button using codicon-settings-gear SVG
+      FlowPanel settingsButton = new FlowPanel();
+      settingsButton.addStyleName("ai-settings-button");
+      Element settingsButtonElement = settingsButton.getElement();
+      settingsButtonElement.getStyle().setProperty("display", "inline-flex");
+      settingsButtonElement.getStyle().setProperty("alignItems", "center");
+      settingsButtonElement.getStyle().setProperty("justifyContent", "center");
+      settingsButtonElement.getStyle().setProperty("width", "24px");
+      settingsButtonElement.getStyle().setProperty("height", "24px");
+      settingsButtonElement.getStyle().setProperty("borderRadius", "2px");
+      settingsButtonElement.getStyle().setProperty("backgroundColor", "transparent");
+      settingsButtonElement.getStyle().setProperty("border", "none");
+      settingsButtonElement.getStyle().setProperty("cursor", "pointer");
+      settingsButtonElement.getStyle().setProperty("padding", "2px");
+      settingsButtonElement.getStyle().setProperty("marginLeft", "-4px");
+      settingsButtonElement.getStyle().setProperty("marginTop", "-2px");
+      settingsButtonElement.getStyle().setProperty("transform", "scale(0.9)");
+      
+      // Create settings-gear icon SVG (codicon-settings-gear) with theme-based color via CSS
+      settingsButtonElement.setInnerHTML(
+         "<svg width='16' height='16' viewBox='0 0 24 24' stroke-width='1'>" +
+         "<path fill-rule='evenodd' clip-rule='evenodd' d='M19.85 8.75l4.15.83v4.84l-4.15.83 2.35 3.52-3.43 3.43-3.52-2.35-.83 4.15H9.58l-.83-4.15-3.52 2.35-3.43-3.43 2.35-3.52L0 14.42V9.58l4.15-.83L1.8 5.23 5.23 1.8l3.52 2.35L9.58 0h4.84l.83 4.15 3.52-2.35 3.43 3.43-2.35 3.52zm-1.57 5.07l4-.81v-2l-4-.81-.54-1.3 2.29-3.43-1.43-1.43-3.43 2.29-1.3-.54-.81-4h-2l-.81 4-1.3.54-3.43-2.29-1.43 1.43L6.38 8.9l-.54 1.3-4 .81v2l4 .81.54 1.3-2.29 3.43 1.43 1.43 3.43-2.29 1.3.54.81 4h2l.81-4 1.3-.54 3.43 2.29 1.43-1.43-2.29-3.43.54-1.3zm-8.186-4.672A3.43 3.43 0 0 1 12 8.57 3.44 3.44 0 0 1 15.43 12a3.43 3.43 0 1 1-5.336-2.852zm.956 4.274c.281.188.612.288.95.288A1.7 1.7 0 0 0 13.71 12a1.71 1.71 0 1 0-2.66 1.422z'/>" +
+         "</svg>"
+      );
+      
+      // Add click handler to show settings
+      settingsButton.addDomHandler(new ClickHandler() {
+         @Override
+         public void onClick(ClickEvent event) {
+            if (viewManager_ != null) {
+               viewManager_.showSettings();
+            }
+         }
+      }, ClickEvent.getType());
+      
+      toolbar.addLeftWidget(settingsButton);
       toolbar.addLeftSeparator();
 
-      // Addes back, and forward buttons to the toolbar
-      ToolbarButton refreshButton = commands_.refreshAi().createToolbarButton();
-      refreshButton.addStyleName(ThemeStyles.INSTANCE.refreshToolbarButton());
-      toolbar.addLeftWidget(refreshButton);
-      // Create back button with direct click handler instead of command system
-      ToolbarButton backButton = new ToolbarButton(
-         ToolbarButton.NoText,
-         "Previous conversation",
-         commands_.aiBack().getImageResource(),
-         new ClickHandler() {
-            @Override
-            public void onClick(ClickEvent event) {
-               // Get current conversation index from server
-               pane_.getAiServerOperations().getCurrentConversationIndex(new ServerRequestCallback<Double>() {
-                  @Override
-                  public void onResponseReceived(Double currentIndex) {
-                     if (currentIndex == null) return;
-                     
-                     // Get list of available conversations
-                     pane_.getAiServerOperations().listConversations(new ServerRequestCallback<JsArrayString>() {
-                        @Override
-                        public void onResponseReceived(JsArrayString conversations) {
-                           // Convert to array of integers and find current position
-                           int[] conversationIds = new int[conversations.length()];
-                           int currentPosition = -1;
-                           
-                           for (int i = 0; i < conversations.length(); i++) {
-                              conversationIds[i] = Integer.parseInt(conversations.get(i));
-                              if (conversationIds[i] == currentIndex.intValue()) {
-                                 currentPosition = i;
-                              }
-                           }
-                           
-                           if (currentPosition <= 0) {
-                              return; // Already at first conversation or current not found
-                           }
-                           
-                           // Navigate to previous conversation in the sorted list
-                           int targetIndex = conversationIds[currentPosition - 1];
-                           AiPaneConversations conversationsManager = pane_.getConversationsManager();
-                           if (conversationsManager != null) {
-                              conversationsManager.switchToConversation(targetIndex, false);
+      // Create new conversation button using codicon-add SVG
+      FlowPanel newConversationButton = new FlowPanel();
+      newConversationButton.addStyleName("ai-new-conversation-button");
+      Element newConversationElement = newConversationButton.getElement();
+      newConversationElement.getStyle().setProperty("display", "inline-flex");
+      newConversationElement.getStyle().setProperty("alignItems", "center");
+      newConversationElement.getStyle().setProperty("justifyContent", "center");
+      newConversationElement.getStyle().setProperty("width", "24px");
+      newConversationElement.getStyle().setProperty("height", "24px");
+      newConversationElement.getStyle().setProperty("borderRadius", "2px");
+      newConversationElement.getStyle().setProperty("backgroundColor", "transparent");
+      newConversationElement.getStyle().setProperty("border", "none");
+      newConversationElement.getStyle().setProperty("cursor", "pointer");
+      newConversationElement.getStyle().setProperty("padding", "2px");
+      newConversationElement.getStyle().setProperty("transform", "scale(0.9)");
+      
+      // Create add icon SVG (codicon-add) with theme-based color via CSS
+      newConversationElement.setInnerHTML(
+         "<svg width='16' height='16' viewBox='0 0 16 16' stroke-width='1'>" +
+         "<path d='M14 7v1H8v6H7V8H1V7h6V1h1v6h6z'/>" +
+         "</svg>"
+      );
+      
+      // Add click handler for new conversation
+      newConversationButton.addDomHandler(new ClickHandler() {
+         @Override
+         public void onClick(ClickEvent event) {
+            commands_.refreshAi().execute();
+         }
+      }, ClickEvent.getType());
+      
+      toolbar.addLeftWidget(newConversationButton);
+      
+      // Create back button using codicon-chevron-left SVG
+      FlowPanel backButton = new FlowPanel();
+      backButton.addStyleName("ai-back-button");
+      Element backButtonElement = backButton.getElement();
+      backButtonElement.getStyle().setProperty("display", "inline-flex");
+      backButtonElement.getStyle().setProperty("alignItems", "center");
+      backButtonElement.getStyle().setProperty("justifyContent", "center");
+      backButtonElement.getStyle().setProperty("width", "24px");
+      backButtonElement.getStyle().setProperty("height", "24px");
+      backButtonElement.getStyle().setProperty("borderRadius", "2px");
+      backButtonElement.getStyle().setProperty("backgroundColor", "transparent");
+      backButtonElement.getStyle().setProperty("border", "none");
+      backButtonElement.getStyle().setProperty("cursor", "pointer");
+      backButtonElement.getStyle().setProperty("padding", "2px");
+      
+      // Create chevron-left icon SVG (codicon-chevron-left) with theme-based color via CSS
+      backButtonElement.setInnerHTML(
+         "<svg width='16' height='16' viewBox='0 0 16 16' stroke-width='1'>" +
+         "<path d='M5.928 7.976l4.357 4.357-.618.62L5 8.284v-.618L9.667 3l.618.619-4.357 4.357z'/>" +
+         "</svg>"
+      );
+      
+      // Add click handler for previous conversation
+      backButton.addDomHandler(new ClickHandler() {
+         @Override
+         public void onClick(ClickEvent event) {
+            // Get current conversation index from server
+            pane_.getAiServerOperations().getCurrentConversationIndex(new ServerRequestCallback<Double>() {
+               @Override
+               public void onResponseReceived(Double currentIndex) {
+                  if (currentIndex == null) return;
+                  
+                  // Get list of available conversations
+                  pane_.getAiServerOperations().listConversations(new ServerRequestCallback<JsArrayString>() {
+                     @Override
+                     public void onResponseReceived(JsArrayString conversations) {
+                        // Convert to array of integers and find current position
+                        int[] conversationIds = new int[conversations.length()];
+                        int currentPosition = -1;
+                        
+                        for (int i = 0; i < conversations.length(); i++) {
+                           conversationIds[i] = Integer.parseInt(conversations.get(i));
+                           if (conversationIds[i] == currentIndex.intValue()) {
+                              currentPosition = i;
                            }
                         }
                         
-                        @Override
-                        public void onError(ServerError error) {
-                           // Handle error silently
+                        if (currentPosition <= 0) {
+                           return; // Already at first conversation or current not found
                         }
-                     });
-                  }
-                  
-                  @Override
-                  public void onError(ServerError error) {
-                     // Handle error silently
-                  }
-               });
-            }
+                        
+                        // Navigate to previous conversation in the sorted list
+                        int targetIndex = conversationIds[currentPosition - 1];
+                        AiPaneConversations conversationsManager = pane_.getConversationsManager();
+                        if (conversationsManager != null) {
+                           conversationsManager.switchToConversation(targetIndex, false);
+                        }
+                     }
+                     
+                     @Override
+                     public void onError(ServerError error) {
+                        // Handle error silently
+                     }
+                  });
+               }
+               
+               @Override
+               public void onError(ServerError error) {
+                  // Handle error silently
+               }
+            });
          }
-      );
+      }, ClickEvent.getType());
+      
       toolbar.addLeftWidget(backButton);
       
-      // Create forward button with direct click handler instead of command system  
-      ToolbarButton forwardButton = new ToolbarButton(
-         ToolbarButton.NoText,
-         "Next conversation", 
-         commands_.aiForward().getImageResource(),
-         new ClickHandler() {
-            @Override
-            public void onClick(ClickEvent event) {
-               // Get current conversation index from server
-               pane_.getAiServerOperations().getCurrentConversationIndex(new ServerRequestCallback<Double>() {
-                  @Override
-                  public void onResponseReceived(Double currentIndex) {
-                     if (currentIndex == null) return;
-                     
-                     // Get list of available conversations
-                     pane_.getAiServerOperations().listConversations(new ServerRequestCallback<JsArrayString>() {
-                        @Override
-                        public void onResponseReceived(JsArrayString conversations) {
-                           // Convert to array of integers and find current position
-                           int[] conversationIds = new int[conversations.length()];
-                           int currentPosition = -1;
-                           
-                           for (int i = 0; i < conversations.length(); i++) {
-                              conversationIds[i] = Integer.parseInt(conversations.get(i));
-                              if (conversationIds[i] == currentIndex.intValue()) {
-                                 currentPosition = i;
-                              }
-                           }
-                           
-                           if (currentPosition >= conversations.length() - 1 || currentPosition == -1) {
-                              return; // Already at last conversation or current not found
-                           }
-                           
-                           // Navigate to next conversation in the sorted list
-                           int targetIndex = conversationIds[currentPosition + 1];
-                           AiPaneConversations conversationsManager = pane_.getConversationsManager();
-                           if (conversationsManager != null) {
-                              conversationsManager.switchToConversation(targetIndex, false);
+      // Create forward button using codicon-chevron-right SVG
+      FlowPanel forwardButton = new FlowPanel();
+      forwardButton.addStyleName("ai-forward-button");
+      Element forwardButtonElement = forwardButton.getElement();
+      forwardButtonElement.getStyle().setProperty("display", "inline-flex");
+      forwardButtonElement.getStyle().setProperty("alignItems", "center");
+      forwardButtonElement.getStyle().setProperty("justifyContent", "center");
+      forwardButtonElement.getStyle().setProperty("width", "24px");
+      forwardButtonElement.getStyle().setProperty("height", "24px");
+      forwardButtonElement.getStyle().setProperty("borderRadius", "2px");
+      forwardButtonElement.getStyle().setProperty("backgroundColor", "transparent");
+      forwardButtonElement.getStyle().setProperty("border", "none");
+      forwardButtonElement.getStyle().setProperty("cursor", "pointer");
+      forwardButtonElement.getStyle().setProperty("padding", "2px");
+      
+      // Create chevron-right icon SVG (codicon-chevron-right) with theme-based color via CSS
+      forwardButtonElement.setInnerHTML(
+         "<svg width='16' height='16' viewBox='0 0 16 16' stroke-width='1'>" +
+         "<path d='M10.072 8.024L5.715 3.667l.618-.62L11 7.716v.618L6.333 13l-.618-.619 4.357-4.357z'/>" +
+         "</svg>"
+      );
+      
+      // Add click handler for next conversation
+      forwardButton.addDomHandler(new ClickHandler() {
+         @Override
+         public void onClick(ClickEvent event) {
+            // Get current conversation index from server
+            pane_.getAiServerOperations().getCurrentConversationIndex(new ServerRequestCallback<Double>() {
+               @Override
+               public void onResponseReceived(Double currentIndex) {
+                  if (currentIndex == null) return;
+                  
+                  // Get list of available conversations
+                  pane_.getAiServerOperations().listConversations(new ServerRequestCallback<JsArrayString>() {
+                     @Override
+                     public void onResponseReceived(JsArrayString conversations) {
+                        // Convert to array of integers and find current position
+                        int[] conversationIds = new int[conversations.length()];
+                        int currentPosition = -1;
+                        
+                        for (int i = 0; i < conversations.length(); i++) {
+                           conversationIds[i] = Integer.parseInt(conversations.get(i));
+                           if (conversationIds[i] == currentIndex.intValue()) {
+                              currentPosition = i;
                            }
                         }
                         
-                        @Override
-                        public void onError(ServerError error) {
-                           // Handle error silently
+                        if (currentPosition >= conversations.length() - 1 || currentPosition == -1) {
+                           return; // Already at last conversation or current not found
                         }
-                     });
-                  }
-                  
-                  @Override
-                  public void onError(ServerError error) {
-                     // Handle error silently
-                  }
-               });
-            }
+                        
+                        // Navigate to next conversation in the sorted list
+                        int targetIndex = conversationIds[currentPosition + 1];
+                        AiPaneConversations conversationsManager = pane_.getConversationsManager();
+                        if (conversationsManager != null) {
+                           conversationsManager.switchToConversation(targetIndex, false);
+                        }
+                     }
+                     
+                     @Override
+                     public void onError(ServerError error) {
+                        // Handle error silently
+                     }
+                  });
+               }
+               
+               @Override
+               public void onError(ServerError error) {
+                  // Handle error silently
+               }
+            });
          }
-      );
+      }, ClickEvent.getType());
+      
       toolbar.addLeftWidget(forwardButton);
       toolbar.addLeftSeparator();
       

@@ -11,7 +11,7 @@
 /* ---------- EXTERNAL CLASSES ---------- */
 /* External classes that shouldn't be obfuscated */
 @external gwt-SuggestBox, gwt-SuggestBoxPopup, search, searchBoxContainer, searchBoxContainer2, searchBox, rstheme_center, left, right, searchMagGlass, clearSearch, rstudio-AiSearchContainer, rstudio-AiFrame, rstheme_toolbarWrapper, gwt-FlowPanel, gwt-HTML, ai-streaming-panel, ace_editor, ace_scroller;
-@external rstudio-themes-dark, rstudio-themes-default, rstudio-themes-alternate, rstudio-themes-dark-grey, rstudio-themes-flat, aiWidgetHeader, aiDeleteButton, aiCancelButton, aiRejectButton, aiConfirmButton, aiAcceptButton, aiEditButton, aiModalBackground, aiThumbnail, aiDivider, aiDropZoneOverlay, aiDropZoneBorder, aiContextItem, aiPlaceholder, aiHoverTarget, aiToggleEnabled, aiToggleDisabled, aiDragFeedback, ai-mode-toggle-button, ai-toolbar-button, ai-menu-element, ai-input-field, ai-mode-dropdown, ai-mode-option, ai-attach-file-button, ai-selected-files-panel, rstudio-AiSearchContentPanel, ai-mode-dropdown-popup, gwt-PopupPanelGlass, ai-image-button, ai-send-button, ai-stop-mode, ai-revert-icon;
+@external rstudio-themes-dark, rstudio-themes-default, rstudio-themes-alternate, rstudio-themes-dark-grey, rstudio-themes-flat, aiWidgetHeader, aiDeleteButton, aiCancelButton, aiRejectButton, aiConfirmButton, aiAcceptButton, aiEditButton, aiModalBackground, aiThumbnail, aiDivider, aiDropZoneOverlay, aiDropZoneBorder, aiContextItem, aiPlaceholder, aiHoverTarget, aiToggleEnabled, aiToggleDisabled, aiDragFeedback, ai-mode-toggle-button, ai-toolbar-button, ai-menu-element, ai-input-field, ai-mode-dropdown, ai-mode-option, ai-attach-file-button, ai-selected-files-panel, rstudio-AiSearchContentPanel, ai-mode-dropdown-popup, gwt-PopupPanelGlass, ai-image-button, ai-send-button, ai-stop-mode, ai-revert-icon, ai-settings-button, ai-new-conversation-button, ai-back-button, ai-forward-button;
 @external rstudio-themes-scrollbars;
 @external editor_dark;
 @external ace_editor_theme;
@@ -166,6 +166,74 @@
 .rstudio-themes-dark-grey .rstudio-AiSearchContainer .ai-image-button svg,
 .rstudio-themes-dark-grey .rstudio-AiSearchContainer .ai-send-button svg {
    fill: THEME_DARKGREY_FOREGROUND !important;
+}
+
+/* Settings button SVG color - theme based (matches conversation title) */
+.rstudio-themes-default .ai-settings-button svg,
+.rstudio-themes-flat .ai-settings-button svg {
+   fill: THEME_DEFAULT_SUBTLE_TEXT !important;
+   stroke: THEME_DEFAULT_SUBTLE_TEXT !important;
+}
+
+.rstudio-themes-alternate .ai-settings-button svg {
+   fill: THEME_ALTERNATE_SUBTLE_TEXT !important;
+   stroke: THEME_ALTERNATE_SUBTLE_TEXT !important;
+}
+
+.rstudio-themes-dark-grey .ai-settings-button svg {
+   fill: THEME_DARKGREY_SUBTLE_TEXT !important;
+   stroke: THEME_DARKGREY_SUBTLE_TEXT !important;
+}
+
+/* New conversation button SVG color - theme based (matches conversation title) */
+.rstudio-themes-default .ai-new-conversation-button svg,
+.rstudio-themes-flat .ai-new-conversation-button svg {
+   fill: THEME_DEFAULT_SUBTLE_TEXT !important;
+   stroke: THEME_DEFAULT_SUBTLE_TEXT !important;
+}
+
+.rstudio-themes-alternate .ai-new-conversation-button svg {
+   fill: THEME_ALTERNATE_SUBTLE_TEXT !important;
+   stroke: THEME_ALTERNATE_SUBTLE_TEXT !important;
+}
+
+.rstudio-themes-dark-grey .ai-new-conversation-button svg {
+   fill: THEME_DARKGREY_SUBTLE_TEXT !important;
+   stroke: THEME_DARKGREY_SUBTLE_TEXT !important;
+}
+
+/* Back button SVG color - theme based (matches conversation title) */
+.rstudio-themes-default .ai-back-button svg,
+.rstudio-themes-flat .ai-back-button svg {
+   fill: THEME_DEFAULT_SUBTLE_TEXT !important;
+   stroke: THEME_DEFAULT_SUBTLE_TEXT !important;
+}
+
+.rstudio-themes-alternate .ai-back-button svg {
+   fill: THEME_ALTERNATE_SUBTLE_TEXT !important;
+   stroke: THEME_ALTERNATE_SUBTLE_TEXT !important;
+}
+
+.rstudio-themes-dark-grey .ai-back-button svg {
+   fill: THEME_DARKGREY_SUBTLE_TEXT !important;
+   stroke: THEME_DARKGREY_SUBTLE_TEXT !important;
+}
+
+/* Forward button SVG color - theme based (matches conversation title) */
+.rstudio-themes-default .ai-forward-button svg,
+.rstudio-themes-flat .ai-forward-button svg {
+   fill: THEME_DEFAULT_SUBTLE_TEXT !important;
+   stroke: THEME_DEFAULT_SUBTLE_TEXT !important;
+}
+
+.rstudio-themes-alternate .ai-forward-button svg {
+   fill: THEME_ALTERNATE_SUBTLE_TEXT !important;
+   stroke: THEME_ALTERNATE_SUBTLE_TEXT !important;
+}
+
+.rstudio-themes-dark-grey .ai-forward-button svg {
+   fill: THEME_DARKGREY_SUBTLE_TEXT !important;
+   stroke: THEME_DARKGREY_SUBTLE_TEXT !important;
 }
 
 /* Remove hover backgrounds from toolbar buttons */

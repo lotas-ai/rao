@@ -116,6 +116,15 @@ public class AiSettingsWidget extends Composite
       String inputContainer();
       String addRuleButton();
       String compactButton();
+      String settingsDescription();
+      String keyStoredText();
+      String allowDenyPanel();
+      String listItemText();
+      String listItemRemove();
+      String usageBarContainer();
+      String usageBarFill();
+      String toggleShadow();
+      String listItemContainer();
    }
    
    public interface Resources extends ClientBundle
@@ -568,10 +577,7 @@ public class AiSettingsWidget extends Composite
       
       // Temperature description
       Label temperatureDescription = new Label("Temperature determines the model's variability from 0 (deterministic) to 1 (highly variable).");
-      temperatureDescription.addStyleName(styles_.settingLabel());
-      temperatureDescription.getElement().getStyle().setProperty("fontWeight", "normal");
-      temperatureDescription.getElement().getStyle().setProperty("fontSize", "13px");
-      temperatureDescription.getElement().getStyle().setProperty("color", ThemeHelper.getSubtleText());
+      temperatureDescription.addStyleName(styles_.settingsDescription());
       temperatureDescription.getElement().getStyle().setProperty("marginBottom", "8px");
       temperatureContainer.add(temperatureDescription);
       
@@ -1041,10 +1047,7 @@ public class AiSettingsWidget extends Composite
       securityTogglePanel.setVerticalAlignment(HorizontalPanel.ALIGN_TOP);
       
       securityModeText_ = new Label("On secure mode, no analytics are collected and zero data is retained by the model providers. Secure mode only uses search-replace for editing files. This must be used for any sensitive data like PHI. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: Secure");
-      securityModeText_.addStyleName(styles_.settingLabel());
-      securityModeText_.getElement().getStyle().setProperty("fontWeight", "normal");
-      securityModeText_.getElement().getStyle().setProperty("fontSize", "13px");
-      securityModeText_.getElement().getStyle().setProperty("color", ThemeHelper.getSubtleText());
+      securityModeText_.addStyleName(styles_.settingsDescription());
       securityModeText_.getElement().getStyle().setProperty("marginRight", "15px");
       securityModeText_.setWidth("100%");
       securityTogglePanel.add(securityModeText_);
@@ -1053,7 +1056,7 @@ public class AiSettingsWidget extends Composite
       securityModeToggle_ = new HTML();
       securityModeToggle_.getElement().setInnerHTML(
          "<div style='position: relative; width: 32px; height: 16px; border-radius: 8px; cursor: pointer; transition: background 0.3s; display: none;' data-setting='security_mode' class='ai-toggle-enabled'>" +
-         "<div style='position: absolute; top: 1px; right: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s; box-shadow: 0 1px 2px " + ThemeHelper.getShadowColor() + ";'></div>" +
+         "<div class='" + styles_.toggleShadow() + "' style='position: absolute; top: 1px; right: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s;'></div>" +
          "</div>"
       );
       addNativeSecurityModeChangeHandler(securityModeToggle_.getElement());
@@ -1081,10 +1084,7 @@ public class AiSettingsWidget extends Composite
       webSearchTogglePanel.setVerticalAlignment(HorizontalPanel.ALIGN_TOP);
       
       webSearchText_ = new Label("When web search is on, the model may choose to search the web. Such searches could involve information from the conversation history and should be disabled for sensitive data like PHI. Web search is currently: off");
-      webSearchText_.addStyleName(styles_.settingLabel());
-      webSearchText_.getElement().getStyle().setProperty("fontWeight", "normal");
-      webSearchText_.getElement().getStyle().setProperty("fontSize", "13px");
-      webSearchText_.getElement().getStyle().setProperty("color", ThemeHelper.getSubtleText());
+      webSearchText_.addStyleName(styles_.settingsDescription());
       webSearchText_.getElement().getStyle().setProperty("marginRight", "15px");
       webSearchText_.setWidth("100%");
       webSearchTogglePanel.add(webSearchText_);
@@ -1093,7 +1093,7 @@ public class AiSettingsWidget extends Composite
       webSearchToggle_ = new HTML();
       webSearchToggle_.getElement().setInnerHTML(
          "<div style='position: relative; width: 32px; height: 16px; border-radius: 8px; cursor: pointer; transition: background 0.3s; display: none;' data-setting='web_search' class='ai-toggle-disabled'>" +
-         "<div style='position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s; box-shadow: 0 1px 2px " + ThemeHelper.getShadowColor() + ";'></div>" +
+         "<div class='" + styles_.toggleShadow() + "' style='position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s;'></div>" +
          "</div>"
       );
       addNativeWebSearchChangeHandler(webSearchToggle_.getElement());
@@ -1231,10 +1231,8 @@ public class AiSettingsWidget extends Composite
       
       // Description
       HTML description = new HTML("Use your own API keys for AI providers. Your keys are stored securely and requests are routed through a local proxy.");
-      description.addStyleName(styles_.settingLabel());
+      description.addStyleName(styles_.settingsDescription());
       description.getElement().getStyle().setProperty("marginBottom", "15px");
-      description.getElement().getStyle().setProperty("color", ThemeHelper.getSubtleText());
-      description.getElement().getStyle().setProperty("fontSize", "13px");
       contentPanel.add(description);
       
       // Anthropic BYOK
@@ -1281,7 +1279,7 @@ public class AiSettingsWidget extends Composite
       final HTML toggle = new HTML();
       toggle.getElement().setInnerHTML(
          "<div style='position: relative; width: 32px; height: 16px; border-radius: 8px; cursor: pointer; transition: background 0.3s; display: none;' data-byok-provider='" + provider + "' class='ai-toggle-disabled'>" +
-         "<div style='position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s; box-shadow: 0 1px 2px " + ThemeHelper.getShadowColor() + ";'></div>" +
+         "<div class='" + styles_.toggleShadow() + "' style='position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s;'></div>" +
          "</div>"
       );
       titleRow.add(toggle);
@@ -1298,9 +1296,7 @@ public class AiSettingsWidget extends Composite
       storedKeyContainer.getElement().setAttribute("data-byok-stored", provider);
       
       HTML storedKeyText = new HTML("Key securely stored");
-      storedKeyText.getElement().getStyle().setProperty("fontSize", "13px");
-      storedKeyText.getElement().getStyle().setProperty("color", ThemeHelper.getSubtleText());
-      storedKeyText.getElement().getStyle().setProperty("fontFamily", "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif");
+      storedKeyText.addStyleName(styles_.keyStoredText());
       storedKeyContainer.add(storedKeyText);
       
       // Delete icon - use Label like the × button for list items
@@ -1429,7 +1425,7 @@ public class AiSettingsWidget extends Composite
       final HTML toggle = new HTML();
       toggle.getElement().setInnerHTML(
          "<div style='position: relative; width: 32px; height: 16px; border-radius: 8px; cursor: pointer; transition: background 0.3s; display: none;' data-byok-provider='" + provider + "' class='ai-toggle-disabled'>" +
-         "<div style='position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s; box-shadow: 0 1px 2px " + ThemeHelper.getShadowColor() + ";'></div>" +
+         "<div class='" + styles_.toggleShadow() + "' style='position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s;'></div>" +
          "</div>"
       );
       titleRow.add(toggle);
@@ -1446,9 +1442,7 @@ public class AiSettingsWidget extends Composite
       sagemakerStoredContainer_.getElement().setAttribute("data-byok-stored", provider);
       
       HTML storedKeyText = new HTML("Credentials and endpoint configured");
-      storedKeyText.getElement().getStyle().setProperty("fontSize", "13px");
-      storedKeyText.getElement().getStyle().setProperty("color", ThemeHelper.getSubtleText());
-      storedKeyText.getElement().getStyle().setProperty("fontFamily", "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif");
+      storedKeyText.addStyleName(styles_.keyStoredText());
       sagemakerStoredContainer_.add(storedKeyText);
       
       // Delete icon
@@ -1785,7 +1779,7 @@ public class AiSettingsWidget extends Composite
       HTML toggle = new HTML();
       toggle.getElement().setInnerHTML(
          "<div style='position: relative; width: 32px; height: 16px; border-radius: 8px; cursor: pointer; transition: background 0.3s; display: none;' data-setting='" + settingName + "' class='ai-toggle-disabled'>" +
-         "<div style='position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s; box-shadow: 0 1px 2px " + ThemeHelper.getShadowColor() + ";'></div>" +
+         "<div class='" + styles_.toggleShadow() + "' style='position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s;'></div>" +
          "</div>"
       );
       
@@ -1828,10 +1822,7 @@ public class AiSettingsWidget extends Composite
    {
       VerticalPanel panel = new VerticalPanel();
       panel.setWidth("100%");
-      panel.getElement().getStyle().setProperty("marginTop", "8px");
-      panel.getElement().getStyle().setProperty("marginBottom", "8px");
-      panel.getElement().getStyle().setProperty("paddingLeft", "12px");
-      panel.getElement().getStyle().setProperty("borderLeft", "2px solid " + ThemeHelper.getDividerColor());
+      panel.addStyleName(styles_.allowDenyPanel());
       
       // "Allow anything" toggle
       HorizontalPanel allowAnythingRow = new HorizontalPanel();
@@ -1850,7 +1841,7 @@ public class AiSettingsWidget extends Composite
       HTML allowAnythingToggle = new HTML();
       allowAnythingToggle.getElement().setInnerHTML(
          "<div style='position: relative; width: 28px; height: 14px; border-radius: 7px; cursor: pointer; transition: background 0.3s; display: none;' data-setting='" + settingName + "_allow_anything' class='ai-toggle-disabled'>" +
-         "<div style='position: absolute; top: 1px; left: 1px; width: 12px; height: 12px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s; box-shadow: 0 1px 2px " + ThemeHelper.getShadowColor() + ";'></div>" +
+         "<div class='" + styles_.toggleShadow() + "' style='position: absolute; top: 1px; left: 1px; width: 12px; height: 12px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s;'></div>" +
          "</div>"
       );
       
@@ -1954,28 +1945,16 @@ public class AiSettingsWidget extends Composite
       
       // Create item container matching chevron button style
       FlowPanel itemContainer = new FlowPanel();
-      itemContainer.getElement().getStyle().setProperty("display", "inline-flex");
-      itemContainer.getElement().getStyle().setProperty("alignItems", "center");
-      itemContainer.getElement().getStyle().setProperty("background", "transparent");
-      itemContainer.getElement().getStyle().setProperty("border", "1px solid " + ThemeHelper.getSectionBorder());
-      itemContainer.getElement().getStyle().setProperty("borderRadius", "3px");
-      itemContainer.getElement().getStyle().setProperty("padding", "2px 6px");
-      itemContainer.getElement().getStyle().setProperty("margin", "0 4px 4px 0");
-      itemContainer.getElement().getStyle().setProperty("fontSize", "12px");
+      itemContainer.addStyleName(styles_.listItemContainer());
       
       // Text label
       Label textLabel = new Label(text);
-      textLabel.getElement().getStyle().setProperty("marginRight", "4px");
-      textLabel.getElement().getStyle().setProperty("color", ThemeHelper.getForeground());
+      textLabel.addStyleName(styles_.listItemText());
       itemContainer.add(textLabel);
       
       // Remove button
       Label removeButton = new Label("×");
-      removeButton.getElement().getStyle().setProperty("cursor", "pointer");
-      removeButton.getElement().getStyle().setProperty("color", ThemeHelper.getSubtleText());
-      removeButton.getElement().getStyle().setProperty("fontWeight", "bold");
-      removeButton.getElement().getStyle().setProperty("fontSize", "14px");
-      removeButton.getElement().getStyle().setProperty("width", "12px");
+      removeButton.addStyleName(styles_.listItemRemove());
       removeButton.getElement().getStyle().setProperty("textAlign", "center");
       removeButton.getElement().getStyle().setProperty("position", "relative");
       removeButton.getElement().getStyle().setProperty("top", "-2px");
@@ -2426,21 +2405,14 @@ public class AiSettingsWidget extends Composite
       
       // Usage bar
       HorizontalPanel usageBarContainer = new HorizontalPanel();
-      usageBarContainer.setWidth("100%");
-      usageBarContainer.getElement().getStyle().setProperty("backgroundColor", ThemeHelper.getDisabledBackground());
-      usageBarContainer.getElement().getStyle().setProperty("border", "1px solid " + ThemeHelper.getBorderColor());
-      usageBarContainer.getElement().getStyle().setProperty("borderRadius", "4px");
-      usageBarContainer.getElement().getStyle().setProperty("height", "8px");
-      usageBarContainer.getElement().getStyle().setProperty("marginTop", "4px");
+      usageBarContainer.addStyleName(styles_.usageBarContainer());
       usageBarContainer.getElement().getStyle().setProperty("overflow", "hidden");
       
       // Usage bar fill
       HTML usageBarFill = new HTML();
       double usagePercent = Math.min(100.0, Math.max(0.0, (double) monthlyUsed / monthlyLimit * 100.0));
       usageBarFill.setWidth(usagePercent + "%");
-      usageBarFill.getElement().getStyle().setProperty("height", "100%");
-      usageBarFill.getElement().getStyle().setProperty("backgroundColor", ThemeHelper.getSuccessBorderColor());
-      usageBarFill.getElement().getStyle().setProperty("transition", "width 0.3s ease");
+      usageBarFill.addStyleName(styles_.usageBarFill());
       
       usageBarContainer.add(usageBarFill);
       usagePanel.add(usageBarContainer);
