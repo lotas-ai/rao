@@ -14,6 +14,9 @@ if (!.rs.hasVar("local_backend_env")) {
 }
 
 .rs.addFunction("ai.startLocalBackendProxy", function() {
+   # Ensure required packages are installed (including processx)
+   .rs.check_required_packages()
+   
    local_backend <- .rs.getVar("local_backend_env")
    
    if (!is.null(local_backend$proxy_url)) {

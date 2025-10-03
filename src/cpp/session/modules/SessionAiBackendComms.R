@@ -64,6 +64,20 @@
 })
 
 .rs.addFunction("get_backend_config", function(conversation = NULL, additional_data = NULL) {
+  # Check if BYOK is enabled for any provider
+  byok_enabled <- .rs.ai.isBYOKEnabled("openai") || .rs.ai.isBYOKEnabled("anthropic") || .rs.ai.isBYOKEnabled("sagemaker")
+  
+  if (byok_enabled) {
+    # Use local backend proxy for BYOK
+    proxy_url <- .rs.ai.startLocalBackendProxy()
+    return(list(
+      url = proxy_url,
+      environment = "byok",
+      is_byok = TRUE
+    ))
+  }
+  
+  # Standard backend (Rao subscription)
   # Only check environment if we haven't checked yet
   if (is.null(.rs.getVar("backend_environment_checked")) || !.rs.getVar("backend_environment_checked")) {
     .rs.detect_backend_environment()
@@ -71,7 +85,8 @@
   
   list(
     url = .rs.getVar("backend_server_url"),
-    environment = .rs.getVar("backend_environment")
+    environment = .rs.getVar("backend_environment"),
+    is_byok = FALSE
   )
 })
 
@@ -590,7 +605,9 @@
     
     # Check backend connectivity before making API requests
     # Skip health check for conversation name and summarization requests to avoid delays
-    if (!is_conversation_name_request && !is_summarization_request) {
+    # Also skip for BYOK since local backend doesn't have /actuator/health endpoint
+    config <- .rs.get_backend_config()
+    if (!is_conversation_name_request && !is_summarization_request && !isTRUE(config$is_byok)) {
       backend_healthy <- tryCatch({
         .rs.check_backend_health()
       }, error = function(e) FALSE)

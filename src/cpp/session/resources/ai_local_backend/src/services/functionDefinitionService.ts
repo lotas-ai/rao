@@ -7,6 +7,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { IFunctionDefinitionService } from '../types';
 import { DEVELOPER_INSTRUCTIONS } from '../config/developerInstructions';
+import { functionsConfig } from '../config/functions';
 
 interface FunctionDefinitionMap {
 	[functionName: string]: any;
@@ -22,8 +23,7 @@ export class FunctionDefinitionService implements IFunctionDefinitionService {
 
 	private loadFunctions(): void {
 		try {
-			// Import the functions config directly - this gets bundled into the executable
-			const functionsConfig = require('../config/functions.json');
+			// Import the functions config from TypeScript module - gets compiled and bundled
 			const functions = functionsConfig.functions;
 
 			if (functions && Array.isArray(functions)) {

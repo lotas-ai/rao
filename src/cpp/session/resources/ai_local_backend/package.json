@@ -9,13 +9,9 @@
     "watch": "tsc -watch -p ./",
     "start": "node out/server.js",
     "bundle": "esbuild out/server.js --bundle --platform=node --target=node18 --format=cjs --outfile=out/bundle.js",
-    "copy-config": "node scripts/copy-config.js",
-    "package": "npm run bundle && npm run copy-config && node scripts/run-pkg.js"
+    "package": "npm run bundle && node scripts/run-pkg.js"
   },
   "pkg": {
-    "assets": [
-      "out/config/**/*"
-    ],
     "outputPath": "dist"
   },
   "devDependencies": {
