@@ -68,12 +68,13 @@ else()
    else()
       set(RSTUDIO_DEPENDENCIES_RIPGREP_DIR "${RSTUDIO_DEPENDENCIES_DIR}/ripgrep")
    endif()
-   
-   # Set local backend directory - built during session build  
-   # CMAKE_CURRENT_BINARY_DIR is build-server/session, but the local backend is copied
-   # alongside other desktop binaries in build-server/bin/rao-local-backend
-   set(RSTUDIO_DEPENDENCIES_LOCAL_BACKEND_DIR "${CMAKE_CURRENT_BINARY_DIR}/../bin/rao-local-backend")
 endif()
+
+# Set local backend directory for all platforms
+# Built during session build and copied to build bin directory
+# CMAKE_CURRENT_BINARY_DIR is build-server/session, but the local backend is copied
+# alongside other desktop binaries in build-server/bin/rao-local-backend
+set(RSTUDIO_DEPENDENCIES_LOCAL_BACKEND_DIR "${CMAKE_CURRENT_BINARY_DIR}/../bin/rao-local-backend")
 
 
 # install pandoc
@@ -673,8 +674,17 @@ if(NOT RSTUDIO_SESSION_WIN32 AND NOT RSESSION_ALTERNATE_BUILD)
         resources/ai_local_backend/package.json
         resources/ai_local_backend/tsconfig.json)
    
+   # Determine platform-specific output file for build validation
+   if(WIN32)
+      set(AI_BACKEND_OUTPUT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/resources/ai_local_backend/dist/rao-local-backend-win-x64.exe")
+   elseif(APPLE)
+      set(AI_BACKEND_OUTPUT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/resources/ai_local_backend/dist/rao-local-backend-macos-arm64")
+   else()
+      set(AI_BACKEND_OUTPUT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/resources/ai_local_backend/dist/rao-local-backend-linux-x64")
+   endif()
+   
    add_custom_command(
-      OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/resources/ai_local_backend/dist/rao-local-backend-macos-arm64"
+      OUTPUT "${AI_BACKEND_OUTPUT_FILE}"
       DEPENDS ${AI_BACKEND_SOURCES}
       COMMENT "Building AI local backend (TypeScript → standalone executable)"
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/resources/ai_local_backend"
@@ -684,7 +694,7 @@ if(NOT RSTUDIO_SESSION_WIN32 AND NOT RSESSION_ALTERNATE_BUILD)
    )
    
    add_custom_target(ai_local_backend ALL 
-      DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/ai_local_backend/dist/rao-local-backend-macos-arm64")
+      DEPENDS "${AI_BACKEND_OUTPUT_FILE}")
    
    # Copy local backend executables to build bin directory for dev mode
    # rsession is in build-server/session, but resourcePath is build-server, so copy to ../bin
