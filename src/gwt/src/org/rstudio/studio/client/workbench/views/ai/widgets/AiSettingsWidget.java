@@ -201,7 +201,7 @@ public class AiSettingsWidget extends Composite
    private boolean rulesSectionExpanded_ = true;
    private boolean securitySectionExpanded_ = true;
    private boolean automationSectionExpanded_ = true;
-   private boolean byokSectionExpanded_ = true;
+   private boolean byokSectionExpanded_ = false;
    
    // Automation toggle widgets
    private HTML autoAcceptEditsToggle_;
@@ -306,6 +306,11 @@ public class AiSettingsWidget extends Composite
       profileSection_.addStyleName(styles_.settingsSection());
       mainPanel.add(profileSection_);
       
+      // BYOK Section
+      byokSection_ = new HTML();
+      byokSection_.addStyleName(styles_.settingsSection());
+      mainPanel.add(byokSection_);
+      
       // Rules Section
       rulesSection_ = new HTML();
       rulesSection_.addStyleName(styles_.settingsSection());
@@ -327,11 +332,6 @@ public class AiSettingsWidget extends Composite
       modelSection_ = new HTML();
       modelSection_.addStyleName(styles_.settingsSection());
       mainPanel.add(modelSection_);
-      
-      // BYOK Section (last section)
-      byokSection_ = new HTML();
-      byokSection_.addStyleName(styles_.settingsSection());
-      mainPanel.add(byokSection_);
       
       // CRITICAL FIX: Wrap in ScrollPanel to enable scrolling like other working widgets
       ScrollPanel scrollPanel = new ScrollPanel(mainPanel);
@@ -457,14 +457,14 @@ public class AiSettingsWidget extends Composite
          signInButton_ = new Button("Sign up/Sign in");
          signInButton_.addStyleName(styles_.settingButton());
          signInButton_.addStyleName(styles_.primaryButton());
-         signInButton_.setWidth("120px");
+         signInButton_.setWidth("150px");
          addNativeClickHandler(signInButton_.getElement(), "Sign in");
          
          // Options button
-         optionsButton_ = new Button("Use API key");
+         optionsButton_ = new Button("Use Lotas API Key");
          optionsButton_.addStyleName(styles_.settingButton());
          optionsButton_.addStyleName(styles_.primaryButton());
-         optionsButton_.setWidth("120px");
+         optionsButton_.setWidth("150px");
          addNativeClickHandler(optionsButton_.getElement(), "Options");
          
          buttonPanel.add(signInButton_);
@@ -2257,11 +2257,11 @@ public class AiSettingsWidget extends Composite
    private void updateAllSections()
    {
       buildProfileSection();
+      buildBYOKSection();
       buildRulesSection();
       buildSecuritySection();
       buildAutomationSection();
       buildModelSection();
-      buildBYOKSection();
    }
    
    private void updateProfileSection()
