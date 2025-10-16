@@ -515,25 +515,6 @@
   # This ensures all conversation data sent to rao-backend is properly ordered by message_id
   sorted_conversation <- conversation[order(sapply(conversation, function(x) if (is.null(x$id)) 0 else x$id))]
   
-  cat("DEBUG backend_ai_api_call: Preparing API request\n")
-  cat("DEBUG backend_ai_api_call: Conversation has", length(sorted_conversation), "entries\n")
-  
-  # Debug: check for function_call_output entries
-  for (i in seq_along(sorted_conversation)) {
-    entry <- sorted_conversation[[i]]
-    if (!is.null(entry$type) && entry$type == "function_call_output") {
-      cat("DEBUG backend_ai_api_call: Found function_call_output at index", i, "\n")
-      cat("DEBUG backend_ai_api_call:   call_id:", entry$call_id, "\n")
-      cat("DEBUG backend_ai_api_call:   output length:", nchar(entry$output), "\n")
-      cat("DEBUG backend_ai_api_call:   output content:", substr(entry$output, 1, 200), "...\n")
-    }
-    if (!is.null(entry$function_call) && !is.null(entry$function_call$name)) {
-      cat("DEBUG backend_ai_api_call: Found function_call at index", i, "\n")
-      cat("DEBUG backend_ai_api_call:   name:", entry$function_call$name, "\n")
-      cat("DEBUG backend_ai_api_call:   call_id:", entry$function_call$call_id, "\n")
-    }
-  }
-  
   # Get client version for backend tracking
   client_version <- tryCatch({
     version_info <- .Call("rs_rstudioLongVersion")

@@ -336,18 +336,11 @@ public class AiPaneResponses
                   @Override
                   public void onResponseReceived(JavaScriptObject result) {
                      terminalCheckTimer_.cancel();
-                     Debug.log("[AiPaneResponses] finalizeTerminalCommand response received for messageId: " + messageId);
-                     Debug.log("[AiPaneResponses] result is null: " + (result == null));
-                     
                      // Check if the result contains a status that needs processing
                      if (result != null) {
                         JSONObject resultObj = new JSONObject(result);
-                        Debug.log("[AiPaneResponses] resultObj keys: " + resultObj.keySet());
-                        Debug.log("[AiPaneResponses] Full result JSON: " + resultObj.toString());
-                        
                         if (resultObj.containsKey("status")) {
                            String status = getString(resultObj, "status", "");
-                           Debug.log("[AiPaneResponses] Status from finalize result: " + status);
                            
                            if ("continue_silent".equals(status)) {
                               // R wants us to continue the conversation
@@ -378,11 +371,8 @@ public class AiPaneResponses
                               }
                               
                               // Use orchestrator to continue the conversation
-                              Debug.log("[AiPaneResponses] Calling orchestrator.continueConversation with relatedToId: " + relatedToId + ", conversationIndex: " + conversationIndex + ", requestId: " + requestId);
                               if (orchestrator_ != null) {
                                  orchestrator_.continueConversation(relatedToId, conversationIndex, requestId);
-                              } else {
-                                 Debug.log("[AiPaneResponses] ERROR: orchestrator_ is null!");
                               }
                               return;
                            }
@@ -420,7 +410,6 @@ public class AiPaneResponses
             else
             {
                // Terminal not complete yet, reschedule the timer to check again
-               Debug.log("[AiPaneResponses] Terminal not complete yet for messageId: " + messageId + ", rescheduling check");
                terminalCheckTimer_.schedule(500);
             }
          }
