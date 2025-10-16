@@ -1499,6 +1499,17 @@
       return(invisible(FALSE))
    }
    
+   # Skip adding plots to conversation for SageMaker - it doesn't support images
+   provider <- tryCatch({
+      .rs.get_active_provider()
+   }, error = function(e) {
+      NULL
+   })
+   
+   if (!is.null(provider) && provider == "sagemaker") {
+      return(invisible(FALSE))
+   }
+   
    # Ensure required packages (including magick) are installed
    .rs.check_required_packages()
    
@@ -2013,13 +2024,18 @@
          "Terminal command executed successfully"
       })
       
+      cat("DEBUG check_terminal_complete: Raw buffer from terminalBuffer:", paste(utils::capture.output(str(terminal_output)), collapse = "\n"), "\n")
+      cat("DEBUG check_terminal_complete: Buffer class:", class(terminal_output), "\n")
+      cat("DEBUG check_terminal_complete: Buffer length:", length(terminal_output), "\n")
       
       exit_code <- tryCatch({
          code <- .rs.api.terminalExitCode(terminal_id)
          if (is.null(code)) 0 else code
-              }, error = function(e) {
-           0
+             }, error = function(e) {
+          0
       })
+      
+      cat("DEBUG check_terminal_complete: Exit code:", exit_code, "\n")
       
       if (is.character(terminal_output) && length(terminal_output) > 0) {
          terminal_output <- paste(terminal_output, collapse = "\n")
@@ -2032,6 +2048,8 @@
          terminal_output <- "Terminal command executed successfully"
       }
       
+      cat("DEBUG check_terminal_complete: Processed terminal_output:", terminal_output, "\n")
+      cat("DEBUG check_terminal_complete: Output length:", nchar(terminal_output), "\n")
       
       if (exit_code != 0) {
          terminal_output <- paste0(terminal_output, "\n\nExit code: ", exit_code)
@@ -2039,6 +2057,7 @@
          terminal_output <- paste0(terminal_output, "\n\nExit code: 0 (success)")
       }
       
+      cat("DEBUG check_terminal_complete: Final terminal_output with exit code:", terminal_output, "\n")
       
       assign(".rs.terminal_output", terminal_output, envir = .GlobalEnv)
       assign(".rs.terminal_exit_code", exit_code, envir = .GlobalEnv)
@@ -2097,12 +2116,23 @@
    
    command_output <- ""
    
+   cat("DEBUG finalize_terminal_command: Starting finalization for message_id:", message_id, "\n")
+   cat("DEBUG finalize_terminal_command: request_id:", request_id, "\n")
+   cat("DEBUG finalize_terminal_command: call_id:", call_id, "\n")
+   
    # Check if this was a cancelled command
    if (exists(".rs.terminal_cancellation_message", envir = .GlobalEnv)) {
       command_output <- get(".rs.terminal_cancellation_message", envir = .GlobalEnv)
+      cat("DEBUG finalize_terminal_command: Using cancellation message:", command_output, "\n")
       rm(".rs.terminal_cancellation_message", envir = .GlobalEnv)
    } else if (exists(".rs.terminal_output", envir = .GlobalEnv)) {
       output <- get(".rs.terminal_output", envir = .GlobalEnv)
+      cat("DEBUG finalize_terminal_command: Retrieved terminal_output from global env\n")
+      cat("DEBUG finalize_terminal_command: Output class:", class(output), "\n")
+      cat("DEBUG finalize_terminal_command: Output length:", length(output), "\n")
+      cat("DEBUG finalize_terminal_command: Output nchar:", nchar(output), "\n")
+      cat("DEBUG finalize_terminal_command: Output content:", output, "\n")
+      
       if (length(output) > 0 && nchar(output) > 0) {
          # Split terminal output into lines and apply limits
          if (is.character(output) && length(output) == 1) {
@@ -2110,14 +2140,21 @@
          } else {
             terminal_lines <- as.character(output)
          }
+         cat("DEBUG finalize_terminal_command: Terminal lines count:", length(terminal_lines), "\n")
          limited_output <- .rs.limit_output_text(terminal_lines)
          command_output <- paste(limited_output, collapse = "\n")
+         cat("DEBUG finalize_terminal_command: Limited output:", command_output, "\n")
       } else {
          command_output <- "Terminal command executed successfully"
+         cat("DEBUG finalize_terminal_command: Using default success message (empty output)\n")
       }
    } else {
       command_output <- "Terminal command executed successfully"
+      cat("DEBUG finalize_terminal_command: Using default success message (no global var)\n")
    }
+   
+   cat("DEBUG finalize_terminal_command: Final command_output to save:", command_output, "\n")
+   cat("DEBUG finalize_terminal_command: command_output length:", nchar(command_output), "\n")
    
    # Find the unique pending message for this call_id
    fresh_log <- .rs.read_conversation_log()
@@ -2134,7 +2171,10 @@
    
    # Replace the pending message
    pending_entry_index <- pending_entries[1]
+   cat("DEBUG finalize_terminal_command: Replacing pending entry at index:", pending_entry_index, "\n")
+   cat("DEBUG finalize_terminal_command: Old output:", fresh_log[[pending_entry_index]]$output, "\n")
    fresh_log[[pending_entry_index]]$output <- command_output
+   cat("DEBUG finalize_terminal_command: New output saved:", fresh_log[[pending_entry_index]]$output, "\n")
    # Keep the original message ID - don't assign a new one
    # Keep procedural flag - users see output in terminal widget, not conversation
    fresh_log[[pending_entry_index]]$procedural <- TRUE
@@ -2178,6 +2218,11 @@
       
    .rs.write_conversation_log(fresh_log)
    
+   cat("DEBUG finalize_terminal_command: Conversation log updated with terminal output\n")
+   cat("DEBUG finalize_terminal_command: Verifying saved output in log...\n")
+   verification_log <- .rs.read_conversation_log()
+   verification_entry <- verification_log[[pending_entry_index]]
+   cat("DEBUG finalize_terminal_command: Verified output from log:", verification_entry$output, "\n")
 
    if (exists(".rs.terminal_id", envir = .GlobalEnv)) {
       rm(".rs.terminal_id", envir = .GlobalEnv)
@@ -2194,6 +2239,7 @@
    
    # Return different status based on whether conversation has moved on
    if (has_newer_messages) {
+      cat("DEBUG finalize_terminal_command: has_newer_messages = TRUE, returning done status\n")
       result <- .rs.create_ai_operation_result(
          status = "done",
          data = list(
@@ -2204,6 +2250,8 @@
          )
       )
    } else {      
+      cat("DEBUG finalize_terminal_command: has_newer_messages = FALSE, returning continue_silent status\n")
+      cat("DEBUG finalize_terminal_command: Will continue with related_to_id:", related_to_id, "\n")
       result <- .rs.create_ai_operation_result(
          status = "continue_silent",
          data = list(
@@ -2215,6 +2263,7 @@
       )
    }
    
+   cat("DEBUG finalize_terminal_command: Returning result with status:", result$status, "\n")
    return(result)
 })
 
@@ -2858,8 +2907,17 @@
       updated_log <- c(conversation_log, list(function_result$function_call_output))
       
       # CRITICAL FIX: Special handling for view_image - add the image message to conversation log
+      # Skip for SageMaker provider since it doesn't support images
       if (function_name == "view_image" && !is.null(function_result$image_message_entry)) {
-         updated_log <- c(updated_log, list(function_result$image_message_entry))
+         provider <- tryCatch({
+            .rs.get_active_provider()
+         }, error = function(e) {
+            NULL
+         })
+         
+         if (is.null(provider) || provider != "sagemaker") {
+            updated_log <- c(updated_log, list(function_result$image_message_entry))
+         }
       }
       
       .rs.write_conversation_log(updated_log)

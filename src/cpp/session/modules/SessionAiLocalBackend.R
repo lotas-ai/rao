@@ -310,7 +310,8 @@ if (!.rs.hasVar("local_backend_env")) {
    
    # If provider is already set, just check if BYOK is enabled for it
    if (!is.null(provider) && provider != "") {
-      return(.rs.ai.isBYOKEnabled(provider))
+      result <- .rs.ai.isBYOKEnabled(provider)
+      return(result)
    }
    
    # If provider not set, try to map from model
@@ -319,6 +320,8 @@ if (!.rs.hasVar("local_backend_env")) {
          provider <- "anthropic"
       } else if (grepl("^gpt-", model) || grepl("^o1-", model)) {
          provider <- "openai"
+      } else if (grepl("^sagemaker:", model)) {
+         provider <- "sagemaker"
       } else if (grepl("sagemaker", model, ignore.case = TRUE)) {
          provider <- "sagemaker"
       } else {
@@ -343,7 +346,8 @@ if (!.rs.hasVar("local_backend_env")) {
 })
 
 .rs.addFunction("ai.getSageMakerEndpoint", function() {
-   return(.rs.get_ai_state("sagemaker_endpoint", ""))
+   endpoint <- .rs.get_ai_state("sagemaker_endpoint", "")
+   return(endpoint)
 })
 
 .rs.addFunction("ai.setSageMakerRegion", function(region) {
@@ -352,7 +356,8 @@ if (!.rs.hasVar("local_backend_env")) {
 })
 
 .rs.addFunction("ai.getSageMakerRegion", function() {
-   return(.rs.get_ai_state("sagemaker_region", "us-east-1"))
+   region <- .rs.get_ai_state("sagemaker_region", "us-east-1")
+   return(region)
 })
 
 # JSON RPC handlers for SageMaker configuration

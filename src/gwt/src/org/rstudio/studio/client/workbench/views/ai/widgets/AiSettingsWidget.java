@@ -4209,12 +4209,15 @@ public class AiSettingsWidget extends Composite
    }
    
    private String getProviderFromModel(String model) {
-      if (model.startsWith("claude-")) {
+      // Check for SageMaker models first (they have a specific prefix)
+      if (model.startsWith("sagemaker:")) {
+         return "sagemaker";
+      } else if (model.toLowerCase().contains("sagemaker")) {
+         return "sagemaker";
+      } else if (model.startsWith("claude-")) {
          return "anthropic";
       } else if (model.startsWith("gpt-") || model.startsWith("o1-")) {
          return "openai";
-      } else if (model.toLowerCase().contains("sagemaker")) {
-         return "sagemaker";
       }
       return "anthropic"; // default
    }

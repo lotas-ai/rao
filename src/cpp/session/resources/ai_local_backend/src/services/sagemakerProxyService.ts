@@ -145,18 +145,20 @@ export class SagemakerProxyService implements ISagemakerProxyService {
         let sseBuffer = ''; // Buffer for incomplete SSE chunks
 
         try {
+            // Invoke SageMaker endpoint
             const command = new AWS.InvokeEndpointWithResponseStreamCommand({
                 EndpointName: endpointName,
                 Body: JSON.stringify(sagemakerRequest),
-                ContentType: 'application/json'
+                ContentType: 'application/json',
+                Accept: 'text/event-stream'
             });
 
             const response = await client.send(command);
             
             if (!response.Body) {
-                throw new Error('No response stream available from SageMaker');
+                throw new Error('No response body from SageMaker endpoint');
             }
-            
+
             // Use promise to block until streaming completes
             await new Promise<void>((resolve, reject) => {
                 const timeoutInterval = setInterval(() => {					
@@ -173,7 +175,7 @@ export class SagemakerProxyService implements ISagemakerProxyService {
                 // Process streaming response
                 (async () => {
                     try {
-                        for await (const event of response.Body!) {
+                        for await (const chunk of response.Body!) {
                             // Check for cancellation
                             if (streamState.cancelled) {
                                 clearInterval(timeoutInterval);
@@ -185,9 +187,10 @@ export class SagemakerProxyService implements ISagemakerProxyService {
                             const nowMs = Date.now();
                             lastStreamEventTime = nowMs;
                             
-                            if (event.PayloadPart?.Bytes) {
-                                const chunk = new TextDecoder().decode(event.PayloadPart.Bytes);
-                                sseBuffer += chunk;
+                            // Decode the chunk
+                            if (chunk.PayloadPart?.Bytes) {
+                                const chunkText = new TextDecoder().decode(chunk.PayloadPart.Bytes);
+                                sseBuffer += chunkText;
                                 
                                 while (sseBuffer.includes('\n\n')) {
                                     const eventEnd = sseBuffer.indexOf('\n\n');

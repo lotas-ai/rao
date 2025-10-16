@@ -70,6 +70,11 @@
 })
 
 .rs.addFunction("get_provider_from_model", function(model) {
+  # Check for SageMaker models first (they have a specific prefix)
+  if (grepl("^sagemaker:", model)) {
+    return("sagemaker")
+  }
+  
   # OpenAI models
   openai_models <- c("gpt-5-mini")
   
@@ -79,6 +84,10 @@
   if (model %in% openai_models) {
     return("openai")
   } else if (model %in% anthropic_models) {
+    return("anthropic")
+  } else if (grepl("^gpt-", model) || grepl("^o1-", model)) {
+    return("openai")
+  } else if (grepl("^claude-", model)) {
     return("anthropic")
   } else {
     return("openai")  # Default to OpenAI for unknown models
@@ -112,6 +121,9 @@
   }
   if (!is.null(.rs.ai.getBYOKApiKey("anthropic")) && nchar(.rs.ai.getBYOKApiKey("anthropic")) > 0) {
     return("anthropic")
+  }
+  if (!is.null(.rs.ai.getBYOKApiKey("sagemaker")) && nchar(.rs.ai.getBYOKApiKey("sagemaker")) > 0) {
+    return("sagemaker")
   }
   
   return(NULL)
@@ -151,12 +163,24 @@
     available_models <- c(available_models, "gpt-5-mini")
   }
   
+  # Check if BYOK SageMaker is enabled
+  if (.rs.ai.isBYOKEnabled("sagemaker")) {
+    # Get the configured endpoint name to use as the model name
+    sagemaker_endpoint <- .rs.get_ai_state("sagemaker_endpoint", "")
+    if (sagemaker_endpoint != "") {
+      # Use endpoint name as model identifier
+      available_models <- c(available_models, paste0("sagemaker:", sagemaker_endpoint))
+    }
+  }
+  
   # If a specific provider is requested, filter to only that provider's models
   if (!is.null(provider)) {
     if (provider == "openai") {
       available_models <- available_models[grepl("^gpt-", available_models)]
     } else if (provider == "anthropic") {
       available_models <- available_models[grepl("^claude-", available_models)]
+    } else if (provider == "sagemaker") {
+      available_models <- available_models[grepl("^sagemaker:", available_models)]
     }
   }
   

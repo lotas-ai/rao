@@ -503,7 +503,7 @@ export class LocalBackendService implements ILocalBackendService {
 	 */
 	private addUserInfoToOriginalQuery(conversation: ConversationMessage[], 
 									  userWorkspacePath: string | null, userShell: string | null, 
-									  projectLayout: string | null): void {
+									  projectLayout: string | null, interactionMode: string | null): void {
 		// Find the last user message with original_query = true
 		for (let i = conversation.length - 1; i >= 0; i--) {
 			const message = conversation[i];
@@ -526,14 +526,23 @@ export class LocalBackendService implements ILocalBackendService {
 					}
 				}
 				
-				// Create user info section
-				const userInfo = [
+				// Create user info section with optional Ask mode message
+				const userInfoLines = [
 					'<user_info>',
 					`The absolute path of the user's workspace is ${userWorkspacePath || '/home/byte/code/ai-dashboard'}. ` +
-					`The user's shell is ${userShell || '/usr/bin/fish'}.`,
-					'</user_info>',
-					''
-				].join('\n');
+					`The user's shell is ${userShell || '/usr/bin/fish'}.`
+				];
+				
+				// Add Ask mode message if in ask mode
+				if (interactionMode === 'ask') {
+					userInfoLines.push('');
+					userInfoLines.push('You are currently in read-only ask mode, which means you cannot edit files or run code. Do not attempt or offer to do so. If necessary, suggest the user switches you to Agent mode.');
+				}
+				
+				userInfoLines.push('</user_info>');
+				userInfoLines.push('');
+				
+				const userInfo = userInfoLines.join('\n');
 				
 				// Create project layout section
 				let projectLayoutSection = '';
@@ -1250,7 +1259,8 @@ export class LocalBackendService implements ILocalBackendService {
 			const symbolsNote = request.symbols_note;
 						
 			// Check if there are attached images in symbols_note and prepend them as context messages
-			if (symbolsNote?.attached_images?.length > 0) {
+			// SageMaker does not support images, so skip for that provider
+			if (symbolsNote?.attached_images?.length > 0 && provider !== 'sagemaker') {
 				this.addImageContextMessages(conversation, symbolsNote.attached_images);
 			}
 			
@@ -1268,7 +1278,8 @@ export class LocalBackendService implements ILocalBackendService {
 			
 			// Add user info to the beginning of the original query message for better caching
 			this.addUserInfoToOriginalQuery(conversation, 
-				request.user_workspace_path, request.user_shell, request.project_layout);
+				request.user_workspace_path, request.user_shell, request.project_layout, 
+				request.interaction_mode);
 			
 			// Use conversation as-is since we no longer process edit_file
 			const updatedConversation = conversation;
@@ -1345,13 +1356,26 @@ export class LocalBackendService implements ILocalBackendService {
 	 */
 	private async buildSagemakerRequestParams(conversation: ConversationMessage[], model: string, 
 											 request: any, symbolsNote: string | null): Promise<any> {
+		console.log(`[SageMaker LocalBackend] buildSagemakerRequestParams called for model: ${model}`);
+		
 		// Check if this is a naming request that shouldn't have developer instructions
 		const isConversationNameRequest = request.request_type === 'generate_conversation_name';
 		const isNamingRequest = isConversationNameRequest;
 		
+		console.log(`[SageMaker LocalBackend] Is naming request: ${isNamingRequest}`);
+		
+		// For SageMaker, we need to use the actual Hugging Face model ID, not our identifier
+		// Strip the "sagemaker:" prefix and use a default model ID
+		let actualModelId = model;
+		if (model.startsWith('sagemaker:')) {
+			// Use a default model - this should match what your SageMaker endpoint is configured to use
+			actualModelId = 'Qwen/Qwen3-Coder-30B-A3B-Instruct';
+			console.log(`[SageMaker LocalBackend] Converted model ${model} -> ${actualModelId} for SageMaker API`);
+		}
+		
 		// Build the API parameters in OpenAI ChatCompletion format
 		const apiParams: any = {
-			model: model,
+			model: actualModelId,
 			messages: [],
 			max_tokens: 8192,
 			stream: true
@@ -1360,6 +1384,7 @@ export class LocalBackendService implements ILocalBackendService {
 		// Add temperature if specified
 		if (request.temperature !== undefined) {
 			apiParams.temperature = request.temperature;
+			console.log(`[SageMaker LocalBackend] Temperature set to: ${request.temperature}`);
 		}
 		
 		// Build messages array for SageMaker (OpenAI ChatCompletion format)
@@ -1382,6 +1407,15 @@ export class LocalBackendService implements ILocalBackendService {
 		
 		// Process conversation messages
 		for (const msg of conversation) {
+			// Skip image messages - SageMaker does not support images
+			if (Array.isArray(msg.content)) {
+				const hasImage = msg.content.some((item: any) => item.type === 'input_image');
+				if (hasImage) {
+					console.log(`[SageMaker LocalBackend] Skipping image message - SageMaker does not support images`);
+					continue;
+				}
+			}
+			
 			// Handle function_call_output messages - convert to OpenAI format
 			if (msg.type === 'function_call_output') {
 				const callId = msg.call_id;
