@@ -982,7 +982,7 @@ tryCatch({
    return(output_text)
 })
 
-.rs.addFunction("check_required_packages", function(pkgs = c("httr2", "httr", "jsonlite", "curl", "commonmark", "htmltools", "base64enc", "processx", "callr", "magick", "rmarkdown")) {
+.rs.addFunction("check_required_packages", function(pkgs = c("httr2", "httr", "jsonlite", "curl", "commonmark", "htmltools", "base64enc", "processx", "callr", "magick", "rmarkdown", "readxl")) {
   installed <- vapply(pkgs, function(pkg) {
      location <- find.package(pkg, quiet = TRUE)
      length(location) > 0
@@ -1500,6 +1500,67 @@ tryCatch({
       return(paste(all_lines, collapse = "\n"))
    }, error = function(e) {
       return(NULL)
+   })
+})
+
+.rs.addFunction("read_xlsx_file", function(file_path, start_line = 1, end_line = 200) {
+   if (!requireNamespace("readxl", quietly = TRUE)) {
+      return("Error: readxl package is required to read xlsx files")
+   }
+   
+   tryCatch({
+      sheet_name <- readxl::excel_sheets(file_path)[1]
+      data <- readxl::read_excel(file_path, sheet = 1, col_names = TRUE)
+      
+      total_rows <- nrow(data)
+      actual_end_line <- min(end_line, total_rows)
+      actual_start_line <- max(1, start_line)
+      
+      if (actual_start_line > total_rows) {
+         return(paste0("Error: Start line ", actual_start_line, " exceeds total rows (", total_rows, ") in sheet '", sheet_name, "'"))
+      }
+      
+      data_subset <- data[actual_start_line:actual_end_line, , drop = FALSE]
+      
+      output_lines <- character()
+      output_lines <- c(output_lines, paste0(sheet_name, " (lines ", actual_start_line, "-", actual_end_line, "):"))
+      output_lines <- c(output_lines, "")
+      
+      col_names <- names(data_subset)
+      max_col_width <- 30
+      
+      format_value <- function(val, width) {
+         val_str <- as.character(val)
+         if (is.na(val_str)) {
+            val_str <- "NA"
+         }
+         if (nchar(val_str) > width) {
+            val_str <- paste0(substr(val_str, 1, width - 3), "...")
+         }
+         return(sprintf(paste0("%-", width, "s"), val_str))
+      }
+      
+      header <- paste(sapply(col_names, function(name) format_value(name, max_col_width)), collapse = " | ")
+      output_lines <- c(output_lines, header)
+      output_lines <- c(output_lines, paste(rep("-", nchar(header)), collapse = ""))
+      
+      for (i in seq_len(nrow(data_subset))) {
+         row_values <- sapply(seq_len(ncol(data_subset)), function(j) {
+            format_value(data_subset[i, j], max_col_width)
+         })
+         row_text <- paste(row_values, collapse = " | ")
+         output_lines <- c(output_lines, row_text)
+      }
+      
+      if (actual_end_line < total_rows) {
+         output_lines <- c(output_lines, "")
+         output_lines <- c(output_lines, paste0("...[", total_rows - actual_end_line, " more rows not shown. Total rows: ", total_rows, "]"))
+      }
+      
+      return(paste(output_lines, collapse = "\n"))
+      
+   }, error = function(e) {
+      return(paste0("Error reading xlsx file: ", e$message))
    })
 })
 

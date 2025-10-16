@@ -148,33 +148,20 @@ public class AiPaneResponses
       
       for (int i = 0; i < lines.length; i++) {
          String line = lines[i];
+         String trimmedLine = line.trim();
          
-         if (line.trim().startsWith(">")) {
-            // Check if the next line(s) also start with ">"
-            int j = i + 1;
-            while (j < lines.length && lines[j].trim().startsWith(">")) {
-               j++;
-            }
-            
-            // If we found consecutive ">" lines, only keep the last one
-            if (j > i + 1) {
-               // Skip to the last ">" line in this sequence
-               i = j - 1;
-               line = lines[i];
-            }
-            
-            // Add this ">" line (either standalone or last in sequence)
-            if (result.length() > 0) {
-               result.append("\n");
-            }
-            result.append(line);
-         } else {
-            // Non-">" line, add it as is
-            if (result.length() > 0) {
-               result.append("\n");
-            }
-            result.append(line);
+         // Skip all lines starting with ">" (R prompt lines) or "+" (R continuation lines)
+         // The command is already stored in function call arguments, we only want actual output
+         if (trimmedLine.startsWith(">") || trimmedLine.startsWith("+")) {
+            // Skip this line entirely - it's part of the command echo, not the output
+            continue;
          }
+         
+         // Keep all non-prompt lines (actual output)
+         if (result.length() > 0) {
+            result.append("\n");
+         }
+         result.append(line);
       }
       
       return result.toString();

@@ -1507,6 +1507,33 @@
    
    absoluteMaxLines <- 250
    
+   # Check if this is an xlsx file
+   if (grepl("\\.xlsx$", file_path, ignore.case = TRUE)) {
+      if (!file.exists(file_path)) {
+         file_content <- paste0("Error: File not found, try using your tools to look elsewhere for: ", file_path)
+         end_line_to_read <- startLine
+      } else {
+         file_content <- .rs.read_xlsx_file(file_path, startLine, endLine)
+         end_line_to_read <- endLine
+      }
+      
+      function_output_id <- .rs.get_preallocated_message_id(function_call$call_id, 2)
+      function_call_output <- list(
+         id = function_output_id,
+         type = "function_call_output",
+         call_id = function_call$call_id,
+         output = file_content,
+         related_to = function_call$msg_id,
+         start_line = startLine,
+         end_line = end_line_to_read
+      )
+      
+      return(list(
+         function_call_output = function_call_output,
+         function_output_id = function_output_id
+      ))
+   }
+   
    # First try to get content from editor (handles both saved and unsaved files)
    effective_content <- .rs.get_effective_file_content(file_path)
    

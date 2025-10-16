@@ -414,7 +414,6 @@
   # This prevents new API calls when user has already cancelled
   # IMPORTANT: Never cancel conversation name generation - these should always proceed
   if (.rs.get_conversation_var("ai_cancelled") && !is_conversation_name_request) {
-    cat("DEBUG CANCELLATION: send_backend_query returning NULL due to ai_cancelled\n")
     return(NULL)
   }
   
@@ -1216,8 +1215,6 @@
     # Verify file was written
     if (file.exists(summaries_path)) {
       file_size <- file.size(summaries_path)
-    } else {
-      cat("DEBUG: save_conversation_summary - ERROR: File does not exist after writing\n")
     }
     
     return(TRUE)
@@ -1692,7 +1689,6 @@
   }
   
   if (is.null(target_query_info)) {
-    cat("DEBUG: Could not find target query", target_query_number, "\n")
     return(list())
   }
   
