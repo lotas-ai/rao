@@ -1833,6 +1833,18 @@ public class RemoteServer implements Server, AiServerOperations
       sendRequest(RPC_SCOPE, GET_SAGEMAKER_REGION, new JSONArray(), requestCallback);
    }
    
+   public void setSageMakerModel(String model, ServerRequestCallback<Boolean> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(model));
+      sendRequest(RPC_SCOPE, SET_SAGEMAKER_MODEL, params, requestCallback);
+   }
+   
+   public void getSageMakerModel(ServerRequestCallback<String> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, GET_SAGEMAKER_MODEL, new JSONArray(), requestCallback);
+   }
+   
    public void getVignetteTitle(String topic,
                                 String pkgName, 
                                 ServerRequestCallback<String> requestCallback)
@@ -7454,6 +7466,8 @@ public class RemoteServer implements Server, AiServerOperations
    private static final String GET_SAGEMAKER_ENDPOINT = "get_sagemaker_endpoint";
    private static final String SET_SAGEMAKER_REGION = "set_sagemaker_region";
    private static final String GET_SAGEMAKER_REGION = "get_sagemaker_region";
+   private static final String SET_SAGEMAKER_MODEL = "set_sagemaker_model";
+   private static final String GET_SAGEMAKER_MODEL = "get_sagemaker_model";
    private static final String GET_CUSTOM_PARAMETER_AI = "get_custom_parameter_ai";
    private static final String SHOW_CUSTOM_AI_TOPIC = "show_custom_ai_topic";
    private static final String ACCEPT_SEARCH_REPLACE_COMMAND = "accept_search_replace_command";

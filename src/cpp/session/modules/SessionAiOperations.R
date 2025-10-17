@@ -1923,6 +1923,13 @@
 
 
 .rs.addFunction("cancel_console_command", function(message_id, request_id) {
+   # Restore print options that were saved before command execution
+   if (exists(".rs.ai_saved_print_opts", envir = .GlobalEnv)) {
+      saved_opts <- get(".rs.ai_saved_print_opts", envir = .GlobalEnv)
+      .rs.restore_printing_options(saved_opts)
+      rm(".rs.ai_saved_print_opts", envir = .GlobalEnv)
+   }
+   
    # Look up call_id from conversation log using message_id
    conversation_log <- .rs.read_conversation_log()
    call_id <- NULL
@@ -2231,6 +2238,13 @@
 
   
 .rs.addFunction("finalize_console_command", function(message_id, request_id, console_output = "") {
+   # Restore print options that were saved before command execution
+   if (exists(".rs.ai_saved_print_opts", envir = .GlobalEnv)) {
+      saved_opts <- get(".rs.ai_saved_print_opts", envir = .GlobalEnv)
+      .rs.restore_printing_options(saved_opts)
+      rm(".rs.ai_saved_print_opts", envir = .GlobalEnv)
+   }
+   
    conversation_log <- .rs.read_conversation_log()
    
    function_call <- NULL

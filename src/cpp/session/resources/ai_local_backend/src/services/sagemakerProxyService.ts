@@ -92,6 +92,7 @@ export class SagemakerProxyService implements ISagemakerProxyService {
         const sagemakerConfig = requestBodyJson.byok_keys?.sagemaker;
         const endpointName = sagemakerConfig?.endpointName;
         const region = sagemakerConfig?.region || 'us-east-1';
+        const model = sagemakerConfig?.model || 'Qwen/Qwen3-Coder-30B-A3B-Instruct';
         
         if (!endpointName) {
             throw new Error('SageMaker endpoint name not configured in BYOK settings.');

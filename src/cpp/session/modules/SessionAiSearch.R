@@ -39,6 +39,43 @@
    return(list())
 })
 
+.rs.addFunction("save_and_set_unlimited_printing", function() {
+   # Save current print options and set unlimited printing
+   saved_opts <- list(
+      tibble.print_max = getOption('tibble.print_max'),
+      tibble.print_min = getOption('tibble.print_min'),
+      dplyr.print_max = getOption('dplyr.print_max'),
+      dplyr.print_min = getOption('dplyr.print_min'),
+      max.print = getOption('max.print'),
+      width = getOption('width')
+   )
+   
+   options(
+      tibble.print_max = Inf,
+      tibble.print_min = Inf,
+      dplyr.print_max = Inf,
+      dplyr.print_min = Inf,
+      max.print = .Machine$integer.max,
+      width = 10000
+   )
+   
+   return(saved_opts)
+})
+
+.rs.addFunction("restore_printing_options", function(saved_opts) {
+   # Restore previously saved print options
+   if (!is.null(saved_opts)) {
+      options(
+         tibble.print_max = saved_opts$tibble.print_max,
+         tibble.print_min = saved_opts$tibble.print_min,
+         dplyr.print_max = saved_opts$dplyr.print_max,
+         dplyr.print_min = saved_opts$dplyr.print_min,
+         max.print = saved_opts$max.print,
+         width = saved_opts$width
+      )
+   }
+})
+
 .rs.addFunction("reset_ai_cancellation", function() {
    .rs.set_conversation_var("ai_cancelled", FALSE)
 })
@@ -2175,6 +2212,10 @@
       ))
    }
    
+   # Save current print options and set unlimited printing
+   saved_print_opts <- .rs.save_and_set_unlimited_printing()
+   assign(".rs.ai_saved_print_opts", saved_print_opts, envir = .GlobalEnv)
+   
    normalized_function_call <- list(
       name = if (is.list(function_call$name)) function_call$name[[1]] else function_call$name,
       arguments = if (is.list(function_call$arguments)) function_call$arguments[[1]] else function_call$arguments,
@@ -2293,6 +2334,10 @@
    trimmed_command <- gsub("\\n?```\\s*$", "", trimmed_command, perl = TRUE)
    trimmed_command <- gsub("```\\n", "", trimmed_command, perl = TRUE)
    trimmed_command <- trimws(trimmed_command)
+   
+   # Save current print options and set unlimited printing
+   saved_print_opts <- .rs.save_and_set_unlimited_printing()
+   assign(".rs.ai_saved_print_opts", saved_print_opts, envir = .GlobalEnv)
    
    conversation_index <- .rs.get_current_conversation_index()
    

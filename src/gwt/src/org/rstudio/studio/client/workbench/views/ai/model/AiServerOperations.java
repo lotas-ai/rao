@@ -191,6 +191,10 @@ public interface AiServerOperations
    
    void getSageMakerRegion(ServerRequestCallback<String> requestCallback);
    
+   void setSageMakerModel(String model, ServerRequestCallback<Boolean> requestCallback);
+   
+   void getSageMakerModel(ServerRequestCallback<String> requestCallback);
+   
    void deleteAllImages(ServerRequestCallback<java.lang.Void> requestCallback);
    
    void checkImageContentDuplicate(String imagePath, ServerRequestCallback<Boolean> requestCallback);

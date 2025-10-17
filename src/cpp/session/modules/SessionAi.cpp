@@ -3940,6 +3940,49 @@ Error getSageMakerRegion(const json::JsonRpcRequest& request,
    return Success();
 }
 
+Error setSageMakerModel(const json::JsonRpcRequest& request,
+                        json::JsonRpcResponse* pResponse)
+{
+   std::string model;
+   Error error = json::readParams(request.params, &model);
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   bool success;
+   error = r::exec::RFunction(".rs.ai.setSageMakerModel")
+      .addParam(model)
+      .call(&success);
+
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   pResponse->setResult(success);
+   return Success();
+}
+
+Error getSageMakerModel(const json::JsonRpcRequest& request,
+                        json::JsonRpcResponse* pResponse)
+{
+   std::string model;
+   Error error = r::exec::RFunction(".rs.ai.getSageMakerModel")
+      .call(&model);
+
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   pResponse->setResult(model);
+   return Success();
+}
+
 Error initialize()
 {
    using boost::bind;
@@ -4506,6 +4549,8 @@ Error initialize()
       (bind(module_context::registerRpcMethod, "get_sagemaker_endpoint", getSageMakerEndpoint))
       (bind(module_context::registerRpcMethod, "set_sagemaker_region", setSageMakerRegion))
       (bind(module_context::registerRpcMethod, "get_sagemaker_region", getSageMakerRegion))
+      (bind(module_context::registerRpcMethod, "set_sagemaker_model", setSageMakerModel))
+      (bind(module_context::registerRpcMethod, "get_sagemaker_model", getSageMakerModel))
       // User rules management RPC methods
       (bind(module_context::registerRpcMethod, "get_user_rules",
             boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(

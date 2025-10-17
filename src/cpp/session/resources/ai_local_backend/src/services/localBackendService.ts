@@ -78,14 +78,15 @@ export class LocalBackendService implements ILocalBackendService {
 	/**
 	 * Helper method to select appropriate cheap model for cost optimization
 	 */
-	private selectCheapModel(provider: string): string {
+	private selectCheapModel(provider: string, request?: any): string {
 		switch (provider) {
 			case 'openai':
 				return LocalBackendService.OPENAI_CHEAP_MODEL;
 			case 'anthropic':
 				return LocalBackendService.ANTHROPIC_CHEAP_MODEL;
 			case 'sagemaker':
-				return LocalBackendService.SAGEMAKER_MODEL;
+				// Use configured model from SageMaker settings, or fall back to default
+				return request?.byok_keys?.sagemaker?.model || LocalBackendService.SAGEMAKER_MODEL;
 			default:
 				throw new Error(`Unsupported provider: ${provider}. Supported providers: openai, anthropic, sagemaker`);
 		}
@@ -1365,11 +1366,11 @@ export class LocalBackendService implements ILocalBackendService {
 		console.log(`[SageMaker LocalBackend] Is naming request: ${isNamingRequest}`);
 		
 		// For SageMaker, we need to use the actual Hugging Face model ID, not our identifier
-		// Strip the "sagemaker:" prefix and use a default model ID
+		// Strip the "sagemaker:" prefix and use the configured model from SageMaker settings
 		let actualModelId = model;
 		if (model.startsWith('sagemaker:')) {
-			// Use a default model - this should match what your SageMaker endpoint is configured to use
-			actualModelId = 'Qwen/Qwen3-Coder-30B-A3B-Instruct';
+			// Get the configured model from SageMaker settings, or use default if not provided
+			actualModelId = request.byok_keys?.sagemaker?.model || 'Qwen/Qwen3-Coder-30B-A3B-Instruct';
 			console.log(`[SageMaker LocalBackend] Converted model ${model} -> ${actualModelId} for SageMaker API`);
 		}
 		
@@ -1591,7 +1592,7 @@ export class LocalBackendService implements ILocalBackendService {
 			
 			// Use the provider from the request (determined by workbench settings service) and use cheap model for cost optimization
 			const actualProvider = request.provider;
-			const cheapModel = this.selectCheapModel(actualProvider);
+			const cheapModel = this.selectCheapModel(actualProvider, request);
 			
 			// Create a new request for conversation name generation without tools
 			const nameRequest: any = {
@@ -1658,7 +1659,7 @@ export class LocalBackendService implements ILocalBackendService {
 		
 		// Use cheap model for cost optimization (same as conversation name generation)
 		// Don't use the model from request as it might be null
-		const model = this.selectCheapModel(provider);
+		const model = this.selectCheapModel(provider, request);
 		
 		// Get target query number from request
 		const targetQueryNumber = request.target_query_number;

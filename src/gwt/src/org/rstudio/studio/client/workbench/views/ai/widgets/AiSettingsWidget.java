@@ -224,6 +224,7 @@ public class AiSettingsWidget extends Composite
    private TextBox sagemakerSecretKeyInput_;
    private TextBox sagemakerEndpointInput_;
    private TextBox sagemakerRegionInput_;
+   private TextBox sagemakerModelInput_;
    private FlowPanel sagemakerInputContainer_;
    private HorizontalPanel sagemakerStoredContainer_;
    
@@ -1507,6 +1508,16 @@ public class AiSettingsWidget extends Composite
       sagemakerRegionInput_.setValue("us-east-1");
       sagemakerInputContainer_.add(sagemakerRegionInput_);
       
+      // Model Name input
+      sagemakerModelInput_ = new TextBox();
+      sagemakerModelInput_.addStyleName(styles_.settingInput());
+      sagemakerModelInput_.setWidth("100%");
+      sagemakerModelInput_.getElement().getStyle().setProperty("fontSize", "13px");
+      sagemakerModelInput_.getElement().getStyle().setProperty("display", "block");
+      sagemakerModelInput_.getElement().setAttribute("placeholder", "Model Name (e.g., Qwen/Qwen3-Coder-30B-A3B-Instruct)");
+      sagemakerModelInput_.setValue("Qwen/Qwen3-Coder-30B-A3B-Instruct");
+      sagemakerInputContainer_.add(sagemakerModelInput_);
+      
       // Save button styled like other settings buttons
       Button saveSageMakerButton = new Button("Save Configuration");
       saveSageMakerButton.addStyleName(styles_.settingButton());
@@ -1572,6 +1583,21 @@ public class AiSettingsWidget extends Composite
                            public void onError(ServerError error)
                            {
                               Debug.log("Error loading SageMaker region: " + error.getMessage());
+                           }
+                        });
+                        
+                        server_.getSageMakerModel(new ServerRequestCallback<String>()
+                        {
+                           @Override
+                           public void onResponseReceived(String model)
+                           {
+                              sagemakerModelInput_.setValue(model);
+                           }
+                           
+                           @Override
+                           public void onError(ServerError error)
+                           {
+                              Debug.log("Error loading SageMaker model: " + error.getMessage());
                            }
                         });
                      } else {
@@ -3085,6 +3111,18 @@ public class AiSettingsWidget extends Composite
                   }
                });
                
+               server_.setSageMakerModel("Qwen/Qwen3-Coder-30B-A3B-Instruct", new ServerRequestCallback<Boolean>() {
+                  @Override
+                  public void onResponseReceived(Boolean success) {
+                     Debug.log("SageMaker model reset to default");
+                  }
+                  
+                  @Override
+                  public void onError(ServerError error) {
+                     Debug.log("Error resetting SageMaker model: " + error.getMessage());
+                  }
+               });
+               
                // Switch UI to show input container for SageMaker
                sagemakerInputContainer_.setVisible(true);
                sagemakerStoredContainer_.setVisible(false);
@@ -3140,6 +3178,7 @@ public class AiSettingsWidget extends Composite
       String secretKey = sagemakerSecretKeyInput_.getValue();
       String endpoint = sagemakerEndpointInput_.getValue();
       String region = sagemakerRegionInput_.getValue();
+      String model = sagemakerModelInput_.getValue();
       
       // Validate inputs
       if (accessKey == null || accessKey.trim().isEmpty()) {
@@ -3162,6 +3201,11 @@ public class AiSettingsWidget extends Composite
          return;
       }
       
+      if (model == null || model.trim().isEmpty()) {
+         globalDisplay_.showErrorMessage("Error", "Please enter Model Name.");
+         return;
+      }
+      
       // Create AWS credentials JSON
       String awsCredentialsJson = "{\"accessKeyId\":\"" + accessKey + "\",\"secretAccessKey\":\"" + secretKey + "\"}";
       
@@ -3179,36 +3223,56 @@ public class AiSettingsWidget extends Composite
                   public void onResponseReceived(Boolean endpointSuccess)
                   {
                      if (endpointSuccess) {
-                        // Finally save region
+                        // Save region
                         server_.setSageMakerRegion(region, new ServerRequestCallback<Boolean>()
                         {
                            @Override
                            public void onResponseReceived(Boolean regionSuccess)
                            {
                               if (regionSuccess) {
-                                 // Clear input fields
-                                 sagemakerAccessKeyInput_.setValue("");
-                                 sagemakerSecretKeyInput_.setValue("");
-                                 sagemakerEndpointInput_.setValue("");
-                                 sagemakerRegionInput_.setValue("us-east-1");
-                                 
-                                 globalDisplay_.showMessage(
-                                    GlobalDisplay.MSG_INFO,
-                                    "Configuration Saved",
-                                    "Your SageMaker configuration has been securely stored."
-                                 );
-                                 
-                                 // Switch UI to show stored container
-                                 sagemakerInputContainer_.setVisible(false);
-                                 sagemakerStoredContainer_.setVisible(true);
-                                 
-                                 handler_.onBYOKApiKeySet("sagemaker", awsCredentialsJson);
-                                 
-                                 // Reload models to show newly available models
-                                 AiSettingsWidget.this.loadAvailableModels();
-                                 
-                                 // Update authentication status
-                                 checkForAnyAuthentication();
+                                 // Finally save model
+                                 server_.setSageMakerModel(model, new ServerRequestCallback<Boolean>()
+                                 {
+                                    @Override
+                                    public void onResponseReceived(Boolean modelSuccess)
+                                    {
+                                       if (modelSuccess) {
+                                          // Clear input fields
+                                          sagemakerAccessKeyInput_.setValue("");
+                                          sagemakerSecretKeyInput_.setValue("");
+                                          sagemakerEndpointInput_.setValue("");
+                                          sagemakerRegionInput_.setValue("us-east-1");
+                                          sagemakerModelInput_.setValue("Qwen/Qwen3-Coder-30B-A3B-Instruct");
+                                          
+                                          globalDisplay_.showMessage(
+                                             GlobalDisplay.MSG_INFO,
+                                             "Configuration Saved",
+                                             "Your SageMaker configuration has been securely stored."
+                                          );
+                                          
+                                          // Switch UI to show stored container
+                                          sagemakerInputContainer_.setVisible(false);
+                                          sagemakerStoredContainer_.setVisible(true);
+                                          
+                                          handler_.onBYOKApiKeySet("sagemaker", awsCredentialsJson);
+                                          
+                                          // Reload models to show newly available models
+                                          AiSettingsWidget.this.loadAvailableModels();
+                                          
+                                          // Update authentication status
+                                          checkForAnyAuthentication();
+                                       } else {
+                                          globalDisplay_.showErrorMessage("Error", "Failed to save SageMaker model.");
+                                       }
+                                    }
+                                    
+                                    @Override
+                                    public void onError(ServerError error)
+                                    {
+                                       Debug.log("Error saving SageMaker model: " + error.getMessage());
+                                       globalDisplay_.showErrorMessage("Error", "Failed to save SageMaker model: " + error.getMessage());
+                                    }
+                                 });
                               } else {
                                  globalDisplay_.showErrorMessage("Error", "Failed to save SageMaker region.");
                               }

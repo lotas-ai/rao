@@ -285,10 +285,12 @@ if (!.rs.hasVar("local_backend_env")) {
          # Also get SageMaker config from AI settings
          sagemaker_endpoint <- .rs.get_ai_state("sagemaker_endpoint", "")
          sagemaker_region <- .rs.get_ai_state("sagemaker_region", "us-east-1")
+         sagemaker_model <- .rs.get_ai_state("sagemaker_model", "Qwen/Qwen3-Coder-30B-A3B-Instruct")
          
          request_data$byok_keys$sagemaker <- list(
             endpointName = sagemaker_endpoint,
-            region = sagemaker_region
+            region = sagemaker_region,
+            model = sagemaker_model
          )
       }, error = function(e) {
          stop("Invalid AWS credentials format: ", e$message)
@@ -360,6 +362,16 @@ if (!.rs.hasVar("local_backend_env")) {
    return(region)
 })
 
+.rs.addFunction("ai.setSageMakerModel", function(model) {
+   .rs.set_ai_state("sagemaker_model", model)
+   return(TRUE)
+})
+
+.rs.addFunction("ai.getSageMakerModel", function() {
+   model <- .rs.get_ai_state("sagemaker_model", "Qwen/Qwen3-Coder-30B-A3B-Instruct")
+   return(model)
+})
+
 # JSON RPC handlers for SageMaker configuration
 .rs.addJsonRpcHandler("set_sagemaker_endpoint", function(endpoint) {
    return(.rs.ai.setSageMakerEndpoint(endpoint))
@@ -375,5 +387,13 @@ if (!.rs.hasVar("local_backend_env")) {
 
 .rs.addJsonRpcHandler("get_sagemaker_region", function() {
    return(.rs.ai.getSageMakerRegion())
+})
+
+.rs.addJsonRpcHandler("set_sagemaker_model", function(model) {
+   return(.rs.ai.setSageMakerModel(model))
+})
+
+.rs.addJsonRpcHandler("get_sagemaker_model", function() {
+   return(.rs.ai.getSageMakerModel())
 })
 
