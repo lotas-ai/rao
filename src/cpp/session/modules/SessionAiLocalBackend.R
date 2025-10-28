@@ -154,7 +154,7 @@ if (!.rs.hasVar("local_backend_env")) {
       }
    }
    
-   return(local_backend$proxy_url %||% "")
+   return(if (is.null(local_backend$proxy_url)) "" else local_backend$proxy_url)
 })
 
 # ============================================================================
