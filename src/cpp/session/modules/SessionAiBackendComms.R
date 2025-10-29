@@ -112,7 +112,19 @@
     provider <- .rs.get_active_provider()
   }
   
-  # Always require a real Rao API key regardless of local/production mode
+  # For local models, authentication is optional
+  if (provider == "localmodel") {
+    # Check for optional BYOK key
+    byok_key <- .rs.ai.getBYOKApiKey(provider)
+    if (!is.null(byok_key) && nchar(byok_key) > 0) {
+      return(list(api_key = byok_key))
+    } else {
+      # Return empty auth for local model (no API key required)
+      return(list(api_key = ""))
+    }
+  }
+  
+  # For other providers, always require a real Rao API key regardless of local/production mode
   api_key <- .rs.get_api_key(provider)
   
   if (is.null(api_key)) {
@@ -449,7 +461,12 @@
     provider <- .rs.get_active_provider()
     
     if (is.null(provider)) {
-      if (!is.null(.rs.get_api_key("openai"))) {
+      # Check for local model first (it's available without Rao authentication)
+      has_localmodel_byok <- .rs.ai.isBYOKEnabled("localmodel") && .rs.ai.getLocalModelEndpoint() != ""
+      
+      if (has_localmodel_byok) {
+        provider <- "localmodel"
+      } else if (!is.null(.rs.get_api_key("openai"))) {
         provider <- "openai"
       } else {
         # Check for BYOK keys (OpenAI first, then Anthropic, then SageMaker)
@@ -478,16 +495,35 @@
   # Check for Rao API key first, then BYOK key
   api_key <- .rs.get_api_key(provider)
   if (is.null(api_key)) {
-    # Check for BYOK key
-    byok_key <- .rs.ai.getBYOKApiKey(provider)    
-    if (!is.null(byok_key) && nchar(byok_key) > 0) {
-      api_key <- byok_key
-    } else {
-      if (!is_conversation_name_request) {
-        .rs.enqueClientEvent("update_thinking_message", list(message = "", hide_cancel = TRUE))
+    # For local model, API key is optional
+    if (provider == "localmodel") {
+      # Check if endpoint is configured
+      if (.rs.ai.getLocalModelEndpoint() == "") {
+        if (!is_conversation_name_request) {
+          .rs.enqueClientEvent("update_thinking_message", list(message = "", hide_cancel = TRUE))
+        }
+        .rs.enqueue_error_message("Local model endpoint not configured. Please set it in Settings (gear icon).")
+        return(NULL)
       }
-      .rs.enqueue_error_message(paste0("No API key found for this user. Please use a valid log-in or set up a valid API key in the Settings (gear icon)."))
-      return(NULL)
+      # Check for optional BYOK key
+      byok_key <- .rs.ai.getBYOKApiKey(provider)    
+      if (!is.null(byok_key) && nchar(byok_key) > 0) {
+        api_key <- byok_key
+      } else {
+        api_key <- ""  # Allow empty API key for local model
+      }
+    } else {
+      # Check for BYOK key for other providers
+      byok_key <- .rs.ai.getBYOKApiKey(provider)    
+      if (!is.null(byok_key) && nchar(byok_key) > 0) {
+        api_key <- byok_key
+      } else {
+        if (!is_conversation_name_request) {
+          .rs.enqueClientEvent("update_thinking_message", list(message = "", hide_cancel = TRUE))
+        }
+        .rs.enqueue_error_message(paste0("No API key found for this user. Please use a valid log-in or set up a valid API key in the Settings (gear icon)."))
+        return(NULL)
+      }
     }
   }
   
@@ -533,6 +569,13 @@
     list()  # Return empty list on error
   })
   
+  # Get rules file content if a rules file is attached
+  rule_file <- tryCatch({
+    .rs.getRulesFileContent()
+  }, error = function(e) {
+    NULL
+  })
+  
   request_data <- list(
     request_type = request_type,
     conversation = sorted_conversation,
@@ -548,7 +591,10 @@
     user_shell = user_env_info$user_shell,
     project_layout = user_env_info$project_layout,
     user_rules = user_rules,
-    interaction_mode = .rs.get_interaction_mode()
+    rule_file = rule_file,
+    interaction_mode = .rs.get_interaction_mode(),
+    localmodel_endpoint = if (provider == "localmodel") .rs.ai.getLocalModelEndpoint() else NULL,
+    localmodel_name = if (provider == "localmodel") .rs.ai.getLocalModelName() else NULL
   )
   
   if (!is.null(attachment_data) && !is.null(attachment_data$has_attachments) && attachment_data$has_attachments) {

@@ -1845,6 +1845,46 @@ public class RemoteServer implements Server, AiServerOperations
       sendRequest(RPC_SCOPE, GET_SAGEMAKER_MODEL, new JSONArray(), requestCallback);
    }
    
+   public void setLocalModelEndpoint(String endpoint, ServerRequestCallback<Boolean> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(endpoint));
+      sendRequest(RPC_SCOPE, SET_LOCALMODEL_ENDPOINT, params, requestCallback);
+   }
+   
+   public void getLocalModelEndpoint(ServerRequestCallback<String> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, GET_LOCALMODEL_ENDPOINT, new JSONArray(), requestCallback);
+   }
+   
+   public void setLocalModelName(String modelName, ServerRequestCallback<Boolean> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      params.set(0, new JSONString(modelName));
+      sendRequest(RPC_SCOPE, SET_LOCALMODEL_NAME, params, requestCallback);
+   }
+   
+   public void getLocalModelName(ServerRequestCallback<String> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, GET_LOCALMODEL_NAME, new JSONArray(), requestCallback);
+   }
+   
+   public void setRulesFilePath(String filePath, ServerRequestCallback<Boolean> requestCallback)
+   {
+      JSONArray params = new JSONArray();
+      if (filePath != null) {
+         params.set(0, new JSONString(filePath));
+      } else {
+         params.set(0, JSONNull.getInstance());
+      }
+      sendRequest(RPC_SCOPE, SET_RULES_FILE_PATH, params, requestCallback);
+   }
+   
+   public void getRulesFilePath(ServerRequestCallback<String> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, GET_RULES_FILE_PATH, new JSONArray(), requestCallback);
+   }
+   
    public void getVignetteTitle(String topic,
                                 String pkgName, 
                                 ServerRequestCallback<String> requestCallback)
@@ -7468,6 +7508,12 @@ public class RemoteServer implements Server, AiServerOperations
    private static final String GET_SAGEMAKER_REGION = "get_sagemaker_region";
    private static final String SET_SAGEMAKER_MODEL = "set_sagemaker_model";
    private static final String GET_SAGEMAKER_MODEL = "get_sagemaker_model";
+   private static final String SET_LOCALMODEL_ENDPOINT = "set_localmodel_endpoint";
+   private static final String GET_LOCALMODEL_ENDPOINT = "get_localmodel_endpoint";
+   private static final String SET_LOCALMODEL_NAME = "set_localmodel_name";
+   private static final String GET_LOCALMODEL_NAME = "get_localmodel_name";
+   private static final String SET_RULES_FILE_PATH = "set_rules_file_path";
+   private static final String GET_RULES_FILE_PATH = "get_rules_file_path";
    private static final String GET_CUSTOM_PARAMETER_AI = "get_custom_parameter_ai";
    private static final String SHOW_CUSTOM_AI_TOPIC = "show_custom_ai_topic";
    private static final String ACCEPT_SEARCH_REPLACE_COMMAND = "accept_search_replace_command";

@@ -219,6 +219,27 @@ public class GeneralPreferencesPane extends PreferencesPane
          basic.add(enableMouseWheelZoom);
       }
 
+      Label securityLabel = headerLabel("Security");
+      spacedBefore(securityLabel);
+      basic.add(securityLabel);
+
+      aiSecurityMode_ = new SelectWidget(
+            "",
+            new String[] {
+                  "Improve Rao for everyone - allows us to improve the app based on user data",
+                  "Secure mode - disables analytics but sends app version and UUID for support purposes",
+                  "Lockdown mode - disables all telemetry"
+            },
+            new String[] {
+                  "improve",
+                  "secure",
+                  "lockdown"
+            },
+            false,
+            true,
+            false);
+      basic.add(spaced(aiSecurityMode_));
+
       VerticalTabPanel graphics = new VerticalTabPanel(ElementIds.GENERAL_GRAPHICS_PREFS);
 
       initializeGraphicsBackendWidget();
@@ -518,6 +539,9 @@ public class GeneralPreferencesPane extends PreferencesPane
       // graphics prefs
       graphicsBackend_.setValue(prefs.graphicsBackend().getValue());
       graphicsAntialias_.setValue(prefs.graphicsAntialiasing().getValue());
+      
+      // AI security mode
+      aiSecurityMode_.setValue(prefs.aiSecurityMode().getValue());
 
       initialProjectUserDataDir_ = prefs_.projectUserDataDirectory().getGlobalValue();
       initialUiLanguage_ = prefs_.uiLanguage().getValue();
@@ -597,6 +621,7 @@ public class GeneralPreferencesPane extends PreferencesPane
       prefs.restoreLastProject().setGlobalValue(restoreLastProject_.getValue());
       prefs.graphicsBackend().setGlobalValue(graphicsBackend_.getValue());
       prefs.graphicsAntialiasing().setGlobalValue(graphicsAntialias_.getValue());
+      prefs.aiSecurityMode().setGlobalValue(aiSecurityMode_.getValue());
 
       String uiLanguagePrefValue = uiLanguage_.getValue();
       if (!StringUtil.equals(uiLanguagePrefValue, initialUiLanguage_))
@@ -756,6 +781,7 @@ public class GeneralPreferencesPane extends PreferencesPane
 
    private SelectWidget graphicsBackend_;
    private SelectWidget graphicsAntialias_;
+   private SelectWidget aiSecurityMode_;
 
    private SelectWidget showServerHomePage_;
    private SelectWidget saveWorkspace_;

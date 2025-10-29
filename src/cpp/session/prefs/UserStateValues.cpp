@@ -517,6 +517,45 @@ core::Error UserStateValues::setAiByokOpenaiApiKey(std::string val)
    return writePref("ai_byok_openai_api_key", val);
 }
 
+/**
+ * Local model endpoint URL
+ */
+std::string UserStateValues::aiLocalmodelEndpoint()
+{
+   return readPref<std::string>("ai_localmodel_endpoint");
+}
+
+core::Error UserStateValues::setAiLocalmodelEndpoint(std::string val)
+{
+   return writePref("ai_localmodel_endpoint", val);
+}
+
+/**
+ * Local model name
+ */
+std::string UserStateValues::aiLocalmodelName()
+{
+   return readPref<std::string>("ai_localmodel_name");
+}
+
+core::Error UserStateValues::setAiLocalmodelName(std::string val)
+{
+   return writePref("ai_localmodel_name", val);
+}
+
+/**
+ * Bring Your Own Key for Local Model API
+ */
+std::string UserStateValues::aiByokLocalmodelApiKey()
+{
+   return readPref<std::string>("ai_byok_localmodel_api_key");
+}
+
+core::Error UserStateValues::setAiByokLocalmodelApiKey(std::string val)
+{
+   return writePref("ai_byok_localmodel_api_key", val);
+}
+
 std::vector<std::string> UserStateValues::allKeys()
 {
    return std::vector<std::string>({

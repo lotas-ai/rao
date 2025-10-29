@@ -35,6 +35,7 @@
 #include <core/http/Request.hpp>
 #include <core/http/Response.hpp>
 #include <core/http/URL.hpp>
+#include <core/http/TcpIpBlockingClient.hpp>
 #include <core/FileSerializer.hpp>
 #include <core/system/Process.hpp>
 #include <core/system/ShellUtils.hpp>
@@ -3983,6 +3984,200 @@ Error getSageMakerModel(const json::JsonRpcRequest& request,
    return Success();
 }
 
+Error setLocalModelEndpoint(const json::JsonRpcRequest& request,
+                            json::JsonRpcResponse* pResponse)
+{
+   std::string endpoint;
+   Error error = json::readParams(request.params, &endpoint);
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   bool success;
+   error = r::exec::RFunction(".rs.ai.setLocalModelEndpoint")
+      .addParam(endpoint)
+      .call(&success);
+
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   pResponse->setResult(success);
+   return Success();
+}
+
+Error getLocalModelEndpoint(const json::JsonRpcRequest& request,
+                            json::JsonRpcResponse* pResponse)
+{
+   std::string endpoint;
+   Error error = r::exec::RFunction(".rs.ai.getLocalModelEndpoint")
+      .call(&endpoint);
+
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   pResponse->setResult(endpoint);
+   return Success();
+}
+
+Error setLocalModelName(const json::JsonRpcRequest& request,
+                        json::JsonRpcResponse* pResponse)
+{
+   std::string modelName;
+   Error error = json::readParams(request.params, &modelName);
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   bool success;
+   error = r::exec::RFunction(".rs.ai.setLocalModelName")
+      .addParam(modelName)
+      .call(&success);
+
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   pResponse->setResult(success);
+   return Success();
+}
+
+Error getLocalModelName(const json::JsonRpcRequest& request,
+                        json::JsonRpcResponse* pResponse)
+{
+   std::string modelName;
+   Error error = r::exec::RFunction(".rs.ai.getLocalModelName")
+      .call(&modelName);
+
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   pResponse->setResult(modelName);
+   return Success();
+}
+
+Error setRulesFilePath(const json::JsonRpcRequest& request,
+                       json::JsonRpcResponse* pResponse)
+{
+   std::string filePath;
+   
+   // Handle null parameter (when clearing the file path)
+   if (request.params[0].isNull())
+   {
+      filePath = "";
+   }
+   else
+   {
+      Error error = json::readParams(request.params, &filePath);
+      if (error)
+      {
+         LOG_ERROR(error);
+         return error;
+      }
+   }
+   
+   bool success = false;
+   Error error = r::exec::RFunction(".rs.setRulesFilePath")
+      .addParam(filePath)
+      .call(&success);
+   
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   pResponse->setResult(success);
+   return Success();
+}
+
+Error getRulesFilePath(const json::JsonRpcRequest& request,
+                       json::JsonRpcResponse* pResponse)
+{
+   std::string filePath;
+   Error error = r::exec::RFunction(".rs.getRulesFilePath")
+      .call(&filePath);
+   
+   if (error)
+   {
+      LOG_ERROR(error);
+      return error;
+   }
+   
+   pResponse->setResult(filePath);
+   return Success();
+}
+
+void sendAppOpenTelemetry()
+{
+   std::string userId;
+   Error error = r::exec::RFunction(".rs.telemetry.getOrCreateUserId").call(&userId);
+   if (error)
+      return;
+   
+   std::string securityMode;
+   error = r::exec::RFunction(".rs.get_security_mode").call(&securityMode);
+   if (error)
+      securityMode = "improve";
+   
+   if (securityMode == "lockdown")
+      return;
+   
+   std::string os;
+   error = r::exec::RFunction(".rs.telemetry.detectOperatingSystem").call(&os);
+   if (error)
+      os = "Unknown";
+   
+   std::string appVersion = RSTUDIO_VERSION;
+   
+   // Detect backend URL - check if local backend is available
+   std::string backendUrl = "https://api.lotas.ai";
+   http::Request healthRequest;
+   healthRequest.setMethod("GET");
+   healthRequest.setUri("/actuator/health");
+   http::Response healthResponse;
+   error = http::sendRequest("localhost", "8080", boost::posix_time::milliseconds(2000), healthRequest, &healthResponse);
+   if (!error && healthResponse.statusCode() == 200)
+   {
+      backendUrl = "http://localhost:8080";
+   }
+   
+   json::Object payload;
+   payload["userId"] = userId;
+   payload["appVersion"] = appVersion;
+   payload["operatingSystem"] = os;
+   payload["appName"] = "Rao";
+   std::string jsonBody = payload.writeFormatted();
+   
+   http::URL url(backendUrl + "/api/telemetry/app-open");
+   std::string host = url.hostname();
+   std::string port = url.portStr();
+   
+   http::Request request;
+   request.setMethod("POST");
+   request.setUri("/api/telemetry/app-open");
+   request.setContentType("application/json");
+   request.setHeader("Accept", "application/json");
+   request.setBody(jsonBody);
+   
+   http::Response response;
+   http::sendRequest(host, port, boost::posix_time::milliseconds(5000), request, &response);
+}
+
 Error initialize()
 {
    using boost::bind;
@@ -4551,6 +4746,14 @@ Error initialize()
       (bind(module_context::registerRpcMethod, "get_sagemaker_region", getSageMakerRegion))
       (bind(module_context::registerRpcMethod, "set_sagemaker_model", setSageMakerModel))
       (bind(module_context::registerRpcMethod, "get_sagemaker_model", getSageMakerModel))
+      // Local Model configuration RPC methods
+      (bind(module_context::registerRpcMethod, "set_localmodel_endpoint", setLocalModelEndpoint))
+      (bind(module_context::registerRpcMethod, "get_localmodel_endpoint", getLocalModelEndpoint))
+      (bind(module_context::registerRpcMethod, "set_localmodel_name", setLocalModelName))
+      (bind(module_context::registerRpcMethod, "get_localmodel_name", getLocalModelName))
+      // Rules file RPC methods
+      (bind(module_context::registerRpcMethod, "set_rules_file_path", setRulesFilePath))
+      (bind(module_context::registerRpcMethod, "get_rules_file_path", getRulesFilePath))
       // User rules management RPC methods
       (bind(module_context::registerRpcMethod, "get_user_rules",
             boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
@@ -4612,6 +4815,7 @@ Error initialize()
       (bind(sourceModuleRFile, "SessionAiAttachments.R"))
       (bind(sourceModuleRFile, "SessionAiImages.R"))
       (bind(sourceModuleRFile, "SessionAiContext.R"))
+      (bind(sourceModuleRFile, "SessionAiTelemetry.R"))   // app telemetry
       (bind(sourceModuleRFile, "SessionAiLocalBackend.R"))  // BYOK local backend
       (bind(sourceModuleRFile, "SessionAiBackendComms.R"));    // then attachment functions
    

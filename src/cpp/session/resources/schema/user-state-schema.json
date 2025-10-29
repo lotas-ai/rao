@@ -445,6 +445,30 @@
             "default": "",
             "title": "BYOK OpenAI API Key",
             "description": "Bring Your Own Key for OpenAI API"
+        },
+        "ai_localmodel_endpoint": {
+            "type": "string",
+            "default": "http://localhost:11434",
+            "title": "Local Model Endpoint",
+            "description": "OpenAI-compatible endpoint URL for local model server (e.g., http://localhost:11434 for Ollama, http://localhost:8080 for LocalAI). The system will append /v1/chat/completions automatically."
+        },
+        "ai_localmodel_name": {
+            "type": "string",
+            "default": "llama3.2:1b",
+            "title": "Local Model Name",
+            "description": "Model name to use with your local AI server (e.g., llama3.2:1b for Ollama, gpt-3.5-turbo for LocalAI). This is sent to your local endpoint."
+        },
+        "ai_byok_localmodel_api_key": {
+            "type": "string",
+            "default": "",
+            "title": "BYOK Local Model API Key",
+            "description": "Optional API key for local model endpoint"
+        },
+        "telemetry_user_id": {
+            "type": "string",
+            "default": "",
+            "title": "Telemetry User ID",
+            "description": "Unique identifier for telemetry"
         }
     }
 }

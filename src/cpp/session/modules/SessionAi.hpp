@@ -27,6 +27,7 @@ namespace modules {
 namespace ai {
    
 core::Error initialize();
+void sendAppOpenTelemetry();
                        
 } // namespace ai
 } // namespace modules

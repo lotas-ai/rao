@@ -75,6 +75,11 @@
     return("sagemaker")
   }
   
+  # Check for Local Model
+  if (model == "Local model") {
+    return("localmodel")
+  }
+  
   # OpenAI models
   openai_models <- c("gpt-5-mini")
   
@@ -138,12 +143,33 @@
   if (is_signed_in) {
     all_models <- c("claude-sonnet-4-5-20250929", "gpt-5-mini")
     
+    # Even when signed in, add BYOK models if configured
+    # SageMaker
+    if (.rs.ai.isBYOKEnabled("sagemaker")) {
+      sagemaker_endpoint <- .rs.get_ai_state("sagemaker_endpoint", "")
+      if (sagemaker_endpoint != "") {
+        all_models <- c(all_models, paste0("sagemaker:", sagemaker_endpoint))
+      }
+    }
+    
+    # Local model
+    if (.rs.ai.isBYOKEnabled("localmodel")) {
+      localmodel_endpoint <- .rs.ai.getLocalModelEndpoint()
+      if (localmodel_endpoint != "") {
+        all_models <- c(all_models, "Local model")
+      }
+    }
+    
     # Filter by provider if specified
     if (!is.null(provider)) {
       if (provider == "openai") {
         return(all_models[grepl("^gpt-", all_models)])
       } else if (provider == "anthropic") {
         return(all_models[grepl("^claude-", all_models)])
+      } else if (provider == "sagemaker") {
+        return(all_models[grepl("^sagemaker:", all_models)])
+      } else if (provider == "localmodel") {
+        return(all_models[all_models == "Local model"])
       }
     }
     
@@ -173,6 +199,16 @@
     }
   }
   
+  # Check if BYOK Local Model is enabled
+  if (.rs.ai.isBYOKEnabled("localmodel")) {
+    # Get the configured endpoint to ensure it's set up
+    localmodel_endpoint <- .rs.ai.getLocalModelEndpoint()
+    if (localmodel_endpoint != "") {
+      # Add "Local model" to available models
+      available_models <- c(available_models, "Local model")
+    }
+  }
+  
   # If a specific provider is requested, filter to only that provider's models
   if (!is.null(provider)) {
     if (provider == "openai") {
@@ -181,6 +217,8 @@
       available_models <- available_models[grepl("^claude-", available_models)]
     } else if (provider == "sagemaker") {
       available_models <- available_models[grepl("^sagemaker:", available_models)]
+    } else if (provider == "localmodel") {
+      available_models <- available_models[available_models == "Local model"]
     }
   }
   
@@ -193,7 +231,8 @@
   # Define all possible display names
   all_display_names <- list(
     "claude-sonnet-4-5-20250929" = "claude-sonnet-4-5-20250929 (Superior coding and analysis - recommended)",
-    "gpt-5-mini" = "gpt-5-mini (Reasoning tier)"
+    "gpt-5-mini" = "gpt-5-mini (Reasoning tier)",
+    "Local model" = "Local model (Your local endpoint)"
   )
   
   # Return only display names for available models
@@ -835,6 +874,49 @@
 
 .rs.addJsonRpcHandler("delete_user_rule", function(index) {
   return(.rs.delete_user_rule(index))
+})
+
+# ============================================================================
+# Rules File Management
+# ============================================================================
+
+.rs.addFunction("setRulesFilePath", function(filePath) {
+  if (is.null(filePath) || filePath == "") {
+    .rs.set_ai_pref("rules_file_path", "")
+  } else {
+    # Expand ~ and store the full path
+    filePath <- path.expand(filePath)
+    .rs.set_ai_pref("rules_file_path", filePath)
+  }
+  return(TRUE)
+})
+
+.rs.addFunction("getRulesFilePath", function() {
+  filePath <- .rs.get_ai_pref("rules_file_path", "")
+  if (is.null(filePath) || filePath == "") {
+    return("")
+  }
+  # Ensure path is fully expanded when retrieved
+  return(path.expand(filePath))
+})
+
+.rs.addFunction("getRulesFileContent", function() {
+  filePath <- .rs.getRulesFilePath()
+  if (is.null(filePath) || filePath == "") {
+    return(NULL)
+  }
+  
+  if (!file.exists(filePath)) {
+    return(NULL)
+  }
+  
+  content <- tryCatch({
+    paste(readLines(filePath, warn = FALSE), collapse = "\n")
+  }, error = function(e) {
+    NULL
+  })
+  
+  return(content)
 })
 
 # Sign in with website flow - now using loopback server for desktop

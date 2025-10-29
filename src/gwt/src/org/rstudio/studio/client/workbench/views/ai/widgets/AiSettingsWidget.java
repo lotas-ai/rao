@@ -44,6 +44,12 @@ import org.rstudio.studio.client.server.ServerError;
 import org.rstudio.studio.client.server.ServerRequestCallback;
 import org.rstudio.studio.client.application.events.EventBus;
 import com.google.gwt.user.client.Timer;
+import org.rstudio.studio.client.common.FileDialogs;
+import org.rstudio.core.client.files.FileSystemContext;
+import org.rstudio.core.client.files.FileSystemItem;
+import org.rstudio.core.client.widget.ProgressOperationWithInput;
+import org.rstudio.core.client.widget.ProgressIndicator;
+import org.rstudio.studio.client.common.filetypes.FileTypeRegistry;
 
 public class AiSettingsWidget extends Composite
 {
@@ -88,6 +94,7 @@ public class AiSettingsWidget extends Composite
       String statusBadge();
       String statusActive();
       String statusTrial();
+      String statusOrgPromo();
       String statusPastDue();
       String statusPaymentActionRequired();
       String statusCancelled();
@@ -141,6 +148,9 @@ public class AiSettingsWidget extends Composite
    private final AiServerOperations server_;
    private final EventBus eventBus_;
    private final GlobalDisplay globalDisplay_;
+   private final FileDialogs fileDialogs_;
+   private final FileSystemContext fileSystemContext_;
+   private final FileTypeRegistry fileTypeRegistry_;
    
    // UI Components
    private PasswordTextBox apiKeyInput_;
@@ -168,6 +178,8 @@ public class AiSettingsWidget extends Composite
    private Label webSearchText_;
    private Button addRuleButton_;
    private VerticalPanel rulesContainer_;
+   private HorizontalPanel rulesFileContainer_;
+   private String currentRulesFilePath_ = null;
    private TextArea newRuleInput_;
    private Button saveNewRuleButton_;
    private Button cancelNewRuleButton_;
@@ -228,15 +240,28 @@ public class AiSettingsWidget extends Composite
    private FlowPanel sagemakerInputContainer_;
    private HorizontalPanel sagemakerStoredContainer_;
    
+   // Local Model-specific fields
+   private TextBox localModelEndpointInput_;
+   private TextBox localModelNameInput_;
+   private PasswordTextBox localModelApiKeyInput_;
+   private FlowPanel localModelInputContainer_;
+   private HorizontalPanel localModelStoredContainer_;
+   
    public AiSettingsWidget(SettingsHandler handler, 
                           AiServerOperations server, 
                           EventBus eventBus,
-                          GlobalDisplay globalDisplay)
+                          GlobalDisplay globalDisplay,
+                          FileDialogs fileDialogs,
+                          FileSystemContext fileSystemContext,
+                          FileTypeRegistry fileTypeRegistry)
    {
       handler_ = handler;
       server_ = server;
       eventBus_ = eventBus;
       globalDisplay_ = globalDisplay;
+      fileDialogs_ = fileDialogs;
+      fileSystemContext_ = fileSystemContext;
+      fileTypeRegistry_ = fileTypeRegistry;
       
       initWidget(createWidget());
       addStyleName(styles_.settingsContainer());
@@ -734,6 +759,43 @@ public class AiSettingsWidget extends Composite
       // Build the rules list
       buildRulesList();
       
+      // Rules file section - styled like the description panel above
+      HorizontalPanel rulesFilePanel = new HorizontalPanel();
+      rulesFilePanel.setWidth("100%");
+      rulesFilePanel.setVerticalAlignment(HorizontalPanel.ALIGN_TOP);
+      rulesFilePanel.setHorizontalAlignment(HorizontalPanel.ALIGN_LEFT);
+      rulesFilePanel.getElement().getStyle().setProperty("marginTop", "12px");
+      
+      Label rulesFileDescription = new Label("Attach a text document with expanded rules.");
+      rulesFileDescription.addStyleName(styles_.settingLabel());
+      rulesFileDescription.setWidth("100%");
+      rulesFilePanel.add(rulesFileDescription);
+      rulesFilePanel.setCellWidth(rulesFileDescription, "100%");
+      rulesFilePanel.setCellHorizontalAlignment(rulesFileDescription, HasHorizontalAlignment.ALIGN_LEFT);
+      
+      // Attach File button - always visible
+      Button attachFileButton_ = new Button("Attach File");
+      attachFileButton_.addStyleName(styles_.settingButton());
+      attachFileButton_.addStyleName(styles_.primaryButton());
+      attachFileButton_.addStyleName(styles_.addRuleButton());
+      addNativeClickHandler(attachFileButton_.getElement(), "AttachRulesFile");
+      rulesFilePanel.add(attachFileButton_);
+      rulesFilePanel.setCellHorizontalAlignment(attachFileButton_, HasHorizontalAlignment.ALIGN_RIGHT);
+      rulesFilePanel.setCellVerticalAlignment(attachFileButton_, HasVerticalAlignment.ALIGN_TOP);
+      
+      contentPanel.add(rulesFilePanel);
+      
+      // Container for attached file display (initially hidden) - like BYOK stored key
+      rulesFileContainer_ = new HorizontalPanel();
+      rulesFileContainer_.setVisible(false);
+      rulesFileContainer_.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
+      rulesFileContainer_.getElement().getStyle().setProperty("marginTop", "10px");
+      rulesFileContainer_.getElement().getStyle().setProperty("marginBottom", "4px");
+      contentPanel.add(rulesFileContainer_);
+      
+      // Build the rules file display
+      buildRulesFileDisplay();
+      
       // Add content panel to section
       section.add(contentPanel);
       
@@ -806,6 +868,42 @@ public class AiSettingsWidget extends Composite
 
          
          rulesContainer_.add(ruleContainer); // Add to bottom for correct indexing
+      }
+   }
+   
+   private void buildRulesFileDisplay()
+   {
+      rulesFileContainer_.clear();
+      
+      if (currentRulesFilePath_ != null && !currentRulesFilePath_.isEmpty()) {
+         // Show the container with file path
+         rulesFileContainer_.setVisible(true);
+         
+         // File path label with clickable underline - wrapping text like BYOK
+         HTML filePathLabel = new HTML(currentRulesFilePath_);
+         filePathLabel.addStyleName(styles_.keyStoredText());
+         filePathLabel.getElement().getStyle().setProperty("textDecoration", "underline");
+         filePathLabel.getElement().getStyle().setProperty("cursor", "pointer");
+         filePathLabel.getElement().getStyle().setProperty("marginRight", "8px");
+         filePathLabel.getElement().getStyle().setProperty("wordBreak", "break-word");
+         filePathLabel.getElement().getStyle().setProperty("flex", "1");
+         addNativeClickHandler(filePathLabel.getElement(), "OpenRulesFile");
+         rulesFileContainer_.add(filePathLabel);
+         
+         // Delete icon - use Label with SVG like BYOK
+         Label deleteIcon = new Label();
+         deleteIcon.getElement().setInnerHTML("<svg width='16' height='16' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentColor'><path fill-rule='evenodd' clip-rule='evenodd' d='M10 3h3v1h-1v9l-1 1H4l-1-1V4H2V3h3V2a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1zM9 2H6v1h3V2zM4 13h7V4H4v9zm2-8H5v7h1V5zm1 0h1v7H7V5zm2 0h1v7H9V5z'/></svg>");
+         deleteIcon.getElement().getStyle().setProperty("cursor", "pointer");
+         deleteIcon.getElement().getStyle().setProperty("display", "inline-flex");
+         deleteIcon.getElement().getStyle().setProperty("alignItems", "center");
+         deleteIcon.getElement().getStyle().setProperty("userSelect", "none");
+         deleteIcon.getElement().getStyle().setProperty("marginLeft", "8px");
+         
+         addNativeClickHandler(deleteIcon.getElement(), "RemoveRulesFile");
+         rulesFileContainer_.add(deleteIcon);
+      } else {
+         // Hide the container when no file is attached
+         rulesFileContainer_.setVisible(false);
       }
    }
    
@@ -1245,6 +1343,9 @@ public class AiSettingsWidget extends Composite
       // SageMaker BYOK (special panel with multiple inputs)
       contentPanel.add(createSageMakerProviderPanel());
       
+      // Local Model BYOK (special panel with multiple inputs)
+      contentPanel.add(createLocalModelProviderPanel());
+      
       // Add content panel to section
       section.add(contentPanel);
       
@@ -1634,6 +1735,208 @@ public class AiSettingsWidget extends Composite
       return panel;
    }
    
+   private VerticalPanel createLocalModelProviderPanel()
+   {
+      final String provider = "localmodel";
+      final String displayName = "Local Model";
+      
+      VerticalPanel panel = new VerticalPanel();
+      panel.setWidth("100%");
+      panel.addStyleName(styles_.ruleContainer());
+      panel.getElement().getStyle().setProperty("marginBottom", "15px");
+      
+      // Title row with toggle
+      HorizontalPanel titleRow = new HorizontalPanel();
+      titleRow.setWidth("100%");
+      titleRow.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
+      
+      HTML label = new HTML("Use my own " + displayName + " endpoint");
+      label.addStyleName(styles_.settingLabel());
+      titleRow.add(label);
+      
+      // Toggle (hidden initially until we check status)
+      final HTML toggle = new HTML();
+      toggle.getElement().setInnerHTML(
+         "<div style='position: relative; width: 32px; height: 16px; border-radius: 8px; cursor: pointer; transition: background 0.3s; display: none;' data-byok-provider='" + provider + "' class='ai-toggle-disabled'>" +
+         "<div class='" + styles_.toggleShadow() + "' style='position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; background: white; border-radius: 50%; transition: left 0.3s, right 0.3s;'></div>" +
+         "</div>"
+      );
+      titleRow.add(toggle);
+      titleRow.setCellHorizontalAlignment(toggle, HorizontalPanel.ALIGN_RIGHT);
+      
+      panel.add(titleRow);
+      
+      // Stored configuration display container (initially hidden)
+      final HorizontalPanel storedContainer = new HorizontalPanel();
+      storedContainer.setVisible(false);
+      storedContainer.setVerticalAlignment(HorizontalPanel.ALIGN_MIDDLE);
+      storedContainer.getElement().getStyle().setProperty("marginTop", "10px");
+      storedContainer.getElement().getStyle().setProperty("marginBottom", "4px");
+      
+      HTML storedText = new HTML("Endpoint configured");
+      storedText.addStyleName(styles_.keyStoredText());
+      storedContainer.add(storedText);
+      
+      // Delete icon
+      Label deleteIcon = new Label();
+      deleteIcon.getElement().setInnerHTML("<svg width='16' height='16' viewBox='0 0 16 16' xmlns='http://www.w3.org/2000/svg' fill='currentColor'><path fill-rule='evenodd' clip-rule='evenodd' d='M10 3h3v1h-1v9l-1 1H4l-1-1V4H2V3h3V2a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1zM9 2H6v1h3V2zM4 13h7V4H4v9zm2-8H5v7h1V5zm1 0h1v7H7V5zm2 0h1v7H9V5z'/></svg>");
+      deleteIcon.getElement().getStyle().setProperty("cursor", "pointer");
+      deleteIcon.getElement().getStyle().setProperty("display", "inline-flex");
+      deleteIcon.getElement().getStyle().setProperty("alignItems", "center");
+      deleteIcon.getElement().getStyle().setProperty("userSelect", "none");
+      deleteIcon.getElement().getStyle().setProperty("marginLeft", "8px");
+      
+      addNativeClickHandler(deleteIcon.getElement(), "DeleteLocalModelConfig");
+      storedContainer.add(deleteIcon);
+      
+      panel.add(storedContainer);
+      localModelStoredContainer_ = storedContainer;
+      
+      // Input container (initially hidden)
+      final FlowPanel inputContainer = new FlowPanel();
+      inputContainer.setWidth("100%");
+      inputContainer.setVisible(false);
+      inputContainer.getElement().getStyle().setProperty("marginTop", "10px");
+      
+      // Endpoint URL input
+      HTML endpointLabel = new HTML("Endpoint URL:");
+      endpointLabel.addStyleName(styles_.settingLabel());
+      endpointLabel.getElement().getStyle().setProperty("display", "block");
+      endpointLabel.getElement().getStyle().setProperty("marginBottom", "5px");
+      endpointLabel.getElement().getStyle().setProperty("fontSize", "13px");
+      inputContainer.add(endpointLabel);
+      
+      localModelEndpointInput_ = new TextBox();
+      localModelEndpointInput_.addStyleName(styles_.settingInput());
+      localModelEndpointInput_.setWidth("100%");
+      localModelEndpointInput_.getElement().getStyle().setProperty("fontSize", "13px");
+      localModelEndpointInput_.getElement().getStyle().setProperty("display", "block");
+      localModelEndpointInput_.getElement().getStyle().setProperty("marginBottom", "10px");
+      localModelEndpointInput_.getElement().setAttribute("placeholder", "http://localhost:11434");
+      inputContainer.add(localModelEndpointInput_);
+      
+      // Model Name input
+      HTML modelNameLabel = new HTML("Model Name:");
+      modelNameLabel.addStyleName(styles_.settingLabel());
+      modelNameLabel.getElement().getStyle().setProperty("display", "block");
+      modelNameLabel.getElement().getStyle().setProperty("marginBottom", "5px");
+      modelNameLabel.getElement().getStyle().setProperty("fontSize", "13px");
+      inputContainer.add(modelNameLabel);
+      
+      localModelNameInput_ = new TextBox();
+      localModelNameInput_.addStyleName(styles_.settingInput());
+      localModelNameInput_.setWidth("100%");
+      localModelNameInput_.getElement().getStyle().setProperty("fontSize", "13px");
+      localModelNameInput_.getElement().getStyle().setProperty("display", "block");
+      localModelNameInput_.getElement().getStyle().setProperty("marginBottom", "10px");
+      localModelNameInput_.getElement().setAttribute("placeholder", "llama3.2:1b");
+      inputContainer.add(localModelNameInput_);
+      
+      // API Key input (optional)
+      HTML apiKeyLabel = new HTML("API Key (optional):");
+      apiKeyLabel.addStyleName(styles_.settingLabel());
+      apiKeyLabel.getElement().getStyle().setProperty("display", "block");
+      apiKeyLabel.getElement().getStyle().setProperty("marginBottom", "5px");
+      apiKeyLabel.getElement().getStyle().setProperty("fontSize", "13px");
+      inputContainer.add(apiKeyLabel);
+      
+      localModelApiKeyInput_ = new PasswordTextBox();
+      localModelApiKeyInput_.addStyleName(styles_.settingInput());
+      localModelApiKeyInput_.setWidth("100%");
+      localModelApiKeyInput_.getElement().getStyle().setProperty("fontSize", "13px");
+      localModelApiKeyInput_.getElement().getStyle().setProperty("display", "block");
+      localModelApiKeyInput_.getElement().getStyle().setProperty("marginBottom", "10px");
+      localModelApiKeyInput_.getElement().setAttribute("placeholder", "Optional API key");
+      inputContainer.add(localModelApiKeyInput_);
+      
+      // Save button styled like other settings buttons
+      Button saveButton = new Button("Save Configuration");
+      saveButton.addStyleName(styles_.settingButton());
+      saveButton.addStyleName(styles_.primaryButton());
+      saveButton.getElement().getStyle().setProperty("marginTop", "8px");
+      addNativeClickHandler(saveButton.getElement(), "SaveLocalModelConfig");
+      inputContainer.add(saveButton);
+      
+      panel.add(inputContainer);
+      localModelInputContainer_ = inputContainer;
+      
+      // Check if BYOK is enabled and update UI
+      server_.isBYOKEnabled(provider, new ServerRequestCallback<Boolean>()
+      {
+         @Override
+         public void onResponseReceived(Boolean enabled)
+         {
+            toggle.getElement().getFirstChildElement().getStyle().setProperty("display", "block");
+            
+            if (enabled) {
+               toggle.getElement().getFirstChildElement().addClassName("ai-toggle-enabled");
+               toggle.getElement().getFirstChildElement().removeClassName("ai-toggle-disabled");
+               com.google.gwt.dom.client.Element knob = toggle.getElement().getFirstChildElement().getFirstChildElement().cast();
+               knob.getStyle().setProperty("left", "auto");
+               knob.getStyle().setProperty("right", "1px");
+               
+               loadLocalModelConfiguration(storedContainer, inputContainer);
+            } else {
+               storedContainer.setVisible(false);
+               inputContainer.setVisible(false);
+            }
+            
+            addNativeBYOKToggleHandler(toggle.getElement(), provider, inputContainer.getElement(), storedContainer.getElement());
+         }
+         
+         @Override
+         public void onError(ServerError error)
+         {
+            Debug.log("Error checking Local Model BYOK status: " + error.getMessage());
+         }
+      });
+      
+      return panel;
+   }
+   
+   private void loadLocalModelConfiguration(final HorizontalPanel storedContainer, final FlowPanel inputContainer)
+   {
+      server_.getLocalModelEndpoint(new ServerRequestCallback<String>()
+      {
+         @Override
+         public void onResponseReceived(String endpoint)
+         {
+            if (endpoint != null && !endpoint.isEmpty()) {
+               storedContainer.setVisible(true);
+               inputContainer.setVisible(false);
+               localModelEndpointInput_.setText(endpoint);
+               
+               server_.getLocalModelName(new ServerRequestCallback<String>()
+               {
+                  @Override
+                  public void onResponseReceived(String modelName)
+                  {
+                     if (modelName != null && !modelName.isEmpty()) {
+                        localModelNameInput_.setText(modelName);
+                     }
+                  }
+                  
+                  @Override
+                  public void onError(ServerError error)
+                  {
+                     Debug.log("Error loading local model name: " + error.getMessage());
+                  }
+               });
+            } else {
+               storedContainer.setVisible(false);
+               inputContainer.setVisible(true);
+            }
+         }
+         
+         @Override
+         public void onError(ServerError error)
+         {
+            Debug.log("Error loading local model endpoint: " + error.getMessage());
+            inputContainer.setVisible(true);
+         }
+      });
+   }
+   
    private native void addNativeSageMakerToggleHandler(com.google.gwt.dom.client.Element element, com.google.gwt.dom.client.Element inputContainer, com.google.gwt.dom.client.Element storedKeyContainer) /*-{
       var thiz = this;
       var toggleDiv = element.querySelector('[data-byok-provider="sagemaker"]');
@@ -1710,8 +2013,12 @@ public class AiSettingsWidget extends Composite
                knob.style.left = 'auto';
                knob.style.right = '1px';
                
-               // Check if key is stored to show appropriate container
-               thiz.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::checkAndShowBYOKContainer(Ljava/lang/String;Lcom/google/gwt/dom/client/Element;Lcom/google/gwt/dom/client/Element;)(provider, inputContainer, storedKeyContainer);
+               // For local model, check endpoint configuration; for others, check API key
+               if (provider === 'localmodel') {
+                  thiz.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::checkAndShowLocalModelContainer(Lcom/google/gwt/dom/client/Element;Lcom/google/gwt/dom/client/Element;)(inputContainer, storedKeyContainer);
+               } else {
+                  thiz.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::checkAndShowBYOKContainer(Ljava/lang/String;Lcom/google/gwt/dom/client/Element;Lcom/google/gwt/dom/client/Element;)(provider, inputContainer, storedKeyContainer);
+               }
             } else {
                toggleDiv.classList.remove('ai-toggle-enabled');
                toggleDiv.classList.add('ai-toggle-disabled');
@@ -1725,6 +2032,29 @@ public class AiSettingsWidget extends Composite
             // Call handler
             thiz.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleBYOKEnabledChange(Ljava/lang/String;Z)(provider, newEnabled);
          };
+      }
+   }-*/;
+   
+   private native void updateToggleState(String provider, boolean enabled) /*-{
+      var toggleDiv = $doc.querySelector('[data-byok-provider="' + provider + '"]');
+      if (toggleDiv) {
+         if (enabled) {
+            toggleDiv.classList.add('ai-toggle-enabled');
+            toggleDiv.classList.remove('ai-toggle-disabled');
+            var knob = toggleDiv.querySelector('div');
+            if (knob) {
+               knob.style.left = 'auto';
+               knob.style.right = '1px';
+            }
+         } else {
+            toggleDiv.classList.remove('ai-toggle-enabled');
+            toggleDiv.classList.add('ai-toggle-disabled');
+            var knob = toggleDiv.querySelector('div');
+            if (knob) {
+               knob.style.left = '1px';
+               knob.style.right = 'auto';
+            }
+         }
       }
    }-*/;
    
@@ -1748,6 +2078,33 @@ public class AiSettingsWidget extends Composite
          public void onError(ServerError error)
          {
             Debug.log("Error checking if BYOK key exists: " + error.getMessage());
+            inputContainer.getStyle().setProperty("display", "block");
+            storedKeyContainer.getStyle().setProperty("display", "none");
+         }
+      });
+   }
+   
+   private void checkAndShowLocalModelContainer(final com.google.gwt.dom.client.Element inputContainer, final com.google.gwt.dom.client.Element storedKeyContainer)
+   {
+      // For local model, check if endpoint is configured
+      server_.getLocalModelEndpoint(new ServerRequestCallback<String>()
+      {
+         @Override
+         public void onResponseReceived(String endpoint)
+         {
+            if (endpoint != null && !endpoint.isEmpty()) {
+               storedKeyContainer.getStyle().setProperty("display", "block");
+               inputContainer.getStyle().setProperty("display", "none");
+            } else {
+               storedKeyContainer.getStyle().setProperty("display", "none");
+               inputContainer.getStyle().setProperty("display", "block");
+            }
+         }
+         
+         @Override
+         public void onError(ServerError error)
+         {
+            Debug.log("Error checking local model endpoint: " + error.getMessage());
             inputContainer.getStyle().setProperty("display", "block");
             storedKeyContainer.getStyle().setProperty("display", "none");
          }
@@ -2197,6 +2554,23 @@ public class AiSettingsWidget extends Composite
       
       // Load user rules
       refreshRules();
+      
+      // Load rules file path
+      server_.getRulesFilePath(new ServerRequestCallback<String>() {
+         @Override
+         public void onResponseReceived(String filePath) {
+            if (filePath != null && !filePath.isEmpty()) {
+               currentRulesFilePath_ = filePath;
+               buildRulesFileDisplay();
+            }
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            currentRulesFilePath_ = null;
+            buildRulesFileDisplay();
+         }
+      });
    }
    
    private void checkForAnyAuthentication()
@@ -2349,6 +2723,8 @@ public class AiSettingsWidget extends Composite
       switch (status.toLowerCase()) {
          case "trial":
             return "Free Tier";
+         case "org_promo":
+            return "Organization Promotion";
          case "active":
             return "Active";
          case "past_due":
@@ -2371,6 +2747,7 @@ public class AiSettingsWidget extends Composite
       // Remove all status classes
       subscriptionStatusLabel_.removeStyleName(styles_.statusActive());
       subscriptionStatusLabel_.removeStyleName(styles_.statusTrial());
+      subscriptionStatusLabel_.removeStyleName(styles_.statusOrgPromo());
       subscriptionStatusLabel_.removeStyleName(styles_.statusPastDue());
       subscriptionStatusLabel_.removeStyleName(styles_.statusPaymentActionRequired());
       subscriptionStatusLabel_.removeStyleName(styles_.statusCancelled());
@@ -2381,6 +2758,9 @@ public class AiSettingsWidget extends Composite
          switch (status.toLowerCase()) {
             case "trial":
                subscriptionStatusLabel_.addStyleName(styles_.statusTrial());
+               break;
+            case "org_promo":
+               subscriptionStatusLabel_.addStyleName(styles_.statusOrgPromo());
                break;
             case "active":
                subscriptionStatusLabel_.addStyleName(styles_.statusActive());
@@ -3317,6 +3697,310 @@ public class AiSettingsWidget extends Composite
       });
    }
    
+   private void handleSaveLocalModelConfig() {
+      String endpoint = localModelEndpointInput_.getValue();
+      String modelName = localModelNameInput_.getValue();
+      String apiKey = localModelApiKeyInput_.getValue();
+      
+      // Validate inputs
+      if (endpoint == null || endpoint.trim().isEmpty()) {
+         globalDisplay_.showErrorMessage("Error", "Please enter endpoint URL.");
+         return;
+      }
+      
+      if (modelName == null || modelName.trim().isEmpty()) {
+         globalDisplay_.showErrorMessage("Error", "Please enter model name.");
+         return;
+      }
+      
+      // First, enable BYOK for local model
+      server_.setBYOKEnabled("localmodel", true, new ServerRequestCallback<Boolean>()
+      {
+         @Override
+         public void onResponseReceived(Boolean enableSuccess)
+         {
+            if (enableSuccess) {
+               // Then save endpoint
+               saveLocalModelEndpointAndName(endpoint, modelName, apiKey);
+            } else {
+               globalDisplay_.showErrorMessage("Error", "Failed to enable local model BYOK.");
+            }
+         }
+         
+         @Override
+         public void onError(ServerError error)
+         {
+            globalDisplay_.showErrorMessage("Save Failed", "Failed to enable local model BYOK: " + error.getUserMessage());
+         }
+      });
+   }
+   
+   private void saveLocalModelEndpointAndName(String endpoint, String modelName, String apiKey) {
+      server_.setLocalModelEndpoint(endpoint, new ServerRequestCallback<Boolean>()
+      {
+         @Override
+         public void onResponseReceived(Boolean success)
+         {
+            if (success) {
+               // Then save model name
+               server_.setLocalModelName(modelName, new ServerRequestCallback<Boolean>()
+               {
+                  @Override
+                  public void onResponseReceived(Boolean modelSuccess)
+                  {
+                     if (modelSuccess) {
+                        // Save API key if provided
+                        if (apiKey != null && !apiKey.trim().isEmpty()) {
+                           server_.setBYOKApiKey("localmodel", apiKey, new ServerRequestCallback<Boolean>()
+                           {
+                              @Override
+                              public void onResponseReceived(Boolean keySuccess)
+                              {
+                                 if (keySuccess) {
+                                    completeLocalModelSave();
+                                 } else {
+                                    globalDisplay_.showErrorMessage("Error", "Failed to save API key.");
+                                 }
+                              }
+                              
+                              @Override
+                              public void onError(ServerError error)
+                              {
+                                 globalDisplay_.showErrorMessage("Save Failed", "Failed to save API key: " + error.getUserMessage());
+                              }
+                           });
+                        } else {
+                           completeLocalModelSave();
+                        }
+                     } else {
+                        globalDisplay_.showErrorMessage("Error", "Failed to save model name.");
+                     }
+                  }
+                  
+                  @Override
+                  public void onError(ServerError error)
+                  {
+                     globalDisplay_.showErrorMessage("Save Failed", "Failed to save model name: " + error.getUserMessage());
+                  }
+               });
+            } else {
+               globalDisplay_.showErrorMessage("Error", "Failed to save endpoint.");
+            }
+         }
+         
+         @Override
+         public void onError(ServerError error)
+         {
+            globalDisplay_.showErrorMessage("Save Failed", "Failed to save endpoint: " + error.getUserMessage());
+         }
+      });
+   }
+   
+   private void completeLocalModelSave() {
+      // Clear inputs
+      localModelEndpointInput_.setValue("");
+      localModelNameInput_.setValue("");
+      localModelApiKeyInput_.setValue("");
+      
+      // Update UI to show stored state
+      localModelInputContainer_.setVisible(false);
+      localModelStoredContainer_.setVisible(true);
+      
+      // Update toggle to show enabled state
+      updateToggleState("localmodel", true);
+      
+      // Notify handler to start proxy
+      handler_.onBYOKEnabledChange("localmodel", true);
+      
+      globalDisplay_.showMessage(
+         GlobalDisplay.MSG_INFO,
+         "Success",
+         "Local model configuration saved successfully."
+      );
+      
+      // Reload available models since local model is now configured
+      loadAvailableModels();
+   }
+   
+   private void handleDeleteLocalModelConfig() {
+      // First, disable BYOK for local model
+      server_.setBYOKEnabled("localmodel", false, new ServerRequestCallback<Boolean>()
+      {
+         @Override
+         public void onResponseReceived(Boolean disableSuccess)
+         {
+            if (disableSuccess) {
+               // Then clear endpoint and configuration
+               clearLocalModelConfiguration();
+            } else {
+               globalDisplay_.showErrorMessage("Error", "Failed to disable local model BYOK.");
+            }
+         }
+         
+         @Override
+         public void onError(ServerError error)
+         {
+            globalDisplay_.showErrorMessage("Delete Failed", "Failed to disable local model BYOK: " + error.getUserMessage());
+         }
+      });
+   }
+   
+   private void clearLocalModelConfiguration() {
+      // Clear endpoint
+      server_.setLocalModelEndpoint("", new ServerRequestCallback<Boolean>()
+      {
+         @Override
+         public void onResponseReceived(Boolean success)
+         {
+            if (success) {
+               // Clear model name
+               server_.setLocalModelName("", new ServerRequestCallback<Boolean>()
+               {
+                  @Override
+                  public void onResponseReceived(Boolean modelSuccess)
+                  {
+                     if (modelSuccess) {
+                        // Clear API key if any
+                        server_.clearBYOKApiKey("localmodel", new ServerRequestCallback<java.lang.Void>()
+                        {
+                           @Override
+                           public void onResponseReceived(java.lang.Void result)
+                           {
+                              completeLocalModelDelete();
+                           }
+                           
+                           @Override
+                           public void onError(ServerError error)
+                           {
+                              // Still complete delete even if key clear fails
+                              completeLocalModelDelete();
+                           }
+                        });
+                     } else {
+                        globalDisplay_.showErrorMessage("Error", "Failed to delete model name.");
+                     }
+                  }
+                  
+                  @Override
+                  public void onError(ServerError error)
+                  {
+                     globalDisplay_.showErrorMessage("Delete Failed", "Failed to delete model name: " + error.getUserMessage());
+                  }
+               });
+            } else {
+               globalDisplay_.showErrorMessage("Error", "Failed to delete endpoint.");
+            }
+         }
+         
+         @Override
+         public void onError(ServerError error)
+         {
+            globalDisplay_.showErrorMessage("Delete Failed", "Failed to delete endpoint: " + error.getUserMessage());
+         }
+      });
+   }
+   
+   private void completeLocalModelDelete() {
+      // Update UI to show input state
+      localModelStoredContainer_.setVisible(false);
+      localModelInputContainer_.setVisible(true);
+      
+      // Clear input fields
+      localModelEndpointInput_.setValue("");
+      localModelNameInput_.setValue("");
+      localModelApiKeyInput_.setValue("");
+      
+      // Update toggle to show disabled state
+      updateToggleState("localmodel", false);
+      
+      // Notify handler to stop proxy
+      handler_.onBYOKEnabledChange("localmodel", false);
+      
+      globalDisplay_.showMessage(
+         GlobalDisplay.MSG_INFO,
+         "Success",
+         "Local model configuration deleted successfully."
+      );
+      
+      // Reload available models since local model is no longer configured
+      loadAvailableModels();
+   }
+   
+   private void handleAttachRulesFile() {
+      FileSystemItem initialPath = FileSystemItem.home();
+      if (currentRulesFilePath_ != null && !currentRulesFilePath_.isEmpty()) {
+         FileSystemItem currentFile = FileSystemItem.createFile(currentRulesFilePath_);
+         initialPath = currentFile.getParentPath();
+      }
+      
+      fileDialogs_.openFile(
+         "Select Rules File",
+         fileSystemContext_,
+         initialPath,
+         new ProgressOperationWithInput<FileSystemItem>()
+         {
+            @Override
+            public void execute(FileSystemItem file, ProgressIndicator indicator)
+            {
+               if (file != null) {
+                  String filePath = file.getPath();
+                  server_.setRulesFilePath(filePath, new ServerRequestCallback<Boolean>()
+                  {
+                     @Override
+                     public void onResponseReceived(Boolean success)
+                     {
+                        if (success) {
+                           currentRulesFilePath_ = filePath;
+                           buildRulesFileDisplay();
+                           indicator.onCompleted();
+                        } else {
+                           indicator.onError("Failed to save rules file path");
+                        }
+                     }
+                     
+                     @Override
+                     public void onError(ServerError error)
+                     {
+                        indicator.onError(error.getUserMessage());
+                     }
+                  });
+               } else {
+                  indicator.onCompleted();
+               }
+            }
+         }
+      );
+   }
+   
+   private void handleRemoveRulesFile() {
+      server_.setRulesFilePath(null, new ServerRequestCallback<Boolean>()
+      {
+         @Override
+         public void onResponseReceived(Boolean success)
+         {
+            if (success) {
+               currentRulesFilePath_ = null;
+               buildRulesFileDisplay();
+            } else {
+               globalDisplay_.showErrorMessage("Error", "Failed to remove rules file");
+            }
+         }
+         
+         @Override
+         public void onError(ServerError error)
+         {
+            globalDisplay_.showErrorMessage("Error", "Failed to remove rules file: " + error.getUserMessage());
+         }
+      });
+   }
+   
+   private void handleOpenRulesFile() {
+      if (currentRulesFilePath_ != null && !currentRulesFilePath_.isEmpty()) {
+         FileSystemItem file = FileSystemItem.createFile(currentRulesFilePath_);
+         fileTypeRegistry_.openFile(file);
+      }
+   }
+   
    // Native method to get toggle value
    private native String getToggleValue(com.google.gwt.dom.client.Element element) /*-{
       var toggleDiv = element.querySelector('div[data-setting]');
@@ -3431,6 +4115,16 @@ public class AiSettingsWidget extends Composite
                self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleBYOKDeleteKey(Ljava/lang/String;)(provider);
             } else if (buttonText === 'SaveSageMaker') {
                self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleSaveSageMakerConfig()();
+            } else if (buttonText === 'SaveLocalModelConfig') {
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleSaveLocalModelConfig()();
+            } else if (buttonText === 'DeleteLocalModelConfig') {
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleDeleteLocalModelConfig()();
+            } else if (buttonText === 'AttachRulesFile') {
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleAttachRulesFile()();
+            } else if (buttonText === 'RemoveRulesFile') {
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleRemoveRulesFile()();
+            } else if (buttonText === 'OpenRulesFile') {
+               self.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::handleOpenRulesFile()();
             }
             
             // Only prevent default for actual button clicks
@@ -3843,11 +4537,15 @@ public class AiSettingsWidget extends Composite
          @Override
          public void onResponseReceived(String mode) {
             String currentMode = mode != null ? mode : "secure";
+            
+            // Treat lockdown as secure for display purposes in AI settings
+            String displayMode = "lockdown".equals(currentMode) ? "secure" : currentMode;
+            
             if (securityModeToggle_ != null) {
-               updateToggleDisplay(securityModeToggle_.getElement(), currentMode, "secure");
+               updateToggleDisplay(securityModeToggle_.getElement(), displayMode, "secure");
             }
             if (securityModeText_ != null) {
-               boolean isSecure = "secure".equals(currentMode);
+               boolean isSecure = "secure".equals(displayMode);
                String modeText = isSecure ? "Secure" : "Improve Rao for everyone";
                securityModeText_.setText("On secure mode, no analytics are collected and zero data is retained by the model providers. This must be used for any sensitive data like PHI. On \"Improve Rao for everyone,\" user analytics are collected to improve the experience. Still, zero data is retained by the model providers. Your current mode is: " + modeText);
             }

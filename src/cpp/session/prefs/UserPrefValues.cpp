@@ -3832,6 +3832,16 @@ core::Error UserPrefValues::setAiByokSagemakerEnabled(bool val)
    return writePref("ai_byok_sagemaker_enabled", val);
 }
 
+bool UserPrefValues::aiByokLocalmodelEnabled()
+{
+   return readPref<bool>("ai_byok_localmodel_enabled");
+}
+
+core::Error UserPrefValues::setAiByokLocalmodelEnabled(bool val)
+{
+   return writePref("ai_byok_localmodel_enabled", val);
+}
+
 std::vector<std::string> UserPrefValues::allKeys()
 {
    return std::vector<std::string>({
@@ -4125,6 +4135,7 @@ std::vector<std::string> UserPrefValues::allKeys()
       kAiAutoRunFilesAllowList,
       kAiAutoRunFilesDenyList,
       kAiUserRules,
+      kAiRulesFilePath,
       kAiByokAnthropicEnabled,
       kAiByokOpenaiEnabled,
       kAiByokSagemakerEnabled,

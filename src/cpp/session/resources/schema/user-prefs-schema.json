@@ -1837,10 +1837,11 @@
         },
         "ai_security_mode": {
             "type": "string",
-            "enum": ["secure", "improve"],
+            "enum": ["improve", "secure", "lockdown"],
+            "enumReadable": ["Improve Rao for everyone", "Secure", "Lockdown"],
             "default": "improve",
             "title": "Security Mode",
-            "description": "The security level for AI interactions"
+            "description": "Controls the security and data usage mode. \"Improve\" allows analytics to improve the app. \"Secure\" disables analytics but sends app version and UUID for support. \"Lockdown\" disables all telemetry."
         },
         "ai_temperature": {
             "type": "number",
@@ -1960,6 +1961,12 @@
             "title": "Custom AI Rules",
             "description": "Custom rules for the AI assistant"
         },
+        "ai_rules_file_path": {
+            "type": "string",
+            "default": "",
+            "title": "Rules File Path",
+            "description": "Path to a text file containing expanded rules for the AI assistant"
+        },
         "ai_byok_anthropic_enabled": {
             "type": "boolean",
             "default": false,
@@ -1977,6 +1984,12 @@
             "default": false,
             "title": "BYOK SageMaker Enabled",
             "description": "Enable Bring Your Own Key for AWS SageMaker"
+        },
+        "ai_byok_localmodel_enabled": {
+            "type": "boolean",
+            "default": false,
+            "title": "BYOK Local Model Enabled",
+            "description": "Enable local model endpoint for AI inference (Ollama, LocalAI, llama.cpp, etc.)"
         }
       }
 }

@@ -431,7 +431,10 @@ public class AiViewManager
          settingsHandler,
          server_,
          RStudioGinjector.INSTANCE.getEventBus(),
-         RStudioGinjector.INSTANCE.getGlobalDisplay()
+         RStudioGinjector.INSTANCE.getGlobalDisplay(),
+         RStudioGinjector.INSTANCE.getFileDialogs(),
+         RStudioGinjector.INSTANCE.getRemoteFileSystemContext(),
+         RStudioGinjector.INSTANCE.getFileTypeRegistry()
       );
       
       settingsContainer_.setWidget(settingsWidget_);

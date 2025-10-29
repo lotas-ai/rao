@@ -13,6 +13,7 @@ import { StreamingService } from './streamingService.js';
 import { OpenAiProxyService } from './openAiProxyService.js';
 import { AnthropicProxyService } from './anthropicProxyService.js';
 import { SagemakerProxyService } from './sagemakerProxyService.js';
+import { LocalModelProxyService } from './localModelProxyService.js';
 
 /**
  * Extended message type for API processing that can handle array content
@@ -51,6 +52,7 @@ export class LocalBackendService implements ILocalBackendService {
 	private readonly openAiProxyService: OpenAiProxyService;
 	private readonly anthropicProxyService: AnthropicProxyService;
 	private readonly sagemakerProxyService: SagemakerProxyService;
+	private readonly localModelProxyService: LocalModelProxyService;
 
 	constructor(
 		private readonly functionDefinitionService: IFunctionDefinitionService
@@ -59,6 +61,7 @@ export class LocalBackendService implements ILocalBackendService {
 		this.openAiProxyService = new OpenAiProxyService();
 		this.anthropicProxyService = new AnthropicProxyService();
 		this.sagemakerProxyService = new SagemakerProxyService();
+		this.localModelProxyService = new LocalModelProxyService();
 	}
 
 	/**
@@ -87,8 +90,11 @@ export class LocalBackendService implements ILocalBackendService {
 			case 'sagemaker':
 				// Use configured model from SageMaker settings, or fall back to default
 				return request?.byok_keys?.sagemaker?.model || LocalBackendService.SAGEMAKER_MODEL;
+			case 'localmodel':
+				// Use configured model name from local model settings
+				return request?.localmodel_name || 'localmodel';
 			default:
-				throw new Error(`Unsupported provider: ${provider}. Supported providers: openai, anthropic, sagemaker`);
+				throw new Error(`Unsupported provider: ${provider}. Supported providers: openai, anthropic, sagemaker, localmodel`);
 		}
 	}
 
@@ -1292,8 +1298,10 @@ export class LocalBackendService implements ILocalBackendService {
 				await this.callAnthropicStreaming(updatedConversation, model, request, symbolsNoteString, request_id, outputStream, webSearchEnabled);
 			} else if (provider === 'sagemaker') {
 				await this.callSagemakerStreaming(updatedConversation, model, request, symbolsNoteString, request_id, outputStream);
+			} else if (provider === 'localmodel') {
+				await this.callLocalModelStreaming(updatedConversation, model, request, symbolsNoteString, request_id, outputStream);
 			} else {
-				this.sendSseEvent(outputStream, request_id, 'error', `Unsupported provider: ${provider} (actualProvider: ${actualProvider}). Supported providers: openai, anthropic, sagemaker`, undefined, true);
+				this.sendSseEvent(outputStream, request_id, 'error', `Unsupported provider: ${provider} (actualProvider: ${actualProvider}). Supported providers: openai, anthropic, sagemaker, localmodel`, undefined, true);
 			}
 	}
 
@@ -1532,6 +1540,89 @@ export class LocalBackendService implements ILocalBackendService {
 		return apiParams;
 	}
 
+	private async buildLocalModelRequestParams(conversation: ConversationMessage[], model: string, 
+											   request: any, symbolsNote: string | null): Promise<any> {
+		// Check if this is a naming request that shouldn't have developer instructions
+		const isConversationNameRequest = request.request_type === 'generate_conversation_name';
+		const isNamingRequest = isConversationNameRequest;
+		
+		// Build the API parameters in OpenAI ChatCompletion format
+		const apiParams: any = {
+			model: model,
+			messages: [],
+			max_tokens: 8192,
+			stream: true
+		};
+		
+		// Add temperature if specified
+		if (request.temperature !== undefined) {
+			apiParams.temperature = request.temperature;
+		}
+		
+		// Build messages array (OpenAI ChatCompletion format)
+		const messages: any[] = [];
+		
+		// Add system message with developer instructions (if not a naming request)
+		if (!isNamingRequest) {
+			const systemMessage = {
+				role: 'system',
+				content: await this.loadDeveloperInstructions(model)
+			};
+			
+			// Add previous summary to system message if available
+			if (request.previous_summary) {
+				systemMessage.content += `\n\n<previous_conversation_summary>\n(Query ${request.previous_summary.query_number} - ${request.previous_summary.timestamp}):\n\n${request.previous_summary.summary_text}\n</previous_conversation_summary>\n`;
+			}
+			
+			messages.push(systemMessage);
+		}
+		
+		// Process conversation messages
+		for (const msg of conversation) {
+			if (msg.role === 'user') {
+				const messageContent = Array.isArray(msg.content) ? msg.content : [{ type: 'text', text: msg.content }];
+				
+				// Filter out null or undefined content items
+				const validContent = messageContent.filter((item: any) => item && item.text);
+				
+				if (validContent.length > 0) {
+					const userMessage: any = {
+						role: 'user',
+						content: validContent.map((item: any) => item.text).join('\n')
+					};
+					messages.push(userMessage);
+				}
+			} else if (msg.role === 'assistant') {
+				let assistantContent = '';
+				
+				if (Array.isArray(msg.content)) {
+					assistantContent = msg.content
+						.filter((item: any) => item && item.type === 'text')
+						.map((item: any) => item.text || '')
+						.join('\n');
+				} else if (typeof msg.content === 'string') {
+					assistantContent = msg.content;
+				}
+				
+				if (assistantContent) {
+					messages.push({
+						role: 'assistant',
+						content: assistantContent
+					});
+				}
+			}
+		}
+		
+		apiParams.messages = messages;
+		
+		// Add tools/functions if not a naming request
+		if (!isNamingRequest && request.tools) {
+			apiParams.tools = request.tools;
+		}
+		
+		return apiParams;
+	}
+
 	/**
 	 * Streaming version of callSagemaker
 	 */
@@ -1563,6 +1654,43 @@ export class LocalBackendService implements ILocalBackendService {
             );
         } catch (e) {
             this.sendSseEvent(outputStream, request_id, 'error', `Error calling SageMaker: ${e}`, undefined, true);
+        }
+    }
+
+    /**
+     * Streaming version for local models
+     */
+    private async callLocalModelStreaming(conversation: ConversationMessage[], model: string, request: any, 
+                                       symbolsNote: string | null, request_id: string, outputStream: any): Promise<void> {
+        
+        try {
+            // Build local model request parameters (similar to OpenAI format)
+            const apiParams = await this.buildLocalModelRequestParams(conversation, model, request, symbolsNote);
+            
+            // Add BYOK API key if provided in the original request
+            if (request.byok_keys?.localmodel) {
+                apiParams.byok_keys = request.byok_keys;
+            }
+            
+            // Add local model configuration from request
+            if (request.localmodel_endpoint) {
+                apiParams.localmodel_endpoint = request.localmodel_endpoint;
+            }
+            if (request.localmodel_name) {
+                apiParams.localmodel_name = request.localmodel_name;
+            }
+            
+            // Call local model proxy service for streaming
+            await this.localModelProxyService.processStreamingResponsesWithCallback(
+                JSON.stringify(apiParams),
+                null, // user
+                {}, // originalHeaders
+                request_id,
+                outputStream,
+                request // originalRequest
+            );
+        } catch (e) {
+            this.sendSseEvent(outputStream, request_id, 'error', `Error calling local model: ${e}`, undefined, true);
         }
     }
 
@@ -1787,6 +1915,14 @@ export class LocalBackendService implements ILocalBackendService {
 				max_tokens: 8192,
 				stream: true
 			};
+		} else if (provider === 'localmodel') {
+			// Local model uses OpenAI format
+			apiRequest = {
+				model: model,
+				messages: messages,
+				max_tokens: 8192,
+				stream: true
+			};
 		} else {
 			console.error('  - ERROR: Unsupported provider for API request building:', provider);
 			this.sendSseEvent(outputStream, request_id, 'error', `Unsupported provider for summarization: ${provider}`, undefined, true);
@@ -1799,6 +1935,16 @@ export class LocalBackendService implements ILocalBackendService {
 				apiRequest.byok_keys = request.byok_keys;
 			} else if (request.byok_keys && provider === 'sagemaker' && request.byok_keys.aws) {
 				apiRequest.byok_keys = { aws: request.byok_keys.aws };
+			}
+			
+			// Add local model configuration if provider is localmodel
+			if (provider === 'localmodel') {
+				if (request.localmodel_endpoint) {
+					apiRequest.localmodel_endpoint = request.localmodel_endpoint;
+				}
+				if (request.localmodel_name) {
+					apiRequest.localmodel_name = request.localmodel_name;
+				}
 			}
 			
 			// Route to the appropriate provider service
@@ -1822,6 +1968,15 @@ export class LocalBackendService implements ILocalBackendService {
 				);
 			} else if (provider === 'sagemaker') {
 				await this.sagemakerProxyService.processStreamingResponsesWithCallback(
+					JSON.stringify(apiRequest),
+					null, // user
+					{}, // originalHeaders
+					request_id,
+					outputStream,
+					request // originalRequest
+				);
+			} else if (provider === 'localmodel') {
+				await this.localModelProxyService.processStreamingResponsesWithCallback(
 					JSON.stringify(apiRequest),
 					null, // user
 					{}, // originalHeaders

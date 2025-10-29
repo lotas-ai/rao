@@ -483,9 +483,11 @@ namespace prefs {
 #define kAiAutoRunFilesAllowList "ai_auto_run_files_allow_list"
 #define kAiAutoRunFilesDenyList "ai_auto_run_files_deny_list"
 #define kAiUserRules "ai_user_rules"
+#define kAiRulesFilePath "ai_rules_file_path"
 #define kAiByokAnthropicEnabled "ai_byok_anthropic_enabled"
 #define kAiByokOpenaiEnabled "ai_byok_openai_enabled"
 #define kAiByokSagemakerEnabled "ai_byok_sagemaker_enabled"
+#define kAiByokLocalmodelEnabled "ai_byok_localmodel_enabled"
 
 class UserPrefValues: public Preferences
 {
@@ -2248,6 +2250,12 @@ public:
     */
    bool aiByokSagemakerEnabled();
    core::Error setAiByokSagemakerEnabled(bool val);
+
+   /**
+    * Enable local model endpoint for AI inference
+    */
+   bool aiByokLocalmodelEnabled();
+   core::Error setAiByokLocalmodelEnabled(bool val);
 
 };
 

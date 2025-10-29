@@ -81,10 +81,22 @@ export async function httpRequest(url: string, options: HttpOptions = {}): Promi
 		const urlObj = new URL(url);
 		const module = urlObj.protocol === 'https:' ? https : http;
 		
-		const req = module.request(url, {
+		// Only force IPv4 for localhost to avoid IPv6 connection issues
+		// Allow dual-stack for external APIs (anthropic.com, openai.com, etc.)
+		const isLocalhost = urlObj.hostname === 'localhost' || 
+		                    urlObj.hostname === '127.0.0.1' || 
+		                    urlObj.hostname === '::1';
+		
+		const requestOptions: any = {
 			method: options.method || 'GET',
 			headers: options.headers
-		}, (res) => {
+		};
+		
+		if (isLocalhost) {
+			requestOptions.family = 4;  // Force IPv4 only for localhost
+		}
+		
+		const req = module.request(url, requestOptions, (res) => {
 			resolve(new HttpResponseImpl(
 				res.statusCode || 0,
 				res.statusMessage || '',
@@ -93,7 +105,9 @@ export async function httpRequest(url: string, options: HttpOptions = {}): Promi
 		});
 
 		req.setTimeout(60 * 1000);
-		req.on('error', reject);
+		req.on('error', (err: any) => {
+			reject(err);
+		});
 		
 		if (options.signal) {
 			options.signal.addEventListener('abort', () => {

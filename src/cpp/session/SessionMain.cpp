@@ -889,6 +889,9 @@ void rInitComplete()
 {
    module_context::syncRSaveAction();
    module_context::events().onInitComplete();
+   
+   // Send app open telemetry
+   modules::ai::sendAppOpenTelemetry();
 }
 
 void notifyIfRVersionChanged()

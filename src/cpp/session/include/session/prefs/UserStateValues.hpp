@@ -355,6 +355,24 @@ public:
    std::string aiByokOpenaiApiKey();
    core::Error setAiByokOpenaiApiKey(std::string val);
 
+   /**
+    * Local model endpoint URL
+    */
+   std::string aiLocalmodelEndpoint();
+   core::Error setAiLocalmodelEndpoint(std::string val);
+
+   /**
+    * Local model name
+    */
+   std::string aiLocalmodelName();
+   core::Error setAiLocalmodelName(std::string val);
+
+   /**
+    * Bring Your Own Key for Local Model API
+    */
+   std::string aiByokLocalmodelApiKey();
+   core::Error setAiByokLocalmodelApiKey(std::string val);
+
 };
 
    

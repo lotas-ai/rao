@@ -533,6 +533,15 @@
     color: THEME_DARKGREY_STATUS_COLOR;
 }
 
+.rstudio-themes-default .statusOrgPromo,
+.rstudio-themes-alternate .statusOrgPromo {
+    color: #8b5cf6;
+}
+
+.rstudio-themes-dark-grey .statusOrgPromo {
+    color: #a78bfa;
+}
+
 .rstudio-themes-default .statusPastDue,
 .rstudio-themes-alternate .statusPastDue {
     color: THEME_DEFAULT_STATUS_COLOR;

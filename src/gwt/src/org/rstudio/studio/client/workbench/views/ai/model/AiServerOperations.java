@@ -187,6 +187,11 @@ public interface AiServerOperations
    
    void getSageMakerEndpoint(ServerRequestCallback<String> requestCallback);
    
+   // Rules file operations
+   void setRulesFilePath(String filePath, ServerRequestCallback<Boolean> requestCallback);
+   
+   void getRulesFilePath(ServerRequestCallback<String> requestCallback);
+   
    void setSageMakerRegion(String region, ServerRequestCallback<Boolean> requestCallback);
    
    void getSageMakerRegion(ServerRequestCallback<String> requestCallback);
@@ -194,6 +199,14 @@ public interface AiServerOperations
    void setSageMakerModel(String model, ServerRequestCallback<Boolean> requestCallback);
    
    void getSageMakerModel(ServerRequestCallback<String> requestCallback);
+   
+   void getLocalModelEndpoint(ServerRequestCallback<String> requestCallback);
+   
+   void setLocalModelEndpoint(String endpoint, ServerRequestCallback<Boolean> requestCallback);
+   
+   void getLocalModelName(ServerRequestCallback<String> requestCallback);
+   
+   void setLocalModelName(String modelName, ServerRequestCallback<Boolean> requestCallback);
    
    void deleteAllImages(ServerRequestCallback<java.lang.Void> requestCallback);
    

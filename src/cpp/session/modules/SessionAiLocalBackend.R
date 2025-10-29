@@ -267,7 +267,9 @@ if (!.rs.hasVar("local_backend_env")) {
 .rs.addFunction("ai.addBYOKKeysToRequest", function(request_data, provider) {
    # Get API key
    api_key <- .rs.ai.getBYOKApiKey(provider)
-   if (is.null(api_key) || api_key == "") {
+   
+   # For local models, API key is optional
+   if (provider != "localmodel" && (is.null(api_key) || api_key == "")) {
       stop("BYOK API key not found for provider: ", provider)
    }
    
@@ -295,6 +297,11 @@ if (!.rs.hasVar("local_backend_env")) {
       }, error = function(e) {
          stop("Invalid AWS credentials format: ", e$message)
       })
+   } else if (provider == "localmodel") {
+      # For local model, add API key only if provided (it's optional)
+      if (!is.null(api_key) && api_key != "") {
+         request_data$byok_keys[[provider]] <- api_key
+      }
    } else {
       request_data$byok_keys[[provider]] <- api_key
    }
@@ -326,6 +333,8 @@ if (!.rs.hasVar("local_backend_env")) {
          provider <- "sagemaker"
       } else if (grepl("sagemaker", model, ignore.case = TRUE)) {
          provider <- "sagemaker"
+      } else if (model == "Local model") {
+         provider <- "localmodel"
       } else {
          return(FALSE)
       }
@@ -370,6 +379,30 @@ if (!.rs.hasVar("local_backend_env")) {
 .rs.addFunction("ai.getSageMakerModel", function() {
    model <- .rs.get_ai_state("sagemaker_model", "Qwen/Qwen3-Coder-30B-A3B-Instruct")
    return(model)
+})
+
+# ============================================================================
+# Local Model Configuration Management
+# ============================================================================
+
+.rs.addFunction("ai.setLocalModelEndpoint", function(endpoint) {
+   .rs.set_ai_state("localmodel_endpoint", endpoint)
+   return(TRUE)
+})
+
+.rs.addFunction("ai.getLocalModelEndpoint", function() {
+   endpoint <- .rs.get_ai_state("localmodel_endpoint", "http://localhost:11434")
+   return(endpoint)
+})
+
+.rs.addFunction("ai.setLocalModelName", function(model_name) {
+   .rs.set_ai_state("localmodel_name", model_name)
+   return(TRUE)
+})
+
+.rs.addFunction("ai.getLocalModelName", function() {
+   model_name <- .rs.get_ai_state("localmodel_name", "llama3.2:1b")
+   return(model_name)
 })
 
 # JSON RPC handlers for SageMaker configuration
