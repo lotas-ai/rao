@@ -15,6 +15,8 @@
 
 context("download")
 
+`%||%` <- function(x, y) if (is.null(x)) y else x
+
 expect_download <- function(url, destfile = NULL, method = "libcurl") {
    
    destfile <- destfile %||% {

@@ -884,8 +884,9 @@
   if (is.null(filePath) || filePath == "") {
     .rs.set_ai_pref("rules_file_path", "")
   } else {
-    # Expand ~ and store the full path
+    # Expand ~ and normalize path with forward slashes for Windows compatibility
     filePath <- path.expand(filePath)
+    filePath <- normalizePath(filePath, winslash = "/", mustWork = FALSE)
     .rs.set_ai_pref("rules_file_path", filePath)
   }
   return(TRUE)
@@ -896,8 +897,10 @@
   if (is.null(filePath) || filePath == "") {
     return("")
   }
-  # Ensure path is fully expanded when retrieved
-  return(path.expand(filePath))
+  # Ensure path is fully expanded and normalized with forward slashes for Windows compatibility
+  filePath <- path.expand(filePath)
+  filePath <- normalizePath(filePath, winslash = "/", mustWork = FALSE)
+  return(filePath)
 })
 
 .rs.addFunction("getRulesFileContent", function() {
