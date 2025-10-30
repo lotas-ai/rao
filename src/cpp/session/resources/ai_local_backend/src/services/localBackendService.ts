@@ -460,8 +460,8 @@ export class LocalBackendService implements ILocalBackendService {
 	/**
 	 * Add user rules as a separate user message before the original query message
 	 */
-	private addUserRulesMessage(conversation: ConversationMessage[], userRules: string[]): void {
-		if (!userRules || userRules.length === 0) {
+	private addUserRulesMessage(conversation: ConversationMessage[], userRules: string[], ruleFile?: string | null): void {
+		if ((!userRules || userRules.length === 0) && !ruleFile) {
 			return;
 		}
 		
@@ -485,13 +485,28 @@ export class LocalBackendService implements ILocalBackendService {
 		}
 		
 		// Create the user rules message content
-		const rulesContent = [
+		const contentParts = [
 			'# USER_RULES',
 			'User rules are provided instructions for the AI to follow to help work with the codebase.',
 			'They may or may not be relevant to the task at hand.',
-			'',
-			...userRules
-		].join('\n');
+			''
+		];
+
+		// Add inline rules if any
+		if (userRules && userRules.length > 0) {
+			contentParts.push(...userRules);
+		}
+
+		// Add rules file content if present
+		if (ruleFile) {
+			if (userRules && userRules.length > 0) {
+				contentParts.push('');
+				contentParts.push('# EXPANDED RULES FROM USER RULES FILE');
+			}
+			contentParts.push(ruleFile);
+		}
+
+		const rulesContent = contentParts.join('\n');
 		
 		// Create the user rules message
 		const rulesMessage: ConversationMessage = {
@@ -1271,10 +1286,10 @@ export class LocalBackendService implements ILocalBackendService {
 				this.addImageContextMessages(conversation, symbolsNote.attached_images);
 			}
 			
-			// Add user rules as a separate user message if any are provided
-			if (request.user_rules?.length > 0) {
-				this.addUserRulesMessage(conversation, request.user_rules);
-			}
+		// Add user rules as a separate user message if any are provided
+		if (request.user_rules?.length > 0 || request.rule_file) {
+			this.addUserRulesMessage(conversation, request.user_rules || [], request.rule_file);
+		}
 			
 			// Convert structured symbolsNote to JSON string for downstream methods
 			let symbolsNoteString: string | null = null;
@@ -2055,6 +2070,7 @@ export class LocalBackendService implements ILocalBackendService {
 		// Extract symbols_note and other context from contextData
 		const symbols_note = contextData?.symbols_note || null;
 		const user_rules = contextData?.user_rules || [];
+		const rule_file = contextData?.rule_file || null;
 		const user_workspace_path = contextData?.user_workspace_path || null;
 		const user_shell = contextData?.user_shell || null;
 		const project_layout = contextData?.project_layout || null;
@@ -2069,6 +2085,7 @@ export class LocalBackendService implements ILocalBackendService {
 			request_id: request_id,
 			symbols_note: symbols_note,
 			user_rules: user_rules,
+			rule_file: rule_file,
 			user_workspace_path: user_workspace_path,
 			user_shell: user_shell,
 			project_layout: project_layout,
