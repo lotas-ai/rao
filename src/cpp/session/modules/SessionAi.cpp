@@ -36,6 +36,7 @@
 #include <core/http/Response.hpp>
 #include <core/http/URL.hpp>
 #include <core/http/TcpIpBlockingClient.hpp>
+#include <core/http/TcpIpBlockingClientSsl.hpp>
 #include <core/FileSerializer.hpp>
 #include <core/system/Process.hpp>
 #include <core/system/ShellUtils.hpp>
@@ -4164,6 +4165,7 @@ void sendAppOpenTelemetry()
    std::string jsonBody = payload.writeFormatted();
    
    http::URL url(backendUrl + "/api/telemetry/app-open");
+   std::string protocol = url.protocol();
    std::string host = url.hostname();
    std::string port = url.portStr();
    
@@ -4175,7 +4177,18 @@ void sendAppOpenTelemetry()
    request.setBody(jsonBody);
    
    http::Response response;
-   http::sendRequest(host, port, boost::posix_time::milliseconds(5000), request, &response);
+   
+   // Use SSL for HTTPS, plain HTTP for local backend
+   bool useSSL = (protocol == "https");
+   
+   if (useSSL)
+   {
+      error = http::sendSslRequest(host, port, true /* verify cert */, boost::posix_time::milliseconds(5000), request, &response);
+   }
+   else
+   {
+      error = http::sendRequest(host, port, boost::posix_time::milliseconds(5000), request, &response);
+   }
 }
 
 Error initialize()
