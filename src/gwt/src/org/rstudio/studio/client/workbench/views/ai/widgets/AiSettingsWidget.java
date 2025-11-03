@@ -37,6 +37,7 @@ import org.rstudio.core.client.widget.ToolbarPopupMenu;
 import com.google.gwt.user.client.ui.PasswordTextBox;
 import org.rstudio.studio.client.common.GlobalDisplay;
 import org.rstudio.studio.client.workbench.views.ai.model.AiServerOperations;
+import org.rstudio.studio.client.workbench.views.ai.model.AiReferralSummary;
 import org.rstudio.core.client.theme.ThemeHelper;
 import org.rstudio.studio.client.workbench.views.ai.model.AiUserProfile;
 import org.rstudio.studio.client.workbench.views.ai.model.AiSubscriptionStatus;
@@ -185,6 +186,7 @@ public class AiSettingsWidget extends Composite
    private Button cancelNewRuleButton_;
    private VerticalPanel newRulePanel_;
    private HTML profileSection_;
+   private HTML referralSection_;
    private HTML modelSection_;
    private HTML workingDirectorySection_;
    private HTML rulesSection_;
@@ -331,6 +333,11 @@ public class AiSettingsWidget extends Composite
       profileSection_ = new HTML();
       profileSection_.addStyleName(styles_.settingsSection());
       mainPanel.add(profileSection_);
+      
+      // Referral Section
+      referralSection_ = new HTML();
+      referralSection_.addStyleName(styles_.settingsSection());
+      mainPanel.add(referralSection_);
       
       // BYOK Section
       byokSection_ = new HTML();
@@ -2903,6 +2910,7 @@ public class AiSettingsWidget extends Composite
       updateAllSections();
       loadUserProfile();
       loadSubscriptionStatus();
+      loadReferralSummary();
       loadAvailableModels();
    }
    
@@ -2913,6 +2921,7 @@ public class AiSettingsWidget extends Composite
       updateAllSections();
       loadUserProfile();
       loadSubscriptionStatus();
+      loadReferralSummary();
       loadAvailableModels();
    }
    
@@ -2944,6 +2953,9 @@ public class AiSettingsWidget extends Composite
    public void refreshAllSettings() {
       // Refresh subscription status
       refreshSubscriptionStatus();
+      
+      // Refresh referral summary
+      loadReferralSummary();
       
       // Always query fresh security mode, web search, and automation values from R functions
       updateSecurityModeDisplay();
@@ -2995,6 +3007,147 @@ public class AiSettingsWidget extends Composite
          }
       });
    }
+   
+   private void loadReferralSummary()
+   {
+      if (!hasApiKey_) {
+         buildReferralSection(null);
+         return;
+      }
+      
+      server_.getReferralSummary(new ServerRequestCallback<AiReferralSummary>() {
+         @Override
+         public void onResponseReceived(AiReferralSummary summary) {
+            buildReferralSection(summary);
+         }
+         
+         @Override
+         public void onError(ServerError error) {
+            Debug.logError(error);
+            buildReferralSection(null);
+         }
+      });
+   }
+   
+   private void buildReferralSection(AiReferralSummary summary)
+   {
+      String html = "<div class='" + styles_.sectionHeaderPanel() + "'>" +
+         "<span class='" + styles_.sectionTitle() + "'>Referral Program</span>" +
+         "</div>" +
+         "<div class='" + styles_.sectionContent() + "'>";
+      
+      if (!hasApiKey_) {
+         html += "<div class='" + styles_.settingRow() + "' style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif; font-size: 14px;'>Send free months of Lotas Pro, get free months of Lotas Pro. Share your link and earn 30 days of free access for every friend who joins.</div>";
+         html += "<button class='" + styles_.settingButton() + " " + styles_.primaryButton() + " ai-upgrade-button' " +
+            "style='margin-top: 12px;'>Upgrade to Lotas Pro</button>";
+      } else if (summary == null) {
+         html += "<div class='" + styles_.settingRow() + "' style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif; font-size: 14px;'>Unable to load referral information.</div>";
+      } else {
+         html += "<div class='" + styles_.settingRow() + "' style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif; font-size: 14px;'>" +
+            "Send free months of Lotas Pro, get free months of Lotas Pro. Share your link and earn 30 days of free access for every friend who joins." +
+            "</div>";
+         
+         if (summary.getIsEligible() && "active".equals(summary.getStatus()) && summary.getReferralUrl() != null) {
+            String url = summary.getReferralUrl();
+            html += "<div class='" + styles_.settingRow() + " ai-referral-link-container'>" +
+               "<div style='display: flex; gap: 8px; align-items: center;'>" +
+               "<input type='text' class='" + styles_.settingInput() + " ai-referral-link-input' " +
+               "value='" + url + "' readonly style='flex: 1;'/>" +
+               "<button class='" + styles_.settingButton() + " " + styles_.primaryButton() + " ai-copy-referral-button' " +
+               "data-url='" + url + "' style='min-width: 80px; padding: 6px 16px;'>Copy</button>" +
+               "</div>" +
+               "</div>";
+            
+            html += "<div class='" + styles_.settingRow() + "' style='margin-top: 12px;'>" +
+               "<strong>Successful Referrals:</strong> " + summary.getSuccessfulRedemptions() + " / " + summary.getMaxRedemptions() +
+               "</div>";
+         } else {
+            html += "<button class='" + styles_.settingButton() + " " + styles_.primaryButton() + " ai-upgrade-button' " +
+               "style='margin-top: 12px;'>Upgrade to Lotas Pro</button>";
+         }
+      }
+      
+      html += "</div>";
+      referralSection_.setHTML(html);
+      
+      addReferralCopyHandlers();
+      addUpgradeButtonHandlers();
+   }
+   
+   private native void addReferralCopyHandlers() /*-{
+      var widget = this;
+      setTimeout(function() {
+         var copyButtons = $doc.querySelectorAll('.ai-copy-referral-button');
+         for (var i = 0; i < copyButtons.length; i++) {
+            (function(button) {
+               button.addEventListener('click', function(e) {
+                  e.preventDefault();
+                  var url = button.getAttribute('data-url');
+                  if (url) {
+                     widget.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::copyToClipboard(Ljava/lang/String;)(url);
+                     button.textContent = 'Copied!';
+                     setTimeout(function() {
+                        button.textContent = 'Copy';
+                     }, 2000);
+                  }
+               });
+            })(copyButtons[i]);
+         }
+      }, 100);
+   }-*/;
+   
+   private native void addUpgradeButtonHandlers() /*-{
+      var widget = this;
+      setTimeout(function() {
+         var upgradeButtons = $doc.querySelectorAll('.ai-upgrade-button');
+         for (var i = 0; i < upgradeButtons.length; i++) {
+            (function(button) {
+               button.addEventListener('click', function(e) {
+                  e.preventDefault();
+                  widget.@org.rstudio.studio.client.workbench.views.ai.widgets.AiSettingsWidget::openAccountPage()();
+               });
+            })(upgradeButtons[i]);
+         }
+      }, 100);
+   }-*/;
+   
+   private void openAccountPage()
+   {
+      String accountUrl = "http://localhost:3000/account?tab=settings";
+      openUrl(accountUrl);
+   }
+   
+   private native void openUrl(String url) /*-{
+      $wnd.open(url, '_blank');
+   }-*/;
+   
+   private void copyToClipboard(String text)
+   {
+      copyTextToClipboard(text);
+   }
+   
+   private native void copyTextToClipboard(String text) /*-{
+      if ($wnd.navigator.clipboard && $wnd.navigator.clipboard.writeText) {
+         var clipboard = $wnd.navigator.clipboard;
+         clipboard.writeText(text)['catch'](function(err) {
+            $wnd.console.error('Failed to copy:', err);
+         });
+      } else {
+         // Fallback for older browsers
+         var textArea = $doc.createElement('textarea');
+         textArea.value = text;
+         textArea.style.position = 'fixed';
+         textArea.style.left = '-999999px';
+         $doc.body.appendChild(textArea);
+         textArea.select();
+         try {
+            $doc.execCommand('copy');
+         } catch (err) {
+            $wnd.console.error('Failed to copy:', err);
+         }
+         $doc.body.removeChild(textArea);
+      }
+   }-*/;
    
    private void updateTemperatureDisplay()
    {

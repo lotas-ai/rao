@@ -218,6 +218,8 @@ public interface AiServerOperations
    
    void getSubscriptionStatus(ServerRequestCallback<AiSubscriptionStatus> requestCallback);
    
+   void getReferralSummary(ServerRequestCallback<AiReferralSummary> requestCallback);
+   
    void getApiKeyStatus(ServerRequestCallback<Boolean> requestCallback);
    
    void getAvailableModels(ServerRequestCallback<JsArrayString> requestCallback);

@@ -511,6 +511,34 @@
   return(!is.null(api_key))
 })
 
+.rs.addFunction("get_referral_summary", function() {
+  backend_url <- .rs.get_production_backend_url()
+  api_key <- .rs.get_api_key("rao")
+  
+  if (is.null(api_key)) {
+    return(list(error = "No API key configured"))
+  }
+  
+  tryCatch({
+    response <- httr2::resp_body_json(
+      httr2::req_perform(
+        httr2::req_headers(
+          httr2::request(paste0(backend_url, "/api/referrals/summary")),
+          "Authorization" = paste("Bearer", api_key)
+        )
+      )
+    )
+    
+    return(response)
+  }, error = function(e) {
+    return(list(error = paste("Error retrieving referral summary:", e$message)))
+  })
+})
+
+.rs.addJsonRpcHandler("get_referral_summary", function() {
+  return(.rs.get_referral_summary())
+})
+
 .rs.addJsonRpcHandler("get_selected_model", function() {
   return(.rs.get_selected_model())
 })

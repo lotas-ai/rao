@@ -3047,6 +3047,35 @@ Error getApiKeyStatus(const json::JsonRpcRequest& request,
    return Success();
 }
 
+Error getReferralSummary(const json::JsonRpcRequest& request,
+                        json::JsonRpcResponse* p_response)
+{
+   SEXP result_sexp;
+   r::sexp::Protect rp;
+   
+   Error error = r::exec::RFunction(".rs.get_referral_summary").call(&result_sexp, &rp);
+   if (error)
+   {
+      LOG_ERROR(error);
+      p_response->setResult(json::Object());
+   }
+   else
+   {
+      json::Value result;
+      error = r::json::jsonValueFromList(result_sexp, &result);
+      if (error)
+      {
+         LOG_ERROR(error);
+         p_response->setResult(json::Object());
+      }
+      else
+      {
+         p_response->setResult(result);
+      }
+   }
+   return Success();
+}
+
 Error getAvailableModels(const json::JsonRpcRequest& request,
                         json::JsonRpcResponse* p_response)
 {
@@ -4550,6 +4579,11 @@ Error initialize()
             boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
                [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
                   return getApiKeyStatus(request, p_response);
+               })))
+      (bind(module_context::registerRpcMethod, "get_referral_summary", 
+            boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
+               [](const json::JsonRpcRequest& request, json::JsonRpcResponse* p_response) {
+                  return getReferralSummary(request, p_response);
                })))
       (bind(module_context::registerRpcMethod, "get_available_models", 
             boost::function<core::Error(const json::JsonRpcRequest&, json::JsonRpcResponse*)>(
