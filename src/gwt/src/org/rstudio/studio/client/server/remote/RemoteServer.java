@@ -8354,6 +8354,12 @@ public class RemoteServer implements Server, AiServerOperations
    }
    
    @Override
+   public void getReferralSummary(ServerRequestCallback<org.rstudio.studio.client.workbench.views.ai.model.AiReferralSummary> requestCallback)
+   {
+      sendRequest(RPC_SCOPE, "get_referral_summary", requestCallback);
+   }
+   
+   @Override
    public void getApiKeyStatus(ServerRequestCallback<Boolean> requestCallback)
    {
       sendRequest(RPC_SCOPE, "get_api_key_status", requestCallback);

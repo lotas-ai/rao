@@ -89,7 +89,7 @@
 @eval THEME_ALTERNATE_TOGGLE_BACKGROUND org.rstudio.core.client.theme.ThemeColors.alternateToggleBackground;
 
 /* External class declarations for theme classes and other unobfuscated classes */
-@external rstudio-themes-default, rstudio-themes-dark-grey, rstudio-themes-alternate, ai-chevron-button, ai-chevron-svg, ai-toggle-enabled, ai-toggle-disabled, gwt-VerticalPanel, gwt-FlowPanel, gwt-HorizontalPanel, ai-modal-background, ace_editor, ace_scroller, ace_editor_theme;
+@external rstudio-themes-default, rstudio-themes-dark-grey, rstudio-themes-alternate, ai-chevron-button, ai-chevron-svg, ai-toggle-enabled, ai-toggle-disabled, gwt-VerticalPanel, gwt-FlowPanel, gwt-HorizontalPanel, ai-modal-background, ace_editor, ace_scroller, ace_editor_theme, ai-referral-description, ai-referral-link-input, ai-referral-ineligible, ai-referral-link-container, ai-copy-referral-button, ai-upgrade-button;
 .settingsContainer {
     height: 100vh;
     overflow-y: auto;
@@ -409,7 +409,7 @@
 
 .rstudio-themes-default .primaryButton:hover,
 .rstudio-themes-alternate .primaryButton:hover {
-    /* Inherits border-color change from .settingButton:hover */
+    border-color: rgba(38, 37, 30, 0.3);
 }
 
 .rstudio-themes-dark-grey .primaryButton:hover {
@@ -1282,4 +1282,41 @@ table[data-lists-container] td {
 
 .rstudio-themes-dark-grey.settingsContainer .usageBarFill {
     background-color: THEME_DARKGREY_SUCCESS_COLOR !important;
+}
+
+/* Referral Program Section Styles */
+.ai-referral-link-container {
+    margin-top: 8px !important;
+}
+
+.ai-referral-link-input {
+    flex: 1 !important;
+}
+
+.ai-copy-referral-button {
+    min-width: 80px !important;
+    padding: 6px 16px !important;
+}
+
+.ai-referral-ineligible {
+    padding: 12px !important;
+    border-radius: 4px !important;
+    margin-top: 8px !important;
+}
+
+.ai-upgrade-button {
+    min-width: 120px !important;
+}
+
+.rstudio-themes-default.settingsContainer .ai-referral-ineligible,
+.rstudio-themes-alternate.settingsContainer .ai-referral-ineligible {
+    background-color: rgba(245, 78, 0, 0.08) !important;
+    border: 1px solid rgba(245, 78, 0, 0.22) !important;
+    color: rgb(245, 78, 0) !important;
+}
+
+.rstudio-themes-dark-grey.settingsContainer .ai-referral-ineligible {
+    background-color: rgba(245, 78, 0, 0.12) !important;
+    border: 1px solid rgba(245, 78, 0, 0.3) !important;
+    color: rgb(255, 130, 60) !important;
 }
