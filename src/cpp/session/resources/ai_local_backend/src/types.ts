@@ -8,7 +8,7 @@ import { ConversationMessage, FunctionCall } from './conversationTypes.js';
 export { ConversationMessage, FunctionCall };
 
 export interface StreamData {
-    type: 'content' | 'function_call' | 'error' | 'done' | 'function_delta' | 'function_complete' | 'thinking' | 'end_turn' | 'ai_stream_data';
+    type: 'content' | 'function_call' | 'error' | 'done' | 'function_delta' | 'function_complete' | 'thinking' | 'ai_stream_data';
     content?: string;
     functionCall?: FunctionCall;
     error?: { message: string; type?: string; details?: any };
@@ -18,7 +18,6 @@ export interface StreamData {
     response?: string;
     isComplete?: boolean;
     thinking?: boolean;
-    end_turn?: boolean;
     messageId?: string;
     request_id?: string;
     sequence?: number;
@@ -34,7 +33,6 @@ export interface IFunctionDefinitionService {
 
 export interface IStreamingService {
     sendErrorEvent(onData: (data: StreamData) => void, request_id: string, errorMessage: string): void;
-    sendEndTurnEvent(onData: (data: StreamData) => void, request_id: string): void;
     sendCompleteEvent(onData: (data: StreamData) => void, request_id: string, field: string, value: string): void;
     sendDeltaEvent(onData: (data: StreamData) => void, request_id: string, field: string, delta: string): void;
 }

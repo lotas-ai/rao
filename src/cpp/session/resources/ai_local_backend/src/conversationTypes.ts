@@ -4,6 +4,16 @@
  *--------------------------------------------------------------------------------------------*/
 
 /**
+ * Web search citation structure for both OpenAI and Anthropic
+ */
+export interface WebSearchCitation {
+    /** Title of the web page */
+    title: string;
+    /** URL of the web page */
+    url: string;
+}
+
+/**
  * Message metadata for different message types
  */
 export interface MessageMetadata {
@@ -40,6 +50,8 @@ export interface MessageMetadata {
     plots?: string[];
     /** Full path to plots JSON file */
     plots_file?: string;
+    /** Web search citations from both OpenAI and Anthropic responses */
+    web_search_citations?: WebSearchCitation[];
 }
 
 /**

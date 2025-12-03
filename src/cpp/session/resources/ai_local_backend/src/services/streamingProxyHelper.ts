@@ -56,12 +56,18 @@ export class StreamingProxyHelper {
 	/**
 	 * Create a text completion event
 	 */
-	public createTextCompleteEvent(requestId: string, content: string): string {
-		const event = {
+	public createTextCompleteEvent(requestId: string, content: string, citations?: any[]): string {
+		const event: any = {
 			request_id: requestId,
 			response: content,
 			isComplete: true
 		};
+		
+		// Include web search citations if provided (unified format for both OpenAI and Anthropic)
+		if (citations && citations.length > 0) {
+			event.web_search_citations = citations;
+		}
+		
 		return `data: ${JSON.stringify(event)}\n\n`;
 	}
 	
@@ -78,17 +84,6 @@ export class StreamingProxyHelper {
 		return `data: ${JSON.stringify(event)}\n\n`;
 	}
 	
-	/**
-	 * Create an end_turn event
-	 */
-	public createEndTurnEvent(requestId: string): string {
-		const event = {
-			request_id: requestId,
-			end_turn: true,
-			isComplete: true
-		};
-		return `data: ${JSON.stringify(event)}\n\n`;
-	}
 	
 	/**
 	 * Create a timeout event
@@ -98,18 +93,6 @@ export class StreamingProxyHelper {
 		return this.createErrorEvent(requestId, errorMessage);
 	}
 	
-	/**
-	 * Create web search call event
-	 */
-	public createWebSearchCallEvent(requestId: string, webSearchCallJson: string): string {
-		const event = {
-			request_id: requestId,
-			web_search_call: JSON.parse(webSearchCallJson),
-			field: 'web_search_call',
-			isComplete: false
-		};
-		return `data: ${JSON.stringify(event)}\n\n`;
-	}
 	
 	/**
 	 * Create web search results event
@@ -124,18 +107,6 @@ export class StreamingProxyHelper {
 		return `data: ${JSON.stringify(event)}\n\n`;
 	}
 	
-	/**
-	 * Create annotations event
-	 */
-	public createAnnotationsEvent(requestId: string, annotationsJson: string): string {
-		const event = {
-			request_id: requestId,
-			annotations: JSON.parse(annotationsJson),
-			field: 'annotations',
-			isComplete: false
-		};
-		return `data: ${JSON.stringify(event)}\n\n`;
-	}
 	
 	/**
 	 * Create response ID event
@@ -174,10 +145,6 @@ export class StreamingProxyHelper {
 									  functionName: string, callId: string, functionArguments: string,
 									  originalRequest: any, streamState: StreamingState,
 									  functionCallCompletionSent: boolean): boolean {
-		// Handle special function calls first
-		if (functionName === 'end_turn') {
-			return this.safeWriteToOutputStream(outputStream, this.createEndTurnEvent(requestId), requestId, streamState);
-		}
 		
 		if (functionName === 'web_search') {
 			return true; // Skip web_search - handled separately

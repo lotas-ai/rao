@@ -313,18 +313,6 @@ export const functionsConfig = {
         "required": ["query"],
         "additionalProperties": false
       }
-    },
-    {
-      "type": "function",
-      "name": "end_turn",
-      "description": "Use this function to indicate you are done addressing the user's query. This is the only way to break out of the message chain, and there will be an infinite loop if you do not call this eventually. This should be used either when the user's query has been fully addressed or when no further progress can be made due to confusion or futility. Use this AS SOON as the user's query is fully addressed, but no sooner.",
-      "strict": true,
-      "parameters": {
-        "type": "object",
-        "properties": {},
-        "required": [],
-        "additionalProperties": false
-      }
     }
   ]
 };

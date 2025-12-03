@@ -170,31 +170,6 @@ export class LocalBackendService implements ILocalBackendService {
 		outputStream.write(`data: ${JSON.stringify(eventData)}\n\n`);
 	}
 
-	/**
-	 * Check if we need to add a reminder message for two consecutive assistant messages
-	 */
-	private needsEndTurnReminder(messages: ConversationMessage[]): boolean {
-		if (messages.length < 2) {
-			return false;
-		}
-		
-		// Check last two messages from the end
-		const lastMessage = messages[messages.length - 1];
-		const secondToLastMessage = messages[messages.length - 2];
-		
-		// Both messages must be assistant messages without function calls
-		return this.isAssistantMessageWithoutFunctionCall(lastMessage) && 
-			   this.isAssistantMessageWithoutFunctionCall(secondToLastMessage);
-	}
-
-	/**
-	 * Check if a message is an assistant message without function calls
-	 */
-	private isAssistantMessageWithoutFunctionCall(message: ConversationMessage): boolean {
-		return message.role === 'assistant' && 
-			   !message.function_call &&
-			   message.content !== undefined;
-	}
 	
 	/**
 	 * Determines if this is the first user message in a conversation
@@ -293,11 +268,6 @@ export class LocalBackendService implements ILocalBackendService {
 		}
 		
 		
-		// Include end_turn function for OpenAI models only
-		// Anthropic models use stop_reason: "end_turn" instead of function calls
-		if (provider !== 'anthropic') {
-			standardFunctions.push('end_turn');
-		}
 		
 		// Add standard functions
 		const standardTools = this.functionDefinitionService.getFunctionsByNames(standardFunctions);
@@ -841,6 +811,14 @@ export class LocalBackendService implements ILocalBackendService {
 						textContent += '... (User cancelled)';
 					}
 					
+					// Append web search citations if present (for assistant messages)
+					if (msg.role === 'assistant' && msg.web_search_citations && msg.web_search_citations.length > 0) {
+						textContent += '\n\nCitations:\n';
+						for (const citation of msg.web_search_citations) {
+							textContent += `${citation.title} (${citation.url})\n`;
+						}
+					}
+					
 					processedMsg.content = textContent;
 				} else {
 					// Process content array for images and complex content
@@ -989,17 +967,8 @@ export class LocalBackendService implements ILocalBackendService {
 		// Convert conversation to Anthropic messages format
 		const messages: any[] = [];
 		
-		// Find the LAST original_query message index for caching
-		let lastOriginalQueryIndex = -1;
-		if (!isSummarizationRequest) {  // Skip caching logic for summarization requests
-			for (let i = conversation.length - 1; i >= 0; i--) {
-				const msg = conversation[i];
-				if (msg.role === 'user' && msg.original_query === true) {
-					lastOriginalQueryIndex = i;
-					break;
-				}
-			}
-		}
+		// Cache all messages for Claude models (except summarization/naming requests)
+		const shouldCacheAllMessages = model && model.startsWith('claude-') && !isSummarizationRequest;
 		
 		for (let msgIndex = 0; msgIndex < conversation.length; msgIndex++) {
 			const msg = conversation[msgIndex];
@@ -1067,15 +1036,8 @@ export class LocalBackendService implements ILocalBackendService {
 					role: msg.role
 				};
 				
-				// Check if this is the LAST original_query message that should be cached
-				const isLastOriginalQuery = (msgIndex === lastOriginalQueryIndex) && msg.role === 'user';
-				
-				// Also check if this is the last user message in conversation (important for caching)
-				const isLastUserMessage = (msgIndex === conversation.length - 1) && msg.role === 'user';
-				
-				// Only cache: last original_query message OR last user message (if not already the last original_query)
-				// SKIP all caching for summarization requests
-				const shouldCache = !isSummarizationRequest && (isLastOriginalQuery || (isLastUserMessage && !isLastOriginalQuery));
+				// Cache all messages for Claude models (except summarization/naming requests)
+				const shouldCache = shouldCacheAllMessages;
 				
 				if (typeof msg.content === 'string') {
 					let textContent = msg.content;
@@ -1083,6 +1045,14 @@ export class LocalBackendService implements ILocalBackendService {
 					// Check if message was cancelled and append marker
 					if (msg.cancelled) {
 						textContent += '... (User cancelled)';
+					}
+					
+					// Append web search citations if present (for assistant messages)
+					if (msg.role === 'assistant' && msg.web_search_citations && msg.web_search_citations.length > 0) {
+						textContent += '\n\nCitations:\n';
+						for (const citation of msg.web_search_citations) {
+							textContent += `${citation.title} (${citation.url})\n`;
+						}
 					}
 					
 					if (shouldCache) {
@@ -1158,8 +1128,19 @@ export class LocalBackendService implements ILocalBackendService {
 							}
 						}
 						
-						// Apply cache control to the last text block if this is an original_query
-						// SKIP caching for summarization requests
+						// Append web search citations if present (for assistant messages)
+						if (msg.role === 'assistant' && msg.web_search_citations && msg.web_search_citations.length > 0) {
+							let citationsText = '\n\nCitations:\n';
+							for (const citation of msg.web_search_citations) {
+								citationsText += `${citation.title} (${citation.url})\n`;
+							}
+							contentList.push({
+								type: 'text',
+								text: citationsText
+							});
+						}
+						
+						// Apply cache control to the last text block for all messages in Claude models
 						if (shouldCache && contentList.length > 0) {
 							// Find the last text block and add cache control
 							for (let i = contentList.length - 1; i >= 0; i--) {
@@ -1260,18 +1241,6 @@ export class LocalBackendService implements ILocalBackendService {
 			const provider = request.provider;
 			const model = request.model;
 			
-			// Check if we need to send synthetic end_turn instead of making API call
-			if (this.needsEndTurnReminder(conversation)) {
-				// Send synthetic end_turn completion event directly
-				const event = {
-					request_id: request_id,
-					end_turn: true,
-					isComplete: true
-				};
-				
-				outputStream.write(`data: ${JSON.stringify(event)}\n\n`);
-				return;
-			}
 			
 			
 			// Use the provider from the request (determined by workbench settings service)
@@ -1824,17 +1793,17 @@ export class LocalBackendService implements ILocalBackendService {
 		// Add system message with summarization instructions
 
 		let content = 
-				"You are a conversation summarizer for an AI coding assistant in RStudio. Your job is to analyze the provided conversation and create a detailed summary to inform future actions. In future steps, the assistant will have access to the user's new query (query N+1), the user's most recent query and its responses (query N), and this summary for everything before (queries 1 to N-1). Nothing else about these messages besides your summary will be provided, so you should be concise but comprehensive. If part of what you are summarizing is itself a summary, you must also summarize that since your summary of the previous summary will be the only record of the past messages.\n\n" +
-				"Focus on:\n" +
-				"- What the user's query was\n" +
-				"- What tasks were completed successfully\n" +
-				"- What files were created, modified, or analyzed\n" +
-				"- What bugs or issues were resolved\n" +
-				"- What problems remain unresolved\n" +
-				"- Key decisions or insights made during the conversation\n" +
-				"- Important context for continuing the work\n\n" +
-				"Write a comprehensive summary that will help the assistant understand what happened in the conversation up through the messages you have access to. " +
-				"You should structure your response as JSON with fields like 'summary_text', 'completed_tasks', 'open_issues', and 'file_changes' so that you can add to it in the future."
+				"Please provide a comprehensive summary of the conversation so far. The summary should include:\n" +
+				"1. Primary Request and Intent - What the user is asking for\n" +
+				"2. Key Technical Concepts - Important technologies and concepts involved\n" +
+				"3. Files and Code Sections - All relevant files that have been created or examined\n" +
+				"4. Errors and fixes - Any problems encountered and their solutions\n" +
+				"5. Problem Solving - Steps taken to solve the task\n" +
+				"6. All user messages - Complete text of every message the user has sent\n" +
+				"7. Pending Tasks - What still needs to be done\n" +
+				"8. Current Work - What was being worked on immediately before the summary\n" +
+				"9. Optional Next Step - What should happen next\n" +
+				"Format the summary with numbered sections and clear headings."
 		if (request.previous_summary) {
 			content += `It is EXTREMELY IMPORTANT that you also include the information from any previous summaries because that is the ONLY record of past messages that will be provided in the future. All other knowledge of these messages will be lost forever with no way to access it.`;
 		}
@@ -2054,18 +2023,6 @@ export class LocalBackendService implements ILocalBackendService {
 			return;
 		}
 
-		// Check if we need to send synthetic end_turn instead of making API call
-		if (this.needsEndTurnReminder(messages)) {
-			// Send synthetic end_turn completion event directly
-			onData({
-				type: 'end_turn',
-				request_id: request_id,
-				end_turn: true,
-				isComplete: true
-			});
-			onComplete();
-			return;
-		}
 
 		// Extract symbols_note and other context from contextData
 		const symbols_note = contextData?.symbols_note || null;

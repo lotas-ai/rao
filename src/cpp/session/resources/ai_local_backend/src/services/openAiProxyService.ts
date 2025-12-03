@@ -43,6 +43,9 @@ interface OpenAIStreamState {
 	cancelledMessageLogged: boolean; // Track if we've already logged the cancellation message
 	writeErrorLogged: boolean; // Track if we've already logged a write error to prevent spam
 	functionCallCompletionSent: boolean; // Track if completion has been sent
+	
+	// Web search annotations tracking
+	accumulatedAnnotations: any[]; // Store annotations extracted from response.output_text.annotation.added events
 }
 
 /**
@@ -148,7 +151,8 @@ export class OpenAiProxyService implements IOpenAiProxyService {
 			cancelled: false,
 			cancelledMessageLogged: false,
 			writeErrorLogged: false,
-			functionCallCompletionSent: false
+			functionCallCompletionSent: false,
+			accumulatedAnnotations: []
 		};
 		
 		// Track last stream event time for timeout policy
@@ -326,8 +330,10 @@ export class OpenAiProxyService implements IOpenAiProxyService {
 		
 		// If we have text content that hasn't been sent as complete, send it now
 		if (streamState.hasTextContent && !streamState.textStreamingComplete && streamState.textContent.length > 0) {
+			// Include accumulated annotations in the completion
+			const citations = streamState.accumulatedAnnotations.length > 0 ? streamState.accumulatedAnnotations : undefined;
 			this.streamingHelper.safeWriteToOutputStream(outputStream, 
-				this.streamingHelper.createTextCompleteEvent(request_id, streamState.textContent));
+				this.streamingHelper.createTextCompleteEvent(request_id, streamState.textContent, citations));
 		}
 	}
 
@@ -364,14 +370,6 @@ export class OpenAiProxyService implements IOpenAiProxyService {
 				if (chunkNode.delta) {
 					const delta = chunkNode.delta;
 					
-					// Check if this text delta has annotations (web search citations)
-					if (chunkNode.annotations) {
-						// Send annotations as separate events for debugging on R side
-						if (!this.streamingHelper.safeWriteToOutputStream(outputStream, 
-							this.streamingHelper.createAnnotationsEvent(request_id, chunkNode.annotations))) {
-							return;
-						}
-					}
 					
 					// Add text to accumulated buffer
 					streamState.textContent += delta;
@@ -432,14 +430,7 @@ export class OpenAiProxyService implements IOpenAiProxyService {
 					if (item.type) {
 						const itemType = item.type;
 						
-						if (itemType === 'web_search_call') {                            
-							// Send web_search_call events to the conversation for processing
-							if (!this.streamingHelper.safeWriteToOutputStream(outputStream, 
-								this.streamingHelper.createWebSearchCallEvent(request_id, item))) {
-								return;
-							}
-							
-						} else if (itemType === 'function_call') {
+						if (itemType === 'function_call') {
 							// Existing function call handling
 							streamState.hasFunctionCall = true;
 							
@@ -525,8 +516,10 @@ export class OpenAiProxyService implements IOpenAiProxyService {
 				// Response completed - only send completion if we haven't handled function call
 				if (streamState.hasTextContent && !streamState.hasFunctionCall && !streamState.textStreamingComplete) {
 					// Pure text response - complete it now (send even if userStreamingStarted is false as fallback)
+					// Include accumulated annotations in the completion
+					const citations = streamState.accumulatedAnnotations.length > 0 ? streamState.accumulatedAnnotations : undefined;
 					if (this.streamingHelper.safeWriteToOutputStream(outputStream, 
-						this.streamingHelper.createTextCompleteEvent(request_id, streamState.textContent))) {
+						this.streamingHelper.createTextCompleteEvent(request_id, streamState.textContent, citations))) {
 						streamState.textStreamingComplete = true;
 					}
 				}                
@@ -537,8 +530,10 @@ export class OpenAiProxyService implements IOpenAiProxyService {
 					if (item.type === 'function_call') {
 						// Complete text first if we have text content (only if user streaming has started)
 						if (streamState.hasTextContent && !streamState.textStreamingComplete && streamState.userStreamingStarted) {
+							// Include accumulated annotations in the completion
+							const citations = streamState.accumulatedAnnotations.length > 0 ? streamState.accumulatedAnnotations : undefined;
 							if (!this.streamingHelper.safeWriteToOutputStream(outputStream, 
-								this.streamingHelper.createTextCompleteEvent(request_id, streamState.textContent))) {
+								this.streamingHelper.createTextCompleteEvent(request_id, streamState.textContent, citations))) {
 								return;
 							}
 							streamState.textStreamingComplete = true;
@@ -593,8 +588,10 @@ export class OpenAiProxyService implements IOpenAiProxyService {
 				if (streamState.hasTextContent && !streamState.textStreamingComplete && streamState.userStreamingStarted) {
 					// Only complete text if no function call is coming
 					if (!streamState.hasFunctionCall) {
+						// Include accumulated annotations in the completion
+						const citations = streamState.accumulatedAnnotations.length > 0 ? streamState.accumulatedAnnotations : undefined;
 						if (this.streamingHelper.safeWriteToOutputStream(outputStream, 
-							this.streamingHelper.createTextCompleteEvent(request_id, streamState.textContent))) {
+							this.streamingHelper.createTextCompleteEvent(request_id, streamState.textContent, citations))) {
 							streamState.textStreamingComplete = true;
 						}
 					}
@@ -606,7 +603,18 @@ export class OpenAiProxyService implements IOpenAiProxyService {
 			} else if (eventType === 'response.web_search_call.completed') {
 				// Web search call has completed - no action needed
 			} else if (eventType === 'response.output_text.annotation.added') {
-				// Text annotation (citation) has been added - no action needed
+				// Text annotation (citation) has been added - extract for later inclusion in completion
+				if (chunkNode.annotation) {
+					const annotation = chunkNode.annotation;
+					// Extract only title and url for unified citation format
+					if (annotation.title && annotation.url) {
+						const citation = {
+							title: annotation.title,
+							url: annotation.url
+						};
+						streamState.accumulatedAnnotations.push(citation);
+					}
+				}
 			} else {
 				// Handle unknown event types
 				console.warn("Unhandled OpenAI event type:", eventType);
@@ -649,6 +657,8 @@ export class OpenAiProxyService implements IOpenAiProxyService {
 		_streamState: OpenAIStreamState
 	): boolean {
 		if (hasTextContent && !textStreamingComplete && userStreamingStarted) {
+			// Note: This helper method doesn't have access to streamState.accumulatedAnnotations
+			// Citations will be included in the main completion calls above
 			if (!this.streamingHelper.safeWriteToOutputStream(outputStream, this.streamingHelper.createTextCompleteEvent(request_id, textContent))) {
 				return false;
 			}

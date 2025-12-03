@@ -24,19 +24,6 @@ export class StreamingService implements IStreamingService {
 		onData(event);
 	}
 
-	/**
-	 * Send end_turn event - matches SseEndTurnEvent format  
-	 * Format: {"request_id":"req_123","end_turn":true,"isComplete":true}
-	 */
-	public sendEndTurnEvent(onData: (data: StreamData) => void, request_id: string): void {
-		const event: StreamData = {
-			type: 'end_turn',
-			request_id: request_id,
-			end_turn: true,
-			isComplete: true
-		};
-		onData(event);
-	}
 
 	/**
 	 * Send complete event - matches SseTextEvent format and custom field format

@@ -41,6 +41,9 @@ interface AnthropicStreamState {
 	contentBlockTypes: Map<number, string>;
 	parallelFunctionCalls: Map<string, FunctionCallData>;
 	hasParallelFunctionCalls: boolean;
+	
+	// Web search citations tracking
+	accumulatedCitations: any[]; // Store citations extracted from web_search_tool_result blocks
 }
 
 /**
@@ -198,7 +201,8 @@ export class AnthropicProxyService implements IAnthropicProxyService {
 				writeErrorLogged: false,
 				contentBlockTypes: new Map(),
 				parallelFunctionCalls: new Map(),
-				hasParallelFunctionCalls: false
+				hasParallelFunctionCalls: false,
+				accumulatedCitations: []
 			};
 			
 			// Track last stream event time for timeout policy
@@ -481,6 +485,7 @@ export class AnthropicProxyService implements IAnthropicProxyService {
 				state.contentBlockTypes.clear();
 				state.parallelFunctionCalls.clear();
 				state.hasParallelFunctionCalls = false;
+				state.accumulatedCitations = [];
 				
 				if (data.message && data.message.usage) {
 					state.usageData = data.message.usage;
@@ -520,7 +525,7 @@ export class AnthropicProxyService implements IAnthropicProxyService {
 					}
 				}
 				
-				// Handle stop_reason: "end_turn" - convert to same format as OpenAI end_turn function
+				// Handle stop_reason: "end_turn" - just complete text streaming if needed
 				if (data.delta && data.delta.stop_reason) {
 					const stopReason = data.delta.stop_reason;
 					if (stopReason === 'end_turn') {
@@ -528,16 +533,13 @@ export class AnthropicProxyService implements IAnthropicProxyService {
 						// Always send completion if we have accumulated text, even if textStreamingComplete is already true
 						// This handles the case where message_stop was processed before end_turn
 						if (state.hasTextContent && state.accumulatedText.length > 0) {
+							// Include accumulated citations in the completion
+							const citations = state.accumulatedCitations.length > 0 ? state.accumulatedCitations : undefined;
 							if (!this.streamingHelper.safeWriteToOutputStream(outputStream, 
-								this.streamingHelper.createTextCompleteEvent(request_id, state.accumulatedText))) {
+								this.streamingHelper.createTextCompleteEvent(request_id, state.accumulatedText, citations))) {
 								return;
 							}
 							state.textStreamingComplete = true;
-						}
-						
-						if (!this.streamingHelper.safeWriteToOutputStream(outputStream, 
-							this.streamingHelper.createEndTurnEvent(request_id))) {
-							return;
 						}
 					}
 				}
@@ -690,11 +692,6 @@ export class AnthropicProxyService implements IAnthropicProxyService {
 							query: query
 						};
 						
-						// Send web search call event to conversation (same format as OpenAI)
-						if (!this.streamingHelper.safeWriteToOutputStream(outputStream, 
-							this.streamingHelper.createWebSearchCallEvent(request_id, JSON.stringify(webSearchCall)))) {
-							return;
-						}
 						
 					} catch (error) {
 						console.error('Error parsing Anthropic web search query:', error);
@@ -702,12 +699,23 @@ export class AnthropicProxyService implements IAnthropicProxyService {
 				}
 			}
 		} else if (blockType === 'web_search_tool_result') {
-			// Web search results completed - send the results event
+			// Web search results completed - extract citations for later inclusion with text
 			if (state.toolBlocks.has(index)) {
 				const toolBlock = state.toolBlocks.get(index);
 				// Extract and process the web search results
-				if (toolBlock && toolBlock.content && Array.isArray(toolBlock.content)) {                    
-					// Send web search results event to conversation (same format as OpenAI)
+				if (toolBlock && toolBlock.content && Array.isArray(toolBlock.content)) {
+					// Extract citations from web search results
+					for (const result of toolBlock.content) {
+						if (result.type === 'web_search_result' && result.url && result.title) {
+							const citation = {
+								title: result.title,
+								url: result.url
+							};
+							state.accumulatedCitations.push(citation);
+						}
+					}
+					
+					// Still send web search results event
 					if (!this.streamingHelper.safeWriteToOutputStream(outputStream, 
 						this.streamingHelper.createWebSearchResultsEvent(request_id, JSON.stringify(toolBlock)))) {
 						return;
@@ -722,8 +730,10 @@ export class AnthropicProxyService implements IAnthropicProxyService {
 				
 				// Complete text first if needed
 				if (state.hasTextContent && !state.textStreamingComplete && state.userStreamingStarted) {
+					// Include accumulated citations in the completion
+					const citations = state.accumulatedCitations.length > 0 ? state.accumulatedCitations : undefined;
 					if (!this.streamingHelper.safeWriteToOutputStream(outputStream, 
-						this.streamingHelper.createTextCompleteEvent(request_id, state.accumulatedText))) {
+						this.streamingHelper.createTextCompleteEvent(request_id, state.accumulatedText, citations))) {
 						return;
 					}
 					state.textStreamingComplete = true;
@@ -756,9 +766,11 @@ export class AnthropicProxyService implements IAnthropicProxyService {
 		
 		// Send final completion event for pure text responses
 		if (state.hasTextContent && !state.hasToolUse && !state.textStreamingComplete && state.userStreamingStarted) {
+			// Include accumulated citations in the completion
+			const citations = state.accumulatedCitations.length > 0 ? state.accumulatedCitations : undefined;
 			// Try to write the completion event - if it fails, the connection is likely closed (cancellation)
 			const writeSuccessful = this.streamingHelper.safeWriteToOutputStream(outputStream, 
-				this.streamingHelper.createTextCompleteEvent(request_id, state.accumulatedText));
+				this.streamingHelper.createTextCompleteEvent(request_id, state.accumulatedText, citations));
 			if (!writeSuccessful) {
 				state.cancelled = true;
 				return;
@@ -784,8 +796,10 @@ export class AnthropicProxyService implements IAnthropicProxyService {
 		
 		// Complete any buffered text if needed
 		if (state.hasTextContent && !state.textStreamingComplete && state.accumulatedText.length > 0) {
+			// Include accumulated citations in the final completion
+			const citations = state.accumulatedCitations.length > 0 ? state.accumulatedCitations : undefined;
 			this.streamingHelper.safeWriteToOutputStream(outputStream, 
-				this.streamingHelper.createTextCompleteEvent(request_id, state.accumulatedText));
+				this.streamingHelper.createTextCompleteEvent(request_id, state.accumulatedText, citations));
 		}
 		
 	}
